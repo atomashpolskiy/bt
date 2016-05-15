@@ -13,24 +13,24 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
 
     <url>https://github.com/atomashpolskiy/bt</url>
 
     <developers>
-		<developer>
-			<id>atomashpolskiy</id>
-			<name>Andrei Tomashpolskiy</name>
-			<email>nordmann89@gmail.com</email>
-		</developer>
-	</developers>
+        <developer>
+            <id>atomashpolskiy</id>
+            <name>Andrei Tomashpolskiy</name>
+            <email>nordmann89@gmail.com</email>
+        </developer>
+    </developers>
 
     <scm>
-		<connection>scm:git:https://github.com/atomashpolskiy/bt</connection>
-		<developerConnection>scm:git:ssh://git@github.com/atomashpolskiy/bt</developerConnection>
-		<url>https://github.com/atomashpolskiy/bt</url>
-	</scm>
+        <connection>scm:git:https://github.com/atomashpolskiy/bt</connection>
+        <developerConnection>scm:git:ssh://git@github.com/atomashpolskiy/bt</developerConnection>
+        <url>https://github.com/atomashpolskiy/bt</url>
+    </scm>
 
     <dependencyManagement>
         <dependencies>
