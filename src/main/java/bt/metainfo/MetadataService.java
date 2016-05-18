@@ -60,8 +60,10 @@ public class MetadataService implements IMetadataService {
 
             Map info = readNotNull(root, Map.class, INFOMAP_KEY);
 
-            String name = new String(cast(byte[].class, TORRENT_NAME_KEY, info.get(TORRENT_NAME_KEY)), defaultCharset);
-            torrent.setName(name);
+            byte[] name = cast(byte[].class, TORRENT_NAME_KEY, info.get(TORRENT_NAME_KEY));
+            if (name != null) {
+                torrent.setName(new String(name, defaultCharset));
+            }
 
             BigInteger chunkSize = readNotNull(info, BigInteger.class, CHUNK_SIZE_KEY);
             torrent.setChunkSize(chunkSize.longValueExact());
