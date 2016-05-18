@@ -1,39 +1,43 @@
 package bt.bencoding;
 
-class BEStringBuilder implements BEObjectBuilder<String> {
+import java.io.ByteArrayOutputStream;
+
+class BEStringBuilder implements BEObjectBuilder<byte[]> {
 
     private static final char DELIMITER = ':';
-    private StringBuilder buf;
+    private ByteArrayOutputStream buf;
     private int length;
-    private int charsAcceptedCount;
+    private int bytesAcceptedCount;
     private boolean shouldReadBody;
 
     BEStringBuilder() {
-        buf = new StringBuilder();
+        buf = new ByteArrayOutputStream();
     }
 
     @Override
-    public boolean accept(char c) {
+    public boolean accept(int b) {
 
+        char c = (char) b;
         if (shouldReadBody) {
-            if (charsAcceptedCount + 1 > length) {
+            if (bytesAcceptedCount + 1 > length) {
                 return false;
             }
         } else {
-            if (charsAcceptedCount == 0 && (c == '0' || !Character.isDigit(c))) {
-                throw new IllegalArgumentException("Unexpected token while reading string's length: " + c);
+            if (bytesAcceptedCount == 0 && (c == '0' || !Character.isDigit(c))) {
+                throw new IllegalArgumentException(
+                        "Unexpected token while reading string's length (as ASCII char): " + c);
             }
             if (c == DELIMITER) {
                 shouldReadBody = true;
-                charsAcceptedCount = 0;
+                bytesAcceptedCount = 0;
                 length = Integer.parseInt(buf.toString());
-                buf = new StringBuilder(length);
+                buf = new ByteArrayOutputStream(length);
                 return true;
             }
         }
 
-        buf.append(c);
-        charsAcceptedCount++;
+        buf.write(b);
+        bytesAcceptedCount++;
         return true;
     }
 
@@ -43,14 +47,14 @@ class BEStringBuilder implements BEObjectBuilder<String> {
     }
 
     @Override
-    public String build() {
+    public byte[] build() {
         if (!shouldReadBody) {
             throw new IllegalStateException("Can't build string: no content");
         }
-        if (charsAcceptedCount < length) {
+        if (bytesAcceptedCount < length) {
             throw new IllegalStateException("Can't build string: insufficient content");
         }
-        return buf.toString();
+        return buf.toByteArray();
     }
 
     @Override

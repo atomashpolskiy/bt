@@ -13,16 +13,16 @@ class BEListBuilder extends BEPrefixedTypeBuilder<List<Object>> {
     }
 
     @Override
-    protected boolean doAccept(char c) {
+    protected boolean doAccept(int b) {
 
         if (builder == null) {
-            BEType type = BEParser.getTypeForPrefix(c);
+            BEType type = BEParser.getTypeForPrefix((char) b);
             builder = BEParser.builderForType(type);
         }
-        if (!builder.accept(c)) {
+        if (!builder.accept(b)) {
             objects.add(builder.build());
             builder = null;
-            return accept(c);
+            return accept(b);
         }
         return true;
     }

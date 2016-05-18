@@ -11,13 +11,14 @@ class BEIntegerBuilder extends BEPrefixedTypeBuilder<BigInteger> {
     }
 
     @Override
-    protected boolean doAccept(char c) {
+    protected boolean doAccept(int b) {
 
+        char c = (char) b;
         if (Character.isDigit(c) || buf.length() == 0 && c == '-') {
             buf.append(c);
             return true;
         }
-        throw new IllegalArgumentException("Unexpected token while reading integer: " + c);
+        throw new IllegalArgumentException("Unexpected token while reading integer (as ASCII char): " + c);
     }
 
     @Override

@@ -6,7 +6,7 @@ abstract class BEPrefixedTypeBuilder<T> implements BEObjectBuilder<T> {
     private boolean receivedEOF;
 
     @Override
-    public final boolean accept(char c) {
+    public final boolean accept(int b) {
 
         if (receivedEOF) {
             return false;
@@ -14,20 +14,21 @@ abstract class BEPrefixedTypeBuilder<T> implements BEObjectBuilder<T> {
 
         if (!receivedPrefix) {
             BEType type = getType();
-            if (c == BEParser.getPrefixForType(type)) {
+            if (b == BEParser.getPrefixForType(type)) {
                 receivedPrefix = true;
                 return true;
             } else {
-                throw new IllegalArgumentException("Invalid prefix for type " + type.name().toLowerCase() + ": " + c);
+                throw new IllegalArgumentException("Invalid prefix for type " + type.name().toLowerCase()
+                        + " (as ASCII char): " + (char) b);
             }
         }
 
-        if (c == BEParser.EOF && acceptEOF()) {
+        if (b == BEParser.EOF && acceptEOF()) {
             receivedEOF = true;
             return true;
         }
 
-        return doAccept(c);
+        return doAccept(b);
     }
 
     @Override
@@ -42,6 +43,6 @@ abstract class BEPrefixedTypeBuilder<T> implements BEObjectBuilder<T> {
         return doBuild();
     }
 
-    protected abstract boolean doAccept(char c);
+    protected abstract boolean doAccept(int b);
     protected abstract T doBuild();
 }

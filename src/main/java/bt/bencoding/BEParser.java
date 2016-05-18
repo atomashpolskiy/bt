@@ -1,10 +1,15 @@
 package bt.bencoding;
 
+import bt.BtException;
+
+import java.io.IOException;
 import java.math.BigInteger;
+import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 
-public class BEParser {
+public class BEParser implements AutoCloseable {
 
     static final char EOF = 'e';
 
@@ -12,19 +17,30 @@ public class BEParser {
     private static final char LIST_PREFIX = 'l';
     private static final char MAP_PREFIX = 'd';
 
-    private String encodedStr;
     private Scanner scanner;
     private final BEType type;
     private Object parsedObject;
 
-    public BEParser(String encodedStr) {
+    public BEParser(URL url) {
 
-        if (encodedStr == null || encodedStr.isEmpty()) {
-            throw new IllegalArgumentException("Can't parse string: null or empty");
+        if (url == null) {
+            throw new NullPointerException("Missing URL");
         }
-        this.encodedStr = encodedStr;
-        this.scanner = new Scanner(encodedStr);
-        this.type = getTypeForPrefix(scanner.peek());
+        try {
+            this.scanner = new Scanner(url.openStream());
+        } catch (IOException e) {
+            throw new BtException("Failed to open stream for URL: " + url, e);
+        }
+        this.type = getTypeForPrefix((char) scanner.peek());
+    }
+
+    public BEParser(byte[] bs) {
+
+        if (bs == null || bs.length == 0) {
+            throw new IllegalArgumentException("Can't parse bytes array: null or empty");
+        }
+        this.scanner = new Scanner(bs);
+        this.type = getTypeForPrefix((char) scanner.peek());
     }
 
     public BEType readType() {
@@ -89,8 +105,9 @@ public class BEParser {
         }
     }
 
-    public String readString() {
-        return readObject(BEType.STRING, BEStringBuilder.class);
+    public String readString(Charset charset) {
+        byte[] bytes = readObject(BEType.STRING, BEStringBuilder.class);
+        return new String(bytes, charset);
     }
 
     public BigInteger readInteger() {
@@ -116,7 +133,7 @@ public class BEParser {
                 // relying on the default constructor being present
                 parsedObject = result = scanner.readObject(builderClass.newInstance());
             } catch (Exception e) {
-                throw new RuntimeException("Failed to read from encoded string: " + encodedStr, e);
+                throw new BtParseException("Failed to read from encoded data", scanner.getScannedContents(), e);
             }
         }
         return result;
@@ -132,5 +149,10 @@ public class BEParser {
             throw new IllegalStateException(
                     "Can't read " + type.name().toLowerCase() + " from: " + this.type.name().toLowerCase());
         }
+    }
+
+    @Override
+    public void close() {
+        scanner.close();
     }
 }
