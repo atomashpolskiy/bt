@@ -45,4 +45,5 @@ abstract class BEPrefixedTypeBuilder<T> implements BEObjectBuilder<T> {
 
     protected abstract boolean doAccept(int b);
     protected abstract T doBuild();
+    protected abstract boolean acceptEOF();
 }

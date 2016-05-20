@@ -42,11 +42,6 @@ class BEStringBuilder implements BEObjectBuilder<byte[]> {
     }
 
     @Override
-    public boolean acceptEOF() {
-        return false;
-    }
-
-    @Override
     public byte[] build() {
         if (!shouldReadBody) {
             throw new IllegalStateException("Can't build string: no content");
