@@ -3,7 +3,11 @@ package bt.metainfo;
 import bt.BtException;
 import bt.bencoding.BEParser;
 import bt.bencoding.BEType;
+import bt.bencoding.model.BEObjectModel;
+import bt.bencoding.model.YamlBEObjectModelLoader;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigInteger;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -24,10 +28,20 @@ public class MetadataService implements IMetadataService {
     private static final String FILE_SIZE_KEY = "length";
     private static final String FILE_PATH_ELEMENTS_KEY = "path";
 
+    private BEObjectModel torrentModel;
     private Charset defaultCharset;
 
     public MetadataService() {
+
         defaultCharset = Charset.forName("UTF-8");
+
+        try {
+            try (InputStream in = MetadataService.class.getResourceAsStream("/metainfo.yml")) {
+                torrentModel = new YamlBEObjectModelLoader().load(in);
+            }
+        } catch (IOException e) {
+            throw new BtException("Failed to create metadata service", e);
+        }
     }
 
     @Override
@@ -44,7 +58,7 @@ public class MetadataService implements IMetadataService {
         }
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private Torrent buildTorrent(BEParser parser) {
 
         if (parser.readType() != BEType.MAP) {
@@ -54,39 +68,40 @@ public class MetadataService implements IMetadataService {
 
         DefaultTorrent torrent = new DefaultTorrent();
         Map<String, Object> root = parser.readMap();
+        torrentModel.validate(root);
+
         try {
-            String trackerUrl = new String(readNotNull(root, byte[].class, TRACKER_URL_KEY), defaultCharset);
-            torrent.setTrackerUrl(new URL(trackerUrl));
+            byte[] trackerUrl = (byte[]) root.get(TRACKER_URL_KEY);
+            torrent.setTrackerUrl(new URL(new String(trackerUrl, defaultCharset)));
 
-            Map info = readNotNull(root, Map.class, INFOMAP_KEY);
+            Map info = (Map) root.get(INFOMAP_KEY);
 
-            byte[] name = cast(byte[].class, TORRENT_NAME_KEY, info.get(TORRENT_NAME_KEY));
+            byte[] name = (byte[]) info.get(TORRENT_NAME_KEY);
             if (name != null) {
                 torrent.setName(new String(name, defaultCharset));
             }
 
-            BigInteger chunkSize = readNotNull(info, BigInteger.class, CHUNK_SIZE_KEY);
+            BigInteger chunkSize = (BigInteger) info.get(CHUNK_SIZE_KEY);
             torrent.setChunkSize(chunkSize.longValueExact());
 
-            byte[] chunkHashes = readNotNull(info, byte[].class, CHUNK_HASHES_KEY);
+            byte[] chunkHashes = (byte[]) info.get(CHUNK_HASHES_KEY);
             torrent.setChunkHashes(chunkHashes);
 
-            BigInteger torrentSize = cast(BigInteger.class, TORRENT_SIZE_KEY, info.get(TORRENT_SIZE_KEY));
+            BigInteger torrentSize = (BigInteger) info.get(TORRENT_SIZE_KEY);
             if (torrentSize != null) {
                 torrent.setSize(torrentSize.longValueExact());
 
             } else {
-                List<Map> files = castList(Map.class, readNotNull(info, List.class, FILES_KEY));
+                List<Map> files = (List<Map>) info.get(FILES_KEY);
                 List<TorrentFile> torrentFiles = new ArrayList<>(files.size() + 1);
                 for (Map file : files) {
 
                     DefaultTorrentFile torrentFile = new DefaultTorrentFile();
 
-                    BigInteger fileSize = readNotNull(file, BigInteger.class, FILE_SIZE_KEY);
+                    BigInteger fileSize = (BigInteger) file.get(FILE_SIZE_KEY);
                     torrentFile.setSize(fileSize.longValueExact());
 
-                    List<byte[]> pathElements = castList(byte[].class,
-                            readNotNull(file, List.class, FILE_PATH_ELEMENTS_KEY));
+                    List<byte[]> pathElements = (List<byte[]>) file.get(FILE_PATH_ELEMENTS_KEY);
 
                     torrentFile.setPathElements(pathElements.stream()
                             .map(bytes -> new String(bytes, defaultCharset))
@@ -101,37 +116,5 @@ public class MetadataService implements IMetadataService {
             throw new BtException("Invalid metainfo format", e);
         }
         return torrent;
-    }
-
-    @SuppressWarnings("rawtypes")
-    private <T> T readNotNull(Map map, Class<T> type, Object key) throws Exception {
-        Object value = map.get(key);
-        if (value == null) {
-            throw new Exception("Value is missing for key: " + key);
-        }
-        return cast(type, key, value);
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private <T> T cast(Class<T> type, Object key, Object value) throws Exception {
-        if (value == null) {
-            return null;
-        }
-        if (!type.isAssignableFrom(value.getClass())) {
-            throw new Exception("Value has invalid type for key: " + key + " -- expected '"
-                    + type.getName() + "', got: " + value.getClass().getName());
-        }
-        return (T) value;
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> List<T> castList(Class<T> elementType, List<?> list) throws Exception {
-        for (Object element : list) {
-            if (!elementType.isAssignableFrom(element.getClass())) {
-                throw new Exception("List element has invalid type -- expected '"
-                    + elementType.getName() + "', got: " + element.getClass().getName());
-            }
-        }
-        return (List<T>) list;
     }
 }

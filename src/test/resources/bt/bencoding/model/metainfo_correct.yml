@@ -1,0 +1,21 @@
+--- # schema of a basic metainfo document
+- datatype: &file
+    type: dictionary
+    entries:
+      - {key: length, type: integer}
+      - {key: path, type: list, elements: {type: string}}
+- model:
+    type: dictionary
+    entries:
+      - {key: announce, type: string}
+      - key: info
+        type: dictionary
+        exclusives:
+          - length
+          - files
+        entries:
+          - {key: name, type: string, required: false}
+          - {key: "piece length", type: integer}
+          - {key: pieces, type: binary}
+          - {key: length, type: integer}
+          - {key: files, type: list, elements: *file}
