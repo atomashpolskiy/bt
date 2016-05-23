@@ -11,6 +11,11 @@ public interface Torrent {
     URL getTrackerUrl();
 
     /**
+     * @return SHA-1 hash of this torrent's info.
+     */
+    byte[] getInfoHash();
+
+    /**
      * @return Suggested name for this torrent.
      */
     String getName();

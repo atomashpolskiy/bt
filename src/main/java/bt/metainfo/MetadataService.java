@@ -1,6 +1,7 @@
 package bt.metainfo;
 
 import bt.BtException;
+import bt.CryptoUtil;
 import bt.bencoding.BEParser;
 import bt.bencoding.BEType;
 import bt.bencoding.model.BEMap;
@@ -79,6 +80,7 @@ public class MetadataService implements IMetadataService {
             torrent.setTrackerUrl(new URL(new String(trackerUrl, defaultCharset)));
 
             BEMap info = (BEMap) root.get(INFOMAP_KEY);
+            torrent.setInfoHash(CryptoUtil.getSha1Digest(info.getContent()));
 
             Map<String, BEObject> infoMap = info.getValue();
 

@@ -14,6 +14,7 @@ public class DefaultTorrent implements Torrent {
     private static final int HASH_LENGTH = 20;
 
     private URL trackerUrl;
+    private byte[] infoHash;
     private String name;
     private long chunkSize;
     private byte[] chunkHashes;
@@ -23,6 +24,11 @@ public class DefaultTorrent implements Torrent {
     @Override
     public URL getTrackerUrl() {
         return trackerUrl;
+    }
+
+    @Override
+    public byte[] getInfoHash() {
+        return infoHash;
     }
 
     @Override
@@ -71,6 +77,14 @@ public class DefaultTorrent implements Torrent {
 
     void setTrackerUrl(URL trackerUrl) {
         this.trackerUrl = trackerUrl;
+    }
+
+    void setInfoHash(byte[] infoHash) {
+        if (infoHash.length != HASH_LENGTH) {
+            throw new BtException("Invalid info hash -- length (" + infoHash.length
+                    + ") is not equal to " + HASH_LENGTH);
+        }
+        this.infoHash = infoHash;
     }
 
     void setName(String name) {
