@@ -16,12 +16,21 @@ abstract class BEPrefixedTypeBuilder<T extends BEObject> implements BEObjectBuil
 
     @Override
     public final boolean accept(int b) {
+        return accept(b, true);
+    }
+
+    // work-around for duplicate logging of received bytes
+    // when BEPrefixTypeBuilder.accept(int) is called by itself
+    // -- descendants should use this method instead
+    protected boolean accept(int b, boolean shouldLog) {
 
         if (receivedEOF) {
             return false;
         }
 
-        buf.write(b);
+        if (shouldLog) {
+            buf.write(b);
+        }
 
         if (!receivedPrefix) {
             BEType type = getType();

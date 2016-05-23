@@ -24,7 +24,7 @@ class BEListBuilder extends BEPrefixedTypeBuilder<BEList> {
         if (!builder.accept(b)) {
             objects.add(builder.build());
             builder = null;
-            return accept(b);
+            return accept(b, false);
         }
         return true;
     }

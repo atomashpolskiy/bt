@@ -37,7 +37,7 @@ class BEMapBuilder extends BEPrefixedTypeBuilder<BEMap> {
                 map.put(new String(keyBuilder.build().getValue(), keyCharset), valueBuilder.build());
                 keyBuilder = null;
                 valueBuilder = null;
-                return accept(b);
+                return accept(b, false);
             }
         }
         return true;
