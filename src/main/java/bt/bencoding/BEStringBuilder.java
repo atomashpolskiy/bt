@@ -26,7 +26,7 @@ class BEStringBuilder implements BEObjectBuilder<BEString> {
                 return false;
             }
         } else {
-            if (bytesAcceptedCount == 0 && (c == '0' || !Character.isDigit(c))) {
+            if (bytesAcceptedCount == 0 && !Character.isDigit(c)) {
                 throw new IllegalArgumentException(
                         "Unexpected token while reading string's length (as ASCII char): " + c);
             }

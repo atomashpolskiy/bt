@@ -38,9 +38,11 @@ public class BEParserTest {
         new BEParser("".getBytes());
     }
 
-    @Test(expected = Exception.class)
-    public void testParse_String_Exception_LengthStartsWithZero() {
-        new BEParser("0:".getBytes()).readString();
+    @Test
+    public void testParse_String_LengthStartsWithZero() {
+        BEString string = new BEParser("0:".getBytes()).readString();
+        assertNotNull(string);
+        assertEquals(0, string.getValue().length);
     }
 
     @Test(expected = Exception.class)
