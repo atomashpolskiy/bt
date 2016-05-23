@@ -12,7 +12,6 @@ public class CryptoUtil {
         } catch (NoSuchAlgorithmException e) {
             throw new BtException("Unexpected error", e);
         }
-        cryptor.update(bytes);
-        return cryptor.digest();
+        return cryptor.digest(bytes);
     }
 }
