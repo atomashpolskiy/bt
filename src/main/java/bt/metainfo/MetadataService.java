@@ -3,7 +3,10 @@ package bt.metainfo;
 import bt.BtException;
 import bt.bencoding.BEParser;
 import bt.bencoding.BEType;
+import bt.bencoding.model.BEMap;
+import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEObjectModel;
+import bt.bencoding.model.BEString;
 import bt.bencoding.model.YamlBEObjectModelLoader;
 
 import java.io.IOException;
@@ -67,44 +70,48 @@ public class MetadataService implements IMetadataService {
         }
 
         DefaultTorrent torrent = new DefaultTorrent();
-        Map<String, Object> root = parser.readMap();
-        torrentModel.validate(root);
+        BEMap beMap = parser.readMap();
+        torrentModel.validate(beMap);
+        Map<String, BEObject> root = beMap.getValue();
 
         try {
-            byte[] trackerUrl = (byte[]) root.get(TRACKER_URL_KEY);
+            byte[] trackerUrl = (byte[]) root.get(TRACKER_URL_KEY).getValue();
             torrent.setTrackerUrl(new URL(new String(trackerUrl, defaultCharset)));
 
-            Map info = (Map) root.get(INFOMAP_KEY);
+            BEMap info = (BEMap) root.get(INFOMAP_KEY);
 
-            byte[] name = (byte[]) info.get(TORRENT_NAME_KEY);
-            if (name != null) {
+            Map<String, BEObject> infoMap = info.getValue();
+
+            if (infoMap.get(TORRENT_NAME_KEY) != null) {
+                byte[] name = (byte[]) infoMap.get(TORRENT_NAME_KEY).getValue();
                 torrent.setName(new String(name, defaultCharset));
             }
 
-            BigInteger chunkSize = (BigInteger) info.get(CHUNK_SIZE_KEY);
+            BigInteger chunkSize = (BigInteger) infoMap.get(CHUNK_SIZE_KEY).getValue();
             torrent.setChunkSize(chunkSize.longValueExact());
 
-            byte[] chunkHashes = (byte[]) info.get(CHUNK_HASHES_KEY);
+            byte[] chunkHashes = (byte[]) infoMap.get(CHUNK_HASHES_KEY).getValue();
             torrent.setChunkHashes(chunkHashes);
 
-            BigInteger torrentSize = (BigInteger) info.get(TORRENT_SIZE_KEY);
-            if (torrentSize != null) {
+            if (infoMap.get(TORRENT_SIZE_KEY) != null) {
+                BigInteger torrentSize = (BigInteger) infoMap.get(TORRENT_SIZE_KEY).getValue();
                 torrent.setSize(torrentSize.longValueExact());
 
             } else {
-                List<Map> files = (List<Map>) info.get(FILES_KEY);
+                List<BEMap> files = (List<BEMap>) infoMap.get(FILES_KEY).getValue();
                 List<TorrentFile> torrentFiles = new ArrayList<>(files.size() + 1);
-                for (Map file : files) {
+                for (BEMap file : files) {
 
+                    Map<String, BEObject> fileMap = file.getValue();
                     DefaultTorrentFile torrentFile = new DefaultTorrentFile();
 
-                    BigInteger fileSize = (BigInteger) file.get(FILE_SIZE_KEY);
+                    BigInteger fileSize = (BigInteger) fileMap.get(FILE_SIZE_KEY).getValue();
                     torrentFile.setSize(fileSize.longValueExact());
 
-                    List<byte[]> pathElements = (List<byte[]>) file.get(FILE_PATH_ELEMENTS_KEY);
+                    List<BEString> pathElements = (List<BEString>) fileMap.get(FILE_PATH_ELEMENTS_KEY).getValue();
 
                     torrentFile.setPathElements(pathElements.stream()
-                            .map(bytes -> new String(bytes, defaultCharset))
+                            .map(bytes -> new String(bytes.getValue(), defaultCharset))
                             .collect(Collectors.toList()));
 
                     torrentFiles.add(torrentFile);

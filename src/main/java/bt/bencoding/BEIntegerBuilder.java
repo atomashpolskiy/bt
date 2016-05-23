@@ -1,8 +1,10 @@
 package bt.bencoding;
 
+import bt.bencoding.model.BEInteger;
+
 import java.math.BigInteger;
 
-class BEIntegerBuilder extends BEPrefixedTypeBuilder<BigInteger> {
+class BEIntegerBuilder extends BEPrefixedTypeBuilder<BEInteger> {
 
     private StringBuilder buf;
 
@@ -22,7 +24,7 @@ class BEIntegerBuilder extends BEPrefixedTypeBuilder<BigInteger> {
     }
 
     @Override
-    public boolean acceptEOF() {
+    protected boolean acceptEOF() {
         return true;
     }
 
@@ -32,7 +34,7 @@ class BEIntegerBuilder extends BEPrefixedTypeBuilder<BigInteger> {
     }
 
     @Override
-    public BigInteger doBuild() {
-        return new BigInteger(buf.toString());
+    protected BEInteger doBuild(byte[] content) {
+        return new BEInteger(content, new BigInteger(buf.toString()));
     }
 }

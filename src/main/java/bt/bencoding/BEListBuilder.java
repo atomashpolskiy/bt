@@ -1,9 +1,11 @@
 package bt.bencoding;
 
+import bt.bencoding.model.BEList;
+
 import java.util.ArrayList;
 import java.util.List;
 
-class BEListBuilder extends BEPrefixedTypeBuilder<List<Object>> {
+class BEListBuilder extends BEPrefixedTypeBuilder<BEList> {
 
     private final List<Object> objects;
     private BEObjectBuilder<?> builder;
@@ -33,8 +35,8 @@ class BEListBuilder extends BEPrefixedTypeBuilder<List<Object>> {
     }
 
     @Override
-    protected List<Object> doBuild() {
-        return objects;
+    protected BEList doBuild(byte[] content) {
+        return new BEList(content, objects);
     }
 
     @Override

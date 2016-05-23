@@ -1,21 +1,22 @@
 package bt.bencoding;
 
 import bt.BtException;
+import bt.bencoding.model.BEInteger;
+import bt.bencoding.model.BEList;
+import bt.bencoding.model.BEMap;
+import bt.bencoding.model.BEObject;
+import bt.bencoding.model.BEString;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.net.URL;
-import java.nio.charset.Charset;
-import java.util.List;
-import java.util.Map;
 
 public class BEParser implements AutoCloseable {
 
     static final char EOF = 'e';
 
-    private static final char INTEGER_PREFIX = 'i';
-    private static final char LIST_PREFIX = 'l';
-    private static final char MAP_PREFIX = 'd';
+    static final char INTEGER_PREFIX = 'i';
+    static final char LIST_PREFIX = 'l';
+    static final char MAP_PREFIX = 'd';
 
     private Scanner scanner;
     private final BEType type;
@@ -105,24 +106,23 @@ public class BEParser implements AutoCloseable {
         }
     }
 
-    public String readString(Charset charset) {
-        byte[] bytes = readObject(BEType.STRING, BEStringBuilder.class);
-        return new String(bytes, charset);
+    public BEString readString() {
+        return readObject(BEType.STRING, BEStringBuilder.class);
     }
 
-    public BigInteger readInteger() {
+    public BEInteger readInteger() {
         return readObject(BEType.INTEGER, BEIntegerBuilder.class);
     }
 
-    public List<Object> readList() {
+    public BEList readList() {
         return readObject(BEType.LIST, BEListBuilder.class);
     }
 
-    public Map<String, Object> readMap() {
+    public BEMap readMap() {
         return readObject(BEType.MAP, BEMapBuilder.class);
     }
 
-    private <T> T readObject(BEType type, Class<? extends BEObjectBuilder<T>> builderClass) {
+    private <T extends BEObject> T readObject(BEType type, Class<? extends BEObjectBuilder<T>> builderClass) {
 
         assertType(type);
 

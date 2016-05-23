@@ -1,11 +1,14 @@
 package bt.bencoding;
 
+import bt.bencoding.model.BEList;
+import bt.bencoding.model.BEObject;
+import bt.bencoding.model.BEString;
 import org.junit.Test;
 
 import java.math.BigInteger;
 import java.nio.charset.Charset;
-import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -20,14 +23,14 @@ public class BEParserTest {
     public void testParse_String1() {
         BEParser parser = new BEParser("1:s".getBytes());
         assertEquals(BEType.STRING, parser.readType());
-        assertEquals("s", parser.readString(charset));
+        assertEquals("s", parser.readString().getValue(charset));
     }
 
     @Test
     public void testParse_String2() {
         BEParser parser = new BEParser("11:!@#$%^&*()_".getBytes());
         assertEquals(BEType.STRING, parser.readType());
-        assertEquals("!@#$%^&*()_", parser.readString(charset));
+        assertEquals("!@#$%^&*()_", parser.readString().getValue(charset));
     }
 
     @Test(expected = Exception.class)
@@ -37,26 +40,26 @@ public class BEParserTest {
 
     @Test(expected = Exception.class)
     public void testParse_String_Exception_LengthStartsWithZero() {
-        new BEParser("0:".getBytes()).readString(charset);
+        new BEParser("0:".getBytes()).readString();
     }
 
     @Test(expected = Exception.class)
     public void testParse_String_Exception_InsufficientContent() {
-        new BEParser("7:abcdef".getBytes()).readString(charset);
+        new BEParser("7:abcdef".getBytes()).readString();
     }
 
     @Test
     public void testParse_Integer1() {
         BEParser parser = new BEParser("i1e".getBytes());
         assertEquals(BEType.INTEGER, parser.readType());
-        assertEquals(BigInteger.ONE, parser.readInteger());
+        assertEquals(BigInteger.ONE, parser.readInteger().getValue());
     }
 
     @Test
     public void testParse_Integer_Negative() {
         BEParser parser = new BEParser("i-1e".getBytes());
         assertEquals(BEType.INTEGER, parser.readType());
-        assertEquals(BigInteger.ONE.negate(), parser.readInteger());
+        assertEquals(BigInteger.ONE.negate(), parser.readInteger().getValue());
     }
 
     @Test(expected = Exception.class)
@@ -72,7 +75,7 @@ public class BEParserTest {
         // so let it be for now
         BEParser parser = new BEParser("i-0e".getBytes());
         assertEquals(BEType.INTEGER, parser.readType());
-        assertEquals(BigInteger.ZERO.negate(), parser.readInteger());
+        assertEquals(BigInteger.ZERO.negate(), parser.readInteger().getValue());
     }
 
     @Test(expected = Exception.class)
@@ -95,7 +98,10 @@ public class BEParserTest {
         assertEquals(BEType.LIST, parser.readType());
         assertArrayEquals(
                 new Object[] {"spam".getBytes(charset), "eggs".getBytes(charset), BigInteger.ONE},
-                parser.readList().toArray()
+                parser.readList().getValue().stream()
+                        .map(o -> ((BEObject) o).getValue())
+                        .collect(Collectors.toList())
+                        .toArray()
         );
     }
 
@@ -106,13 +112,17 @@ public class BEParserTest {
 
         byte[][] expected = new byte[][] {"a".getBytes(charset), "b".getBytes(charset)};
 
-        Map<String, Object> map = parser.readMap();
+        Map<String, BEObject> map = parser.readMap().getValue();
 
         Object o = map.get("spam");
         assertNotNull(o);
-        assertTrue(o instanceof List);
+        assertTrue(o instanceof BEList);
 
-        List<?> actual = (List<?>) o;
-        assertArrayEquals(expected, actual.toArray());
+        BEList actual = (BEList) o;
+        assertArrayEquals(expected,
+                actual.getValue().stream()
+                        .map(s -> ((BEString) s).getValue())
+                        .collect(Collectors.toList())
+                        .toArray());
     }
 }

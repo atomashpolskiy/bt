@@ -1,12 +1,15 @@
 package bt.bencoding;
 
+import bt.bencoding.model.BEMap;
+import bt.bencoding.model.BEObject;
+
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
-class BEMapBuilder extends BEPrefixedTypeBuilder<Map<String, Object>> {
+class BEMapBuilder extends BEPrefixedTypeBuilder<BEMap> {
 
-    private final Map<String, Object> map;
+    private final Map<String, BEObject> map;
     private BEStringBuilder keyBuilder;
     private BEObjectBuilder<?> valueBuilder;
 
@@ -31,7 +34,7 @@ class BEMapBuilder extends BEPrefixedTypeBuilder<Map<String, Object>> {
             }
         } else {
             if (!valueBuilder.accept(b)) {
-                map.put(new String(keyBuilder.build(), keyCharset), valueBuilder.build());
+                map.put(new String(keyBuilder.build().getValue(), keyCharset), valueBuilder.build());
                 keyBuilder = null;
                 valueBuilder = null;
                 return accept(b);
@@ -41,12 +44,12 @@ class BEMapBuilder extends BEPrefixedTypeBuilder<Map<String, Object>> {
     }
 
     @Override
-    protected Map<String, Object> doBuild() {
-        return map;
+    protected BEMap doBuild(byte[] content) {
+        return new BEMap(content, map);
     }
 
     @Override
-    public boolean acceptEOF() {
+    protected boolean acceptEOF() {
         return keyBuilder == null && valueBuilder == null;
     }
 

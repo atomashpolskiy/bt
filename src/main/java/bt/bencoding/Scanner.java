@@ -1,5 +1,7 @@
 package bt.bencoding;
 
+import bt.bencoding.model.BEObject;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -18,7 +20,7 @@ class Scanner {
         source = new MemoizingPushbackInputStream(in);
     }
 
-    <T> T readObject(BEObjectBuilder<T> builder) throws Exception {
+    <T extends BEObject> T readObject(BEObjectBuilder<T> builder) throws Exception {
 
         source.resetContents();
 

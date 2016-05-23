@@ -1,10 +1,13 @@
 package bt.bencoding;
 
+import bt.bencoding.model.BEString;
+
 import java.io.ByteArrayOutputStream;
 
-class BEStringBuilder implements BEObjectBuilder<byte[]> {
+class BEStringBuilder implements BEObjectBuilder<BEString> {
 
-    private static final char DELIMITER = ':';
+    static final char DELIMITER = ':';
+
     private ByteArrayOutputStream buf;
     private int length;
     private int bytesAcceptedCount;
@@ -42,14 +45,14 @@ class BEStringBuilder implements BEObjectBuilder<byte[]> {
     }
 
     @Override
-    public byte[] build() {
+    public BEString build() {
         if (!shouldReadBody) {
             throw new IllegalStateException("Can't build string: no content");
         }
         if (bytesAcceptedCount < length) {
             throw new IllegalStateException("Can't build string: insufficient content");
         }
-        return buf.toByteArray();
+        return new BEString(buf.toByteArray());
     }
 
     @Override

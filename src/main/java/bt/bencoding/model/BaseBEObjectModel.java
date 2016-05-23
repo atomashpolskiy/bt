@@ -19,6 +19,12 @@ public abstract class BaseBEObjectModel implements BEObjectModel {
 
         ValidationResult result = new ValidationResult();
         if (object != null) {
+
+            // unwrap BEObjects
+            if (object instanceof BEObject) {
+                object = ((BEObject) object).getValue();
+            }
+
             Class<?> javaType = TypesMapping.getJavaTypeForBEType(getType());
             if (!javaType.isAssignableFrom(object.getClass())) {
                 result.addMessage("Wrong type -- expected " + javaType.getName()

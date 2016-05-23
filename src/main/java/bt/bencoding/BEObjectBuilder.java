@@ -1,6 +1,8 @@
 package bt.bencoding;
 
-interface BEObjectBuilder<T> {
+import bt.bencoding.model.BEObject;
+
+interface BEObjectBuilder<T extends BEObject> {
     boolean accept(int b);
     T build();
     BEType getType();

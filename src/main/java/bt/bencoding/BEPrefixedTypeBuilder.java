@@ -1,9 +1,18 @@
 package bt.bencoding;
 
-abstract class BEPrefixedTypeBuilder<T> implements BEObjectBuilder<T> {
+import bt.bencoding.model.BEObject;
 
+import java.io.ByteArrayOutputStream;
+
+abstract class BEPrefixedTypeBuilder<T extends BEObject> implements BEObjectBuilder<T> {
+
+    private ByteArrayOutputStream buf;
     private boolean receivedPrefix;
     private boolean receivedEOF;
+
+    BEPrefixedTypeBuilder() {
+        buf = new ByteArrayOutputStream();
+    }
 
     @Override
     public final boolean accept(int b) {
@@ -11,6 +20,8 @@ abstract class BEPrefixedTypeBuilder<T> implements BEObjectBuilder<T> {
         if (receivedEOF) {
             return false;
         }
+
+        buf.write(b);
 
         if (!receivedPrefix) {
             BEType type = getType();
@@ -40,10 +51,10 @@ abstract class BEPrefixedTypeBuilder<T> implements BEObjectBuilder<T> {
         if (!receivedEOF) {
             throw new IllegalStateException("Can't build " + getType().name().toLowerCase() + " -- content was not terminated");
         }
-        return doBuild();
+        return doBuild(buf.toByteArray());
     }
 
     protected abstract boolean doAccept(int b);
-    protected abstract T doBuild();
+    protected abstract T doBuild(byte[] content);
     protected abstract boolean acceptEOF();
 }
