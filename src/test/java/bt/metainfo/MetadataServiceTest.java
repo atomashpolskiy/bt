@@ -14,7 +14,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-public class MetainfoServiceTest {
+public class MetadataServiceTest {
 
     private IMetadataService metadataService;
 
@@ -26,7 +26,7 @@ public class MetainfoServiceTest {
     @Test
     public void testBuildTorrent_SingleFile() throws Exception {
 
-        Torrent torrent = metadataService.fromUrl(MetainfoServiceTest.class.getResource("single_file.torrent"));
+        Torrent torrent = metadataService.fromUrl(MetadataServiceTest.class.getResource("single_file.torrent"));
 
         assertHasAttributes(torrent,
                 new URL("http://bt2.t-ru.org/ann"), "3du-Arch-Uni-i686.iso", 524288L, 1766, 925892608L);
@@ -37,7 +37,7 @@ public class MetainfoServiceTest {
     @Test
     public void testBuildTorrent_MultiFile() throws Exception {
 
-        Torrent torrent = metadataService.fromUrl(MetainfoServiceTest.class.getResource("multi_file.torrent"));
+        Torrent torrent = metadataService.fromUrl(MetadataServiceTest.class.getResource("multi_file.torrent"));
 
         assertHasAttributes(torrent,
                 new URL("http://bt3.t-ru.org/ann"), "VMWARE_ARCH", 4194304L, 1329, 0L);
