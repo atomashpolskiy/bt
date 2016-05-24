@@ -8,6 +8,7 @@ import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEString;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 
 public class BEParser implements AutoCloseable {
@@ -32,6 +33,16 @@ public class BEParser implements AutoCloseable {
         } catch (IOException e) {
             throw new BtException("Failed to open stream for URL: " + url, e);
         }
+        this.type = getTypeForPrefix((char) scanner.peek());
+    }
+
+    public BEParser(InputStream in) {
+
+        if (in == null) {
+            throw new NullPointerException("Input stream is null");
+        }
+
+        this.scanner = new Scanner(in);
         this.type = getTypeForPrefix((char) scanner.peek());
     }
 
