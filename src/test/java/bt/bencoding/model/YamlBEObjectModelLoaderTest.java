@@ -70,7 +70,7 @@ public class YamlBEObjectModelLoaderTest {
     public void testValidateTorrent_MutuallyExclusiveProperties() {
 
         Object torrentObject = readTorrent("single_file_exclusive_properties.torrent");
-        assertValidationFailure(model.validate(torrentObject), "properties are mutually exclusive: [length, files]");
+        assertValidationFailure(model.validate(torrentObject), "properties are mutually exclusive: [[length], [files]]");
     }
 
     private static void assertValidationSuccess(ValidationResult validationResult) {

@@ -6,10 +6,13 @@ import bt.bencoding.model.rule.RequiredRule;
 import bt.bencoding.model.rule.Rule;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static bt.bencoding.model.ClassUtil.cast;
@@ -89,9 +92,25 @@ public class JUMModelBuilder implements BEObjectModelBuilder<Map> {
                 })
                 .collect(Collectors.toList());
 
-        List<String> exclusives = castList(String.class, cast(List.class, EXCLUSIVES_KEY, map.get(EXCLUSIVES_KEY)));
+        @SuppressWarnings("unchecked")
+        List<Object> exclusives = (List<Object>) cast(List.class, EXCLUSIVES_KEY, map.get(EXCLUSIVES_KEY));
         if (exclusives != null) {
-            rules.add(new ExclusiveRule(exclusives, required));
+            Collection<Set<String>> exclusiveSets = exclusives.stream()
+                .map(item -> {
+                    if (item instanceof String) {
+                        return Collections.singleton((String) item);
+                    } else {
+                        try {
+                            List<String> strings = castList(String.class, cast(List.class, null, item));
+                            return new HashSet<>(strings);
+                        } catch (Exception e) {
+                            throw new BtException("Unexpected error", e);
+                        }
+                    }
+                })
+                .collect(Collectors.toList());
+
+            rules.add(new ExclusiveRule(exclusiveSets, required));
         } else {
             rules.add(new RequiredRule(required));
         }
