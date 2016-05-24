@@ -1,0 +1,16 @@
+--- # schema of a tracker response document
+- model:
+    type: dictionary
+    exclusives:
+      - "failure reason"
+      - ["warning message", interval, "min interval", "tracker id", complete, incomplete, peers]
+    entries:
+      - {key: "failure reason", type: string}
+      - {key: "warning message", type: string, required: false}
+      - {key: interval, type: integer}
+      - {key: "min interval", type: integer, required: false}
+      - {key: "tracker id", type: string, required: false}
+      - {key: complete, type: integer, required: false}
+      - {key: incomplete, type: integer, required: false}
+      - {key: peers, type: string}
+
