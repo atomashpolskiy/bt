@@ -1,13 +1,14 @@
 package bt.metainfo;
 
 import bt.BtException;
-import bt.CryptoUtil;
+import bt.service.CryptoUtil;
 import bt.bencoding.BEParser;
 import bt.bencoding.BEType;
 import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEObjectModel;
 import bt.bencoding.model.BEString;
+import bt.bencoding.model.ValidationResult;
 import bt.bencoding.model.YamlBEObjectModelLoader;
 
 import java.io.IOException;
@@ -16,6 +17,7 @@ import java.math.BigInteger;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -72,7 +74,13 @@ public class MetadataService implements IMetadataService {
 
         DefaultTorrent torrent = new DefaultTorrent();
         BEMap beMap = parser.readMap();
-        torrentModel.validate(beMap);
+
+        ValidationResult validationResult = torrentModel.validate(beMap);;
+        if (!validationResult.isSuccess()) {
+            throw new BtException("Validation failed for torrent metainfo: "
+                    + Arrays.toString(validationResult.getMessages().toArray()));
+        }
+
         Map<String, BEObject> root = beMap.getValue();
 
         try {

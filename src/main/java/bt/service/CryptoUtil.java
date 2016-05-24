@@ -1,4 +1,6 @@
-package bt;
+package bt.service;
+
+import bt.BtException;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
