@@ -1,6 +1,7 @@
 package bt.metainfo;
 
 import bt.BtException;
+import bt.Constants;
 
 import java.net.URL;
 import java.util.Arrays;
@@ -10,8 +11,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 public class DefaultTorrent implements Torrent {
-
-    private static final int HASH_LENGTH = 20;
 
     private URL trackerUrl;
     private byte[] infoHash;
@@ -46,7 +45,7 @@ public class DefaultTorrent implements Torrent {
 
         return () -> new Iterator<byte[]>() {
 
-            int read;
+            private int read;
 
             @Override
             public boolean hasNext() {
@@ -59,7 +58,7 @@ public class DefaultTorrent implements Torrent {
                     throw new NoSuchElementException();
                 }
                 int start = read;
-                read += HASH_LENGTH;
+                read += Constants.INFO_HASH_LENGTH;
                 return Arrays.copyOfRange(chunkHashes, start, read);
             }
         };
@@ -80,9 +79,9 @@ public class DefaultTorrent implements Torrent {
     }
 
     void setInfoHash(byte[] infoHash) {
-        if (infoHash.length != HASH_LENGTH) {
+        if (infoHash.length != Constants.INFO_HASH_LENGTH) {
             throw new BtException("Invalid info hash -- length (" + infoHash.length
-                    + ") is not equal to " + HASH_LENGTH);
+                    + ") is not equal to " + Constants.INFO_HASH_LENGTH);
         }
         this.infoHash = infoHash;
     }
@@ -113,9 +112,9 @@ public class DefaultTorrent implements Torrent {
     }
 
     public void setChunkHashes(byte[] chunkHashes) {
-        if (chunkHashes.length % HASH_LENGTH != 0) {
+        if (chunkHashes.length % Constants.INFO_HASH_LENGTH != 0) {
             throw new BtException("Invalid chunk hashes string -- length (" + chunkHashes.length
-                    + ") is not divisible by " + HASH_LENGTH);
+                    + ") is not divisible by " + Constants.INFO_HASH_LENGTH);
         }
         this.chunkHashes = chunkHashes;
     }

@@ -1,4 +1,4 @@
-package bt;
+package bt.net;
 
 import java.net.InetAddress;
 
