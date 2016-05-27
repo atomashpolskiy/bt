@@ -80,26 +80,31 @@ public class Protocol {
                     break;
                 }
                 case CHOKE: {
+                    assertHasLength(MessageType.CHOKE, data, 1);
                     messageHolder[0] = Choke.instance();
                     consumed = CHOKE.length;
                     break;
                 }
                 case UNCHOKE: {
+                    assertHasLength(MessageType.UNCHOKE, data, 1);
                     messageHolder[0] = Unchoke.instance();
                     consumed = UNCHOKE.length;
                     break;
                 }
                 case INTERESTED: {
+                    assertHasLength(MessageType.INTERESTED, data, 1);
                     messageHolder[0] = Interested.instance();
                     consumed = INTERESTED.length;
                     break;
                 }
                 case NOT_INTERESTED: {
+                    assertHasLength(MessageType.NOT_INTERESTED, data, 1);
                     messageHolder[0] = NotInterested.instance();
                     consumed = NOT_INTERESTED.length;
                     break;
                 }
                 case HAVE: {
+                    assertHasLength(MessageType.HAVE, data, 5);
                     consumed = decodeHave(messageHolder, data);
                     break;
                 }
@@ -108,6 +113,7 @@ public class Protocol {
                     break;
                 }
                 case REQUEST: {
+                    assertHasLength(MessageType.REQUEST, data, 13);
                     consumed = decodeRequest(messageHolder, data);
                     break;
                 }
@@ -116,10 +122,12 @@ public class Protocol {
                     break;
                 }
                 case CANCEL: {
+                    assertHasLength(MessageType.CANCEL, data, 13);
                     consumed = decodeCancel(messageHolder, data);
                     break;
                 }
                 case PORT: {
+                    assertHasLength(MessageType.PORT, data, 3);
                     consumed = decodePort(messageHolder, data);
                     break;
                 }
@@ -132,6 +140,23 @@ public class Protocol {
         return consumed;
     }
 
+    private static void assertHasLength(MessageType type, byte[] data, int expectedLength) throws InvalidMessageException {
+
+        if (data == null) {
+            // algorithm malfunction
+            throw new NullPointerException("Failed to read length: data is null");
+        }
+
+        if (data.length < Integer.BYTES) {
+            throw new InvalidMessageException("Failed to read length: insufficient bytes");
+        }
+
+        int declaredLength = getInt(data, 0);
+        if (declaredLength != expectedLength) {
+            throw new InvalidMessageException("Unexpected declared length for " + type.name() + ": " + declaredLength);
+        }
+    }
+
 
     /**
      * @return Message type or @{code null} if the data is insufficient
@@ -142,48 +167,56 @@ public class Protocol {
         if (prefix.length == 0) {
             return null;
 
-        } else if (prefix.length == 1) {
-            return (prefix[0] == PROTOCOL_NAME.length()) ? MessageType.HANDSHAKE : null;
+        } else {
+            if (prefix[0] == PROTOCOL_NAME.length()) {
+                return MessageType.HANDSHAKE;
+            }
 
-        } else if (prefix.length == MESSAGE_LENGTH_PREFIX_SIZE) {
-            int length = getInt(prefix, 0);
-            return length == 0? MessageType.KEEPALIVE : null;
+            if (prefix.length >= MESSAGE_LENGTH_PREFIX_SIZE) {
 
-        } else if (prefix.length >= MESSAGE_PREFIX_SIZE) {
-            switch (prefix[MESSAGE_LENGTH_PREFIX_SIZE]) {
-                case CHOKE_ID: {
-                    return MessageType.CHOKE;
+                int length = getInt(prefix, 0);
+                if (length == 0) {
+                    return MessageType.KEEPALIVE;
                 }
-                case UNCHOKE_ID: {
-                    return MessageType.UNCHOKE;
-                }
-                case INTERESTED_ID: {
-                    return MessageType.INTERESTED;
-                }
-                case NOT_INTERESTED_ID: {
-                    return MessageType.NOT_INTERESTED;
-                }
-                case HAVE_ID: {
-                    return MessageType.HAVE;
-                }
-                case BITFIELD_ID: {
-                    return MessageType.BITFIELD;
-                }
-                case REQUEST_ID: {
-                    return MessageType.REQUEST;
-                }
-                case PIECE_ID: {
-                    return MessageType.PIECE;
-                }
-                case CANCEL_ID: {
-                    return MessageType.CANCEL;
-                }
-                case PORT_ID: {
-                    return MessageType.PORT;
-                }
-                default: {
-                    throw new InvalidMessageException("Invalid message prefix (" + MESSAGE_PREFIX_SIZE + " first bytes): " +
-                            Arrays.toString(Arrays.copyOfRange(prefix, 0, MESSAGE_PREFIX_SIZE)));
+
+                if (prefix.length >= MESSAGE_PREFIX_SIZE) {
+                    switch (prefix[MESSAGE_LENGTH_PREFIX_SIZE]) {
+                        case CHOKE_ID: {
+                            return MessageType.CHOKE;
+                        }
+                        case UNCHOKE_ID: {
+                            return MessageType.UNCHOKE;
+                        }
+                        case INTERESTED_ID: {
+                            return MessageType.INTERESTED;
+                        }
+                        case NOT_INTERESTED_ID: {
+                            return MessageType.NOT_INTERESTED;
+                        }
+                        case HAVE_ID: {
+                            return MessageType.HAVE;
+                        }
+                        case BITFIELD_ID: {
+                            return MessageType.BITFIELD;
+                        }
+                        case REQUEST_ID: {
+                            return MessageType.REQUEST;
+                        }
+                        case PIECE_ID: {
+                            return MessageType.PIECE;
+                        }
+                        case CANCEL_ID: {
+                            return MessageType.CANCEL;
+                        }
+                        case PORT_ID: {
+                            return MessageType.PORT;
+                        }
+                        default: {
+                            throw new InvalidMessageException(
+                                    "Invalid message prefix (" + MESSAGE_PREFIX_SIZE + " first bytes): " +
+                                            Arrays.toString(Arrays.copyOfRange(prefix, 0, MESSAGE_PREFIX_SIZE)));
+                        }
+                    }
                 }
             }
         }
@@ -292,8 +325,9 @@ public class Protocol {
         int consumed = 0;
         int offset = HANDSHAKE_PREFIX.length;
         int length = Constants.INFO_HASH_LENGTH + Constants.PEER_ID_LENGTH;
+        int limit = offset + length;
 
-        if (data.length >= offset + length) {
+        if (data.length >= limit) {
 
             byte[] protocolNameBytes = Arrays.copyOfRange(data, 1, 1 + PROTOCOL_NAME.length());
             if (!Arrays.equals(PROTOCOL_NAME_BYTES, protocolNameBytes)) {
@@ -302,10 +336,10 @@ public class Protocol {
             }
 
             byte[] infoHash = Arrays.copyOfRange(data, offset, offset + Constants.INFO_HASH_LENGTH);
-            byte[] peerId = Arrays.copyOfRange(data, offset + Constants.INFO_HASH_LENGTH, length);
+            byte[] peerId = Arrays.copyOfRange(data, offset + Constants.INFO_HASH_LENGTH, limit);
 
             messageHolder[0] = new Handshake(infoHash, peerId);
-            consumed = offset + length;
+            consumed = limit;
         }
 
         return consumed;
@@ -349,7 +383,7 @@ public class Protocol {
         return message;
     }
 
-    private static int decodeHave(Message[] messageHolder, byte[] data) {
+    private static int decodeHave(Message[] messageHolder, byte[] data) throws InvalidMessageException {
 
         int consumed = 0;
         int offset = HAVE_PREFIX.length;
@@ -380,11 +414,12 @@ public class Protocol {
         int consumed = 0;
         int offset = MESSAGE_PREFIX_SIZE;
         int length = getInt(data, 0);
+        int limit = offset + length - MESSAGE_TYPE_SIZE;
 
-        if (data.length >= offset + length) {
-            byte[] bitfield = Arrays.copyOfRange(data, offset, length);
+        if (data.length >= limit) {
+            byte[] bitfield = Arrays.copyOfRange(data, offset, limit);
             messageHolder[0] = new Bitfield(bitfield);
-            consumed = offset + length;
+            consumed = limit;
         }
 
         return consumed;
@@ -407,7 +442,7 @@ public class Protocol {
         return message;
     }
 
-    private static int decodeRequest(Message[] messageHolder, byte[] data) {
+    private static int decodeRequest(Message[] messageHolder, byte[] data) throws InvalidMessageException {
 
         int consumed = 0;
         int offset = REQUEST_PREFIX.length;
@@ -447,20 +482,21 @@ public class Protocol {
         return message;
     }
 
-    private static int decodePiece(Message[] messageHolder, byte[] data) {
+    private static int decodePiece(Message[] messageHolder, byte[] data) throws InvalidMessageException {
 
         int consumed = 0;
         int offset = MESSAGE_PREFIX_SIZE;
         int length = getInt(data, 0);
+        int limit = offset + length - MESSAGE_TYPE_SIZE;
 
-        if (data.length >= offset + length) {
+        if (data.length >= limit) {
 
             int pieceIndex = getInt(data, offset);
             int blockOffset = getInt(data, offset + Integer.BYTES);
-            byte[] block = Arrays.copyOfRange(data, offset + Integer.BYTES * 2, offset + length);
+            byte[] block = Arrays.copyOfRange(data, offset + Integer.BYTES * 2, limit);
 
             messageHolder[0] = new Piece(pieceIndex, blockOffset, block);
-            consumed = offset + length;
+            consumed = limit;
         }
 
         return consumed;
@@ -483,7 +519,7 @@ public class Protocol {
         return message;
     }
 
-    private static int decodeCancel(Message[] messageHolder, byte[] data) {
+    private static int decodeCancel(Message[] messageHolder, byte[] data) throws InvalidMessageException {
 
         int consumed = 0;
         int offset = CANCEL_PREFIX.length;
@@ -516,7 +552,7 @@ public class Protocol {
         return message;
     }
 
-    private static int decodePort(Message[] messageHolder, byte[] data) {
+    private static int decodePort(Message[] messageHolder, byte[] data) throws InvalidMessageException {
 
         int consumed = 0;
         int offset = PORT_PREFIX.length;
