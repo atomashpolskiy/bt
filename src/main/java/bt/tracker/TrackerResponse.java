@@ -1,7 +1,7 @@
 package bt.tracker;
 
 import bt.BtException;
-import bt.net.DefaultPeer;
+import bt.net.InetPeer;
 import bt.net.Peer;
 
 import java.net.InetAddress;
@@ -89,7 +89,7 @@ public class TrackerResponse {
                 from = to; to = i = i + PORT_LENGTH;
                 port = (((peers[from] << 8) & 0xFF00) + (peers[to - 1] & 0x00FF));
 
-                return new DefaultPeer(inetAddress, port);
+                return new InetPeer(inetAddress, port);
             }
         };
     }

@@ -1,6 +1,6 @@
 package bt.tracker;
 
-import bt.net.DefaultPeer;
+import bt.net.InetPeer;
 import bt.net.Peer;
 import org.junit.Before;
 import org.junit.Test;
@@ -79,7 +79,7 @@ public class TrackerResponseHandlerTest {
             throw new RuntimeException("Unexpected error", e);
         }
 
-        return new DefaultPeer(inetAddress, port);
+        return new InetPeer(inetAddress, port);
     }
 
     @Test

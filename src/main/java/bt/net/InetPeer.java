@@ -5,7 +5,7 @@ import bt.BtException;
 import java.net.InetAddress;
 import java.util.Arrays;
 
-public class DefaultPeer implements Peer {
+public class InetPeer implements Peer {
 
     private InetAddress inetAddress;
     private int port;
@@ -13,11 +13,11 @@ public class DefaultPeer implements Peer {
 
     private final int hash;
 
-    public DefaultPeer(InetAddress inetAddress, int port) {
+    public InetPeer(InetAddress inetAddress, int port) {
         this(inetAddress, port, null);
     }
 
-    public DefaultPeer(InetAddress inetAddress, int port, byte[] peerId) {
+    public InetPeer(InetAddress inetAddress, int port, byte[] peerId) {
 
         if (inetAddress == null || port < 0) {
             throw new BtException("Invalid arguments (" + inetAddress + ":" + port + ")");
@@ -53,6 +53,10 @@ public class DefaultPeer implements Peer {
     @Override
     public boolean equals(Object object) {
 
+        if (object == this) {
+            return true;
+        }
+
         if (object == null || !(object instanceof Peer)) {
             return false;
         }
@@ -61,5 +65,14 @@ public class DefaultPeer implements Peer {
         return (port == that.getPort())
                 && inetAddress.equals(that.getInetAddress())
                 && Arrays.equals(peerId, that.getPeerId());
+    }
+
+    @Override
+    public String toString() {
+        String description = inetAddress.toString() + ":" + port;
+        if (peerId != null) {
+            description += " (ID: " + Arrays.toString(peerId) + ")";
+        }
+        return description;
     }
 }
