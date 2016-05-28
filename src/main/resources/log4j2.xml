@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="warn">
+    <appenders>
+        <Console name="A2" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%d{dd/MMM/yyyy:HH:mm:ss,SSS}] %t %X %-5p %c{1}: %m%n%ex"/>
+        </Console>
+        <Async name="A1" bufferSize="1000">
+            <appender-ref ref="A2"/>
+        </Async>
+    </appenders>
+
+    <loggers>
+        <logger name="STDOUT" level="trace" additivity="false">
+            <appender-ref ref="A1"/>
+        </logger>
+        <logger name="STDERR" level="trace" additivity="false">
+            <appender-ref ref="A1"/>
+        </logger>
+
+        <logger name="bt" level="debug" additivity="false">
+            <appender-ref ref="A1"/>
+        </logger>
+
+        <root level="warn">
+            <appender-ref ref="A1"/>
+        </root>
+    </loggers>
+</configuration>

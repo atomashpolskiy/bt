@@ -18,6 +18,8 @@
         <snakeyaml-version>1.17</snakeyaml-version>
         <httpclient-version>4.5.2</httpclient-version>
         <slf4j-version>1.7.21</slf4j-version>
+        <log4j-version>2.4.1</log4j-version>
+        <junit-version>4.12</junit-version>
     </properties>
 
     <url>https://github.com/atomashpolskiy/bt</url>
@@ -59,9 +61,19 @@
                 <version>${slf4j-version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>${log4j-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-slf4j-impl</artifactId>
+                <version>${log4j-version}</version>
+            </dependency>
+            <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
-                <version>4.12</version>
+                <version>${junit-version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -83,12 +95,21 @@
             <artifactId>slf4j-api</artifactId>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <scope>compile</scope>
+        </dependency>
 
         <!-- test dependencies -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
             <scope>test</scope>
         </dependency>
         <dependency>
