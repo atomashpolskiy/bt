@@ -16,4 +16,9 @@ public class Bitfield implements Message {
     public byte[] getBitfield() {
         return bitfield;
     }
+
+    @Override
+    public String toString() {
+        return "[" + getType().name() + "] bitfield {" + bitfield.length + " bytes}";
+    }
 }

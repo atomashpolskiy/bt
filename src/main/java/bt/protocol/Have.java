@@ -21,4 +21,9 @@ public class Have implements Message {
     public int getPieceIndex() {
         return pieceIndex;
     }
+
+    @Override
+    public String toString() {
+        return "[" + getType().name() + "] piece index {" + pieceIndex + "}";
+    }
 }

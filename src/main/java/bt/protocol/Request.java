@@ -34,4 +34,10 @@ public class Request implements Message {
     public int getLength() {
         return length;
     }
+
+    @Override
+    public String toString() {
+        return "[" + getType().name() + "] piece index {" + pieceIndex + "}, offset {" + offset +
+                "}, length {" + length + "}";
+    }
 }

@@ -15,4 +15,9 @@ public class KeepAlive implements Message {
     static KeepAlive instance() {
         return instance;
     }
+
+    @Override
+    public String toString() {
+        return "[" + getType().name() + "]";
+    }
 }

@@ -7,7 +7,7 @@ public class Handshake implements Message {
     private byte[] infoHash;
     private byte[] peerId;
 
-    Handshake(byte[] infoHash, byte[] peerId) throws InvalidMessageException {
+    public Handshake(byte[] infoHash, byte[] peerId) throws InvalidMessageException {
 
         if (infoHash.length != Constants.INFO_HASH_LENGTH || peerId.length != Constants.PEER_ID_LENGTH) {
             throw new InvalidMessageException("Illegal arguments size: info hash (" +
@@ -28,5 +28,10 @@ public class Handshake implements Message {
 
     public byte[] getPeerId() {
         return peerId;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + getType().name() + "]";
     }
 }

@@ -15,4 +15,9 @@ public class Unchoke implements Message {
     static Unchoke instance() {
         return instance;
     }
+
+    @Override
+    public String toString() {
+        return "[" + getType().name() + "]";
+    }
 }

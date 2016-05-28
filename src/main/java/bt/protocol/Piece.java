@@ -33,4 +33,10 @@ public class Piece implements Message {
     public byte[] getBlock() {
         return block;
     }
+
+    @Override
+    public String toString() {
+        return "[" + getType().name() + "] piece index {" + pieceIndex + "}, offset {" + offset +
+                "}, block {" + block.length + " bytes}";
+    }
 }

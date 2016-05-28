@@ -15,4 +15,9 @@ public class NotInterested implements Message {
     static NotInterested instance() {
         return instance;
     }
+
+    @Override
+    public String toString() {
+        return "[" + getType().name() + "]";
+    }
 }

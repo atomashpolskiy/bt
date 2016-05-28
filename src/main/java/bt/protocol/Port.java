@@ -21,4 +21,9 @@ public class Port implements Message {
     public int getPort() {
         return port;
     }
+
+    @Override
+    public String toString() {
+        return "[" + getType().name() + "] port {" + port + "}";
+    }
 }
