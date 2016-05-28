@@ -15,6 +15,8 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,6 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class HttpTracker implements Tracker {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpTracker.class);
 
     private URI baseUri;
     private IIdService idService;
@@ -100,6 +104,10 @@ public class HttpTracker implements Tracker {
 
         HttpGet request = new HttpGet(requestUri);
         try {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Executing tracker HTTP request of type " + eventType.name() +
+                        "; request URL: " + requestUri);
+            }
             return httpClient.execute(request, httpResponseHandler);
         } catch (IOException e) {
             throw new BtException("Failed to execute tracker request", e);
