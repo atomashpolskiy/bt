@@ -6,11 +6,17 @@ public class IdService implements IIdService {
 
     private static final int ID_SIZE = 20;
 
-    @Override
-    public byte[] getPeerId() {
+    private final byte[] peerId;
+
+    public IdService() {
         byte[] peerId = new byte[ID_SIZE];
         Random random = new Random(System.currentTimeMillis());
         random.nextBytes(peerId);
+        this.peerId = peerId;
+    }
+
+    @Override
+    public byte[] getPeerId() {
         return peerId;
     }
 
