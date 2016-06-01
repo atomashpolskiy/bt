@@ -2,9 +2,9 @@ package bt.data;
 
 public interface DataAccess {
 
-    byte[] readBlock(int offset, int length);
+    byte[] readBlock(long offset, int length);
 
-    void writeBlock(byte[] block, int offset);
+    void writeBlock(byte[] block, long offset);
 
     long size();
 }

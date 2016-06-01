@@ -109,7 +109,7 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
                     long limitInCurrentFile = chunkSize - (totalSizeOfFiles - fileSize);
 
                     chunkDescriptors.add(new ChunkDescriptor(
-                            Arrays.asList(Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1)),
+                            Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1),
                             chunkOffset, limitInCurrentFile, chunkHashes.next(), configurationService.getTransferBlockSize()
                     ));
 
