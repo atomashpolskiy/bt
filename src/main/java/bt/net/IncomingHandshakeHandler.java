@@ -8,7 +8,7 @@ import bt.protocol.MessageType;
 import bt.service.IConfigurationService;
 import bt.service.IPeerRegistry;
 import bt.service.ITorrentRegistry;
-import bt.service.TorrentDescriptor;
+import bt.torrent.ITorrentDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +36,7 @@ public class IncomingHandshakeHandler implements HandshakeHandler {
 
                 Handshake handshake = (Handshake) firstMessage;
                 Torrent torrent = torrentRegistry.getTorrent(handshake.getInfoHash());
-                TorrentDescriptor descriptor = torrentRegistry.getDescriptor(torrent);
+                ITorrentDescriptor descriptor = torrentRegistry.getDescriptor(torrent);
                 if (descriptor.isActive()) {
                     try {
                         byte[] infoHash = torrent.getInfoHash();

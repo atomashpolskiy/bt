@@ -1,10 +1,11 @@
 package bt.service;
 
 import bt.metainfo.Torrent;
+import bt.torrent.ITorrentDescriptor;
 
 public interface ITorrentRegistry {
 
     Torrent getTorrent(byte[] infoHash);
 
-    TorrentDescriptor getDescriptor(Torrent torrent);
+    ITorrentDescriptor getDescriptor(Torrent torrent);
 }
