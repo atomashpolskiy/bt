@@ -4,7 +4,7 @@ import bt.BtException;
 
 import java.util.List;
 
-class ChunkDescriptor implements IChunkDescriptor {
+public class ChunkDescriptor implements IChunkDescriptor {
 
     private DataStatus status;
     private List<DataAccess> files;
