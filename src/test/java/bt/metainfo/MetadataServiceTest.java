@@ -12,7 +12,6 @@ import java.util.Arrays;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
 public class MetadataServiceTest {
 
@@ -31,7 +30,10 @@ public class MetadataServiceTest {
         assertHasAttributes(torrent,
                 new URL("http://bt2.t-ru.org/ann"), "3du-Arch-Uni-i686.iso", 524288L, 1766, 925892608L);
 
-        assertNull(torrent.getFiles());
+        assertNotNull(torrent.getFiles());
+        assertEquals(1, torrent.getFiles().size());
+
+        // TODO: add check for the torrent file
     }
 
     @Test
