@@ -254,18 +254,7 @@ public class ChunkDescriptor implements IChunkDescriptor {
 
                 DataAccess file = files[i];
                 off = (i == firstRequestedFileIndex) ? offsetInFirstRequestedFile : 0;
-
-                if (i == lastRequestedFileIndex) {
-                    lim = (int) limitInLastRequestedFile;
-
-                } else {
-
-                    long fileSize = file.size();
-                    if (fileSize > Integer.MAX_VALUE) {
-                        throw new BtException("Unexpected file size -- insufficient data in block");
-                    }
-                    lim = (int) fileSize;
-                }
+                lim = (i == lastRequestedFileIndex) ? limitInLastRequestedFile : file.size();
 
                 visitor.visitFile(file, off, lim);
             }
