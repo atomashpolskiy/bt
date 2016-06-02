@@ -1,15 +1,10 @@
 package bt.data;
 
 import bt.data.file.FileSystemDataAccessFactory;
-import bt.metainfo.MetadataService;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
-import bt.service.AdhocTorrentRegistry;
-import bt.service.ConfigurationService;
 import bt.service.CryptoUtil;
-import bt.service.ITorrentRegistry;
-import bt.torrent.ITorrentDescriptor;
-import bt.tracker.TrackerService;
+import bt.service.IConfigurationService;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -30,16 +25,18 @@ import static org.mockito.Mockito.when;
 public class DataDescriptorTest {
 
     private static File rootDirectory;
-    private static ITorrentRegistry torrentRegistry;
+
+    private static DataAccessFactory dataAccessFactory;
+    private static IConfigurationService configurationService;
 
     @BeforeClass
     public static void setUp() {
-
         rootDirectory = new File("target/rt");
 
-        torrentRegistry = new AdhocTorrentRegistry(
-                new MetadataService(), new TrackerService(), new ConfigurationService(),
-                new FileSystemDataAccessFactory(rootDirectory));
+        dataAccessFactory = new FileSystemDataAccessFactory(rootDirectory);
+
+        configurationService = mock(IConfigurationService.class);
+        when(configurationService.getTransferBlockSize()).thenReturn((long) (2 << 13));
     }
 
     private byte[] SINGLE_FILE = new byte[] {
@@ -61,8 +58,8 @@ public class DataDescriptorTest {
                 new byte[][] {new byte[20],new byte[20],new byte[20],new byte[20]},
                 mockTorrentFile(fileSize, fileName));
 
-        ITorrentDescriptor descriptor = torrentRegistry.getDescriptor(torrent);
-        List<IChunkDescriptor> chunks = descriptor.getDataDescriptor().getChunkDescriptors();
+        IDataDescriptor descriptor = new DataDescriptor(dataAccessFactory, configurationService, torrent);
+        List<IChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
         assertEquals(4, chunks.size());
 
@@ -144,8 +141,8 @@ public class DataDescriptorTest {
                 mockTorrentFile(fileSize3, fileName3), mockTorrentFile(fileSize4, fileName4),
                 mockTorrentFile(fileSize5, fileName5), mockTorrentFile(fileSize6, fileName6));
 
-        ITorrentDescriptor descriptor = torrentRegistry.getDescriptor(torrent);
-        List<IChunkDescriptor> chunks = descriptor.getDataDescriptor().getChunkDescriptors();
+        IDataDescriptor descriptor = new DataDescriptor(dataAccessFactory, configurationService, torrent);
+        List<IChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
         assertEquals(6, chunks.size());
 
