@@ -3,6 +3,7 @@ package bt.data;
 import bt.BtException;
 
 import java.util.Arrays;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class ChunkDescriptor implements IChunkDescriptor {
 
@@ -12,6 +13,8 @@ public class ChunkDescriptor implements IChunkDescriptor {
     private long offsetInFirstChunkFile;
     private long limitInLastChunkFile;
     private long blockSize;
+
+    private ReentrantReadWriteLock readWriteLock;
 
     /**
      * Hash of this chunk's contents
@@ -63,6 +66,9 @@ public class ChunkDescriptor implements IChunkDescriptor {
         this.blockSize = blockSize;
         this.checksum = checksum;
 
+        // using fair lock for now
+        readWriteLock = new ReentrantReadWriteLock(true);
+
         long size;
         if (files.length == 1) {
             size = limit - offset;
@@ -100,6 +106,10 @@ public class ChunkDescriptor implements IChunkDescriptor {
         return status;
     }
 
+    /**
+     * Blocks current thread if there are concurrent write operations in progress.
+     * Blocks all concurrent write operations.
+     */
     @Override
     public byte[] readBlock(long offset, int length) {
 
@@ -107,34 +117,43 @@ public class ChunkDescriptor implements IChunkDescriptor {
             return new byte[]{};
         }
 
+        Range range = getRange(offset, length);
         byte[] block = new byte[length];
 
-        Range range = getRange(offset, length);
-        range.visitFiles(new RangeFileVisitor() {
+        readWriteLock.readLock().lock();
+        try {
+            range.visitFiles(new RangeFileVisitor() {
 
-            int offsetInBlock = 0;
+                int offsetInBlock = 0;
 
-            @Override
-            public void visitFile(DataAccess file, long off, long lim) {
+                @Override
+                public void visitFile(DataAccess file, long off, long lim) {
 
-                if (lim > Integer.MAX_VALUE) {
-                    throw new BtException("Too much data requested");
+                    if (lim > Integer.MAX_VALUE) {
+                        throw new BtException("Too much data requested");
+                    }
+
+                    byte[] bs = file.readBlock(off, (int) lim);
+                    if (((long) offsetInBlock) + bs.length > Integer.MAX_VALUE) {
+                        // overflow -- isn't supposed to happen unless the algorithm in range is incorrect
+                        throw new BtException("Integer overflow while constructing block");
+                    }
+
+                    System.arraycopy(bs, 0, block, offsetInBlock, bs.length);
+                    offsetInBlock += bs.length;
                 }
-
-                byte[] bs = file.readBlock(off, (int) lim);
-                if (((long) offsetInBlock) + bs.length > Integer.MAX_VALUE) {
-                    // overflow -- isn't supposed to happen unless the algorithm in range is incorrect
-                    throw new BtException("Integer overflow while constructing block");
-                }
-
-                System.arraycopy(bs, 0, block, offsetInBlock, bs.length);
-                offsetInBlock += bs.length;
-            }
-        });
+            });
+        } finally {
+            readWriteLock.readLock().unlock();
+        }
 
         return block;
     }
 
+    /**
+     * Blocks current thread if there are concurrent read operations in progress.
+     * Block all concurrent read operations.
+     */
     @Override
     public void writeBlock(byte[] block, long offset) {
 
@@ -143,24 +162,30 @@ public class ChunkDescriptor implements IChunkDescriptor {
         }
 
         Range range = getRange(offset, block.length);
-        range.visitFiles(new RangeFileVisitor() {
 
-            int offsetInBlock = 0;
-            int limitInBlock;
+        readWriteLock.writeLock().lock();
+        try {
+            range.visitFiles(new RangeFileVisitor() {
 
-            @Override
-            public void visitFile(DataAccess file, long off, long lim) {
+                int offsetInBlock = 0;
+                int limitInBlock;
 
-                long fileSize = lim - off;
-                if (fileSize > Integer.MAX_VALUE) {
-                    throw new BtException("Unexpected file size -- insufficient data in block");
+                @Override
+                public void visitFile(DataAccess file, long off, long lim) {
+
+                    long fileSize = lim - off;
+                    if (fileSize > Integer.MAX_VALUE) {
+                        throw new BtException("Unexpected file size -- insufficient data in block");
+                    }
+
+                    limitInBlock = offsetInBlock + (int) fileSize;
+                    file.writeBlock(Arrays.copyOfRange(block, offsetInBlock, limitInBlock), off);
+                    offsetInBlock = limitInBlock;
                 }
-
-                limitInBlock = offsetInBlock + (int) fileSize;
-                file.writeBlock(Arrays.copyOfRange(block, offsetInBlock, limitInBlock), off);
-                offsetInBlock = limitInBlock;
-            }
-        });
+            });
+        } finally {
+            readWriteLock.writeLock().unlock();
+        }
     }
 
     private Range getRange(long offset, int length) {
