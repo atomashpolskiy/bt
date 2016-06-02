@@ -13,7 +13,14 @@ public class ChunkDescriptor implements IChunkDescriptor {
     private long limitInLastChunkFile;
     private long blockSize;
 
+    /**
+     * Hash of this chunk's contents
+     */
     private byte[] checksum;
+
+    /**
+     * Bitmask of blocks in this chunk: 1 for complete, 0 for incomplete
+     */
     private byte[] bitfield;
 
     /**
@@ -83,6 +90,12 @@ public class ChunkDescriptor implements IChunkDescriptor {
     }
 
     @Override
+    public boolean verify() {
+        // TODO: Implement me
+        return false;
+    }
+
+    @Override
     public DataStatus getStatus() {
         return status;
     }
@@ -90,53 +103,34 @@ public class ChunkDescriptor implements IChunkDescriptor {
     @Override
     public byte[] readBlock(long offset, int length) {
 
-        // parameters for read requests are arbitrary
-
         if (length == 0) {
             return new byte[]{};
         }
 
-        Object[] addresses = getRangeAddresses(offset, length);
-        int firstRequestedFileIndex = (int) addresses[0],
-            lastRequestedFileIndex = (int) addresses[2];
-
-        long offsetInFirstRequestedFile = (long) addresses[1],
-             limitInLastRequestedFile = (long) addresses[3];
-
-        /* access firstRequestedFile[offsetInFirstRequestedFile]...lastRequestedFile[limitInLastRequestedFile] */
-
         byte[] block = new byte[length];
-        byte[] bs;
-        long off;
-        int lim;
-        int dest = 0;
 
-        for (int i = firstRequestedFileIndex; i <= lastRequestedFileIndex; i++) {
+        Range range = getRange(offset, length);
+        range.visitFiles(new RangeFileVisitor() {
 
-            // collect data from the files
-            DataAccess file = files[i];
-            off = (i == firstRequestedFileIndex) ? offsetInFirstRequestedFile : 0;
+            int offsetInBlock = 0;
 
-            if (i == lastRequestedFileIndex) {
-                lim = (int) limitInLastRequestedFile;
+            @Override
+            public void visitFile(DataAccess file, long off, long lim) {
 
-            } else {
-
-                long fileSize = file.size();
-                if (fileSize > Integer.MAX_VALUE) {
+                if (lim > Integer.MAX_VALUE) {
                     throw new BtException("Too much data requested");
                 }
-                lim = (int) fileSize;
-            }
 
-            bs = file.readBlock(off, lim);
-            if (((long) dest) + bs.length > Integer.MAX_VALUE) {
-                // overflow -- isn't supposed to happen unless the algorithm above is incorrect
-                throw new BtException("Integer overflow while constructing block");
+                byte[] bs = file.readBlock(off, (int) lim);
+                if (((long) offsetInBlock) + bs.length > Integer.MAX_VALUE) {
+                    // overflow -- isn't supposed to happen unless the algorithm in range is incorrect
+                    throw new BtException("Integer overflow while constructing block");
+                }
+
+                System.arraycopy(bs, 0, block, offsetInBlock, bs.length);
+                offsetInBlock += bs.length;
             }
-            System.arraycopy(bs, 0, block, dest, bs.length);
-            dest += bs.length;
-        }
+        });
 
         return block;
     }
@@ -148,46 +142,28 @@ public class ChunkDescriptor implements IChunkDescriptor {
             return;
         }
 
-        Object[] addresses = getRangeAddresses(offset, block.length);
-        int firstRequestedFileIndex = (int) addresses[0],
-            lastRequestedFileIndex = (int) addresses[2];
+        Range range = getRange(offset, block.length);
+        range.visitFiles(new RangeFileVisitor() {
 
-        long offsetInFirstRequestedFile = (long) addresses[1],
-             limitInLastRequestedFile = (long) addresses[3];
+            int offsetInBlock = 0;
+            int limitInBlock;
 
-        /* access firstRequestedFile[offsetInFirstRequestedFile]...lastRequestedFile[limitInLastRequestedFile] */
+            @Override
+            public void visitFile(DataAccess file, long off, long lim) {
 
-        long off;
-        int lim;
-        int offsetInBlock = 0;
-        int limitInBlock;
-
-        for (int i = firstRequestedFileIndex; i <= lastRequestedFileIndex; i++) {
-
-            DataAccess file = files[i];
-            off = (i == firstRequestedFileIndex) ? offsetInFirstRequestedFile : 0;
-
-            if (i == lastRequestedFileIndex) {
-                lim = (int) limitInLastRequestedFile;
-
-            } else {
-
-                long fileSize = file.size();
+                long fileSize = lim - off;
                 if (fileSize > Integer.MAX_VALUE) {
                     throw new BtException("Unexpected file size -- insufficient data in block");
                 }
-                lim = (int) fileSize;
+
+                limitInBlock = offsetInBlock + (int) fileSize;
+                file.writeBlock(Arrays.copyOfRange(block, offsetInBlock, limitInBlock), off);
+                offsetInBlock = limitInBlock;
             }
-
-            limitInBlock = (int) (offsetInBlock + (lim - off));
-
-            file.writeBlock(Arrays.copyOfRange(block, offsetInBlock, limitInBlock), off);
-            offsetInBlock = limitInBlock;
-        }
+        });
     }
 
-    // temporary
-    private Object[] getRangeAddresses(long offset, int length) {
+    private Range getRange(long offset, int length) {
 
         if (offset < 0 || length < 0) {
             throw new BtException("Illegal arguments: offset (" + offset + "), length (" + length + ")");
@@ -249,14 +225,64 @@ public class ChunkDescriptor implements IChunkDescriptor {
             throw new BtException("Too much data requested");
         }
 
-        return new Object[] {firstRequestedFileIndex, offsetInFirstRequestedFile,
-                lastRequestedFileIndex, limitInLastRequestedFile };
+        return new Range(firstRequestedFileIndex, offsetInFirstRequestedFile,
+                lastRequestedFileIndex, limitInLastRequestedFile);
     }
 
-    @Override
-    public boolean verify() {
-        // TODO: Implement me
-        return false;
+    private class Range {
+
+        private int firstRequestedFileIndex;
+        private int lastRequestedFileIndex;
+
+        private long offsetInFirstRequestedFile;
+        private long limitInLastRequestedFile;
+
+        Range(int firstRequestedFileIndex, long offsetInFirstRequestedFile,
+                              int lastRequestedFileIndex, long limitInLastRequestedFile) {
+
+            this.firstRequestedFileIndex = firstRequestedFileIndex;
+            this.offsetInFirstRequestedFile = offsetInFirstRequestedFile;
+            this.lastRequestedFileIndex = lastRequestedFileIndex;
+            this.limitInLastRequestedFile = limitInLastRequestedFile;
+        }
+
+        void visitFiles(RangeFileVisitor visitor) {
+
+            long off, lim;
+
+            for (int i = firstRequestedFileIndex; i <= lastRequestedFileIndex; i++) {
+
+                DataAccess file = files[i];
+                off = (i == firstRequestedFileIndex) ? offsetInFirstRequestedFile : 0;
+
+                if (i == lastRequestedFileIndex) {
+                    lim = (int) limitInLastRequestedFile;
+
+                } else {
+
+                    long fileSize = file.size();
+                    if (fileSize > Integer.MAX_VALUE) {
+                        throw new BtException("Unexpected file size -- insufficient data in block");
+                    }
+                    lim = (int) fileSize;
+                }
+
+                visitor.visitFile(file, off, lim);
+            }
+        }
+    }
+
+    private interface RangeFileVisitor {
+        /**
+         * Visit (a part of) a file in a range of files
+         * @param file A file
+         * @param off Offset that designates the beginning of this chunk's part in the file, inclusive;
+         *            visitor must not access the file before this index
+         * @param lim Limit that designates the end of this chunk's part in the file, exclusive;
+         *            visitor must not access the file at or past this index
+         *            (i.e. the limit does not belong to this chunk)
+         */
+        void visitFile(DataAccess file, long off, long lim);
     }
 
     @Override
@@ -264,7 +290,8 @@ public class ChunkDescriptor implements IChunkDescriptor {
 
         // TODO: remove me or move to a different method
         StringBuilder buf = new StringBuilder();
-        buf.append("[" + offsetInFirstChunkFile + "..." + limitInLastChunkFile + "]: " + bitfield.length + " blocks ~" + (blockSize / (2 << 9)) + " KiB each\n");
+        buf.append("[" + offsetInFirstChunkFile + "..." + limitInLastChunkFile + "]: " + bitfield.length +
+                " blocks ~" + (blockSize / (2 << 9)) + " KiB each\n");
         for (int i = 0; i < files.length; i++) {
             buf.append("\tFile #" + (i + 1) + ": " + files[i].toString() + "\n");
         }
