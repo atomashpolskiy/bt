@@ -1,5 +1,6 @@
 package bt.service;
 
+import bt.BtException;
 import bt.data.ChunkDescriptor;
 import bt.data.DataAccess;
 import bt.data.DataAccessFactory;
@@ -108,6 +109,11 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
                 do {
                     long limitInCurrentFile = chunkSize - (totalSizeOfFiles - fileSize);
 
+                    if (!chunkHashes.hasNext()) {
+                        // TODO: this should probably be handled in DefaultTorrent builder
+                        throw new BtException("Wrong number of chunk hashes in the torrent: too few");
+                    }
+
                     chunkDescriptors.add(new ChunkDescriptor(
                             Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1),
                             chunkOffset, limitInCurrentFile, chunkHashes.next(), configurationService.getTransferBlockSize()
@@ -129,6 +135,10 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
                     chunkOffset = 0;
                 }
             }
+        }
+
+        if (chunkHashes.hasNext()) {
+            throw new BtException("Wrong number of chunk hashes in the torrent: too many");
         }
 
         return new DataDescriptor(chunkDescriptors);

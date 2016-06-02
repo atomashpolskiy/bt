@@ -18,7 +18,14 @@ public class FileSystemDataAccessFactory implements DataAccessFactory {
 
     @Override
     public DataAccess getOrCreateDataAccess(Torrent torrent, TorrentFile torrentFile) {
-        File torrentDirectory = new File(rootDirectory, torrent.getName());
+
+        File torrentDirectory;
+        if (torrent.getFiles().size() == 1) {
+            torrentDirectory = rootDirectory;
+        } else {
+            torrentDirectory = new File(rootDirectory, torrent.getName());
+        }
+
         return new FileSystemDataAccess(torrentDirectory, torrentFile.getPathElements(), torrentFile.getSize());
     }
 }

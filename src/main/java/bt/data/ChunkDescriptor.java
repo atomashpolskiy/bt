@@ -2,6 +2,8 @@ package bt.data;
 
 import bt.BtException;
 
+import java.util.Arrays;
+
 public class ChunkDescriptor implements IChunkDescriptor {
 
     private DataStatus status;
@@ -90,70 +92,16 @@ public class ChunkDescriptor implements IChunkDescriptor {
 
         // parameters for read requests are arbitrary
 
-        if (offset < 0 || length < 0) {
-            throw new BtException("Illegal arguments: offset (" + offset + "), length (" + length + ")");
-        }
-
         if (length == 0) {
             return new byte[]{};
         }
 
-        int firstRequestedFileIndex,
-            lastRequestedFileIndex;
+        Object[] addresses = getRangeAddresses(offset, length);
+        int firstRequestedFileIndex = (int) addresses[0],
+            lastRequestedFileIndex = (int) addresses[2];
 
-        long offsetInFirstRequestedFile,
-             limitInLastRequestedFile;
-
-        // determine the file that the requested block begins in
-        firstRequestedFileIndex = -1;
-        for (int i = 0; i < files.length; i++) {
-
-            if (i == files.length - 1) {
-                // reached the last file
-                firstRequestedFileIndex = i;
-
-            } else if (offset < fileOffsets[i]) {
-                firstRequestedFileIndex = i - 1;
-            }
-        }
-
-        offsetInFirstRequestedFile = offset - fileOffsets[firstRequestedFileIndex];
-        if (firstRequestedFileIndex == 0) {
-            // if the first requested file is the first file in chunk,
-            // then we need to begin from this chunk's offset in that file
-            // (in case this chunk has access only to a portion of the file)
-            offsetInFirstRequestedFile += offsetInFirstChunkFile;
-        }
-
-        lastRequestedFileIndex = firstRequestedFileIndex;
-        do {
-            if (lastRequestedFileIndex >= files.length) {
-                // data in this chunk is insufficient to fulfill the block request
-                throw new BtException("Insufficient data (offset: " + offset + ", requested block length: " + length + ")");
-            }
-            // determine which files overlap with the requested block
-            if (firstRequestedFileIndex == lastRequestedFileIndex) {
-                length -= (files[lastRequestedFileIndex].size() - offsetInFirstRequestedFile);
-            } else {
-                length -= files[lastRequestedFileIndex].size();
-            }
-            lastRequestedFileIndex++;
-        } while (length > 0);
-        // if length is negative now, then we need to
-        // strip off some data from the last file
-        limitInLastRequestedFile = files[lastRequestedFileIndex].size() + length;
-
-        if (lastRequestedFileIndex == files.length - 1) {
-            if (limitInLastRequestedFile > limitInLastChunkFile) {
-                // data in this chunk is insufficient to fulfill the block request
-                throw new BtException("Insufficient data (offset: " + offset + ", requested block length: " + length + ")");
-            }
-        }
-
-        if (limitInLastRequestedFile > Integer.MAX_VALUE) {
-            // overflow -- isn't supposed to happen unless the algorithm above is incorrect
-            throw new BtException("Too much data requested");
-        }
+        long offsetInFirstRequestedFile = (long) addresses[1],
+             limitInLastRequestedFile = (long) addresses[3];
 
         /* access firstRequestedFile[offsetInFirstRequestedFile]...lastRequestedFile[limitInLastRequestedFile] */
 
@@ -195,7 +143,114 @@ public class ChunkDescriptor implements IChunkDescriptor {
 
     @Override
     public void writeBlock(byte[] block, long offset) {
-        // TODO: Implement me
+
+        if (block.length == 0) {
+            return;
+        }
+
+        Object[] addresses = getRangeAddresses(offset, block.length);
+        int firstRequestedFileIndex = (int) addresses[0],
+            lastRequestedFileIndex = (int) addresses[2];
+
+        long offsetInFirstRequestedFile = (long) addresses[1],
+             limitInLastRequestedFile = (long) addresses[3];
+
+        /* access firstRequestedFile[offsetInFirstRequestedFile]...lastRequestedFile[limitInLastRequestedFile] */
+
+        long off;
+        int lim;
+        int offsetInBlock = 0;
+        int limitInBlock;
+
+        for (int i = firstRequestedFileIndex; i <= lastRequestedFileIndex; i++) {
+
+            DataAccess file = files[i];
+            off = (i == firstRequestedFileIndex) ? offsetInFirstRequestedFile : 0;
+
+            if (i == lastRequestedFileIndex) {
+                lim = (int) limitInLastRequestedFile;
+
+            } else {
+
+                long fileSize = file.size();
+                if (fileSize > Integer.MAX_VALUE) {
+                    throw new BtException("Unexpected file size -- insufficient data in block");
+                }
+                lim = (int) fileSize;
+            }
+
+            limitInBlock = (int) (offsetInBlock + (lim - off));
+
+            file.writeBlock(Arrays.copyOfRange(block, offsetInBlock, limitInBlock), off);
+            offsetInBlock = limitInBlock;
+        }
+    }
+
+    // temporary
+    private Object[] getRangeAddresses(long offset, int length) {
+
+        if (offset < 0 || length < 0) {
+            throw new BtException("Illegal arguments: offset (" + offset + "), length (" + length + ")");
+        }
+
+        int firstRequestedFileIndex,
+            lastRequestedFileIndex;
+
+        long offsetInFirstRequestedFile,
+             limitInLastRequestedFile;
+
+        // determine the file that the requested block begins in
+        firstRequestedFileIndex = -1;
+        for (int i = 0; i < files.length; i++) {
+
+            if (offset < fileOffsets[i]) {
+                firstRequestedFileIndex = i - 1;
+            } else if (i == files.length - 1) {
+                // reached the last file
+                firstRequestedFileIndex = i;
+            }
+        }
+
+        offsetInFirstRequestedFile = offset - fileOffsets[firstRequestedFileIndex];
+        if (firstRequestedFileIndex == 0) {
+            // if the first requested file is the first file in chunk,
+            // then we need to begin from this chunk's offset in that file
+            // (in case this chunk has access only to a portion of the file)
+            offsetInFirstRequestedFile += offsetInFirstChunkFile;
+        }
+
+        lastRequestedFileIndex = firstRequestedFileIndex;
+        do {
+            // determine which files overlap with the requested block
+            if (firstRequestedFileIndex == lastRequestedFileIndex) {
+                length -= (files[lastRequestedFileIndex].size() - offsetInFirstRequestedFile);
+            } else {
+                length -= files[lastRequestedFileIndex].size();
+            }
+        } while (length > 0 && ++lastRequestedFileIndex < files.length);
+
+        if (lastRequestedFileIndex >= files.length) {
+            // data in this chunk is insufficient to fulfill the block request
+            throw new BtException("Insufficient data (offset: " + offset + ", requested block length: " + length + ")");
+        }
+        // if length is negative now, then we need to
+        // strip off some data from the last file
+        limitInLastRequestedFile = files[lastRequestedFileIndex].size() + length;
+
+        if (lastRequestedFileIndex == files.length - 1) {
+            if (limitInLastRequestedFile > limitInLastChunkFile) {
+                // data in this chunk is insufficient to fulfill the block request
+                throw new BtException("Insufficient data (offset: " + offset + ", requested block length: " + length + ")");
+            }
+        }
+
+        if (limitInLastRequestedFile > Integer.MAX_VALUE) {
+            // overflow -- isn't supposed to happen unless the algorithm above is incorrect
+            throw new BtException("Too much data requested");
+        }
+
+        return new Object[] {firstRequestedFileIndex, offsetInFirstRequestedFile,
+                lastRequestedFileIndex, limitInLastRequestedFile };
     }
 
     @Override

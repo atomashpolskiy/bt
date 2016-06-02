@@ -20,6 +20,7 @@
         <slf4j-version>1.7.21</slf4j-version>
         <log4j-version>2.4.1</log4j-version>
         <junit-version>4.12</junit-version>
+        <mockito-version>1.10.19</mockito-version>
     </properties>
 
     <url>https://github.com/atomashpolskiy/bt</url>
@@ -75,6 +76,11 @@
                 <artifactId>junit</artifactId>
                 <version>${junit-version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-all</artifactId>
+                <version>${mockito-version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -110,6 +116,11 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
