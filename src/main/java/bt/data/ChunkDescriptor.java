@@ -152,11 +152,12 @@ public class ChunkDescriptor implements IChunkDescriptor {
                 @Override
                 public void visitFile(DataAccess file, long off, long lim) {
 
-                    if (lim > Integer.MAX_VALUE) {
+                    long len = lim - off;
+                    if (len > Integer.MAX_VALUE) {
                         throw new BtException("Too much data requested");
                     }
 
-                    byte[] bs = file.readBlock(off, (int) lim);
+                    byte[] bs = file.readBlock(off, (int) len);
                     if (((long) offsetInBlock) + bs.length > Integer.MAX_VALUE) {
                         // overflow -- isn't supposed to happen unless the algorithm in range is incorrect
                         throw new BtException("Integer overflow while constructing block");

@@ -4,13 +4,16 @@ import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.Arrays;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -81,6 +84,11 @@ public class ChunkDescriptorTestUtil {
         return sequence(size, 1);
     }
 
+    public static void assertFileHasContents(File file, byte[] expectedBytes) {
+        byte[] actualBytes = readBytesFromFile(file, expectedBytes.length);
+        assertArrayEquals(expectedBytes, actualBytes);
+    }
+
     public static byte[] readBytesFromFile(File file, int size) {
 
         byte[] bytes = new byte[size];
@@ -93,5 +101,17 @@ public class ChunkDescriptorTestUtil {
             throw new RuntimeException("Failed to read file: " + file.getPath());
         }
         return bytes;
+    }
+
+    public static void writeBytesToFile(File file, byte[] bytes) {
+
+        file.getParentFile().mkdirs();
+
+        try (BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file))) {
+            out.write(bytes);
+            out.flush();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to write file: " + file.getPath());
+        }
     }
 }
