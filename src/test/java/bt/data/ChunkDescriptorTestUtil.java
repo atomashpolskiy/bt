@@ -14,7 +14,7 @@ import java.util.Arrays;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class DescriptorTestUtil {
+public class ChunkDescriptorTestUtil {
 
     public static DataAccess mockDataAccess(long size) {
         DataAccess dataAccess = mock(DataAccess.class);

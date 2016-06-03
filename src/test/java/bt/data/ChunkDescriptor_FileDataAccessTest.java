@@ -11,10 +11,10 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
-import static bt.data.DescriptorTestUtil.mockTorrent;
-import static bt.data.DescriptorTestUtil.mockTorrentFile;
-import static bt.data.DescriptorTestUtil.readBytesFromFile;
-import static bt.data.DescriptorTestUtil.sequence;
+import static bt.data.ChunkDescriptorTestUtil.mockTorrent;
+import static bt.data.ChunkDescriptorTestUtil.mockTorrentFile;
+import static bt.data.ChunkDescriptorTestUtil.readBytesFromFile;
+import static bt.data.ChunkDescriptorTestUtil.sequence;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class DataDescriptorTest {
+public class ChunkDescriptor_FileDataAccessTest {
 
     private static File rootDirectory;
 

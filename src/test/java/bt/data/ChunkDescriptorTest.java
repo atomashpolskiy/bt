@@ -2,7 +2,7 @@ package bt.data;
 
 import org.junit.Test;
 
-import static bt.data.DescriptorTestUtil.mockDataAccess;
+import static bt.data.ChunkDescriptorTestUtil.mockDataAccess;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
