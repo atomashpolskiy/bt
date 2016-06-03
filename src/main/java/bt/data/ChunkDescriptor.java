@@ -408,17 +408,4 @@ public class ChunkDescriptor implements IChunkDescriptor {
          */
         void visitFile(DataAccess file, long off, long lim);
     }
-
-    @Override
-    public String toString() {
-
-        // TODO: remove me or move to a different method
-        StringBuilder buf = new StringBuilder();
-        buf.append("[" + offsetInFirstChunkFile + "..." + limitInLastChunkFile + "]: " + bitfield.length +
-                " blocks ~" + (blockSize / (2 << 9)) + " KiB each\n");
-        for (int i = 0; i < files.length; i++) {
-            buf.append("\tFile #" + (i + 1) + ": " + files[i].toString() + "\n");
-        }
-        return buf.toString();
-    }
 }
