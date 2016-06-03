@@ -330,22 +330,23 @@ public class ChunkDescriptor implements IChunkDescriptor {
         }
 
         lastRequestedFileIndex = firstRequestedFileIndex;
+        long remaining = length;
         do {
             // determine which files overlap with the requested block
             if (firstRequestedFileIndex == lastRequestedFileIndex) {
-                length -= (files[lastRequestedFileIndex].size() - offsetInFirstRequestedFile);
+                remaining -= (files[lastRequestedFileIndex].size() - offsetInFirstRequestedFile);
             } else {
-                length -= files[lastRequestedFileIndex].size();
+                remaining -= files[lastRequestedFileIndex].size();
             }
-        } while (length > 0 && ++lastRequestedFileIndex < files.length);
+        } while (remaining > 0 && ++lastRequestedFileIndex < files.length);
 
         if (lastRequestedFileIndex >= files.length) {
             // data in this chunk is insufficient to fulfill the block request
             throw new BtException("Insufficient data (offset: " + offset + ", requested block length: " + length + ")");
         }
-        // if length is negative now, then we need to
+        // if remaining is negative now, then we need to
         // strip off some data from the last file
-        limitInLastRequestedFile = files[lastRequestedFileIndex].size() + length;
+        limitInLastRequestedFile = files[lastRequestedFileIndex].size() + remaining;
 
         if (lastRequestedFileIndex == files.length - 1) {
             if (limitInLastRequestedFile > limitInLastChunkFile) {

@@ -36,6 +36,8 @@ class FileSystemDataAccess implements DataAccess {
         this.file = new File(parent, pathElements.get(len - 1));
 
         this.size = size;
+
+        closed = true;
     }
 
     private void init() {

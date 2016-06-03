@@ -2,10 +2,9 @@ package bt.data;
 
 import org.junit.Test;
 
+import static bt.data.DescriptorTestUtil.mockDataAccess;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class ChunkDescriptorTest {
 
@@ -33,9 +32,6 @@ public class ChunkDescriptorTest {
         assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
 
         assertArrayEquals(new byte[]{1,1,1,1}, chunkDescriptor.getBitfield());
-
-        //assertTrue(chunkDescriptor.verify());
-        //assertEquals(DataStatus.VERIFIED, chunkDescriptor.getStatus());
     }
 
     @Test
@@ -64,9 +60,6 @@ public class ChunkDescriptorTest {
         assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
 
         assertArrayEquals(new byte[]{1,1,1,1}, chunkDescriptor.getBitfield());
-
-        //assertTrue(chunkDescriptor.verify());
-        //assertEquals(DataStatus.VERIFIED, chunkDescriptor.getStatus());
     }
 
     @Test
@@ -106,9 +99,6 @@ public class ChunkDescriptorTest {
         chunkDescriptor.writeBlock(new byte[5], blockSize * 3 - 1);
         assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
         assertArrayEquals(new byte[]{1,1,1,1}, chunkDescriptor.getBitfield());
-
-        //assertTrue(chunkDescriptor.verify());
-        //assertEquals(DataStatus.VERIFIED, chunkDescriptor.getStatus());
     }
 
     @Test
@@ -153,14 +143,5 @@ public class ChunkDescriptorTest {
         chunkDescriptor.writeBlock(new byte[5], blockSize * 3 - 1);
         assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
         assertArrayEquals(new byte[]{1,1,1,1}, chunkDescriptor.getBitfield());
-
-        //assertTrue(chunkDescriptor.verify());
-        //assertEquals(DataStatus.VERIFIED, chunkDescriptor.getStatus());
-    }
-
-    private DataAccess mockDataAccess(long size) {
-        DataAccess dataAccess = mock(DataAccess.class);
-        when(dataAccess.size()).thenReturn(size);
-        return dataAccess;
     }
 }
