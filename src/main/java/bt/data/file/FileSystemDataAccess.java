@@ -2,6 +2,8 @@ package bt.data.file;
 
 import bt.BtException;
 import bt.data.DataAccess;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -11,11 +13,13 @@ import java.util.List;
 
 class FileSystemDataAccess implements DataAccess {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(FileSystemDataAccess.class);
+
     private File parent, file;
     private RandomAccessFile raf;
     private long size;
 
-    private boolean initialized;
+    private volatile boolean closed;
 
     FileSystemDataAccess(File root, List<String> pathElements, long size) {
 
@@ -36,7 +40,7 @@ class FileSystemDataAccess implements DataAccess {
 
     private void init() {
 
-        if (!initialized) {
+        if (closed) {
             if (!(parent.exists() || parent.mkdirs())) {
                 throw new BtException("Failed to create file access -- can't create (some of the) directories");
             }
@@ -58,14 +62,14 @@ class FileSystemDataAccess implements DataAccess {
                 throw new BtException("Unexpected I/O error", e);
             }
 
-            initialized = true;
+            closed = false;
         }
     }
 
     @Override
     public byte[] readBlock(long offset, int length) {
 
-        if (!initialized) {
+        if (closed) {
             init();
         }
 
@@ -91,7 +95,7 @@ class FileSystemDataAccess implements DataAccess {
     @Override
     public void writeBlock(byte[] block, long offset) {
 
-        if (!initialized) {
+        if (closed) {
             init();
         }
 
@@ -120,5 +124,18 @@ class FileSystemDataAccess implements DataAccess {
     @Override
     public String toString() {
         return "(" + size + " B) " + file.getPath();
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (!closed) {
+            try {
+                raf.close();
+            } catch (IOException e) {
+                LOGGER.warn("Failed to close file: " + file.getPath(), e);
+            } finally {
+                closed = true;
+            }
+        }
     }
 }

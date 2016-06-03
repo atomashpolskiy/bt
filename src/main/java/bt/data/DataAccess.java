@@ -1,6 +1,8 @@
 package bt.data;
 
-public interface DataAccess {
+import java.io.Closeable;
+
+public interface DataAccess extends Closeable {
 
     byte[] readBlock(long offset, int length);
 
