@@ -2,9 +2,15 @@ package bt.data;
 
 import bt.BtException;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * Contains up to {@code Integer.MAX_VALUE} blocks of data of arbitrary size,
+ * that can span over up to {@code Integer.MAX_VALUE} files.
+ */
 public class ChunkDescriptor implements IChunkDescriptor {
 
     private DataStatus status;
@@ -12,12 +18,13 @@ public class ChunkDescriptor implements IChunkDescriptor {
 
     private long offsetInFirstChunkFile;
     private long limitInLastChunkFile;
+    private long size;
     private long blockSize;
 
     private ReentrantReadWriteLock readWriteLock;
 
     /**
-     * Hash of this chunk's contents
+     * Hash of this chunk's contents; used to verify integrity of chunk's data
      */
     private byte[] checksum;
 
@@ -69,7 +76,6 @@ public class ChunkDescriptor implements IChunkDescriptor {
         // using fair lock for now
         readWriteLock = new ReentrantReadWriteLock(true);
 
-        long size;
         if (files.length == 1) {
             size = limit - offset;
         } else {
@@ -80,8 +86,16 @@ public class ChunkDescriptor implements IChunkDescriptor {
             size += limit;
         }
 
-        int blockCount = (int) Math.ceil(size / blockSize);
-        bitfield = new byte[blockCount];
+        if (size < blockSize) {
+            throw new BtException("Illegal arguments -- chunk size is smaller than block size (size: " +
+                    size + ", block size: " + blockSize + ")");
+        }
+
+        long blockCount = (long) Math.ceil(((double) size) / blockSize);
+        if (blockCount > Integer.MAX_VALUE) {
+            throw new BtException("Integer overflow while constructing chunk: too many blocks");
+        }
+        bitfield = new byte[(int) blockCount];
 
         fileOffsets = new long[files.length];
         // first "virtual" address (first file begins with offset 0)
@@ -96,14 +110,23 @@ public class ChunkDescriptor implements IChunkDescriptor {
     }
 
     @Override
-    public boolean verify() {
-        // TODO: Implement me
-        return false;
+    public DataStatus getStatus() {
+        return status;
     }
 
     @Override
-    public DataStatus getStatus() {
-        return status;
+    public long getSize() {
+        return size;
+    }
+
+    @Override
+    public long getBlockSize() {
+        return blockSize;
+    }
+
+    @Override
+    public byte[] getBitfield() {
+        return bitfield;
     }
 
     /**
@@ -153,7 +176,19 @@ public class ChunkDescriptor implements IChunkDescriptor {
     /**
      * Blocks current thread if there are concurrent read operations in progress.
      * Block all concurrent read operations.
+     *
+     * This method implements a rather simple strategy to track which chunk's blocks are saved:
+     * only those blocks are considered saved that fit fully in the {@code block} passed
+     * as an argument to this method.
+     * E.g. if the array being passed to this method is 6 bytes long, and this chunk is split into 4-byte blocks,
+     * and the {@code offset} is exactly the first index of some chunk's block,
+     * then this array spans over 2 4-byte blocks, but from these 2 blocks the last one is not fully
+     * represented in it (i.e. 2 trailing bytes are trimmed). In such case only the first block will be
+     * considered saved (i.e. the corresponding index in the bitfield will be set to 1).
+     *
+     * @param block Can be of a different size than this chunk's "standard" block
      */
+    // TODO: implement partial tracking of the blocks that do not fully fit in the array passed as an argument
     @Override
     public void writeBlock(byte[] block, long offset) {
 
@@ -183,12 +218,86 @@ public class ChunkDescriptor implements IChunkDescriptor {
                     offsetInBlock = limitInBlock;
                 }
             });
+
+            // update bitfield with the info about the new blocks;
+            // if only a part of some block is written,
+            // then don't count it
+            if (block.length >= blockSize) {
+                int numberOfBlocks = (int) Math.floor(((double) block.length) / blockSize);
+                if (numberOfBlocks > 0) {
+                    int firstBlockIndex = (int) Math.ceil(((double) offset) / blockSize);
+                    int lastBlockIndex = (int) Math.floor(((double)(offset + block.length)) / blockSize) - 1;
+                    if (lastBlockIndex >= firstBlockIndex) {
+                        Arrays.fill(bitfield, firstBlockIndex, lastBlockIndex + 1, (byte) 1);
+                        status = isComplete() ? DataStatus.COMPLETE : DataStatus.INCOMPLETE;
+                    }
+                }
+            }
+
         } finally {
             readWriteLock.writeLock().unlock();
         }
     }
 
-    private Range getRange(long offset, int length) {
+    @Override
+    public boolean verify() {
+
+        if (status == DataStatus.VERIFIED) {
+            return true;
+        } else if (status != DataStatus.COMPLETE) {
+            return false;
+        }
+        // TODO: Implement me
+
+        Range allData = getRange(0, size);
+        MessageDigest digest;
+        try {
+            digest = MessageDigest.getInstance("SHA-1");
+        } catch (NoSuchAlgorithmException e) {
+            // not going to happen
+            throw new BtException("Unexpected error", e);
+        }
+
+        // block everybody when checking data integrity
+        readWriteLock.writeLock().lock();
+        try {
+            allData.visitFiles((file, off, lim) -> {
+
+                int step = 2 << 12;
+                long remaining = lim - off;
+                if (remaining > Integer.MAX_VALUE) {
+                    throw new BtException("Too much data -- can't read to buffer");
+                }
+                do {
+                    digest.update(file.readBlock(off, Math.min(step, (int) remaining)));
+                    remaining -= step;
+                    off += step;
+                } while (remaining > 0);
+            });
+
+            boolean verified = Arrays.equals(checksum, digest.digest());
+            if (verified) {
+                status = DataStatus.VERIFIED;
+            }
+            return verified;
+
+        } finally {
+            readWriteLock.writeLock().unlock();
+        }
+    }
+
+    private boolean isComplete() {
+
+        // check if all chunk's blocks are present
+        for (byte b : bitfield) {
+            if (b == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private Range getRange(long offset, long length) {
 
         if (offset < 0 || length < 0) {
             throw new BtException("Illegal arguments: offset (" + offset + "), length (" + length + ")");

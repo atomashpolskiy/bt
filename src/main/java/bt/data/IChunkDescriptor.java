@@ -4,6 +4,15 @@ public interface IChunkDescriptor {
 
     DataStatus getStatus();
 
+    long getSize();
+
+    long getBlockSize();
+
+    /**
+     * @return Bitmask of blocks in this chunk: 1 for complete, 0 for incomplete
+     */
+    byte[] getBitfield();
+
     /**
      * Reads a block of data
      * @param offset Offset from the beginning of this chunk
