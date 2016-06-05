@@ -12,7 +12,7 @@ public class KeepAlive implements Message {
 
     private static final KeepAlive instance = new KeepAlive();
 
-    static KeepAlive instance() {
+    public static KeepAlive instance() {
         return instance;
     }
 

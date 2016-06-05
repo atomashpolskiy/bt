@@ -6,7 +6,7 @@ public class Cancel implements Message {
     private int offset;
     private int length;
 
-    Cancel(int pieceIndex, int offset, int length) throws InvalidMessageException {
+    public Cancel(int pieceIndex, int offset, int length) throws InvalidMessageException {
 
         if (pieceIndex < 0 || offset < 0 || length <= 0) {
             throw new InvalidMessageException("Illegal arguments: piece index (" +

@@ -12,7 +12,7 @@ public class Unchoke implements Message {
 
     private static final Unchoke instance = new Unchoke();
 
-    static Unchoke instance() {
+    public static Unchoke instance() {
         return instance;
     }
 

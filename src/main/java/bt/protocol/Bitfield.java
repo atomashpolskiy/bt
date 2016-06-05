@@ -4,7 +4,7 @@ public class Bitfield implements Message {
 
     private byte[] bitfield;
 
-    Bitfield(byte[] bitfield) {
+    public Bitfield(byte[] bitfield) {
         this.bitfield = bitfield;
     }
 

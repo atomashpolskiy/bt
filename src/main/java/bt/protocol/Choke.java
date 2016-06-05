@@ -12,7 +12,7 @@ public class Choke implements Message {
 
     private static final Choke instance = new Choke();
 
-    static Choke instance() {
+    public static Choke instance() {
         return instance;
     }
 

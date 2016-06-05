@@ -12,7 +12,7 @@ public class NotInterested implements Message {
 
     private static final NotInterested instance = new NotInterested();
 
-    static NotInterested instance() {
+    public static NotInterested instance() {
         return instance;
     }
 

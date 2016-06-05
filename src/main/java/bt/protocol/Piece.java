@@ -6,7 +6,7 @@ public class Piece implements Message {
     private int offset;
     private byte[] block;
 
-    Piece(int pieceIndex, int offset, byte[] block) throws InvalidMessageException {
+    public Piece(int pieceIndex, int offset, byte[] block) throws InvalidMessageException {
 
         if (pieceIndex < 0 || offset < 0 || block.length == 0) {
             throw new InvalidMessageException("Invalid arguments: piece index (" +

@@ -4,7 +4,7 @@ public class Have implements Message {
 
     private int pieceIndex;
 
-    Have(int pieceIndex) throws InvalidMessageException {
+    public Have(int pieceIndex) throws InvalidMessageException {
 
         if (pieceIndex < 0) {
             throw new InvalidMessageException("Illegal argument: piece index (" + pieceIndex + ")");

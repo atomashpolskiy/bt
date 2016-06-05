@@ -12,7 +12,7 @@ public class Interested implements Message {
 
     private static final Interested instance = new Interested();
 
-    static Interested instance() {
+    public static Interested instance() {
         return instance;
     }
 

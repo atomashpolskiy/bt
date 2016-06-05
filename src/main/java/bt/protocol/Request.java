@@ -6,7 +6,7 @@ public class Request implements Message {
     private int offset;
     private int length;
 
-    Request(int pieceIndex, int offset, int length) throws InvalidMessageException {
+    public Request(int pieceIndex, int offset, int length) throws InvalidMessageException {
 
         if (pieceIndex < 0 || offset < 0 || length <= 0) {
             throw new InvalidMessageException("Illegal arguments: piece index (" +
