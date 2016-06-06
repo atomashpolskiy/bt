@@ -223,6 +223,11 @@ public class ChunkDescriptor implements IChunkDescriptor {
             // update bitfield with the info about the new blocks;
             // if only a part of some block is written,
             // then don't count it
+            boolean shouldCheckIfComplete = false;
+            if (offset + block.length == size) {
+                bitfield[bitfield.length - 1] = 1;
+                shouldCheckIfComplete = true;
+            }
             if (block.length >= blockSize) {
                 int numberOfBlocks = (int) Math.floor(((double) block.length) / blockSize);
                 if (numberOfBlocks > 0) {
@@ -230,9 +235,12 @@ public class ChunkDescriptor implements IChunkDescriptor {
                     int lastBlockIndex = (int) Math.floor(((double)(offset + block.length)) / blockSize) - 1;
                     if (lastBlockIndex >= firstBlockIndex) {
                         Arrays.fill(bitfield, firstBlockIndex, lastBlockIndex + 1, (byte) 1);
-                        status = isComplete() ? DataStatus.COMPLETE : DataStatus.INCOMPLETE;
+                        shouldCheckIfComplete = true;
                     }
                 }
+            }
+            if (shouldCheckIfComplete) {
+                status = isComplete() ? DataStatus.COMPLETE : DataStatus.INCOMPLETE;
             }
 
         } finally {
