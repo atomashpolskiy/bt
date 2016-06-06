@@ -25,6 +25,7 @@ public class PeerConnection implements Closeable {
     private static final long WAIT_BETWEEN_READS = 100L;
     private static final int BUFFER_CAPACITY = Constants.MAX_BLOCK_SIZE * 2;
 
+    private Object tag;
     private Peer remotePeer;
 
     private SocketChannel channel;
@@ -53,9 +54,24 @@ public class PeerConnection implements Closeable {
         condition = readLock.newCondition();
     }
 
-    public Message readMessageNow() {
+    void setTag(Object tag) {
+        this.tag = tag;
+    }
+
+    public Object getTag() {
+        return tag;
+    }
+
+    public synchronized Message readMessageNow() {
 
         try {
+            if (readBytes != null && readBytes.length > 0) {
+                Message message = readFromBuffer();
+                if (message != null) {
+                    return message;
+                }
+            }
+
             int read = channel.read(in);
             if (read > 0) {
 
@@ -76,25 +92,9 @@ public class PeerConnection implements Closeable {
                     in.get(readBytes, offset, read);
                 }
 
-                MessageType messageType = Protocol.readMessageType(readBytes);
-                if (messageType == null) {
-                    // protocol failed to determine the message type
-                    // due to the insufficient data; exiting...
-                    return null;
+                in.rewind();
 
-                } else {
-                    int consumed = Protocol.fromByteArray(messageHolder, readBytes);
-                    if (consumed == 0) {
-                        // protocol failed to read the message fully
-                        // because some data hasn't arrived yet; exiting...
-                        return null;
-                    } else {
-                        // remove consumed bytes from the beginning of the buffer
-                        readBytes = Arrays.copyOfRange(readBytes, consumed, readBytes.length);
-                        // and return the message
-                        return messageHolder[0];
-                    }
-                }
+                return readFromBuffer();
             }
         } catch (InvalidMessageException | IOException e) {
             LOGGER.error("Unexpected error in connection for peer: " + remotePeer, e);
@@ -107,7 +107,33 @@ public class PeerConnection implements Closeable {
         return null;
     }
 
-    public Message readMessage(long timeout) {
+    private Message readFromBuffer() throws InvalidMessageException {
+
+        MessageType messageType = Protocol.readMessageType(readBytes);
+        if (messageType == null) {
+            // protocol failed to determine the message type
+            // due to the insufficient data; exiting...
+            return null;
+
+        } else {
+            int consumed = Protocol.fromByteArray(messageHolder, readBytes);
+            if (consumed == 0) {
+                // protocol failed to read the message fully
+                // because some data hasn't arrived yet; exiting...
+                return null;
+            } else {
+                // remove consumed bytes from the beginning of the buffer
+                readBytes = Arrays.copyOfRange(readBytes, consumed, readBytes.length);
+                // and return the message
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Received message from peer: " + remotePeer + " -- " + messageHolder[0]);
+                }
+                return messageHolder[0];
+            }
+        }
+    }
+
+    public synchronized Message readMessage(long timeout) {
 
         Message message = readMessageNow();
         if (message == null) {
@@ -147,7 +173,7 @@ public class PeerConnection implements Closeable {
         return message;
     }
 
-    public void postMessage(Message message) {
+    public synchronized void postMessage(Message message) {
 
         updateLastActive();
 
@@ -176,9 +202,6 @@ public class PeerConnection implements Closeable {
 
     public void closeQuietly() {
         try {
-            if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Closing connection for peer: " + remotePeer);
-            }
             close();
         } catch (IOException e) {
             LOGGER.warn("Failed to close connection for peer: " + remotePeer, e);
@@ -188,6 +211,9 @@ public class PeerConnection implements Closeable {
     @Override
     public void close() throws IOException {
         if (!isClosed()) {
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Closing connection for peer: " + remotePeer);
+            }
             try {
                 channel.close();
             } finally {
@@ -200,7 +226,7 @@ public class PeerConnection implements Closeable {
         return closed;
     }
 
-    long lastActive() {
+    public long getLastActive() {
         return lastActive.get();
     }
 }
