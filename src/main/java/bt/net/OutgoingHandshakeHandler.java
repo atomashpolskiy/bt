@@ -35,7 +35,10 @@ public class OutgoingHandshakeHandler implements HandshakeHandler {
             if (firstMessage != null) {
                 if (firstMessage.getType() == MessageType.HANDSHAKE) {
                     byte[] incomingInfoHash = ((Handshake) firstMessage).getInfoHash();
-                    return Arrays.equals(torrent.getInfoHash(), incomingInfoHash);
+                    if (Arrays.equals(torrent.getInfoHash(), incomingInfoHash)) {
+                        connection.setTag(torrent.getInfoHash());
+                        return true;
+                    }
                 } else {
                     if (LOGGER.isTraceEnabled()) {
                         LOGGER.trace("Received message of unexpected type " + firstMessage.getType().name() +

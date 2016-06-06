@@ -41,6 +41,7 @@ public class IncomingHandshakeHandler implements HandshakeHandler {
                     try {
                         byte[] infoHash = torrent.getInfoHash();
                         connection.postMessage(new Handshake(infoHash, peerRegistry.getLocalPeer().getPeerId()));
+                        connection.setTag(infoHash);
                         return true;
                     } catch (InvalidMessageException e) {
                         LOGGER.error("Failed to build a handshake response for the incoming connection", e);
