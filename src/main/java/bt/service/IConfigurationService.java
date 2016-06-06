@@ -6,7 +6,11 @@ public interface IConfigurationService {
 
     long getConnectionTimeOut();
 
+    int getMaxActiveConnectionsPerTorrent();
+
     long getPeerRefreshThreshold();
 
     long getTransferBlockSize();
+
+    long getMaxPeerInactivityInterval();
 }
