@@ -1,7 +1,6 @@
 package bt.torrent;
 
 import bt.data.IDataDescriptor;
-import bt.net.Peer;
 
 public interface ITorrentDescriptor {
 
@@ -12,8 +11,6 @@ public interface ITorrentDescriptor {
     void stop();
 
     void complete();
-
-    Iterable<Peer> queryPeers();
 
     IDataDescriptor getDataDescriptor();
 }
