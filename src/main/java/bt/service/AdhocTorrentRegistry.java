@@ -60,8 +60,8 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
 
         ITorrentDescriptor descriptor = descriptors.get(torrent);
         if (descriptor == null) {
-            descriptor = new TorrentDescriptor(trackerService, configurationService,
-                    torrent, new DataDescriptor(dataAccessFactory, configurationService, torrent));
+            descriptor = new TorrentDescriptor(trackerService, torrent,
+                    new DataDescriptor(dataAccessFactory, configurationService, torrent));
             ITorrentDescriptor existing = descriptors.putIfAbsent(torrent, descriptor);
             if (existing != null) {
                 descriptor = existing;
