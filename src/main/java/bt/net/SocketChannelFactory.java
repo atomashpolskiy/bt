@@ -25,6 +25,7 @@ public class SocketChannelFactory {
         InetSocketAddress remoteAddress = new InetSocketAddress(inetAddress, port);
         SocketChannel outgoingChannel = selector.openSocketChannel();
         outgoingChannel.connect(remoteAddress);
+        outgoingChannel.configureBlocking(false);
         return outgoingChannel;
     }
 
