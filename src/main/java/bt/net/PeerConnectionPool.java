@@ -9,13 +9,17 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 
 public class PeerConnectionPool {
 
@@ -26,9 +30,13 @@ public class PeerConnectionPool {
     private ExecutorService incomingAcceptor;
     private HandshakeHandler incomingHandshakeHandler;
 
-    private Executor executor;
+    private ExecutorService executor;
 
+    private Set<Peer> pendingConnections;
     private ConcurrentMap<Peer, PeerConnection> connections;
+    private Set<Consumer<PeerConnection>> connectionListeners;
+    private ReentrantReadWriteLock listenerLock;
+    private ReentrantLock connectionLock;
 
     public PeerConnectionPool(PeerConnectionFactory connectionFactory, SocketChannelFactory socketChannelFactory,
                               HandshakeHandler incomingHandshakeHandler, IConfigurationService configurationService) {
@@ -36,7 +44,11 @@ public class PeerConnectionPool {
         this.connectionFactory = connectionFactory;
         this.incomingHandshakeHandler = incomingHandshakeHandler;
 
+        pendingConnections = ConcurrentHashMap.newKeySet();
         connections = new ConcurrentHashMap<>();
+        connectionListeners = new HashSet<>();
+        listenerLock = new ReentrantReadWriteLock();
+        connectionLock = new ReentrantLock();
 
         this.incomingAcceptor = Executors.newSingleThreadExecutor(
                 runnable -> new Thread(runnable, "PeerConnectionPool-IncomingAcceptor"));
@@ -57,17 +69,52 @@ public class PeerConnectionPool {
         );
     }
 
+    public void addConnectionListener(Consumer<PeerConnection> listener) {
+        listenerLock.writeLock().lock();
+        try {
+            connectionListeners.add(listener);
+        } finally {
+            listenerLock.writeLock().unlock();
+        }
+    }
+
+    public void removeConnectionListener(Consumer<PeerConnection> listener) {
+        listenerLock.writeLock().lock();
+        try {
+            connectionListeners.remove(listener);
+        } finally {
+            listenerLock.writeLock().unlock();
+        }
+    }
+
     public PeerConnection requestConnection(Peer peer, HandshakeHandler handshakeHandler) {
+
         PeerConnection existingConnection = connections.get(peer);
-        if (existingConnection == null) {
-            executor.execute(() -> {
-                try {
-                    PeerConnection newConnection = connectionFactory.createConnection(peer);
-                    initConnection(newConnection, handshakeHandler);
-                } catch (IOException e) {
-                    LOGGER.error("Failed to create new outgoing connection for peer: " + peer, e);
+        if (existingConnection == null && !pendingConnections.contains(peer)) {
+            connectionLock.lock();
+            try {
+                existingConnection = connections.get(peer);
+                if (existingConnection == null && !pendingConnections.contains(peer)) {
+                    pendingConnections.add(peer);
+                    executor.execute(() -> {
+                        try {
+                            PeerConnection newConnection = connectionFactory.createConnection(peer);
+                            initConnection(newConnection, handshakeHandler, false);
+                        } catch (IOException e) {
+                            LOGGER.error("Failed to create new outgoing connection for peer: " + peer, e);
+                        } finally {
+                            connectionLock.lock();
+                            try {
+                                pendingConnections.remove(peer);
+                            } finally {
+                                connectionLock.unlock();
+                            }
+                        }
+                    });
                 }
-            });
+            } finally {
+                connectionLock.unlock();
+            }
         }
         return existingConnection;
     }
@@ -109,16 +156,17 @@ public class PeerConnectionPool {
         executor.execute(() -> {
             try {
                 PeerConnection incomingConnection = connectionFactory.createConnection(incomingChannel);
-                initConnection(incomingConnection, incomingHandshakeHandler);
+                initConnection(incomingConnection, incomingHandshakeHandler, true);
             } catch (IOException e) {
                 LOGGER.error("Failed to process incoming connection", e);
             }
         });
     }
 
-    private void initConnection(PeerConnection newConnection, HandshakeHandler handshakeHandler) {
-        if (handshakeHandler.handleConnection(newConnection)) {
-            addConnection(newConnection);
+    private boolean initConnection(PeerConnection newConnection, HandshakeHandler handshakeHandler, boolean shouldNotifyListeners) {
+        boolean success = handshakeHandler.handleConnection(newConnection);
+        if (success) {
+            addConnection(newConnection, shouldNotifyListeners);
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Successfully performed handshake for connection, remote peer: " +
                         newConnection.getRemotePeer() + "; handshake handler: " + handshakeHandler.getClass().getName());
@@ -130,9 +178,10 @@ public class PeerConnectionPool {
             }
             newConnection.closeQuietly();
         }
+        return success;
     }
 
-    private void addConnection(PeerConnection newConnection) {
+    private void addConnection(PeerConnection newConnection, boolean shouldNotifyListeners) {
 
         PeerConnection existingConnection = connections.putIfAbsent(newConnection.getRemotePeer(), newConnection);
         if (existingConnection != null) {
@@ -140,6 +189,18 @@ public class PeerConnectionPool {
                 LOGGER.debug("Connection already exists for peer: " + newConnection.getRemotePeer());
             }
             newConnection.closeQuietly();
+            newConnection = existingConnection;
+        }
+
+        if (shouldNotifyListeners) {
+            listenerLock.readLock().lock();
+            try {
+                for (Consumer<PeerConnection> listener : connectionListeners) {
+                    listener.accept(newConnection);
+                }
+            } finally {
+                listenerLock.readLock().unlock();
+            }
         }
     }
 }
