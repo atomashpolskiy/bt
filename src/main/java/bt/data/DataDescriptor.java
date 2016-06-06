@@ -82,6 +82,12 @@ public class DataDescriptor implements IDataDescriptor {
                     // new chunk will begin with the next file
                     firstFileInChunkIndex++;
                     chunkOffset = 0;
+                } else if (currentFileIndex == filesCount - 1) {
+                    // create chunk for the remainder of the last file
+                    chunkDescriptors.add(new ChunkDescriptor(
+                            Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1),
+                            chunkOffset, fileSize, chunkHashes.next(), configurationService.getTransferBlockSize()
+                    ));
                 }
             }
         }
