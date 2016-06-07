@@ -88,7 +88,9 @@ public class PeerConnection implements Closeable {
                     // preserve leftovers from the previous reads if there are any
                     // and append fresh data to the end of the buffer
                     int offset = readBytes.length;
+                    byte[] bytes = readBytes;
                     readBytes = new byte[offset + read];
+                    System.arraycopy(bytes, 0, readBytes, 0, bytes.length);
                     in.get(readBytes, offset, read);
                 }
 
