@@ -8,6 +8,10 @@ public class TestUtil {
 
     public static void assertExceptionWithMessage(Function<?,?> function, String message) {
 
+        if (message == null || message.isEmpty()) {
+            throw new RuntimeException("Empty message");
+        }
+
         Exception e = null;
         try {
             function.apply(null);
