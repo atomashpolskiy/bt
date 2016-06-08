@@ -86,7 +86,7 @@ public class PeerConnectionTest {
     private static class Server implements Runnable, Closeable {
 
         private ServerSocketChannel channel;
-        private SocketChannel clientSocket;
+        private volatile SocketChannel clientSocket;
 
         Server(ServerSocketChannel channel) {
             this.channel = channel;

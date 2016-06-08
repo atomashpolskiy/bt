@@ -94,7 +94,7 @@ public class PeerConnection implements Closeable {
                     in.get(readBytes, offset, read);
                 }
 
-                in.rewind();
+                in.clear();
 
                 return readFromBuffer();
             }
