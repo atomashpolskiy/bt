@@ -270,6 +270,10 @@ public class ChunkDescriptor implements IChunkDescriptor {
         // block everybody when checking data integrity
         readWriteLock.writeLock().lock();
         try {
+            if (status == DataStatus.VERIFIED) {
+                return true;
+            }
+
             allData.visitFiles((file, off, lim) -> {
 
                 int step = 2 << 12;

@@ -10,6 +10,7 @@ public interface IChunkDescriptor {
 
     /**
      * @return Bitmask of blocks in this chunk: 1 for complete, 0 for incomplete
+     * // TODO: in fact it's currently a BYTEmask, need to rework
      */
     byte[] getBitfield();
 
