@@ -40,7 +40,7 @@ public class PieceManagerTest {
 
         List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
 
-        PieceManager pieceManager = new PieceManager(chunks);
+        PieceManager pieceManager = new PieceManager(new RarestFirstSelector(false), chunks);
         assertArrayEquals(new byte[]{0,0}, pieceManager.getBitfield());
     }
 
@@ -52,7 +52,7 @@ public class PieceManagerTest {
 
         byte expectedBitfield = (byte) (1 + (0b1 << 4) + (0b1 << 7));
 
-        PieceManager pieceManager = new PieceManager(chunks);
+        PieceManager pieceManager = new PieceManager(new RarestFirstSelector(false), chunks);
         assertArrayEquals(new byte[]{expectedBitfield}, pieceManager.getBitfield());
     }
 
@@ -64,7 +64,7 @@ public class PieceManagerTest {
 
         List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
 
-        PieceManager pieceManager = new PieceManager(chunks);
+        PieceManager pieceManager = new PieceManager(new RarestFirstSelector(false), chunks);
         PeerConnection peer = mock(PeerConnection.class);
         assertExceptionWithMessage(
                 it -> {pieceManager.peerHasBitfield(peer, new byte[]{0,0}); return null;},
@@ -86,7 +86,7 @@ public class PieceManagerTest {
         chunkArray[5] = chunk5;
 
         List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
-        PieceManager pieceManager = new PieceManager(chunks);
+        PieceManager pieceManager = new PieceManager(new RarestFirstSelector(false), chunks);
 
         Map<Integer, List<PeerConnection>> nextPieces;
         nextPieces = pieceManager.getNextPieces(1);
@@ -104,7 +104,7 @@ public class PieceManagerTest {
         pieceManager.peerHasBitfield(peer2, new byte[]{(0b1 << (7 - 3)) + (0b1 << (7 - 5)), 0});
         nextPieces = pieceManager.getNextPieces(1);
         assertEquals(1, nextPieces.size());
-        assertHasPieceAndPeers(nextPieces, 5, peer2); // <-- randomization affects the result -- can fail
+        assertHasPieceAndPeers(nextPieces, 5, peer2); // <-- randomization can affect the result -- don't use it
 
         verifier5.setVerified();
         nextPieces = pieceManager.getNextPieces(2);

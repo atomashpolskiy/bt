@@ -9,13 +9,10 @@ import bt.protocol.Request;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Random;
 
 public class PieceManager {
 
@@ -26,23 +23,15 @@ public class PieceManager {
      */
     private volatile boolean haveAnyData;
     private byte[] bitfield;
-
-    /**
-     * Each element of this aggregate bitfield corresponds to
-     * an element from the original bitfield with the same index
-     * and therefore stores information about exactly 8 torrent pieces.
-     * But, in contrast to the standard bitfield that has 1 bit for each piece
-     * indicating whether a peer has this piece, the "aggregate" bitfield
-     * stores a number (an octet, or 8 bits -- an unsigned byte) for each piece that indicates
-     * the total number of peers that have this piece.
-     *
-     * Used in the piece selection algorithm.
-     */
     private long[] aggregateBitfield;
 
     private Map<PeerConnection, byte[]> peerBitfields;
 
-    public PieceManager(List<IChunkDescriptor> chunks) {
+    private PieceSelector selector;
+
+    public PieceManager(PieceSelector selector, List<IChunkDescriptor> chunks) {
+
+        this.selector = selector;
         this.chunks = chunks;
 
         bitfield = createBitfield(chunks);
@@ -156,77 +145,23 @@ public class PieceManager {
             }
         }
 
-        PriorityQueue<Long> rarestPieces = new PriorityQueue<>(new Comparator<Long>() {
-            @Override
-            public int compare(Long o1, Long o2) {
-                if (o1.intValue() > o2.intValue()) {
-                    return 1;
-                } else if (o1.intValue() < o2.intValue()) {
-                    return -1;
-                } else {
-                    return 0;
-                }
-            }
-        });
+        int chunkCount = chunks.size();
+        Integer[] pieces = selector.getNextPieces(
+                aggregateBitfield, limit, i -> (i < chunkCount) && !checkPieceCompleted(i));
 
-        outer:
-        for (int i = 0; i < aggregateBitfield.length; i++) {
-
-            long bitmask = aggregateBitfield[i];
-            for (int j = 0; j < 8; j++) {
-                // unpack individual pieces count from bitmask
-                int pieceIndex = i * 8 + j;
-                if (pieceIndex >= chunks.size()) {
-                    break outer; // no more pieces left
-                } else if (checkPieceCompleted(pieceIndex)) {
-                    // already have this piece
-                    continue;
-                }
-                // get (j+1)-th octet (from high to low) and normalize to an unsigned byte value
-                int shift = ((7 - j) * 8);
-                int count = (int) ((bitmask & (0xFFL << shift)) >> shift) & 0xFF; // it's an octet so cast is safe
-                if (count > 0) {
-                    // storing two ints in a long value: <piece-index><count>
-                    long packed = (((long)pieceIndex) << 32) + count;
-                    rarestPieces.add(packed);
-                }
-            }
-        }
-
-        Map<Integer, List<PeerConnection>> peersWithPieces = new HashMap<>();
-        Long rarestPiece;
-        int collected = 0, k = limit * 3;
-        while ((rarestPiece = rarestPieces.poll()) != null && collected < k) {
-            int pieceIndex = (int) (rarestPiece >> 32); // retrieving piece-index from packed value
-            for (Map.Entry<PeerConnection, byte[]> peerBitfield : peerBitfields.entrySet()) {
-               if (getBit(peerBitfield.getValue(), pieceIndex) != 0) {
-                   List<PeerConnection> peersWithPiece = peersWithPieces.get(pieceIndex);
-                   if (peersWithPiece == null) {
-                       // increment count of collected pieces
-                       collected++;
-                       peersWithPiece = new ArrayList<>();
-                       peersWithPieces.put(pieceIndex, peersWithPiece);
-                   }
-                   peersWithPiece.add(peerBitfield.getKey());
-               }
-           }
-        }
-
-        // randomly choose min(limit, collected) rarest pieces
         Map<Integer, List<PeerConnection>> result = new HashMap<>();
-        @SuppressWarnings("unchecked")
-        Map.Entry<Integer, List<PeerConnection>>[] entries =
-                peersWithPieces.entrySet().toArray(new Map.Entry[peersWithPieces.size()]);
-        Random random = new Random(System.currentTimeMillis());
-        int actualLimit = Math.min(limit, peersWithPieces.size());
-        Map.Entry<Integer, List<PeerConnection>> entry;
-        for (int i = 0; i < actualLimit; i++) {
-            do {
-                entry = entries[random.nextInt(entries.length)];
-            } while (result.containsKey(entry.getKey()));
-            result.put(entry.getKey(), entry.getValue());
+        for (Integer piece : pieces) {
+            for (Map.Entry<PeerConnection, byte[]> peerBitfield : peerBitfields.entrySet()) {
+                if (getBit(peerBitfield.getValue(), piece) != 0) {
+                    List<PeerConnection> peersWithPiece = result.get(piece);
+                    if (peersWithPiece == null) {
+                        peersWithPiece = new ArrayList<>();
+                        result.put(piece, peersWithPiece);
+                    }
+                    peersWithPiece.add(peerBitfield.getKey());
+                }
+            }
         }
-
         return result;
     }
 
