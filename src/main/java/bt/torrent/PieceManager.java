@@ -38,9 +38,7 @@ public class PieceManager implements IPieceManager {
         this.selector = selector;
         this.chunks = chunks;
 
-
         bitfield = createBitfield(chunks);
-
         for (byte b : bitfield) {
             if (b != 0) {
                 haveAnyData = true;
@@ -49,7 +47,6 @@ public class PieceManager implements IPieceManager {
         }
 
         peerBitfields = new HashMap<>();
-
         pieceStats = new PieceStats(chunks.size());
     }
 
@@ -218,7 +215,7 @@ public class PieceManager implements IPieceManager {
      */
     private static void setBit(byte[] bitfield, int bitAbsIndex) {
 
-        int byteIndex = (int) Math.floor(bitAbsIndex / 8d);
+        int byteIndex = (int) (bitAbsIndex / 8d);
         if (byteIndex >= bitfield.length) {
             throw new BtException("bit index is too large: " + bitAbsIndex);
         }
@@ -236,7 +233,7 @@ public class PieceManager implements IPieceManager {
      */
     private static int getBit(byte[] bitfield, int bitAbsIndex) {
 
-        int byteIndex = (int) Math.floor(bitAbsIndex / 8d);
+        int byteIndex = (int) (bitAbsIndex / 8d);
         if (byteIndex >= bitfield.length) {
             throw new BtException("bit index is too large: " + bitAbsIndex);
         }
