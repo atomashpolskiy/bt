@@ -1,6 +1,6 @@
 package bt.torrent;
 
-import java.util.function.Function;
+import java.util.function.Predicate;
 
 public interface PieceSelector {
 
@@ -14,5 +14,5 @@ public interface PieceSelector {
      *
      * @return Array of length lesser than or equal to {@code limit}
      */
-    Integer[] getNextPieces(IPieceStats pieceStats, int limit, Function<Integer, Boolean> pieceIndexValidator);
+    Integer[] getNextPieces(IPieceStats pieceStats, int limit, Predicate<Integer> pieceIndexValidator);
 }

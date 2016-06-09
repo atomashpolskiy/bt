@@ -6,7 +6,7 @@ import java.util.HashSet;
 import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class RarestFirstSelector implements PieceSelector {
 
@@ -19,13 +19,13 @@ public class RarestFirstSelector implements PieceSelector {
     }
 
     @Override
-    public Integer[] getNextPieces(IPieceStats pieceStats, int limit, Function<Integer, Boolean> pieceIndexValidator) {
+    public Integer[] getNextPieces(IPieceStats pieceStats, int limit, Predicate<Integer> pieceIndexValidator) {
 
         PriorityQueue<Long> rarestPieces = new PriorityQueue<>(comparator);
         int n = pieceStats.size();
         for (int pieceIndex = 0; pieceIndex < n; pieceIndex++) {
             int count = pieceStats.getCount(pieceIndex);
-            if (count > 0 && pieceIndexValidator.apply(pieceIndex)) {
+            if (count > 0 && pieceIndexValidator.test(pieceIndex)) {
                 long packed = (((long)pieceIndex) << 32) + count;
                 rarestPieces.add(packed);
             }
