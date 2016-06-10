@@ -28,7 +28,17 @@ public class ConfigurationService implements IConfigurationService {
     }
 
     @Override
+    public int getReadRequestQueueMaxLength() {
+        return 100;
+    }
+
+    @Override
+    public long getPeerBanTime() {
+        return 300000;
+    }
+
+    @Override
     public long getMaxPeerInactivityInterval() {
-        return 60000;
+        return 180000;
     }
 }

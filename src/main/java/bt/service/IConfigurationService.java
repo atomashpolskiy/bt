@@ -12,5 +12,9 @@ public interface IConfigurationService {
 
     long getTransferBlockSize();
 
+    int getReadRequestQueueMaxLength();
+
+    long getPeerBanTime();
+
     long getMaxPeerInactivityInterval();
 }
