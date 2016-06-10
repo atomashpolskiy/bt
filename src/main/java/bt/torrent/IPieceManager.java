@@ -4,7 +4,6 @@ import bt.net.PeerConnection;
 import bt.protocol.Request;
 
 import java.util.List;
-import java.util.Map;
 
 public interface IPieceManager {
 
@@ -18,7 +17,9 @@ public interface IPieceManager {
 
     boolean checkPieceCompleted(int pieceIndex);
 
-    Map<Integer, List<PeerConnection>> getNextPieces(int limit);
+    int getNextPieceForPeer(PeerConnection peer);
 
     List<Request> buildRequestsForPiece(int pieceIndex);
+
+    int piecesLeft();
 }

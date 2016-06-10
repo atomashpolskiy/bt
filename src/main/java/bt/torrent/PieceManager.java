@@ -21,6 +21,7 @@ public class PieceManager implements IPieceManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceManager.class);
 
     private List<IChunkDescriptor> chunks;
+    private int complete;
 
     /**
      * Indicates if there is at least one verified chunk in the local torrent files.
@@ -32,6 +33,9 @@ public class PieceManager implements IPieceManager {
 
     private PieceSelector selector;
     private PieceStats pieceStats;
+
+    private Map<PeerConnection, Integer> assignedPieces;
+    private Map<Integer, PeerConnection> assignedPeers;
 
     public PieceManager(PieceSelector selector, List<IChunkDescriptor> chunks) {
 
@@ -48,6 +52,9 @@ public class PieceManager implements IPieceManager {
 
         peerBitfields = new HashMap<>();
         pieceStats = new PieceStats(chunks.size());
+
+        assignedPieces = new HashMap<>();
+        assignedPeers = new HashMap<>();
     }
 
     /**
@@ -66,6 +73,7 @@ public class PieceManager implements IPieceManager {
                 IChunkDescriptor chunk = chunks.get(offset + i);
                 if (chunk.getStatus() == DataStatus.VERIFIED) {
                     b += 0b1 << (7 - i);
+                    complete++;
                 }
             }
             bitfield[bitfieldIndex] = (byte) b;
@@ -125,6 +133,9 @@ public class PieceManager implements IPieceManager {
             if (chunk.verify()) {
                 setBit(bitfield, pieceIndex);
                 haveAnyData = true;
+                complete++;
+                PeerConnection assignee = assignedPeers.remove(pieceIndex);
+                assignedPieces.remove(assignee);
                 return true;
             }
         } catch (Exception e) {
@@ -133,14 +144,40 @@ public class PieceManager implements IPieceManager {
         return false;
     }
 
-    // TODO: cache the results until something is changed ?
-
-    /**
-     * Returns up to {@code limit} pieces that are recommended to download first.
-     * @param limit Max amount of pieces to return, exclusive
-     */
     @Override
-    public Map<Integer, List<PeerConnection>> getNextPieces(int limit) {
+    public int getNextPieceForPeer(PeerConnection peer) {
+
+        Integer assignedPiece = assignedPieces.get(peer);
+        if (assignedPiece != null) {
+            return assignedPiece;
+        }
+
+        Iterator<Map.Entry<PeerConnection, Integer>> iter = assignedPieces.entrySet().iterator();
+        while (iter.hasNext()) {
+            if (iter.next().getKey().isClosed()) {
+                iter.remove();
+            }
+        }
+
+        byte[] peerBitfield = peerBitfields.get(peer);
+        if (peerBitfield == null) {
+            return -1;
+        }
+
+        Integer[] pieces = getNextPieces(10);
+
+        for (Integer piece : pieces) {
+            if (getBit(peerBitfield, piece) != 0) {
+                assignedPieces.put(peer, piece);
+                assignedPeers.put(piece, peer);
+                return piece;
+            }
+        }
+        return -1;
+    }
+
+    // TODO: cache the results until something is changed ?
+    private Integer[] getNextPieces(int limit) {
 
         if (limit <= 0) {
             throw new BtException("Invalid limit: " + limit);
@@ -157,23 +194,8 @@ public class PieceManager implements IPieceManager {
         }
 
         int chunkCount = chunks.size();
-        Integer[] pieces = selector.getNextPieces(
+        return selector.getNextPieces(
                 pieceStats, limit, i -> (i < chunkCount) && !checkPieceCompleted(i));
-
-        Map<Integer, List<PeerConnection>> result = new HashMap<>();
-        for (Integer piece : pieces) {
-            for (Map.Entry<PeerConnection, byte[]> peerBitfield : peerBitfields.entrySet()) {
-                if (getBit(peerBitfield.getValue(), piece) != 0) {
-                    List<PeerConnection> peersWithPiece = result.get(piece);
-                    if (peersWithPiece == null) {
-                        peersWithPiece = new ArrayList<>();
-                        result.put(piece, peersWithPiece);
-                    }
-                    peersWithPiece.add(peerBitfield.getKey());
-                }
-            }
-        }
-        return result;
     }
 
     @Override
@@ -201,6 +223,17 @@ public class PieceManager implements IPieceManager {
             }
         }
         return requests;
+    }
+
+    @Override
+    public int piecesLeft() {
+
+        int left = chunks.size() - complete;
+        if (left < 0) {
+            // some algorithm malfunction
+            throw new BtException("Unexpected number of pieces left: " + left);
+        }
+        return left;
     }
 
     private void validatePieceIndex(int pieceIndex) {

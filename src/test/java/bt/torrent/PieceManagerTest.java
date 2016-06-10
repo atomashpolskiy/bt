@@ -72,62 +72,8 @@ public class PieceManagerTest {
                 "bitfield has wrong size: 2");
     }
 
-    @Test
-    public void testPieceManager_GetNextPieces() {
-
-        Verifier verifier3 = new Verifier(),
-                 verifier5 = new Verifier();
-
-        IChunkDescriptor chunk3 = mockChunk(blockSize, chunkSize, new byte[]{0,0,0,0}, verifier3),
-                         chunk5 = mockChunk(blockSize, chunkSize, new byte[]{0,0,0,0}, verifier5);
-
-        IChunkDescriptor[] chunkArray = new IChunkDescriptor[12];
-        Arrays.fill(chunkArray, emptyChunk);
-        chunkArray[3] = chunk3;
-        chunkArray[5] = chunk5;
-
-        List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
-        IPieceManager IPieceManager = new PieceManager(new RarestFirstSelector(false), chunks);
-
-        Map<Integer, List<PeerConnection>> nextPieces;
-        nextPieces = IPieceManager.getNextPieces(1);
-        assertEquals(0, nextPieces.size());
-
-        // peer has piece #3
-        PeerConnection peer1 = mockPeer(1);
-        IPieceManager.peerHasBitfield(peer1, new byte[]{0b1 << (7 - 3), 0});
-        nextPieces = IPieceManager.getNextPieces(1);
-        assertEquals(1, nextPieces.size());
-        assertHasPieceAndPeers(nextPieces, 3, peer1);
-
-        // another peer has pieces #3 and #5
-        PeerConnection peer2 = mockPeer(2);
-        IPieceManager.peerHasBitfield(peer2, new byte[]{(0b1 << (7 - 3)) + (0b1 << (7 - 5)), 0});
-        nextPieces = IPieceManager.getNextPieces(1);
-        assertEquals(1, nextPieces.size());
-        assertHasPieceAndPeers(nextPieces, 5, peer2); // <-- randomization can affect the result -- don't use it
-
-        verifier5.setVerified();
-        nextPieces = IPieceManager.getNextPieces(2);
-        assertEquals(1, nextPieces.size());
-        assertHasPieceAndPeers(nextPieces, 3, peer1, peer2);
-
-        // yet another peer has pieces #7 and #11
-        PeerConnection peer3 = mockPeer(3);
-        IPieceManager.peerHasBitfield(peer3, new byte[]{0, 0b1 << (7 - 3)});
-        IPieceManager.peerHasPiece(peer3, 7);
-        nextPieces = IPieceManager.getNextPieces(3);
-        assertEquals(3, nextPieces.size());
-        assertHasPieceAndPeers(nextPieces, 3, peer1, peer2);
-        assertHasPieceAndPeers(nextPieces, 7, peer3);
-        assertHasPieceAndPeers(nextPieces, 11,peer3);
-
-        verifier3.setVerified();
-        nextPieces = IPieceManager.getNextPieces(3);
-        assertEquals(2, nextPieces.size());
-        assertHasPieceAndPeers(nextPieces, 7, peer3);
-        assertHasPieceAndPeers(nextPieces, 11, peer3);
-    }
+    // TODO: need new test for IPieceManager.getNextPieceForPeer(PeerConnection)
+    // instead of the old one
 
     private static IChunkDescriptor mockChunk(long blockSize, long chunkSize, byte[] bitfield,
                                               Supplier<Boolean> verifier) {
