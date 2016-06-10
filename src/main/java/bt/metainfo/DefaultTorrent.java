@@ -129,4 +129,9 @@ public class DefaultTorrent implements Torrent {
         }
         this.chunkHashes = chunkHashes;
     }
+
+    @Override
+    public String toString() {
+        return name;
+    }
 }
