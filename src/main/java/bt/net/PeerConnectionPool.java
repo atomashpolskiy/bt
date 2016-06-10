@@ -87,6 +87,10 @@ public class PeerConnectionPool {
         }
     }
 
+    public PeerConnection getConnection(Peer peer) {
+        return connections.get(peer);
+    }
+
     public PeerConnection requestConnection(Peer peer, HandshakeHandler handshakeHandler) {
 
         PeerConnection existingConnection = connections.get(peer);
