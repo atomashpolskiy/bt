@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -37,7 +38,7 @@ public class ConnectionWorker {
     private long received;
     private long sent;
 
-    private int currentPiece;
+    private Optional<Integer> currentPiece;
 
     private Queue<Request> requestQueue;
     private Set<Object> pendingRequests;
@@ -51,7 +52,7 @@ public class ConnectionWorker {
         this.connection = connection;
         connectionState = new ConnectionState();
 
-        currentPiece = -1;
+        currentPiece = Optional.empty();
 
         requestQueue = new LinkedBlockingQueue<>();
         pendingRequests = new HashSet<>();
@@ -107,7 +108,6 @@ public class ConnectionWorker {
                 }
                 case CHOKE: {
                     connectionState.setPeerChoking(true);
-                    pendingRequests.clear();
                     break;
                 }
                 case UNCHOKE: {
@@ -185,29 +185,32 @@ public class ConnectionWorker {
         }
 
         if (requestQueue.isEmpty()) {
-            if (currentPiece < 0) {
-                int nextPiece = pieceManager.getNextPieceForPeer(connection);
-                if (nextPiece < 0) {
-                    if (connectionState.isInterested()) {
-                        connection.postMessage(NotInterested.instance());
-                        connectionState.setInterested(false);
-                    }
-                } else {
-                    currentPiece = nextPiece;
+            if (currentPiece.isPresent()) {
+                if (pieceManager.checkPieceCompleted(currentPiece.get())) {
+                    currentPiece = Optional.empty();
+                }
+            } else {
+                if (pieceManager.mightSelectPieceForPeer(connection)) {
                     if (!connectionState.isInterested()) {
                         connection.postMessage(Interested.instance());
                         connectionState.setInterested(true);
                     }
-                    requestQueue.addAll(pieceManager.buildRequestsForPiece(nextPiece));
-                }
-            } else {
-                if (pieceManager.checkPieceCompleted(currentPiece)) {
-                    currentPiece = -1;
+
+                } else if (connectionState.isInterested()) {
+                    connection.postMessage(NotInterested.instance());
+                    connectionState.setInterested(false);
                 }
             }
         }
 
         if (!connectionState.isPeerChoking()) {
+            if (!currentPiece.isPresent()) {
+                Optional<Integer> nextPiece = pieceManager.selectPieceForPeer(connection);
+                if (nextPiece.isPresent()) {
+                    currentPiece = nextPiece;
+                    requestQueue.addAll(pieceManager.buildRequestsForPiece(nextPiece.get()));
+                }
+            }
             while (!requestQueue.isEmpty() && pendingRequests.size() <= MAX_PENDING_REQUESTS) {
                 Request request = requestQueue.poll();
                 connection.postMessage(request);

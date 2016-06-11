@@ -72,7 +72,7 @@ public class PieceManagerTest {
                 "bitfield has wrong size: 2");
     }
 
-    // TODO: need new test for IPieceManager.getNextPieceForPeer(PeerConnection)
+    // TODO: need new test for IPieceManager.selectPieceForPeer(PeerConnection)
     // instead of the old one
 
     private static IChunkDescriptor mockChunk(long blockSize, long chunkSize, byte[] bitfield,

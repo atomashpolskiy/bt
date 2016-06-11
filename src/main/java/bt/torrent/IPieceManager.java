@@ -4,6 +4,7 @@ import bt.net.PeerConnection;
 import bt.protocol.Request;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface IPieceManager {
 
@@ -13,13 +14,15 @@ public interface IPieceManager {
 
     void peerHasBitfield(PeerConnection peer, byte[] peerBitfield);
 
-    void peerHasPiece(PeerConnection peer, int pieceIndex);
+    void peerHasPiece(PeerConnection peer, Integer pieceIndex);
 
-    boolean checkPieceCompleted(int pieceIndex);
+    boolean checkPieceCompleted(Integer pieceIndex);
 
-    int getNextPieceForPeer(PeerConnection peer);
+    boolean mightSelectPieceForPeer(PeerConnection peer);
 
-    List<Request> buildRequestsForPiece(int pieceIndex);
+    Optional<Integer> selectPieceForPeer(PeerConnection peer);
+
+    List<Request> buildRequestsForPiece(Integer pieceIndex);
 
     int piecesLeft();
 }
