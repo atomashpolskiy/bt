@@ -6,8 +6,10 @@ import bt.net.Peer;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 public class TrackerResponse {
@@ -25,8 +27,11 @@ public class TrackerResponse {
     private int leecherCount;
     private byte[] peers;
 
+    private final List<Peer> peerList;
+
     TrackerResponse(boolean success) {
         this.success = success;
+        peerList = new ArrayList<>();
     }
 
     public boolean isSuccess() {
@@ -59,38 +64,49 @@ public class TrackerResponse {
 
     public Iterable<Peer> getPeers() {
 
-        return () -> new Iterator<Peer>() {
+        return () -> {
 
-            private int i;
-
-            @Override
-            public boolean hasNext() {
-                return i < peers.length;
+            if (!peerList.isEmpty()) {
+                return peerList.iterator();
             }
 
-            @Override
-            public Peer next() {
+            return new Iterator<Peer>() {
 
-                if (!hasNext()) {
-                    throw new NoSuchElementException("No more peers left");
+                private int i;
+
+                @Override
+                public boolean hasNext() {
+                    return i < peers.length;
                 }
 
-                int from, to;
-                InetAddress inetAddress;
-                int port;
+                @Override
+                public Peer next() {
 
-                from = i; to = i = i + ADDRESS_LENGTH;
-                try {
-                    inetAddress = InetAddress.getByAddress(Arrays.copyOfRange(peers, from, to));
-                } catch (UnknownHostException e) {
-                    throw new BtException("Failed to get next peer", e);
+                    if (!hasNext()) {
+                        throw new NoSuchElementException("No more peers left");
+                    }
+
+                    int from, to;
+                    InetAddress inetAddress;
+                    int port;
+
+                    from = i;
+                    to = i = i + ADDRESS_LENGTH;
+                    try {
+                        inetAddress = InetAddress.getByAddress(Arrays.copyOfRange(peers, from, to));
+                    } catch (UnknownHostException e) {
+                        throw new BtException("Failed to get next peer", e);
+                    }
+
+                    from = to;
+                    to = i = i + PORT_LENGTH;
+                    port = (((peers[from] << 8) & 0xFF00) + (peers[to - 1] & 0x00FF));
+
+                    Peer peer = new InetPeer(inetAddress, port);
+                    peerList.add(peer);
+                    return peer;
                 }
-
-                from = to; to = i = i + PORT_LENGTH;
-                port = (((peers[from] << 8) & 0xFF00) + (peers[to - 1] & 0x00FF));
-
-                return new InetPeer(inetAddress, port);
-            }
+            };
         };
     }
 
