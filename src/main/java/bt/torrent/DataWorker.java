@@ -64,7 +64,7 @@ public class DataWorker implements Runnable {
             }
             peerCompletedRequests.add(readRequest);
         } catch (Exception e) {
-            LOGGER.error("Failed to process block request (" + request + ") for peer: " + readRequest.getPeer());
+            LOGGER.error("Failed to process block request (" + request + ") for peer: " + readRequest.getPeer(), e);
         }
     }
 
@@ -81,7 +81,7 @@ public class DataWorker implements Runnable {
             chunk.writeBlock(piece.getBlock(), piece.getOffset());
             writeRequest.setSuccess(true);
         } catch (Exception e) {
-            LOGGER.error("Failed to process block (" + piece + ")");
+            LOGGER.error("Failed to process block (" + piece + ")", e);
             writeRequest.setSuccess(false);
         }
     }
