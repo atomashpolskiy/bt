@@ -292,6 +292,7 @@ public class ChunkDescriptor implements IChunkDescriptor {
             if (verified) {
                 status = DataStatus.VERIFIED;
             }
+            // TODO: reset the piece if verification is unsuccessful?
             return verified;
 
         } finally {
