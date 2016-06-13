@@ -36,6 +36,11 @@ public class DataDescriptor implements IDataDescriptor {
         long totalSize = torrent.getSize();
         long chunkSize = torrent.getChunkSize();
 
+        long transferBlockSize = configurationService.getTransferBlockSize();
+        if (transferBlockSize > chunkSize) {
+            transferBlockSize = chunkSize;
+        }
+
         List<IChunkDescriptor> chunkDescriptors = new ArrayList<>((int) Math.ceil(totalSize / chunkSize) + 1);
         Iterator<byte[]> chunkHashes = torrent.getChunkHashes().iterator();
         DataAccess[] files = new DataAccess[filesCount];
@@ -65,8 +70,7 @@ public class DataDescriptor implements IDataDescriptor {
 
                     chunkDescriptors.add(new ChunkDescriptor(
                             Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1),
-                            chunkOffset, limitInCurrentFile, chunkHashes.next(), configurationService.getTransferBlockSize()
-                    ));
+                            chunkOffset, limitInCurrentFile, chunkHashes.next(), transferBlockSize));
 
                     firstFileInChunkIndex = currentFileIndex;
                     chunkOffset = limitInCurrentFile;
@@ -84,10 +88,13 @@ public class DataDescriptor implements IDataDescriptor {
                     chunkOffset = 0;
                 } else if (currentFileIndex == filesCount - 1) {
                     // create chunk for the remainder of the last file
+                    long remaining = fileSize - chunkOffset;
+                    if (transferBlockSize > remaining) {
+                        transferBlockSize = remaining;
+                    }
                     chunkDescriptors.add(new ChunkDescriptor(
                             Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1),
-                            chunkOffset, fileSize, chunkHashes.next(), configurationService.getTransferBlockSize()
-                    ));
+                            chunkOffset, fileSize, chunkHashes.next(), transferBlockSize));
                 }
             }
         }
