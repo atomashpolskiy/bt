@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -124,6 +125,10 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
 
     private void processBannedPeers() {
 
+        if (peerBans.isEmpty()) {
+            return;
+        }
+
         Iterator<Map.Entry<Peer, Long>> iter = peerBans.entrySet().iterator();
         while (iter.hasNext()) {
             Map.Entry<Peer, Long> peerBan = iter.next();
@@ -135,6 +140,10 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
     }
 
     private void processRequestedConnections() {
+
+        if (requestedPoolConnections.isEmpty()) {
+            return;
+        }
 
         Iterator<Peer> iter = requestedPoolConnections.iterator();
         while (iter.hasNext()) {
@@ -148,6 +157,10 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
     }
 
     private void processIncomingConnections() {
+
+        if (incomingConnections.isEmpty()) {
+            return;
+        }
 
         Iterator<PeerConnection> iter = incomingConnections.iterator();
         while (iter.hasNext() && connections.size() < configurationService.getMaxActiveConnectionsPerTorrent()) {
@@ -173,7 +186,7 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
         private IConfigurationService configurationService;
         private Torrent torrent;
 
-        private Iterable<Peer> peers;
+        private Collection<Peer> peers;
         private long lastRequestedPeers;
         private Map<Peer, Long> lastRequestedConnections;
 
@@ -190,6 +203,10 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
 
         List<Peer> requestConnections() {
             refreshPeers();
+
+            if (peers.isEmpty()) {
+                return Collections.emptyList();
+            }
 
             List<Peer> requestedConnections = new ArrayList<>();
             for (Peer peer : peers) {
@@ -222,6 +239,10 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
 
     private void processActiveConnections() {
 
+        if (connectionWorkers.isEmpty()) {
+            return;
+        }
+
         Iterator<Map.Entry<PeerConnection, ConnectionWorker>> workers = connectionWorkers.entrySet().iterator();
         while (workers.hasNext()) {
 
@@ -235,12 +256,9 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
                 if (!connection.isClosed()) {
                     LOGGER.error("Closing peer connection (" + connection.getRemotePeer() + ") due to an error", e);
                     connection.closeQuietly();
-                    LOGGER.info("Adding ban for peer: " + connection.getRemotePeer());
                     peerBans.put(connection.getRemotePeer(), System.currentTimeMillis());
                 }
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Removing connection worker: " + worker);
-                }
+                LOGGER.info("Unexpected error in peer connection. Adding ban for peer: " + connection.getRemotePeer(), e);
                 workers.remove();
                 removeConnection(connection);
             }
@@ -248,6 +266,10 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
     }
 
     private void processInactiveConnections() {
+
+        if (connectionWorkers.isEmpty()) {
+            return;
+        }
 
         Iterator<Map.Entry<PeerConnection, ConnectionWorker>> workers = connectionWorkers.entrySet().iterator();
         while (workers.hasNext()) {
@@ -269,7 +291,10 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
 
     private void processPendingBlockWrites() {
 
-        List<Integer> completedPieces = new ArrayList<>();
+        if (pendingBlockWrites.isEmpty()) {
+            return;
+        }
+
         Iterator<BlockWrite> iter = pendingBlockWrites.iterator();
         while (iter.hasNext()) {
 
@@ -278,22 +303,18 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
 
                 int pieceIndex = pendingBlockWrite.getPiece().getPieceIndex();
                 if (pendingBlockWrite.isSuccess() && pieceManager.checkPieceCompleted(pieceIndex)) {
-                    completedPieces.add(pieceIndex);
-                }
-                iter.remove();
-            }
-        }
-
-        for (Integer completedPiece : completedPieces) {
-            try {
-                Have have = new Have(completedPiece);
-                for (PeerConnection connection : connections.values()) {
-                    if (!connection.isClosed()) {
-                        connection.postMessage(have);
+                    try {
+                        Have have = new Have(pieceIndex);
+                        for (PeerConnection connection : connections.values()) {
+                            if (!connection.isClosed()) {
+                                connection.postMessage(have);
+                            }
+                        }
+                    } catch (InvalidMessageException e) {
+                        LOGGER.error("Unexpected error while announcing new completed pieces", e);
                     }
                 }
-            } catch (InvalidMessageException e) {
-                LOGGER.error("Unexpected error while announcing new completed pieces", e);
+                iter.remove();
             }
         }
     }

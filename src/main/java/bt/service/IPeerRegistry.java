@@ -4,6 +4,7 @@ import bt.metainfo.Torrent;
 import bt.net.Peer;
 
 import java.net.InetAddress;
+import java.util.Collection;
 
 public interface IPeerRegistry {
 
@@ -11,5 +12,5 @@ public interface IPeerRegistry {
 
     Peer getOrCreatePeer(InetAddress inetAddress, int port);
 
-    Iterable<Peer> getPeersForTorrent(Torrent torrent);
+    Collection<Peer> getPeersForTorrent(Torrent torrent);
 }

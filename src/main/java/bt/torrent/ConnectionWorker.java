@@ -15,8 +15,8 @@ import bt.protocol.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Queue;
@@ -88,13 +88,13 @@ public class ConnectionWorker {
 
     private Collection<BlockWrite> processIncomingMessages() {
 
-        Collection<BlockWrite> blockWrites = new ArrayList<>();
+        Collection<BlockWrite> blockWrites = Collections.emptyList();
 
         Message message = connection.readMessageNow();
         if (message != null) {
 
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Received " + message + " from peer: " + connection.getRemotePeer());
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Received " + message + " from peer: " + connection.getRemotePeer());
             }
 
             switch (message.getType()) {
@@ -152,7 +152,7 @@ public class ConnectionWorker {
                     if (!pendingRequests.remove(key)) {
                         throw new BtException("Received unexpected block " + piece + " from peer: " + connection.getRemotePeer());
                     } else {
-                        blockWrites.add(dataWorker.addBlock(piece));
+                        blockWrites = Collections.singletonList(dataWorker.addBlock(piece));
                     }
                     break;
                 }
@@ -187,8 +187,14 @@ public class ConnectionWorker {
         if (requestQueue.isEmpty()) {
             if (currentPiece.isPresent()) {
                 if (pieceManager.checkPieceCompleted(currentPiece.get())) {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Finished downloading piece #" + currentPiece.get());
+                    }
                     currentPiece = Optional.empty();
                 }
+                // TODO: what if peer just doesn't respond? or if some block writes have failed?
+                // being overly optimistical here, need to add some fallback strategy to restart piece
+                // (prob. with another peer, i.e. in another conn worker)
             } else {
                 if (pieceManager.mightSelectPieceForPeer(connection)) {
                     if (!connectionState.isInterested()) {
@@ -207,6 +213,9 @@ public class ConnectionWorker {
             if (!currentPiece.isPresent()) {
                 Optional<Integer> nextPiece = pieceManager.selectPieceForPeer(connection);
                 if (nextPiece.isPresent()) {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Begin downloading piece #" + nextPiece.get());
+                    }
                     currentPiece = nextPiece;
                     requestQueue.addAll(pieceManager.buildRequestsForPiece(nextPiece.get()));
                 }

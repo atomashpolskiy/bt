@@ -10,7 +10,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -45,7 +48,7 @@ public class PeerRegistry implements IPeerRegistry {
     }
 
     @Override
-    public Iterable<Peer> getPeersForTorrent(Torrent torrent) {
+    public Collection<Peer> getPeersForTorrent(Torrent torrent) {
 
         Long lastQueryTime = lastQueryTimes.get(torrent);
         if (lastQueryTime != null &&
@@ -57,7 +60,9 @@ public class PeerRegistry implements IPeerRegistry {
         TrackerResponse response = tracker.request(torrent).query();
         lastQueryTimes.put(torrent, System.currentTimeMillis());
         if (response.isSuccess()) {
-            return response.getPeers();
+            List<Peer> peers = new ArrayList<>();
+            response.getPeers().forEach(peers::add);
+            return peers;
         } else {
             LOGGER.warn("Failed to get peers for torrent -- " +
                     "unexpected error during interaction with the tracker: " + response.getErrorMessage());
