@@ -1,20 +1,20 @@
 package bt.torrent;
 
 import bt.net.Peer;
-import bt.protocol.Request;
 
 class BlockRead {
 
     private Peer peer;
-    private Request request;
+    private int pieceIndex;
+    private int offset;
+    private int length;
     private byte[] block;
 
-    BlockRead(Peer peer, Request request) {
+    BlockRead(Peer peer, int pieceIndex, int offset, int length, byte[] block) {
         this.peer = peer;
-        this.request = request;
-    }
-
-    void setBlock(byte[] block) {
+        this.pieceIndex = pieceIndex;
+        this.offset = offset;
+        this.length = length;
         this.block = block;
     }
 
@@ -22,8 +22,16 @@ class BlockRead {
         return peer;
     }
 
-    Request getRequest() {
-        return request;
+    int getPieceIndex() {
+        return pieceIndex;
+    }
+
+    int getOffset() {
+        return offset;
+    }
+
+    int getLength() {
+        return length;
     }
 
     byte[] getBlock() {

@@ -29,7 +29,7 @@ public class ConfigurationService implements IConfigurationService {
 
     @Override
     public int getReadRequestQueueMaxLength() {
-        return 100;
+        return 10000;
     }
 
     @Override

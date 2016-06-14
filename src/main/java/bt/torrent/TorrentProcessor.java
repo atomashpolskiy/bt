@@ -23,6 +23,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
@@ -52,6 +55,9 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
 
     private boolean complete;
 
+    private ReentrantLock lock;
+    private Condition timer;
+
     public TorrentProcessor(IPeerRegistry peerRegistry, PeerConnectionPool connectionPool,
                             IConfigurationService configurationService, IPieceManager pieceManager,
                             DataWorker dataWorker, Torrent torrent) {
@@ -78,6 +84,9 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
         connectionWorkers = new HashMap<>();
 
         pendingBlockWrites = new ArrayList<>();
+
+        lock = new ReentrantLock();
+        timer = lock.newCondition();
     }
 
     @Override
@@ -95,12 +104,23 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
 
         long start = System.currentTimeMillis();
         long step = 0;
-        while (!complete) {
-            if (++step % 1_000_000L == 0) {
-                LOGGER.info("Working... pieces left: " + pieceManager.piecesLeft() + " {connections: " + connections.size() +
-                        ", workers: " + connectionWorkers.size() + "}");
+        lock.lock();
+        try {
+            while (!complete) {
+                if (++step % 1_000L == 0) {
+                    LOGGER.info("Working... pieces left: " + pieceManager.piecesLeft() + " {connections: " + connections.size() +
+                            ", workers: " + connectionWorkers.size() + "}");
+                }
+                doProcess();
+
+                try {
+                    timer.await(1, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException e) {
+                    LOGGER.warn("Interrupted while awaiting timer", e);
+                }
             }
-            doProcess();
+        } finally {
+            lock.unlock();
         }
         Duration completedIn = Duration.ofMillis(System.currentTimeMillis() - start);
         LOGGER.info("Done in " + completedIn.getSeconds() + " sec");
@@ -301,7 +321,7 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
             BlockWrite pendingBlockWrite = iter.next();
             if (pendingBlockWrite.isComplete()) {
 
-                int pieceIndex = pendingBlockWrite.getPiece().getPieceIndex();
+                int pieceIndex = pendingBlockWrite.getPieceIndex();
                 if (pendingBlockWrite.isSuccess() && pieceManager.checkPieceCompleted(pieceIndex)) {
                     try {
                         Have have = new Have(pieceIndex);
