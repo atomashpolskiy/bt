@@ -111,8 +111,10 @@ public class PeerConnectionPool {
             connection = CompletableFuture.supplyAsync(() -> {
                 try {
                     PeerConnection newConnection = connectionFactory.createConnection(peer);
-                    initConnection(newConnection, handshakeHandler, false);
-                    return newConnection;
+                    if (!initConnection(newConnection, handshakeHandler, false)) {
+                        throw new BtException("Failed to initialize new connection for peer: " + peer);
+                    }
+                    return connections.get(newConnection.getRemotePeer());
                 } catch (IOException e) {
                     throw new BtException("Failed to create new outgoing connection for peer: " + peer, e);
                 } finally {
@@ -195,7 +197,7 @@ public class PeerConnectionPool {
     private boolean initConnection(PeerConnection newConnection, HandshakeHandler handshakeHandler, boolean shouldNotifyListeners) {
         boolean success = handshakeHandler.handleConnection(newConnection);
         if (success) {
-            addConnection(newConnection, shouldNotifyListeners);
+            success = addConnection(newConnection, shouldNotifyListeners);
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Successfully performed handshake for connection, remote peer: " +
                         newConnection.getRemotePeer() + "; handshake handler: " + handshakeHandler.getClass().getName());
@@ -210,7 +212,9 @@ public class PeerConnectionPool {
         return success;
     }
 
-    private void addConnection(PeerConnection connection, boolean shouldNotifyListeners) {
+    private boolean addConnection(PeerConnection connection, boolean shouldNotifyListeners) {
+
+        boolean added = true;
 
         ManagedPeerConnection newConnection = new ManagedPeerConnection(connection);
         ManagedPeerConnection existingConnection = connections.putIfAbsent(connection.getRemotePeer(), newConnection);
@@ -220,9 +224,10 @@ public class PeerConnectionPool {
             }
             connection.closeQuietly();
             newConnection = existingConnection;
+            added = false;
         }
 
-        if (shouldNotifyListeners) {
+        if (added && shouldNotifyListeners) {
             listenerLock.readLock().lock();
             try {
                 for (Consumer<IPeerConnection> listener : connectionListeners) {
@@ -232,6 +237,7 @@ public class PeerConnectionPool {
                 listenerLock.readLock().unlock();
             }
         }
+        return added;
     }
 
     private class ManagedPeerConnection implements IPeerConnection {
