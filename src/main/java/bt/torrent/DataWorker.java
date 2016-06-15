@@ -6,9 +6,6 @@ import bt.net.Peer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,25 +65,15 @@ public class DataWorker implements Runnable {
         boolean accepted = pendingOps.offer(writeOp);
         if (!accepted) {
             LOGGER.warn("Can't accept write block request (" + writeOp + ") -- queue is full");
+            blockWrite.setSuccess(false);
+            blockWrite.setComplete();
         }
-        return accepted? blockWrite : null;
+        return blockWrite;
     }
 
-    Collection<BlockRead> getCompletedBlockRequests(Peer peer, int maxCount) {
-
+    BlockRead getCompletedBlockRequest(Peer peer) {
         BlockingQueue<BlockRead> peerCompletedRequests = completedBlockRequests.get(peer);
-        if (peerCompletedRequests != null) {
-
-            Collection<BlockRead> completedRequests = new ArrayList<>(maxCount + 1);
-            BlockRead peerRequest;
-            int i = 0;
-            while ((peerRequest = peerCompletedRequests.poll()) != null && ++i <= maxCount) {
-                completedRequests.add(peerRequest);
-            }
-            return completedRequests;
-        } else {
-            return Collections.emptyList();
-        }
+        return (peerCompletedRequests == null) ? null : peerCompletedRequests.poll();
     }
 
     private interface BlockOp {

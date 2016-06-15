@@ -15,13 +15,17 @@ import bt.protocol.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class ConnectionWorker {
 
@@ -30,10 +34,15 @@ public class ConnectionWorker {
     private static final int MAX_PENDING_REQUESTS = 3;
 
     private IPieceManager pieceManager;
-    private DataWorker dataWorker;
+
+    private Consumer<Request> requestConsumer;
+    private Function<Piece, BlockWrite> blockConsumer;
+    private Supplier<BlockRead> blockSupplier;
 
     private final IPeerConnection connection;
     private ConnectionState connectionState;
+
+    private long lastBuiltRequests;
 
     private long received;
     private long sent;
@@ -42,12 +51,17 @@ public class ConnectionWorker {
 
     private Queue<Request> requestQueue;
     private Set<Object> pendingRequests;
+    private Map<Object, BlockWrite> pendingWrites;
     private Set<Object> cancelledPeerRequests;
 
-    ConnectionWorker(IPieceManager pieceManager, DataWorker dataWorker, IPeerConnection connection) {
+    ConnectionWorker(IPeerConnection connection, IPieceManager pieceManager, Consumer<Request> requestConsumer,
+                     Function<Piece, BlockWrite> blockConsumer, Supplier<BlockRead> blockSupplier) {
 
         this.pieceManager = pieceManager;
-        this.dataWorker = dataWorker;
+
+        this.requestConsumer = requestConsumer;
+        this.blockConsumer = blockConsumer;
+        this.blockSupplier = blockSupplier;
 
         this.connection = connection;
         connectionState = new ConnectionState();
@@ -56,6 +70,7 @@ public class ConnectionWorker {
 
         requestQueue = new LinkedBlockingQueue<>();
         pendingRequests = new HashSet<>();
+        pendingWrites = new HashMap<>();
         cancelledPeerRequests = new HashSet<>();
 
         if (pieceManager.haveAnyData()) {
@@ -72,12 +87,10 @@ public class ConnectionWorker {
         return sent;
     }
 
-    public Collection<BlockWrite> doWork() {
-
+    public void doWork() {
         checkConnection();
-        Collection<BlockWrite> blockWrites = processIncomingMessages();
+        processIncomingMessages();
         processOutgoingMessages();
-        return blockWrites;
     }
 
     private void checkConnection() {
@@ -86,9 +99,7 @@ public class ConnectionWorker {
         }
     }
 
-    private Collection<BlockWrite> processIncomingMessages() {
-
-        Collection<BlockWrite> blockWrites = Collections.emptyList();
+    private void processIncomingMessages() {
 
         Message message = connection.readMessageNow();
         if (message != null) {
@@ -131,15 +142,8 @@ public class ConnectionWorker {
                 }
                 case REQUEST: {
                     if (!connectionState.isChoking()) {
-
                         Request request = (Request) message;
-                        boolean mightRead = dataWorker.addBlockRequest(connection.getRemotePeer(),
-                                request.getPieceIndex(), request.getOffset(), request.getLength());
-
-                        if (!mightRead) {
-                            connection.postMessage(Choke.instance());
-                            connectionState.setChoking(true);
-                        }
+                        requestConsumer.accept(request);
                     }
                     break;
                 }
@@ -164,10 +168,9 @@ public class ConnectionWorker {
                         if (LOGGER.isTraceEnabled()) {
                             LOGGER.trace(requestQueue.size() + " requests left in queue {piece #" + currentPiece.get() + "}");
                         }
-                        BlockWrite blockWrite = dataWorker.addBlock(connection.getRemotePeer(), pieceIndex, offset, block);
-                        if (blockWrite != null) {
-                            blockWrites = Collections.singletonList(blockWrite);
-                        }
+                        BlockWrite blockWrite = blockConsumer.apply(piece);
+                        pendingWrites.put(key, blockWrite);
+
                     }
                     break;
                 }
@@ -180,15 +183,12 @@ public class ConnectionWorker {
                 }
             }
         }
-
-        return blockWrites;
     }
 
     private void processOutgoingMessages() {
 
-        Collection<BlockRead> completedRequests = dataWorker.getCompletedBlockRequests(connection.getRemotePeer(), 3);
-        for (BlockRead block : completedRequests) {
-
+        BlockRead block;
+        while ((block = blockSupplier.get()) != null) {
             int pieceIndex = block.getPieceIndex(),
                 offset = block.getOffset(),
                 length = block.getLength();
@@ -211,6 +211,7 @@ public class ConnectionWorker {
                                 "; peer: " + connection.getRemotePeer());
                     }
                     currentPiece = Optional.empty();
+                    pendingWrites.clear();
                 }
                 // TODO: what if peer just doesn't respond? or if some block writes have failed?
                 // being overly optimistical here, need to add some fallback strategy to restart piece
@@ -239,20 +240,44 @@ public class ConnectionWorker {
                     }
                     currentPiece = nextPiece;
                     requestQueue.addAll(pieceManager.buildRequestsForPiece(nextPiece.get()));
+                    lastBuiltRequests = System.currentTimeMillis();
                     if (LOGGER.isTraceEnabled()) {
                         LOGGER.trace("Initializing request queue {piece #" + nextPiece.get() +
                                 ", total requests: " + requestQueue.size() + "}");
                     }
                 }
-            } else if (requestQueue.isEmpty()) {
+            } else if (requestQueue.isEmpty() && (System.currentTimeMillis() - lastBuiltRequests) >= 30000) {
                 // this may happen when some of the received blocks were discarded by the data worker;
                 // here we again create requests for the missing blocks;
                 // consider this to be a kind of tradeoff between memory consumption
                 // (internal capacity of the data worker) and additional network overhead from the duplicate requests
                 // while ensuring that the piece WILL be downloaded eventually
                 // TODO: in future this should be handled more intelligently by dynamic load balancing
-                requestQueue.addAll(pieceManager.buildRequestsForPiece(currentPiece.get()));
-                if (LOGGER.isTraceEnabled()) {
+                requestQueue.addAll(
+                        pieceManager.buildRequestsForPiece(currentPiece.get()).stream()
+                            .filter(request -> {
+                                Object key = Mapper.mapper().buildKey(
+                                    request.getPieceIndex(), request.getOffset(), request.getLength());
+                                if (pendingRequests.contains(key)) {
+                                    return false;
+                                }
+
+                                BlockWrite blockWrite = pendingWrites.get(key);
+                                if (blockWrite == null) {
+                                    return true;
+                                }
+
+                                boolean failed = blockWrite.isComplete() && !blockWrite.isSuccess();
+                                if (failed) {
+                                    pendingWrites.remove(key);
+                                }
+                                return failed;
+
+                            }).collect(Collectors.toList()));
+
+                lastBuiltRequests = System.currentTimeMillis();
+
+                if (LOGGER.isTraceEnabled() && !requestQueue.isEmpty()) {
                     LOGGER.trace("Re-initializing request queue {piece #" + currentPiece.get() +
                             ", total requests: " + requestQueue.size() + "}");
                 }

@@ -245,8 +245,7 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
             Map.Entry<IPeerConnection, ConnectionWorker> entry = workers.next();
             ConnectionWorker worker = entry.getValue();
             try {
-                Collection<BlockWrite> blockWrites = worker.doWork();
-                pendingBlockWrites.addAll(blockWrites);
+                worker.doWork();
             } catch (Throwable e) {
                 IPeerConnection connection = entry.getKey();
                 if (!connection.isClosed()) {
@@ -323,10 +322,27 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
     }
 
     private void addConnection(IPeerConnection connection) {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Adding connection for peer: " + connection.getRemotePeer());
+
+        ConnectionWorker existing = connectionWorkers.putIfAbsent(connection,
+                new ConnectionWorker(connection, pieceManager,
+                    request -> {
+                        boolean mightRead = dataWorker.addBlockRequest(connection.getRemotePeer(),
+                                    request.getPieceIndex(), request.getOffset(), request.getLength());
+                        // TODO: load balancing and choking
+                    },
+                    piece -> {
+                        BlockWrite blockWrite = dataWorker.addBlock(connection.getRemotePeer(), piece.getPieceIndex(),
+                                piece.getOffset(), piece.getBlock());
+                        if (!blockWrite.isComplete() || blockWrite.isSuccess()) {
+                            pendingBlockWrites.add(blockWrite);
+                        }
+                        return blockWrite;
+                    },
+                    () -> dataWorker.getCompletedBlockRequest(connection.getRemotePeer())));
+
+        if (existing == null && LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Added connection for peer: " + connection.getRemotePeer());
         }
-        connectionWorkers.putIfAbsent(connection, new ConnectionWorker(pieceManager, dataWorker, connection));
     }
 
     private void removeConnection(IPeerConnection connection) {
