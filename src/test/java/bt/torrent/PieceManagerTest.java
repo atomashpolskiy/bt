@@ -2,6 +2,7 @@ package bt.torrent;
 
 import bt.data.DataStatus;
 import bt.data.IChunkDescriptor;
+import bt.net.IPeerConnection;
 import bt.net.PeerConnection;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -65,7 +66,7 @@ public class PieceManagerTest {
         List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
 
         IPieceManager IPieceManager = new PieceManager(new RarestFirstSelector(false), chunks);
-        PeerConnection peer = mock(PeerConnection.class);
+        IPeerConnection peer = mock(PeerConnection.class);
         assertExceptionWithMessage(
                 it -> {
                     IPieceManager.peerHasBitfield(peer, new byte[]{0,0}); return null;},
@@ -90,28 +91,28 @@ public class PieceManagerTest {
         return chunk;
     }
 
-    private static PeerConnection mockPeer(int id) {
-        PeerConnection connection = mock(PeerConnection.class);
+    private static IPeerConnection mockPeer(int id) {
+        IPeerConnection connection = mock(PeerConnection.class);
         when(connection.isClosed()).thenReturn(false);
         when(connection.getTag()).thenReturn(id);
         return connection;
     }
 
-    private static void assertHasPieceAndPeers(Map<Integer, List<PeerConnection>> nextPieces, Integer pieceIndex,
-                                               PeerConnection... peers) {
+    private static void assertHasPieceAndPeers(Map<Integer, List<IPeerConnection>> nextPieces, Integer pieceIndex,
+                                               IPeerConnection... peers) {
 
         assertTrue(nextPieces.containsKey(pieceIndex));
-        List<PeerConnection> actualPeers = nextPieces.get(pieceIndex);
+        List<IPeerConnection> actualPeers = nextPieces.get(pieceIndex);
         assertEquals(peers.length, actualPeers.size());
-        for (PeerConnection peer : peers) {
+        for (IPeerConnection peer : peers) {
             assertContains(actualPeers, peer);
         }
     }
 
-    private static void assertContains(Collection<PeerConnection> connections, PeerConnection expected) {
+    private static void assertContains(Collection<IPeerConnection> connections, IPeerConnection expected) {
 
         boolean contains = false;
-        for (PeerConnection connection : connections) {
+        for (IPeerConnection connection : connections) {
             if (connection.getTag().equals(expected.getTag())) {
                 contains = true;
             }

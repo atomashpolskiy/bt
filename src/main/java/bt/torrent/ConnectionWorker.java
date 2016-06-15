@@ -1,7 +1,7 @@
 package bt.torrent;
 
 import bt.BtException;
-import bt.net.PeerConnection;
+import bt.net.IPeerConnection;
 import bt.protocol.Bitfield;
 import bt.protocol.Cancel;
 import bt.protocol.Choke;
@@ -32,7 +32,7 @@ public class ConnectionWorker {
     private IPieceManager pieceManager;
     private DataWorker dataWorker;
 
-    private final PeerConnection connection;
+    private final IPeerConnection connection;
     private ConnectionState connectionState;
 
     private long received;
@@ -44,7 +44,7 @@ public class ConnectionWorker {
     private Set<Object> pendingRequests;
     private Set<Object> cancelledPeerRequests;
 
-    ConnectionWorker(IPieceManager pieceManager, DataWorker dataWorker, PeerConnection connection) {
+    ConnectionWorker(IPieceManager pieceManager, DataWorker dataWorker, IPeerConnection connection) {
 
         this.pieceManager = pieceManager;
         this.dataWorker = dataWorker;
@@ -161,6 +161,9 @@ public class ConnectionWorker {
                         throw new BtException("Received unexpected block " + piece +
                                 " from peer: " + connection.getRemotePeer());
                     } else {
+                        if (LOGGER.isTraceEnabled()) {
+                            LOGGER.trace(requestQueue.size() + " requests left in queue {piece #" + currentPiece.get() + "}");
+                        }
                         BlockWrite blockWrite = dataWorker.addBlock(connection.getRemotePeer(), pieceIndex, offset, block);
                         if (blockWrite != null) {
                             blockWrites = Collections.singletonList(blockWrite);
@@ -236,6 +239,10 @@ public class ConnectionWorker {
                     }
                     currentPiece = nextPiece;
                     requestQueue.addAll(pieceManager.buildRequestsForPiece(nextPiece.get()));
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Initializing request queue {piece #" + nextPiece.get() +
+                                ", total requests: " + requestQueue.size() + "}");
+                    }
                 }
             }
             while (!requestQueue.isEmpty() && pendingRequests.size() <= MAX_PENDING_REQUESTS) {

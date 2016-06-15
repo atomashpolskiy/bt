@@ -147,8 +147,15 @@ public class DataWorker implements Runnable {
             try {
                 chunk.writeBlock(blockWrite.getBlock(), blockWrite.getOffset());
                 blockWrite.setSuccess(true);
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Successfully processed block (" + toString() + ") from peer: " + peer);
+                }
+                // TODO: perform verification asynchronously in a separate dedicated thread
+                if (chunk.verify() && LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Successfully verified block (" + toString() + ")");
+                }
             } catch (Exception e) {
-                LOGGER.error("Failed to process block (" + toString() + ") for peer: " + peer, e);
+                LOGGER.error("Failed to process block (" + toString() + ") from peer: " + peer, e);
                 blockWrite.setSuccess(false);
             }
             blockWrite.setComplete();

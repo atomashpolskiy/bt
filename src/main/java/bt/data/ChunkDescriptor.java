@@ -256,7 +256,6 @@ public class ChunkDescriptor implements IChunkDescriptor {
         } else if (status != DataStatus.COMPLETE) {
             return false;
         }
-        // TODO: Implement me
 
         Range allData = getRange(0, size);
         MessageDigest digest;
@@ -267,8 +266,8 @@ public class ChunkDescriptor implements IChunkDescriptor {
             throw new BtException("Unexpected error", e);
         }
 
-        // block everybody when checking data integrity
-        readWriteLock.writeLock().lock();
+        // do not block readers when checking data integrity
+        readWriteLock.readLock().lock();
         try {
             if (status == DataStatus.VERIFIED) {
                 return true;
@@ -296,7 +295,7 @@ public class ChunkDescriptor implements IChunkDescriptor {
             return verified;
 
         } finally {
-            readWriteLock.writeLock().unlock();
+            readWriteLock.readLock().unlock();
         }
     }
 

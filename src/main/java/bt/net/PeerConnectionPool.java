@@ -1,6 +1,7 @@
 package bt.net;
 
 import bt.BtException;
+import bt.protocol.Message;
 import bt.service.IConfigurationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +34,8 @@ public class PeerConnectionPool {
     private ExecutorService executor;
 
     private Set<Peer> pendingConnections;
-    private ConcurrentMap<Peer, PeerConnection> connections;
-    private Set<Consumer<PeerConnection>> connectionListeners;
+    private ConcurrentMap<Peer, ManagedPeerConnection> connections;
+    private Set<Consumer<IPeerConnection>> connectionListeners;
     private ReentrantReadWriteLock listenerLock;
     private ReentrantLock connectionLock;
 
@@ -69,7 +70,7 @@ public class PeerConnectionPool {
         );
     }
 
-    public void addConnectionListener(Consumer<PeerConnection> listener) {
+    public void addConnectionListener(Consumer<IPeerConnection> listener) {
         listenerLock.writeLock().lock();
         try {
             connectionListeners.add(listener);
@@ -78,7 +79,7 @@ public class PeerConnectionPool {
         }
     }
 
-    public void removeConnectionListener(Consumer<PeerConnection> listener) {
+    public void removeConnectionListener(Consumer<IPeerConnection> listener) {
         listenerLock.writeLock().lock();
         try {
             connectionListeners.remove(listener);
@@ -87,13 +88,13 @@ public class PeerConnectionPool {
         }
     }
 
-    public PeerConnection getConnection(Peer peer) {
+    public IPeerConnection getConnection(Peer peer) {
         return connections.get(peer);
     }
 
-    public PeerConnection requestConnection(Peer peer, HandshakeHandler handshakeHandler) {
+    public IPeerConnection requestConnection(Peer peer, HandshakeHandler handshakeHandler) {
 
-        PeerConnection existingConnection = connections.get(peer);
+        IPeerConnection existingConnection = connections.get(peer);
         if (existingConnection == null && !pendingConnections.contains(peer)) {
             connectionLock.lock();
             try {
@@ -185,26 +186,90 @@ public class PeerConnectionPool {
         return success;
     }
 
-    private void addConnection(PeerConnection newConnection, boolean shouldNotifyListeners) {
+    private void addConnection(PeerConnection connection, boolean shouldNotifyListeners) {
 
-        PeerConnection existingConnection = connections.putIfAbsent(newConnection.getRemotePeer(), newConnection);
+        ManagedPeerConnection newConnection = new ManagedPeerConnection(connection);
+        ManagedPeerConnection existingConnection = connections.putIfAbsent(connection.getRemotePeer(), newConnection);
         if (existingConnection != null) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Connection already exists for peer: " + newConnection.getRemotePeer());
+                LOGGER.debug("Connection already exists for peer: " + connection.getRemotePeer());
             }
-            newConnection.closeQuietly();
+            connection.closeQuietly();
             newConnection = existingConnection;
         }
 
         if (shouldNotifyListeners) {
             listenerLock.readLock().lock();
             try {
-                for (Consumer<PeerConnection> listener : connectionListeners) {
+                for (Consumer<IPeerConnection> listener : connectionListeners) {
                     listener.accept(newConnection);
                 }
             } finally {
                 listenerLock.readLock().unlock();
             }
+        }
+    }
+
+    private class ManagedPeerConnection implements IPeerConnection {
+
+        private IPeerConnection delegate;
+
+        ManagedPeerConnection(IPeerConnection delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public Object getTag() {
+            return delegate.getTag();
+        }
+
+        @Override
+        public Message readMessageNow() {
+            return delegate.readMessageNow();
+        }
+
+        @Override
+        public Message readMessage(long timeout) {
+            return delegate.readMessage(timeout);
+        }
+
+        @Override
+        public void postMessage(Message message) {
+            delegate.postMessage(message);
+        }
+
+        @Override
+        public Peer getRemotePeer() {
+            return delegate.getRemotePeer();
+        }
+
+        @Override
+        public void closeQuietly() {
+            purgeConnection();
+            delegate.closeQuietly();
+        }
+
+        @Override
+        public void close() throws IOException {
+            purgeConnection();
+            delegate.close();
+        }
+
+        private void purgeConnection() {
+            ManagedPeerConnection purged = connections.remove(delegate.getRemotePeer());
+            if (purged != null && LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Removing peer connection: " + purged.getRemotePeer());
+            }
+        }
+
+        @Override
+        public boolean isClosed() {
+            return delegate.isClosed();
+        }
+
+        @Override
+        public long getLastActive() {
+            return delegate.getLastActive();
         }
     }
 }

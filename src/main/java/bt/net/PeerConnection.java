@@ -1,5 +1,6 @@
 package bt.net;
 
+import bt.BtException;
 import bt.Constants;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
@@ -18,7 +19,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class PeerConnection implements Closeable {
+public class PeerConnection implements IPeerConnection {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnection.class);
 
@@ -58,10 +59,12 @@ public class PeerConnection implements Closeable {
         this.tag = tag;
     }
 
+    @Override
     public Object getTag() {
         return tag;
     }
 
+    @Override
     public synchronized Message readMessageNow() {
 
         try {
@@ -99,8 +102,7 @@ public class PeerConnection implements Closeable {
                 return readFromBuffer();
             }
         } catch (InvalidMessageException | IOException e) {
-            LOGGER.error("Unexpected error in connection for peer: " + remotePeer, e);
-            closeQuietly();
+            throw new BtException("Unexpected error in connection for peer: " + remotePeer, e);
         } finally {
             // always nullify the message holder
             messageHolder[0] = null;
@@ -135,6 +137,7 @@ public class PeerConnection implements Closeable {
         }
     }
 
+    @Override
     public synchronized Message readMessage(long timeout) {
 
         Message message = readMessageNow();
@@ -175,6 +178,7 @@ public class PeerConnection implements Closeable {
         return message;
     }
 
+    @Override
     public synchronized void postMessage(Message message) {
 
         updateLastActive();
@@ -186,11 +190,9 @@ public class PeerConnection implements Closeable {
         try {
             channel.write(ByteBuffer.wrap(Protocol.toByteArray(message)));
         } catch (IOException e) {
-            LOGGER.error("Unexpected error in connection for peer: " + remotePeer, e);
-            closeQuietly();
+            throw new BtException("Unexpected error in connection for peer: " + remotePeer, e);
         } catch (InvalidMessageException e) {
-            LOGGER.error("Failed to serialize outgoing message for peer: " + remotePeer + " -- " + message, e);
-            closeQuietly();
+            throw new BtException("Failed to serialize outgoing message for peer: " + remotePeer + " -- " + message, e);
         }
     }
 
@@ -198,10 +200,12 @@ public class PeerConnection implements Closeable {
         lastActive.set(System.currentTimeMillis());
     }
 
+    @Override
     public Peer getRemotePeer() {
         return remotePeer;
     }
 
+    @Override
     public void closeQuietly() {
         try {
             close();
@@ -224,10 +228,12 @@ public class PeerConnection implements Closeable {
         }
     }
 
+    @Override
     public boolean isClosed() {
         return closed;
     }
 
+    @Override
     public long getLastActive() {
         return lastActive.get();
     }

@@ -45,7 +45,7 @@ public class PeerConnectionTest {
 
     @Test
     public void testConnection() throws InvalidMessageException, IOException {
-        PeerConnection connection = new PeerConnection(mock(Peer.class), clientChannel);
+        IPeerConnection connection = new PeerConnection(mock(Peer.class), clientChannel);
 
         Message message;
 

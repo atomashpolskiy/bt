@@ -2,9 +2,9 @@ package bt.torrent;
 
 import bt.metainfo.Torrent;
 import bt.net.HandshakeHandler;
+import bt.net.IPeerConnection;
 import bt.net.OutgoingHandshakeHandler;
 import bt.net.Peer;
-import bt.net.PeerConnection;
 import bt.net.PeerConnectionPool;
 import bt.protocol.Have;
 import bt.protocol.InvalidMessageException;
@@ -28,7 +28,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
+public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TorrentProcessor.class);
 
@@ -44,12 +44,12 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
 
     private Map<Peer, Long> peerBans;
 
-    private Set<PeerConnection> incomingConnections;
-    private Map<Peer, PeerConnection> connections;
+    private Set<IPeerConnection> incomingConnections;
+    private Map<Peer, IPeerConnection> connections;
     private Set<Peer> requestedPoolConnections;
     private ConnectionRequestor connectionRequestor;
 
-    private Map<PeerConnection, ConnectionWorker> connectionWorkers;
+    private Map<IPeerConnection, ConnectionWorker> connectionWorkers;
 
     private List<BlockWrite> pendingBlockWrites;
 
@@ -90,7 +90,7 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
     }
 
     @Override
-    public synchronized void accept(PeerConnection connection) {
+    public synchronized void accept(IPeerConnection connection) {
         if (torrent.getInfoHash().equals(connection.getTag())) {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Accepted incoming connection from peer: " + connection.getRemotePeer());
@@ -168,7 +168,7 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
         Iterator<Peer> iter = requestedPoolConnections.iterator();
         while (iter.hasNext()) {
             Peer peer = iter.next();
-            PeerConnection connection = connectionPool.getConnection(peer);
+            IPeerConnection connection = connectionPool.getConnection(peer);
             if (connection != null) {
                 addConnection(connection);
                 iter.remove();
@@ -182,10 +182,10 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
             return;
         }
 
-        Iterator<PeerConnection> iter = incomingConnections.iterator();
+        Iterator<IPeerConnection> iter = incomingConnections.iterator();
         while (iter.hasNext() && connections.size() < configurationService.getMaxActiveConnectionsPerTorrent()) {
 
-            PeerConnection connection = iter.next();
+            IPeerConnection connection = iter.next();
             if (!peerBans.containsKey(connection.getRemotePeer())) {
                 addConnection(connection);
             }
@@ -263,16 +263,16 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
             return;
         }
 
-        Iterator<Map.Entry<PeerConnection, ConnectionWorker>> workers = connectionWorkers.entrySet().iterator();
+        Iterator<Map.Entry<IPeerConnection, ConnectionWorker>> workers = connectionWorkers.entrySet().iterator();
         while (workers.hasNext()) {
 
-            Map.Entry<PeerConnection, ConnectionWorker> entry = workers.next();
+            Map.Entry<IPeerConnection, ConnectionWorker> entry = workers.next();
             ConnectionWorker worker = entry.getValue();
             try {
                 Collection<BlockWrite> blockWrites = worker.doWork();
                 pendingBlockWrites.addAll(blockWrites);
             } catch (Throwable e) {
-                PeerConnection connection = entry.getKey();
+                IPeerConnection connection = entry.getKey();
                 if (!connection.isClosed()) {
                     LOGGER.error("Closing peer connection (" + connection.getRemotePeer() + ") due to an error", e);
                     connection.closeQuietly();
@@ -291,10 +291,10 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
             return;
         }
 
-        Iterator<Map.Entry<PeerConnection, ConnectionWorker>> workers = connectionWorkers.entrySet().iterator();
+        Iterator<Map.Entry<IPeerConnection, ConnectionWorker>> workers = connectionWorkers.entrySet().iterator();
         while (workers.hasNext()) {
 
-            PeerConnection connection = workers.next().getKey();
+            IPeerConnection connection = workers.next().getKey();
             if (connection.isClosed()) {
                 workers.remove();
                 removeConnection(connection);
@@ -322,10 +322,10 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
             if (pendingBlockWrite.isComplete()) {
 
                 int pieceIndex = pendingBlockWrite.getPieceIndex();
-                if (pendingBlockWrite.isSuccess() && pieceManager.checkPieceCompleted(pieceIndex)) {
+                if (pendingBlockWrite.isSuccess() && pieceManager.checkPieceVerified(pieceIndex)) {
                     try {
                         Have have = new Have(pieceIndex);
-                        for (PeerConnection connection : connections.values()) {
+                        for (IPeerConnection connection : connections.values()) {
                             if (!connection.isClosed()) {
                                 connection.postMessage(have);
                             }
@@ -346,7 +346,7 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
         }
     }
 
-    private void addConnection(PeerConnection connection) {
+    private void addConnection(IPeerConnection connection) {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Adding connection for peer: " + connection.getRemotePeer());
         }
@@ -354,7 +354,7 @@ public class TorrentProcessor implements Runnable, Consumer<PeerConnection> {
         connectionWorkers.put(connection, new ConnectionWorker(pieceManager, dataWorker, connection));
     }
 
-    private void removeConnection(PeerConnection connection) {
+    private void removeConnection(IPeerConnection connection) {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Removing connection for peer: " + connection.getRemotePeer());
         }
