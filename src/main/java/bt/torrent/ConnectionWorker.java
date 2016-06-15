@@ -244,12 +244,27 @@ public class ConnectionWorker {
                                 ", total requests: " + requestQueue.size() + "}");
                     }
                 }
+            } else if (requestQueue.isEmpty()) {
+                // this may happen when some of the received blocks were discarded by the data worker;
+                // here we again create requests for the missing blocks;
+                // consider this to be a kind of tradeoff between memory consumption
+                // (internal capacity of the data worker) and additional network overhead from the duplicate requests
+                // while ensuring that the piece WILL be downloaded eventually
+                // TODO: in future this should be handled more intelligently by dynamic load balancing
+                requestQueue.addAll(pieceManager.buildRequestsForPiece(currentPiece.get()));
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Re-initializing request queue {piece #" + currentPiece.get() +
+                            ", total requests: " + requestQueue.size() + "}");
+                }
             }
             while (!requestQueue.isEmpty() && pendingRequests.size() <= MAX_PENDING_REQUESTS) {
                 Request request = requestQueue.poll();
-                connection.postMessage(request);
-                pendingRequests.add(Mapper.mapper().buildKey(
-                        request.getPieceIndex(), request.getOffset(), request.getLength()));
+                Object key = Mapper.mapper().buildKey(
+                            request.getPieceIndex(), request.getOffset(), request.getLength());
+                if (!pendingRequests.contains(key)) {
+                    connection.postMessage(request);
+                    pendingRequests.add(key);
+                }
             }
         }
     }
