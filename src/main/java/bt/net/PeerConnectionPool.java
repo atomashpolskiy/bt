@@ -11,7 +11,9 @@ import java.net.SocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -33,7 +35,7 @@ public class PeerConnectionPool {
 
     private ExecutorService executor;
 
-    private Set<Peer> pendingConnections;
+    private Map<Peer, CompletableFuture<IPeerConnection>> pendingConnections;
     private ConcurrentMap<Peer, ManagedPeerConnection> connections;
     private Set<Consumer<IPeerConnection>> connectionListeners;
     private ReentrantReadWriteLock listenerLock;
@@ -45,7 +47,7 @@ public class PeerConnectionPool {
         this.connectionFactory = connectionFactory;
         this.incomingHandshakeHandler = incomingHandshakeHandler;
 
-        pendingConnections = ConcurrentHashMap.newKeySet();
+        pendingConnections = new ConcurrentHashMap<>();
         connections = new ConcurrentHashMap<>();
         connectionListeners = new HashSet<>();
         listenerLock = new ReentrantReadWriteLock();
@@ -92,36 +94,58 @@ public class PeerConnectionPool {
         return connections.get(peer);
     }
 
-    public IPeerConnection requestConnection(Peer peer, HandshakeHandler handshakeHandler) {
+    public CompletableFuture<IPeerConnection> requestConnection(Peer peer, HandshakeHandler handshakeHandler) {
 
-        IPeerConnection existingConnection = connections.get(peer);
-        if (existingConnection == null && !pendingConnections.contains(peer)) {
-            connectionLock.lock();
-            try {
-                existingConnection = connections.get(peer);
-                if (existingConnection == null && !pendingConnections.contains(peer)) {
-                    pendingConnections.add(peer);
-                    executor.execute(() -> {
-                        try {
-                            PeerConnection newConnection = connectionFactory.createConnection(peer);
-                            initConnection(newConnection, handshakeHandler, false);
-                        } catch (IOException e) {
-                            LOGGER.error("Failed to create new outgoing connection for peer: " + peer, e);
-                        } finally {
-                            connectionLock.lock();
-                            try {
-                                pendingConnections.remove(peer);
-                            } finally {
-                                connectionLock.unlock();
-                            }
-                        }
-                    });
-                }
-            } finally {
-                connectionLock.unlock();
-            }
+        CompletableFuture<IPeerConnection> connection = getExistingOrPendingConnection(peer);
+        if (connection != null) {
+            return connection;
         }
-        return existingConnection;
+
+        connectionLock.lock();
+        try {
+            connection = getExistingOrPendingConnection(peer);
+            if (connection != null) {
+                return connection;
+            }
+
+            connection = CompletableFuture.supplyAsync(() -> {
+                try {
+                    PeerConnection newConnection = connectionFactory.createConnection(peer);
+                    initConnection(newConnection, handshakeHandler, false);
+                    return newConnection;
+                } catch (IOException e) {
+                    throw new BtException("Failed to create new outgoing connection for peer: " + peer, e);
+                } finally {
+                    connectionLock.lock();
+                    try {
+                        pendingConnections.remove(peer);
+                    } finally {
+                        connectionLock.unlock();
+                    }
+                }
+            }, executor);
+
+            pendingConnections.put(peer, connection);
+            return connection;
+
+        } finally {
+            connectionLock.unlock();
+        }
+    }
+
+    private CompletableFuture<IPeerConnection> getExistingOrPendingConnection(Peer peer) {
+
+        IPeerConnection existingConnection = getConnection(peer);
+        if (existingConnection != null) {
+            return CompletableFuture.completedFuture(existingConnection);
+        }
+
+        CompletableFuture<IPeerConnection> pendingConnection = pendingConnections.get(peer);
+        if (pendingConnection != null) {
+            return pendingConnection;
+        }
+
+        return null;
     }
 
     private class IncomingAcceptor implements Runnable {
