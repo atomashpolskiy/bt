@@ -3,6 +3,7 @@ package bt.net;
 import bt.BtException;
 import bt.protocol.Message;
 import bt.service.IConfigurationService;
+import bt.service.IShutdownService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +43,8 @@ public class PeerConnectionPool {
     private ReentrantLock connectionLock;
 
     public PeerConnectionPool(PeerConnectionFactory connectionFactory, SocketChannelFactory socketChannelFactory,
-                              HandshakeHandler incomingHandshakeHandler, IConfigurationService configurationService) {
+                              HandshakeHandler incomingHandshakeHandler, IConfigurationService configurationService,
+                              IShutdownService shutdownService) {
 
         this.connectionFactory = connectionFactory;
         this.incomingHandshakeHandler = incomingHandshakeHandler;
@@ -53,9 +55,10 @@ public class PeerConnectionPool {
         listenerLock = new ReentrantReadWriteLock();
         connectionLock = new ReentrantLock();
 
-        this.incomingAcceptor = Executors.newSingleThreadExecutor(
+        IncomingAcceptor acceptor = new IncomingAcceptor(socketChannelFactory);
+        incomingAcceptor = Executors.newSingleThreadExecutor(
                 runnable -> new Thread(runnable, "PeerConnectionPool-IncomingAcceptor"));
-        incomingAcceptor.execute(new IncomingAcceptor(socketChannelFactory));
+        incomingAcceptor.execute(acceptor);
 
         executor = Executors.newCachedThreadPool(
                 new ThreadFactory() {
@@ -70,6 +73,11 @@ public class PeerConnectionPool {
                     }
                 }
         );
+
+        shutdownService.addShutdownHook(acceptor::shutdown);
+        shutdownService.addShutdownHook(() -> incomingAcceptor.shutdownNow());
+        shutdownService.addShutdownHook(() -> executor.shutdownNow());
+        shutdownService.addShutdownHook(this::shutdown);
     }
 
     public void addConnectionListener(Consumer<IPeerConnection> listener) {
@@ -155,6 +163,8 @@ public class PeerConnectionPool {
         private ServerSocketChannel serverChannel;
         private SocketAddress localAddress;
 
+        private volatile boolean shutdown;
+
         IncomingAcceptor(SocketChannelFactory socketChannelFactory) {
             try {
                 serverChannel = socketChannelFactory.getIncomingChannel();
@@ -169,16 +179,24 @@ public class PeerConnectionPool {
         @Override
         public void run() {
             try {
-                while (true) {
+                while (!shutdown) {
                     acceptIncomingConnection(serverChannel.accept());
                 }
             } catch (IOException e) {
                 LOGGER.error("Unexpected I/O error when listening to the incoming channel: " + localAddress, e);
-                try {
-                    serverChannel.close();
-                } catch (IOException e1) {
-                    LOGGER.warn("Failed to close the incoming channel", e);
+                shutdown();
+            }
+        }
+
+        public void shutdown() {
+            shutdown = true;
+            try {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Closing the incoming channel...");
                 }
+                serverChannel.close();
+            } catch (IOException e) {
+                LOGGER.warn("Failed to close the incoming channel", e);
             }
         }
     }
@@ -301,5 +319,9 @@ public class PeerConnectionPool {
         public long getLastActive() {
             return delegate.getLastActive();
         }
+    }
+
+    private void shutdown() {
+        connections.values().forEach(ManagedPeerConnection::closeQuietly);
     }
 }

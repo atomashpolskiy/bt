@@ -27,12 +27,15 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
     private ConcurrentMap<Torrent, ITorrentDescriptor> descriptors;
 
     public AdhocTorrentRegistry(IMetadataService metadataService, ITrackerService trackerService,
-                                IConfigurationService configurationService, DataAccessFactory dataAccessFactory) {
+                                IConfigurationService configurationService, DataAccessFactory dataAccessFactory,
+                                IShutdownService shutdownService) {
 
         this.metadataService = metadataService;
         this.trackerService = trackerService;
         this.configurationService = configurationService;
         this.dataAccessFactory = dataAccessFactory;
+
+        shutdownService.addShutdownHook(() -> descriptors.values().forEach(it -> it.getDataDescriptor().close()));
 
         torrents = new ConcurrentHashMap<>();
         descriptors = new ConcurrentHashMap<>();

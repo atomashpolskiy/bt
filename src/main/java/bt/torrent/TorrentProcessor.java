@@ -13,7 +13,6 @@ import bt.service.IPeerRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -40,6 +39,7 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
     private DataWorker dataWorker;
 
     private Torrent torrent;
+    private ITorrentDescriptor torrentDescriptor;
 
     private HandshakeHandler handshakeHandler;
 
@@ -52,14 +52,12 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
 
     private List<BlockWrite> pendingBlockWrites;
 
-    private boolean complete;
-
     private ReentrantLock lock;
     private Condition timer;
 
     public TorrentProcessor(IPeerRegistry peerRegistry, PeerConnectionPool connectionPool,
                             IConfigurationService configurationService, IPieceManager pieceManager,
-                            DataWorker dataWorker, Torrent torrent) {
+                            DataWorker dataWorker, Torrent torrent, ITorrentDescriptor torrentDescriptor) {
 
         this.peerRegistry = peerRegistry;
         this.connectionPool = connectionPool;
@@ -68,6 +66,7 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
         this.dataWorker = dataWorker;
 
         this.torrent = torrent;
+        this.torrentDescriptor = torrentDescriptor;
 
         handshakeHandler = new OutgoingHandshakeHandler(torrent, peerRegistry.getLocalPeer(),
                 configurationService.getHandshakeTimeOut());
@@ -99,15 +98,10 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
     @Override
     public void run() {
 
-        long start = System.currentTimeMillis();
-        long step = 0;
         lock.lock();
         try {
-            while (!complete) {
-                if (++step % 1_000L == 0) {
-                    LOGGER.info("Working... pieces left: " + pieceManager.piecesLeft() +
-                            " {connections: " + connectionWorkers.size() + "}");
-                }
+            while (torrentDescriptor.isActive()) {
+
                 doProcess();
 
                 try {
@@ -119,8 +113,6 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
         } finally {
             lock.unlock();
         }
-        Duration completedIn = Duration.ofMillis(System.currentTimeMillis() - start);
-        LOGGER.info("Done in " + completedIn.getSeconds() + " sec");
     }
 
     private void doProcess() {
@@ -132,7 +124,6 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
             processActiveConnections();
             processInactiveConnections();
             processPendingBlockWrites();
-            checkTorrentIsComplete();
 
         } catch (Exception e) {
             LOGGER.error("Unexpected error in torrent processor {torrent: " + torrent + "}", e);
@@ -311,13 +302,6 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
                 }
                 iter.remove();
             }
-        }
-    }
-
-    private void checkTorrentIsComplete() {
-        if (pieceManager.piecesLeft() == 0) {
-            complete = true;
-            LOGGER.info("Torrent is complete: " + torrent);
         }
     }
 

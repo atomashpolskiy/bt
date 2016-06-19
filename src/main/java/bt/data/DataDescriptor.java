@@ -4,13 +4,19 @@ import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 import bt.service.IConfigurationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 public class DataDescriptor implements IDataDescriptor {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DataDescriptor.class);
 
     private DataAccessFactory dataAccessFactory;
     private IConfigurationService configurationService;
@@ -18,12 +24,16 @@ public class DataDescriptor implements IDataDescriptor {
     private Torrent torrent;
     private List<IChunkDescriptor> chunkDescriptors;
 
+    private Set<DataAccess> dataAccesses;
+
     public DataDescriptor(DataAccessFactory dataAccessFactory, IConfigurationService configurationService,
                           Torrent torrent) {
 
         this.dataAccessFactory = dataAccessFactory;
         this.configurationService = configurationService;
         this.torrent = torrent;
+
+        dataAccesses = new HashSet<>();
 
         init();
     }
@@ -55,7 +65,10 @@ public class DataDescriptor implements IDataDescriptor {
             TorrentFile torrentFile = torrentFiles.get(currentFileIndex);
 
             long fileSize = torrentFile.getSize();
-            files[currentFileIndex] = dataAccessFactory.getOrCreateDataAccess(torrent, torrentFile);
+            DataAccess dataAccess = dataAccessFactory.getOrCreateDataAccess(torrent, torrentFile);
+            dataAccesses.add(dataAccess);
+            files[currentFileIndex] = dataAccess;
+
             totalSizeOfFiles += fileSize;
 
             if (totalSizeOfFiles >= chunkSize) {
@@ -108,5 +121,16 @@ public class DataDescriptor implements IDataDescriptor {
 
     public List<IChunkDescriptor> getChunkDescriptors() {
         return chunkDescriptors;
+    }
+
+    @Override
+    public void close() {
+        dataAccesses.forEach(dataAccess -> {
+            try {
+                dataAccess.close();
+            } catch (Exception e) {
+                LOGGER.error("Failed to close data access: " + dataAccess);
+            }
+        });
     }
 }

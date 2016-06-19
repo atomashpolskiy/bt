@@ -22,6 +22,8 @@ public class DataWorker implements Runnable {
     private BlockingQueue<BlockOp> pendingOps;
     private Map<Peer, BlockingQueue<BlockRead>> completedBlockRequests;
 
+    private volatile boolean shutdown;
+
     public DataWorker(List<IChunkDescriptor> chunks, int maxQueueLength) {
 
         this.chunks = chunks;
@@ -32,13 +34,17 @@ public class DataWorker implements Runnable {
 
     @Override
     public void run() {
-        while (true) {
+        while (!shutdown) {
             try {
                 pendingOps.take().execute();
             } catch (InterruptedException e) {
                 LOGGER.warn("Interrupted while waiting for next block op", e);
             }
         }
+    }
+
+    public void shutdown() {
+        shutdown = true;
     }
 
     boolean addBlockRequest(Peer peer, int pieceIndex, int offset, int length) {
