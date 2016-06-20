@@ -25,6 +25,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Singleton;
+import com.google.inject.util.Modules;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -90,11 +91,13 @@ public class BtRuntimeBuilder {
             } else {
                 binder.bind(ExecutorService.class).toInstance(executorService);
             }
-
-            if (adapters != null) {
-                adapters.forEach(adapter -> adapter.contributeToRuntime(binder));
-            }
         };
+
+        if (adapters != null) {
+            module = Modules.override(module).with(binder -> {
+                adapters.forEach(adapter -> adapter.contributeToRuntime(binder));
+            });
+        }
 
         return Guice.createInjector(module);
     }
