@@ -3,19 +3,22 @@ package bt.torrent;
 import bt.data.DataStatus;
 import bt.data.IChunkDescriptor;
 import bt.net.IPeerConnection;
+import bt.net.Peer;
 import bt.net.PeerConnection;
+import bt.protocol.Message;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import static bt.TestUtil.assertExceptionWithMessage;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -41,8 +44,10 @@ public class PieceManagerTest {
 
         List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
 
-        IPieceManager IPieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
-        assertArrayEquals(new byte[]{0,0}, IPieceManager.getBitfield());
+        IPieceManager pieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
+        assertArrayEquals(new byte[]{0,0}, pieceManager.getBitfield());
+        assertFalse(pieceManager.haveAnyData());
+        assertEquals(12, pieceManager.piecesLeft());
     }
 
     @Test
@@ -53,8 +58,10 @@ public class PieceManagerTest {
 
         byte expectedBitfield = (byte) (1 + (0b1 << 4) + (0b1 << 7));
 
-        IPieceManager IPieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
-        assertArrayEquals(new byte[]{expectedBitfield}, IPieceManager.getBitfield());
+        IPieceManager pieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
+        assertArrayEquals(new byte[]{expectedBitfield}, pieceManager.getBitfield());
+        assertTrue(pieceManager.haveAnyData());
+        assertEquals(5, pieceManager.piecesLeft());
     }
 
     @Test
@@ -65,16 +72,65 @@ public class PieceManagerTest {
 
         List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
 
-        IPieceManager IPieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
+        IPieceManager pieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
         IPeerConnection peer = mock(PeerConnection.class);
         assertExceptionWithMessage(
                 it -> {
-                    IPieceManager.peerHasBitfield(peer, new byte[]{0,0}); return null;},
+                    pieceManager.peerHasBitfield(peer, new byte[]{0,0}); return null;},
                 "bitfield has wrong size: 2");
     }
 
-    // TODO: need new test for IPieceManager.selectPieceForPeer(PeerConnection)
-    // instead of the old one
+    @Test
+    public void testPieceManager_SelectPieces() {
+
+        Verifier verifier3 = new Verifier(),
+                 verifier5 = new Verifier();
+
+        IChunkDescriptor chunk3 = mockChunk(blockSize, chunkSize, new byte[]{0,0,0,0}, verifier3),
+                         chunk5 = mockChunk(blockSize, chunkSize, new byte[]{0,0,0,0}, verifier5);
+
+        IChunkDescriptor[] chunkArray = new IChunkDescriptor[12];
+        Arrays.fill(chunkArray, emptyChunk);
+        chunkArray[3] = chunk3;
+        chunkArray[5] = chunk5;
+
+        List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
+        IPieceManager pieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
+
+        // peer has piece #3
+        IPeerConnection peer1 = mockPeer(1);
+        assertFalse(pieceManager.mightSelectPieceForPeer(peer1));
+        pieceManager.peerHasBitfield(peer1, new byte[]{0b1 << (7 - 3), 0});
+        assertTrue(pieceManager.mightSelectPieceForPeer(peer1));
+        assertHasPiece(3, pieceManager.selectPieceForPeer(peer1));
+
+        // another peer has pieces #3 and #5
+        IPeerConnection peer2 = mockPeer(2);
+        pieceManager.peerHasBitfield(peer2, new byte[]{(0b1 << (7 - 3)) + (0b1 << (7 - 5)), 0});
+        assertHasPiece(5, pieceManager.selectPieceForPeer(peer2));
+
+        verifier5.setVerified();
+        assertTrue(pieceManager.checkPieceVerified(5));
+        assertHasPiece(3, pieceManager.selectPieceForPeer(peer1));
+        assertFalse(pieceManager.mightSelectPieceForPeer(peer2));
+
+        // yet another peer has pieces #7 and #11
+        IPeerConnection peer3 = mockPeer(3);
+        pieceManager.peerHasBitfield(peer3, new byte[]{0, 0b1 << (7 - 3)});
+        pieceManager.peerHasPiece(peer3, 7);
+        assertHasPiece(3, pieceManager.selectPieceForPeer(peer1));
+        assertFalse(pieceManager.mightSelectPieceForPeer(peer2));
+        assertHasPiece(7, pieceManager.selectPieceForPeer(peer3));
+
+        // peer1 resets connection
+        peer1.closeQuietly();
+        assertFalse(pieceManager.mightSelectPieceForPeer(peer1));
+        assertTrue(pieceManager.mightSelectPieceForPeer(peer2));
+        assertHasPiece(3, pieceManager.selectPieceForPeer(peer2));
+
+        verifier3.setVerified();
+        assertFalse(pieceManager.mightSelectPieceForPeer(peer2));
+    }
 
     private static IChunkDescriptor mockChunk(long blockSize, long chunkSize, byte[] bitfield,
                                               Supplier<Boolean> verifier) {
@@ -85,39 +141,71 @@ public class PieceManagerTest {
         when(chunk.getSize()).thenReturn(chunkSize);
         when(chunk.getBlockSize()).thenReturn(blockSize);
         when(chunk.getBitfield()).thenReturn(_bitfield);
-        when(chunk.getStatus()).thenReturn(statusForBitfield(_bitfield));
+        when(chunk.getStatus()).then(it ->
+                verifier == null? statusForBitfield(_bitfield)
+                        : (verifier.get()? DataStatus.VERIFIED : statusForBitfield(_bitfield)));
+
         when(chunk.verify()).then(it -> verifier == null? false : verifier.get());
 
         return chunk;
     }
 
     private static IPeerConnection mockPeer(int id) {
-        IPeerConnection connection = mock(PeerConnection.class);
-        when(connection.isClosed()).thenReturn(false);
-        when(connection.getTag()).thenReturn(id);
-        return connection;
-    }
 
-    private static void assertHasPieceAndPeers(Map<Integer, List<IPeerConnection>> nextPieces, Integer pieceIndex,
-                                               IPeerConnection... peers) {
+        return new IPeerConnection() {
 
-        assertTrue(nextPieces.containsKey(pieceIndex));
-        List<IPeerConnection> actualPeers = nextPieces.get(pieceIndex);
-        assertEquals(peers.length, actualPeers.size());
-        for (IPeerConnection peer : peers) {
-            assertContains(actualPeers, peer);
-        }
-    }
+            private boolean closed;
 
-    private static void assertContains(Collection<IPeerConnection> connections, IPeerConnection expected) {
-
-        boolean contains = false;
-        for (IPeerConnection connection : connections) {
-            if (connection.getTag().equals(expected.getTag())) {
-                contains = true;
+            @Override
+            public Object getTag() {
+                return id;
             }
-        }
-        assertTrue(contains);
+
+            @Override
+            public Message readMessageNow() {
+                return null;
+            }
+
+            @Override
+            public Message readMessage(long timeout) {
+                return null;
+            }
+
+            @Override
+            public void postMessage(Message message) {
+
+            }
+
+            @Override
+            public Peer getRemotePeer() {
+                return null;
+            }
+
+            @Override
+            public void closeQuietly() {
+                closed = true;
+            }
+
+            @Override
+            public boolean isClosed() {
+                return closed;
+            }
+
+            @Override
+            public long getLastActive() {
+                return 0;
+            }
+
+            @Override
+            public void close() throws IOException {
+                closed = true;
+            }
+        };
+    }
+
+    private static void assertHasPiece(Integer expectedIndex, Optional<Integer> actualIndex) {
+        assertTrue("missing index", actualIndex.isPresent());
+        assertEquals(expectedIndex, actualIndex.get());
     }
 
     private static DataStatus statusForBitfield(byte[] bitfield) {
