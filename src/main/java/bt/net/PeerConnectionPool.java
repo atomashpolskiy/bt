@@ -3,7 +3,11 @@ package bt.net;
 import bt.BtException;
 import bt.protocol.Message;
 import bt.service.IConfigurationService;
+import bt.service.INetworkService;
+import bt.service.IPeerRegistry;
 import bt.service.IShutdownService;
+import bt.service.ITorrentRegistry;
+import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +29,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 
-public class PeerConnectionPool {
+public class PeerConnectionPool implements IPeerConnectionPool {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionPool.class);
 
@@ -42,12 +46,14 @@ public class PeerConnectionPool {
     private ReentrantReadWriteLock listenerLock;
     private ReentrantLock connectionLock;
 
-    public PeerConnectionPool(PeerConnectionFactory connectionFactory, SocketChannelFactory socketChannelFactory,
-                              HandshakeHandler incomingHandshakeHandler, IConfigurationService configurationService,
-                              IShutdownService shutdownService) {
+    @Inject
+    public PeerConnectionPool(INetworkService networkService, ITorrentRegistry torrentRegistry, IPeerRegistry peerRegistry,
+                              IConfigurationService configurationService, IShutdownService shutdownService) {
 
-        this.connectionFactory = connectionFactory;
-        this.incomingHandshakeHandler = incomingHandshakeHandler;
+        SocketChannelFactory socketChannelFactory = new SocketChannelFactory(networkService);
+        this.connectionFactory = new PeerConnectionFactory(peerRegistry, socketChannelFactory);
+
+        this.incomingHandshakeHandler = new IncomingHandshakeHandler(torrentRegistry, peerRegistry, configurationService);
 
         pendingConnections = new ConcurrentHashMap<>();
         connections = new ConcurrentHashMap<>();
@@ -80,6 +86,7 @@ public class PeerConnectionPool {
         shutdownService.addShutdownHook(this::shutdown);
     }
 
+    @Override
     public void addConnectionListener(Consumer<IPeerConnection> listener) {
         listenerLock.writeLock().lock();
         try {
@@ -89,6 +96,7 @@ public class PeerConnectionPool {
         }
     }
 
+    @Override
     public void removeConnectionListener(Consumer<IPeerConnection> listener) {
         listenerLock.writeLock().lock();
         try {
@@ -98,10 +106,12 @@ public class PeerConnectionPool {
         }
     }
 
+    @Override
     public IPeerConnection getConnection(Peer peer) {
         return connections.get(peer);
     }
 
+    @Override
     public CompletableFuture<IPeerConnection> requestConnection(Peer peer, HandshakeHandler handshakeHandler) {
 
         CompletableFuture<IPeerConnection> connection = getExistingOrPendingConnection(peer);

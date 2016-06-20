@@ -41,7 +41,7 @@ public class PieceManagerTest {
 
         List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
 
-        IPieceManager IPieceManager = new PieceManager(new RarestFirstSelector(false), chunks);
+        IPieceManager IPieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
         assertArrayEquals(new byte[]{0,0}, IPieceManager.getBitfield());
     }
 
@@ -53,7 +53,7 @@ public class PieceManagerTest {
 
         byte expectedBitfield = (byte) (1 + (0b1 << 4) + (0b1 << 7));
 
-        IPieceManager IPieceManager = new PieceManager(new RarestFirstSelector(false), chunks);
+        IPieceManager IPieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
         assertArrayEquals(new byte[]{expectedBitfield}, IPieceManager.getBitfield());
     }
 
@@ -65,7 +65,7 @@ public class PieceManagerTest {
 
         List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
 
-        IPieceManager IPieceManager = new PieceManager(new RarestFirstSelector(false), chunks);
+        IPieceManager IPieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
         IPeerConnection peer = mock(PeerConnection.class);
         assertExceptionWithMessage(
                 it -> {

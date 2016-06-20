@@ -12,6 +12,8 @@ import bt.torrent.ITorrentDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
+
 public class IncomingHandshakeHandler implements HandshakeHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IncomingHandshakeHandler.class);
@@ -36,8 +38,9 @@ public class IncomingHandshakeHandler implements HandshakeHandler {
 
                 Handshake handshake = (Handshake) firstMessage;
                 Torrent torrent = torrentRegistry.getTorrent(handshake.getInfoHash());
-                ITorrentDescriptor descriptor = torrentRegistry.getDescriptor(torrent);
-                if (descriptor.isActive()) {
+
+                Optional<ITorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
+                if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {
                     try {
                         byte[] infoHash = torrent.getInfoHash();
                         connection.postMessage(new Handshake(infoHash, peerRegistry.getLocalPeer().getPeerId()));

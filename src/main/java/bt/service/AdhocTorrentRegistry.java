@@ -2,38 +2,30 @@ package bt.service;
 
 import bt.data.DataAccessFactory;
 import bt.data.DataDescriptor;
-import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
 import bt.torrent.ITorrentDescriptor;
 import bt.torrent.TorrentDescriptor;
 import bt.tracker.ITrackerService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.google.inject.Inject;
 
-import java.net.URL;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class AdhocTorrentRegistry implements ITorrentRegistry {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AdhocTorrentRegistry.class);
-
-    private IMetadataService metadataService;
     private ITrackerService trackerService;
     private IConfigurationService configurationService;
-    private DataAccessFactory dataAccessFactory;
 
     private ConcurrentMap<byte[], Torrent> torrents;
     private ConcurrentMap<Torrent, ITorrentDescriptor> descriptors;
 
-    public AdhocTorrentRegistry(IMetadataService metadataService, ITrackerService trackerService,
-                                IConfigurationService configurationService, DataAccessFactory dataAccessFactory,
+    @Inject
+    public AdhocTorrentRegistry(ITrackerService trackerService, IConfigurationService configurationService,
                                 IShutdownService shutdownService) {
 
-        this.metadataService = metadataService;
         this.trackerService = trackerService;
         this.configurationService = configurationService;
-        this.dataAccessFactory = dataAccessFactory;
 
         shutdownService.addShutdownHook(() -> descriptors.values().forEach(it -> it.getDataDescriptor().close()));
 
@@ -46,30 +38,23 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
         return torrents.get(infoHash);
     }
 
-    public Torrent createTorrentFromMetainfo(URL metainfoUrl) {
-
-        Torrent torrent = metadataService.fromUrl(metainfoUrl);
-
-        Torrent existing = torrents.putIfAbsent(torrent.getInfoHash(), torrent);
-        if (existing != null) {
-            LOGGER.warn("Received request to add an existing torrent: " + torrent.getName());
-            torrent = existing;
-        }
-        return torrent;
+    @Override
+    public Optional<ITorrentDescriptor> getDescriptor(Torrent torrent) {
+        return Optional.ofNullable(descriptors.get(torrent));
     }
 
     @Override
-    public ITorrentDescriptor getDescriptor(Torrent torrent) {
+    public ITorrentDescriptor getOrCreateDescriptor(Torrent torrent, DataAccessFactory dataAccessFactory) {
 
-        ITorrentDescriptor descriptor = descriptors.get(torrent);
-        if (descriptor == null) {
-            descriptor = new TorrentDescriptor(trackerService, torrent,
+        return getDescriptor(torrent).orElseGet(() -> {
+
+            ITorrentDescriptor descriptor = new TorrentDescriptor(trackerService, torrent,
                     new DataDescriptor(dataAccessFactory, configurationService, torrent));
             ITorrentDescriptor existing = descriptors.putIfAbsent(torrent, descriptor);
             if (existing != null) {
                 descriptor = existing;
             }
-        }
-        return descriptor;
+            return descriptor;
+        });
     }
 }

@@ -6,6 +6,7 @@ import bt.net.Peer;
 import bt.tracker.ITrackerService;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerResponse;
+import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +28,7 @@ public class PeerRegistry implements IPeerRegistry {
 
     ConcurrentMap<Torrent, Long> lastQueryTimes;
 
+    @Inject
     public PeerRegistry(INetworkService networkService, IIdService idService, ITrackerService trackerService,
                         IConfigurationService configurationService) {
 

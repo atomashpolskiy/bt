@@ -13,7 +13,7 @@ import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class DataWorker implements Runnable {
+public class DataWorker implements IDataWorker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DataWorker.class);
 
@@ -43,11 +43,13 @@ public class DataWorker implements Runnable {
         }
     }
 
+    @Override
     public void shutdown() {
         shutdown = true;
     }
 
-    boolean addBlockRequest(Peer peer, int pieceIndex, int offset, int length) {
+    @Override
+    public boolean addBlockRequest(Peer peer, int pieceIndex, int offset, int length) {
 
         if (pieceIndex < 0 || pieceIndex >= chunks.size()) {
             throw new BtException("invalid piece index: " + pieceIndex);
@@ -60,7 +62,8 @@ public class DataWorker implements Runnable {
         return accepted;
     }
 
-    BlockWrite addBlock(Peer peer, int pieceIndex, int offset, byte[] block) {
+    @Override
+    public BlockWrite addBlock(Peer peer, int pieceIndex, int offset, byte[] block) {
 
         if (pieceIndex < 0 || pieceIndex >= chunks.size()) {
             throw new BtException("invalid piece index: " + pieceIndex);
@@ -77,7 +80,8 @@ public class DataWorker implements Runnable {
         return blockWrite;
     }
 
-    BlockRead getCompletedBlockRequest(Peer peer) {
+    @Override
+    public BlockRead getCompletedBlockRequest(Peer peer) {
         BlockingQueue<BlockRead> peerCompletedRequests = completedBlockRequests.get(peer);
         return (peerCompletedRequests == null) ? null : peerCompletedRequests.poll();
     }

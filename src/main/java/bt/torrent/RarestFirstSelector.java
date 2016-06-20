@@ -11,10 +11,20 @@ import java.util.function.Predicate;
 public class RarestFirstSelector implements PieceSelector {
 
     private static final Comparator<Long> comparator = new PackedIntComparator();
+    private static final RarestFirstSelector selector = new RarestFirstSelector(false);
+    private static final RarestFirstSelector randomizedSelector = new RarestFirstSelector(true);
+
+    public static RarestFirstSelector selector() {
+        return selector;
+    }
+
+    public static RarestFirstSelector randomized() {
+        return randomizedSelector;
+    }
 
     private boolean randomized;
 
-    public RarestFirstSelector(boolean randomized) {
+    private RarestFirstSelector(boolean randomized) {
         this.randomized = randomized;
     }
 

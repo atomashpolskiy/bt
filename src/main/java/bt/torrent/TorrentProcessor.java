@@ -3,9 +3,9 @@ package bt.torrent;
 import bt.metainfo.Torrent;
 import bt.net.HandshakeHandler;
 import bt.net.IPeerConnection;
+import bt.net.IPeerConnectionPool;
 import bt.net.OutgoingHandshakeHandler;
 import bt.net.Peer;
-import bt.net.PeerConnectionPool;
 import bt.protocol.Have;
 import bt.protocol.InvalidMessageException;
 import bt.service.IConfigurationService;
@@ -32,16 +32,12 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TorrentProcessor.class);
 
-    private IPeerRegistry peerRegistry;
-    private PeerConnectionPool connectionPool;
     private IConfigurationService configurationService;
     private IPieceManager pieceManager;
-    private DataWorker dataWorker;
+    private IDataWorker dataWorker;
 
     private Torrent torrent;
     private ITorrentDescriptor torrentDescriptor;
-
-    private HandshakeHandler handshakeHandler;
 
     private Map<Peer, Long> peerBans;
 
@@ -55,12 +51,10 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
     private ReentrantLock lock;
     private Condition timer;
 
-    public TorrentProcessor(IPeerRegistry peerRegistry, PeerConnectionPool connectionPool,
+    public TorrentProcessor(IPeerRegistry peerRegistry, IPeerConnectionPool connectionPool,
                             IConfigurationService configurationService, IPieceManager pieceManager,
-                            DataWorker dataWorker, Torrent torrent, ITorrentDescriptor torrentDescriptor) {
+                            IDataWorker dataWorker, Torrent torrent, ITorrentDescriptor torrentDescriptor) {
 
-        this.peerRegistry = peerRegistry;
-        this.connectionPool = connectionPool;
         this.configurationService = configurationService;
         this.pieceManager = pieceManager;
         this.dataWorker = dataWorker;
@@ -68,14 +62,14 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
         this.torrent = torrent;
         this.torrentDescriptor = torrentDescriptor;
 
-        handshakeHandler = new OutgoingHandshakeHandler(torrent, peerRegistry.getLocalPeer(),
-                configurationService.getHandshakeTimeOut());
-
         peerBans = new HashMap<>();
 
         incomingConnections = new HashSet<>();
+
+        HandshakeHandler outgoingHandler = new OutgoingHandshakeHandler(torrent, peerRegistry.getLocalPeer(),
+                configurationService.getHandshakeTimeOut());
         connectionRequestor = new ConnectionRequestor(peerRegistry, connectionPool,
-                handshakeHandler, configurationService, torrent);
+                outgoingHandler, configurationService, torrent);
 
         connectionWorkers = new ConcurrentHashMap<>();
 
@@ -171,7 +165,7 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
     private class ConnectionRequestor {
 
         private IPeerRegistry peerRegistry;
-        private PeerConnectionPool pool;
+        private IPeerConnectionPool pool;
         private HandshakeHandler handshakeHandler;
         private IConfigurationService configurationService;
         private Torrent torrent;
@@ -180,7 +174,7 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
         private long lastRequestedPeers;
         private Map<Peer, Long> lastRequestedConnections;
 
-        ConnectionRequestor(IPeerRegistry peerRegistry, PeerConnectionPool pool, HandshakeHandler handshakeHandler,
+        ConnectionRequestor(IPeerRegistry peerRegistry, IPeerConnectionPool pool, HandshakeHandler handshakeHandler,
                             IConfigurationService configurationService, Torrent torrent) {
             this.peerRegistry = peerRegistry;
             this.pool = pool;

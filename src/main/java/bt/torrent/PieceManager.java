@@ -17,6 +17,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 public class PieceManager implements IPieceManager {
@@ -24,7 +25,7 @@ public class PieceManager implements IPieceManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceManager.class);
 
     private List<IChunkDescriptor> chunks;
-    private int completePieces;
+    private AtomicInteger completePieces;
 
     /**
      * Indicates if there is at least one verified chunk in the local torrent files.
@@ -39,6 +40,7 @@ public class PieceManager implements IPieceManager {
     public PieceManager(PieceSelector selector, List<IChunkDescriptor> chunks) {
 
         this.chunks = chunks;
+        completePieces = new AtomicInteger();
 
         bitfield = createBitfield(chunks);
         for (byte b : bitfield) {
@@ -63,6 +65,7 @@ public class PieceManager implements IPieceManager {
 
         int chunkCount = chunks.size();
         byte[] bitfield = new byte[(int) Math.ceil(chunkCount / 8d)];
+        int completePieces = 0;
         int bitfieldIndex = 0;
         while (chunkCount > 0) {
             int b = 0, offset = bitfieldIndex * 8;
@@ -78,6 +81,7 @@ public class PieceManager implements IPieceManager {
             bitfieldIndex++;
             chunkCount -= 8;
         }
+        this.completePieces.addAndGet(completePieces);
         return bitfield;
     }
 
@@ -132,7 +136,7 @@ public class PieceManager implements IPieceManager {
                     case VERIFIED: {
                         setBit(bitfield, pieceIndex);
                         haveAnyData = true;
-                        completePieces++;
+                        completePieces.incrementAndGet();
                         completed = true;
                         break;
                     }
@@ -207,7 +211,7 @@ public class PieceManager implements IPieceManager {
     @Override
     public int piecesLeft() {
 
-        int left = chunks.size() - completePieces;
+        int left = chunks.size() - completePieces.get();
         if (left < 0) {
             // some algorithm malfunction
             throw new BtException("Unexpected number of pieces left: " + left);
