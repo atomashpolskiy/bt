@@ -159,6 +159,9 @@ public class PieceManager implements IPieceManager {
 
     @Override
     public boolean mightSelectPieceForPeer(IPeerConnection peer) {
+        if (peer.isClosed() || assignments.getAssignedPiece(peer).isPresent()) {
+            return false;
+        }
         Optional<Integer> piece = pieceSelectorHelper.selectPieceForPeer(peer, selectionValidator);
         return piece.isPresent() && !assignments.getAssignee(piece.get()).isPresent();
     }
