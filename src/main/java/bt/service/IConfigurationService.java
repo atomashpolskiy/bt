@@ -17,4 +17,6 @@ public interface IConfigurationService {
     long getPeerBanTime();
 
     long getMaxPeerInactivityInterval();
+
+    boolean shouldVerifyChunksOnInit();
 }

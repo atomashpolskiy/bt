@@ -38,6 +38,7 @@ public class ChunkDescriptor_FileDataAccessTest {
 
         configurationService = mock(IConfigurationService.class);
         when(configurationService.getTransferBlockSize()).thenReturn(4L);
+        when(configurationService.shouldVerifyChunksOnInit()).thenReturn(false);
     }
 
     private byte[] SINGLE_FILE = new byte[] {

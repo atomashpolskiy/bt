@@ -15,7 +15,7 @@ public class ChunkDescriptorTest {
              fileSize = blockSize * 4;
 
         IChunkDescriptor chunkDescriptor = new ChunkDescriptor(
-                new DataAccess[]{mockDataAccess(fileSize)}, 0, fileSize, new byte[20], blockSize);
+                new DataAccess[]{mockDataAccess(fileSize)}, 0, fileSize, new byte[20], blockSize, false);
 
         assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
 
@@ -41,7 +41,7 @@ public class ChunkDescriptorTest {
              fileSize = blockSize * 2 + 3;
 
         IChunkDescriptor chunkDescriptor = new ChunkDescriptor(
-                new DataAccess[]{mockDataAccess(fileSize)}, 0, fileSize, new byte[20], blockSize);
+                new DataAccess[]{mockDataAccess(fileSize)}, 0, fileSize, new byte[20], blockSize, false);
 
         assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
 
@@ -64,7 +64,7 @@ public class ChunkDescriptorTest {
              fileSize = blockSize * 2 + 3;
 
         IChunkDescriptor chunkDescriptor = new ChunkDescriptor(
-                new DataAccess[]{mockDataAccess(fileSize)}, 0, fileSize, new byte[20], blockSize);
+                new DataAccess[]{mockDataAccess(fileSize)}, 0, fileSize, new byte[20], blockSize, false);
 
         assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
 
@@ -86,7 +86,7 @@ public class ChunkDescriptorTest {
 
         IChunkDescriptor chunkDescriptor = new ChunkDescriptor(
                 new DataAccess[]{mockDataAccess(fileSize1), mockDataAccess(fileSize2)},
-                0, fileSize2, new byte[20], blockSize);
+                0, fileSize2, new byte[20], blockSize, false);
 
         assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
 
@@ -112,7 +112,7 @@ public class ChunkDescriptorTest {
              fileSize = blockSize * 4;
 
         IChunkDescriptor chunkDescriptor = new ChunkDescriptor(
-                new DataAccess[]{mockDataAccess(fileSize)}, 0, fileSize, new byte[20], blockSize);
+                new DataAccess[]{mockDataAccess(fileSize)}, 0, fileSize, new byte[20], blockSize, false);
 
         assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
 
@@ -156,7 +156,7 @@ public class ChunkDescriptorTest {
         IChunkDescriptor chunkDescriptor = new ChunkDescriptor(
                 new DataAccess[]{mockDataAccess(fileSize1), mockDataAccess(fileSize2),
                         mockDataAccess(fileSize3), mockDataAccess(fileSize4)},
-                0, fileSize4, new byte[20], blockSize);
+                0, fileSize4, new byte[20], blockSize, false);
 
         assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
 

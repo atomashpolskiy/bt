@@ -57,9 +57,10 @@ public class ChunkDescriptor implements IChunkDescriptor {
      * @param limit Offset from the beginning of the last file in {@code files}; exclusive
      * @param checksum Chunk's hash
      * @param blockSize Size of the read-write transfer block
+     * @param shouldVerify If chunk should verify itself upon initialization
      */
     public ChunkDescriptor(DataAccess[] files, long offset, long limit,
-                           byte[] checksum, long blockSize) {
+                           byte[] checksum, long blockSize, boolean shouldVerify) {
 
         if (files.length == 0) {
             throw new BtException("Failed to create chunk descriptor: no files");
@@ -107,7 +108,9 @@ public class ChunkDescriptor implements IChunkDescriptor {
         }
 
         status = DataStatus.EMPTY;
-        doVerify(false); // TODO: integrity check on init should probably be optional/configurable
+        if (shouldVerify) {
+            doVerify(false);
+        }
     }
 
     @Override

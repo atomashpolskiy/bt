@@ -51,6 +51,8 @@ public class DataDescriptor implements IDataDescriptor {
             transferBlockSize = chunkSize;
         }
 
+        boolean shouldVerifyChunks = configurationService.shouldVerifyChunksOnInit();
+
         List<IChunkDescriptor> chunkDescriptors = new ArrayList<>((int) Math.ceil(totalSize / chunkSize) + 1);
         Iterator<byte[]> chunkHashes = torrent.getChunkHashes().iterator();
         DataAccess[] files = new DataAccess[filesCount];
@@ -83,7 +85,7 @@ public class DataDescriptor implements IDataDescriptor {
 
                     chunkDescriptors.add(new ChunkDescriptor(
                             Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1),
-                            chunkOffset, limitInCurrentFile, chunkHashes.next(), transferBlockSize));
+                            chunkOffset, limitInCurrentFile, chunkHashes.next(), transferBlockSize, shouldVerifyChunks));
 
                     firstFileInChunkIndex = currentFileIndex;
                     chunkOffset = limitInCurrentFile;
@@ -107,7 +109,7 @@ public class DataDescriptor implements IDataDescriptor {
                     }
                     chunkDescriptors.add(new ChunkDescriptor(
                             Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1),
-                            chunkOffset, fileSize, chunkHashes.next(), transferBlockSize));
+                            chunkOffset, fileSize, chunkHashes.next(), transferBlockSize, shouldVerifyChunks));
                 }
             }
         }

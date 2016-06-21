@@ -41,4 +41,9 @@ public class ConfigurationService implements IConfigurationService {
     public long getMaxPeerInactivityInterval() {
         return 180000;
     }
+
+    @Override
+    public boolean shouldVerifyChunksOnInit() {
+        return true;
+    }
 }

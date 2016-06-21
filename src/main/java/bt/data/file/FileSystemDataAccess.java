@@ -48,8 +48,6 @@ class FileSystemDataAccess implements DataAccess {
             if (!parent.exists()) {
                 if (create && !parent.mkdirs()) {
                     throw new BtException("Failed to create file access -- can't create (some of the) directories");
-                } else {
-                    return false;
                 }
             }
 
