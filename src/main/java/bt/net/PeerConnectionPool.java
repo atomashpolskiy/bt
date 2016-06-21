@@ -194,7 +194,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 }
             } catch (IOException e) {
                 LOGGER.error("Unexpected I/O error when listening to the incoming channel: " + localAddress, e);
-                shutdown();
             }
         }
 

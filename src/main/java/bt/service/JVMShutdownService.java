@@ -21,4 +21,9 @@ public class JVMShutdownService extends BaseShutdownService {
         e.printStackTrace(System.err);
         System.err.flush();
     }
+
+    @Override
+    public void shutdownNow() {
+        shutdown();
+    }
 }

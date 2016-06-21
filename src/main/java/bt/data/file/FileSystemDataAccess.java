@@ -40,21 +40,31 @@ class FileSystemDataAccess implements DataAccess {
         closed = true;
     }
 
-    private void init() {
+    // TODO: this is temporary fix for verification upon app start
+    // should be re-done (probably need additional API to know if data access is "empty")
+    private boolean init(boolean create) {
 
         if (closed) {
-            if (!(parent.exists() || parent.mkdirs())) {
-                throw new BtException("Failed to create file access -- can't create (some of the) directories");
+            if (!parent.exists()) {
+                if (create && !parent.mkdirs()) {
+                    throw new BtException("Failed to create file access -- can't create (some of the) directories");
+                } else {
+                    return false;
+                }
             }
 
             if (!file.exists()) {
-                try {
-                    if (!file.createNewFile()) {
-                        throw new BtException("Failed to create file access -- " +
-                                "can't create new file: " + file.getAbsolutePath());
+                if (create) {
+                    try {
+                        if (!file.createNewFile()) {
+                            throw new BtException("Failed to create file access -- " +
+                                    "can't create new file: " + file.getAbsolutePath());
+                        }
+                    } catch (IOException e) {
+                        throw new BtException("Failed to create file access -- unexpected I/O error", e);
                     }
-                } catch (IOException e) {
-                    throw new BtException("Failed to create file access -- unexpected I/O error", e);
+                } else {
+                    return false;
                 }
             }
 
@@ -66,13 +76,16 @@ class FileSystemDataAccess implements DataAccess {
 
             closed = false;
         }
+        return true;
     }
 
     @Override
     public byte[] readBlock(long offset, int length) {
 
         if (closed) {
-            init();
+            if (!init(false)) {
+                return new byte[length];
+            }
         }
 
         if (offset < 0 || length < 0) {
@@ -98,7 +111,7 @@ class FileSystemDataAccess implements DataAccess {
     public void writeBlock(byte[] block, long offset) {
 
         if (closed) {
-            init();
+            init(true);
         }
 
         if (offset < 0) {

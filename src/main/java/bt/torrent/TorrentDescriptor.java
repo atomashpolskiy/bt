@@ -17,10 +17,7 @@ public class TorrentDescriptor implements ITorrentDescriptor {
     private Torrent torrent;
     private IDataDescriptor dataDescriptor;
 
-    private volatile TrackerResponse lastResponse;
-
     private volatile boolean active;
-    private volatile long lastTrackerQueryTime;
 
     public TorrentDescriptor(ITrackerService trackerService, Torrent torrent, IDataDescriptor dataDescriptor) {
 
@@ -42,13 +39,11 @@ public class TorrentDescriptor implements ITorrentDescriptor {
         }
 
         TrackerResponse response = tracker.request(torrent).start();
-        if (!response.isSuccess()) {
+        if (response != null && !response.isSuccess()) {
             throw new BtException("Failed to start torrent -- " +
                     "unexpected error during interaction with the tracker: " + response.getErrorMessage());
         }
 
-        lastResponse = response;
-        lastTrackerQueryTime = System.currentTimeMillis();
         active = true;
     }
 
@@ -62,7 +57,7 @@ public class TorrentDescriptor implements ITorrentDescriptor {
         active = false;
 
         TrackerResponse response = tracker.request(torrent).stop();
-        if (!response.isSuccess()) {
+        if (response != null && !response.isSuccess()) {
             LOGGER.warn("Unexpected error during interaction with the tracker: " + response.getErrorMessage());
         }
     }
@@ -71,7 +66,7 @@ public class TorrentDescriptor implements ITorrentDescriptor {
     public void complete() {
 
         TrackerResponse response = tracker.request(torrent).complete();
-        if (!response.isSuccess()) {
+        if (response != null && !response.isSuccess()) {
             LOGGER.warn("Unexpected error during interaction with the tracker: " + response.getErrorMessage());
         }
     }

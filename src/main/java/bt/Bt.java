@@ -80,6 +80,7 @@ public class Bt {
             PieceManager pieceManager = new PieceManager(pieceSelector, descriptor.getDataDescriptor().getChunkDescriptors());
             TorrentProcessor processor = new TorrentProcessor(peerRegistry, connectionPool, configurationService,
                     pieceManager, dataWorker, torrent, descriptor);
+            connectionPool.addConnectionListener(processor);
 
             ExecutorService executorService = runtime.service(ExecutorService.class);
             IShutdownService shutdownService = runtime.service(IShutdownService.class);
@@ -173,12 +174,16 @@ public class Bt {
 
             delegate.start();
 
-            return CompletableFuture.anyOf(
-                        CompletableFuture.runAsync(processor, executor),
-                        CompletableFuture.runAsync(dataWorker, executor))
-                    .thenRun(dataWorker::shutdown)
+            CompletableFuture<?> processorFuture = CompletableFuture.runAsync(processor, executor),
+                                 dataWorkerFuture = CompletableFuture.runAsync(dataWorker, executor);
+
+            CompletableFuture<?> future = CompletableFuture.anyOf(processorFuture, dataWorkerFuture);
+
+            future.thenRun(shutdownService::shutdownNow)
                     .thenRun(() -> listener.ifPresent(listener -> listener.accept(getState())))
                     .thenRun(() -> listenerFuture.ifPresent(listener -> listener.cancel(true)));
+
+            return future;
         }
 
         private TorrentProcessingState getState() {

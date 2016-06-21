@@ -17,7 +17,7 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
     private ITrackerService trackerService;
     private IConfigurationService configurationService;
 
-    private ConcurrentMap<byte[], Torrent> torrents;
+    private ConcurrentMap<String, Torrent> torrents;
     private ConcurrentMap<Torrent, ITorrentDescriptor> descriptors;
 
     @Inject
@@ -35,7 +35,7 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
 
     @Override
     public Torrent getTorrent(byte[] infoHash) {
-        return torrents.get(infoHash);
+        return torrents.get(new String(infoHash));
     }
 
     @Override
@@ -54,6 +54,7 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
             if (existing != null) {
                 descriptor = existing;
             }
+            torrents.putIfAbsent(new String(torrent.getInfoHash()), torrent);
             return descriptor;
         });
     }

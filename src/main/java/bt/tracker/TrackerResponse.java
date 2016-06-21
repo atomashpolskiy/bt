@@ -29,7 +29,7 @@ public class TrackerResponse {
 
     private final List<Peer> peerList;
 
-    TrackerResponse(boolean success) {
+    protected TrackerResponse(boolean success) {
         this.success = success;
         peerList = new ArrayList<>();
     }

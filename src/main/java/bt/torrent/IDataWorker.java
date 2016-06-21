@@ -9,6 +9,4 @@ public interface IDataWorker extends Runnable {
     BlockWrite addBlock(Peer peer, int pieceIndex, int offset, byte[] block);
 
     BlockRead getCompletedBlockRequest(Peer peer);
-
-    void shutdown();
 }

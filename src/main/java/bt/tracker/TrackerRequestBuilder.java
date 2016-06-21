@@ -10,7 +10,7 @@ public abstract class TrackerRequestBuilder {
     private int downloaded;
     private int left;
 
-    TrackerRequestBuilder(byte[] infoHash) {
+    protected TrackerRequestBuilder(byte[] infoHash) {
         this.infoHash = infoHash;
     }
 

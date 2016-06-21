@@ -3,6 +3,7 @@ package bt.torrent;
 import bt.BtException;
 import bt.data.IChunkDescriptor;
 import bt.net.Peer;
+import bt.service.IShutdownService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,30 +23,37 @@ public class DataWorker implements IDataWorker {
     private BlockingQueue<BlockOp> pendingOps;
     private Map<Peer, BlockingQueue<BlockRead>> completedBlockRequests;
 
+    private volatile Thread t;
     private volatile boolean shutdown;
 
-    public DataWorker(List<IChunkDescriptor> chunks, int maxQueueLength) {
+    public DataWorker(IShutdownService shutdownService, List<IChunkDescriptor> chunks, int maxQueueLength) {
 
         this.chunks = chunks;
 
         pendingOps = new LinkedBlockingQueue<>(maxQueueLength);
         completedBlockRequests = new HashMap<>();
+
+        shutdownService.addShutdownHook(this::shutdown);
     }
 
     @Override
     public void run() {
+
+        t = Thread.currentThread();
         while (!shutdown) {
             try {
                 pendingOps.take().execute();
             } catch (InterruptedException e) {
-                LOGGER.warn("Interrupted while waiting for next block op", e);
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Interrupted while waiting for next block op", e);
+                }
             }
         }
     }
 
-    @Override
-    public void shutdown() {
+    private void shutdown() {
         shutdown = true;
+        t.interrupt();
     }
 
     @Override

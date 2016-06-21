@@ -65,8 +65,6 @@ public class ChunkDescriptor implements IChunkDescriptor {
             throw new BtException("Failed to create chunk descriptor: no files");
         }
 
-        status = DataStatus.EMPTY;
-
         this.files = files;
         this.offsetInFirstChunkFile = offset;
         this.limitInLastChunkFile = limit;
@@ -107,6 +105,9 @@ public class ChunkDescriptor implements IChunkDescriptor {
         for (int i = 2; i < files.length; i++) {
             fileOffsets[i] = fileOffsets[i - 1] + files[i - 1].size();
         }
+
+        status = DataStatus.EMPTY;
+        doVerify(false); // TODO: integrity check on init should probably be optional/configurable
     }
 
     @Override
@@ -250,10 +251,14 @@ public class ChunkDescriptor implements IChunkDescriptor {
 
     @Override
     public boolean verify() {
+        return doVerify(true);
+    }
+
+    private boolean doVerify(boolean completeOnly) {
 
         if (status == DataStatus.VERIFIED) {
             return true;
-        } else if (status != DataStatus.COMPLETE) {
+        } else if (completeOnly && status != DataStatus.COMPLETE) {
             return false;
         }
 
