@@ -1,5 +1,6 @@
 package bt.torrent;
 
+import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.net.HandshakeHandler;
 import bt.net.IPeerConnection;
@@ -20,6 +21,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -236,9 +238,9 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
                 if (!connection.isClosed()) {
                     LOGGER.error("Closing peer connection (" + connection.getRemotePeer() + ") due to an error", e);
                     connection.closeQuietly();
-                    peerBans.put(connection.getRemotePeer(), System.currentTimeMillis());
                 }
                 LOGGER.info("Unexpected error in peer connection. Adding ban for peer: " + connection.getRemotePeer(), e);
+                peerBans.put(connection.getRemotePeer(), System.currentTimeMillis());
                 workers.remove();
                 removeConnection(connection);
             }
@@ -304,9 +306,16 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
         ConnectionWorker existing = connectionWorkers.putIfAbsent(connection,
                 new ConnectionWorker(connection, pieceManager,
                     request -> {
-                        boolean mightRead = dataWorker.addBlockRequest(connection.getRemotePeer(),
-                                    request.getPieceIndex(), request.getOffset(), request.getLength());
-                        // TODO: load balancing and choking
+                        IConnectionState state = Objects.requireNonNull(connectionWorkers.get(connection)).getState();
+                        if (state.isChoking()) {
+                            // should not happen
+                            throw new BtException("Received request to read block from choked worker");
+                        }
+
+                        if (!dataWorker.addBlockRequest(connection.getRemotePeer(),
+                                    request.getPieceIndex(), request.getOffset(), request.getLength())) {
+                            state.setChoking(true);
+                        }
                     },
                     piece -> {
                         BlockWrite blockWrite = dataWorker.addBlock(connection.getRemotePeer(), piece.getPieceIndex(),

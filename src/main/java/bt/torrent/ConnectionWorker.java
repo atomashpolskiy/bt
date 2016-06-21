@@ -12,9 +12,11 @@ import bt.protocol.Message;
 import bt.protocol.NotInterested;
 import bt.protocol.Piece;
 import bt.protocol.Request;
+import bt.protocol.Unchoke;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -54,6 +56,8 @@ public class ConnectionWorker {
     private Map<Object, BlockWrite> pendingWrites;
     private Set<Object> cancelledPeerRequests;
 
+    private volatile boolean initialized;
+
     ConnectionWorker(IPeerConnection connection, IPieceManager pieceManager, Consumer<Request> requestConsumer,
                      Function<Piece, BlockWrite> blockConsumer, Supplier<BlockRead> blockSupplier) {
 
@@ -72,11 +76,6 @@ public class ConnectionWorker {
         pendingRequests = new HashSet<>();
         pendingWrites = new HashMap<>();
         cancelledPeerRequests = new HashSet<>();
-
-        if (pieceManager.haveAnyData()) {
-            Bitfield bitfield = new Bitfield(pieceManager.getBitfield());
-            connection.postMessage(bitfield);
-        }
     }
 
     public long getReceived() {
@@ -87,10 +86,23 @@ public class ConnectionWorker {
         return sent;
     }
 
+    public IConnectionState getState() {
+        return connectionState;
+    }
+
     public void doWork() {
+
+        // TODO: this is temporary fix, need to incorporate bitfield sending into the connection initialization chain
+        if (!initialized && pieceManager.haveAnyData()) {
+            Bitfield bitfield = new Bitfield(pieceManager.getBitfield());
+            connection.postMessage(bitfield);
+            initialized = true;
+        }
+
         checkConnection();
         processIncomingMessages();
         processOutgoingMessages();
+        connectionState.updateConnection(connection);
     }
 
     private void checkConnection() {
@@ -103,10 +115,6 @@ public class ConnectionWorker {
 
         Message message = connection.readMessageNow();
         if (message != null) {
-
-            if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Received " + message + " from peer: " + connection.getRemotePeer());
-            }
 
             switch (message.getType()) {
                 case KEEPALIVE: {
@@ -131,8 +139,6 @@ public class ConnectionWorker {
                 }
                 case NOT_INTERESTED: {
                     connectionState.setPeerInterested(false);
-                    connection.postMessage(Choke.instance());
-                    connectionState.setChoking(true);
                     break;
                 }
                 case HAVE: {
@@ -297,5 +303,98 @@ public class ConnectionWorker {
     @Override
     public String toString() {
         return "Worker {peer: " + connection.getRemotePeer() + "}";
+    }
+
+    static class ConnectionState implements IConnectionState {
+
+        private static final Duration CHOKING_THRESHOLD = Duration.ofMillis(10000);
+
+        private boolean interested;
+        private boolean peerInterested;
+        private boolean choking;
+        private boolean peerChoking;
+
+        private Optional<Boolean> shouldChoke;
+
+        private long lastChoked;
+
+        ConnectionState() {
+            choking = true;
+            peerChoking = true;
+            shouldChoke = Optional.empty();
+        }
+
+        @Override
+        public boolean isInterested() {
+            return interested;
+        }
+
+        @Override
+        public void setInterested(boolean interested) {
+            this.interested = interested;
+        }
+
+        @Override
+        public boolean isPeerInterested() {
+            return peerInterested;
+        }
+
+        @Override
+        public void setPeerInterested(boolean peerInterested) {
+            this.peerInterested = peerInterested;
+        }
+
+        @Override
+        public boolean isChoking() {
+            return choking;
+        }
+
+        @Override
+        public void setChoking(boolean shouldChoke) {
+            this.shouldChoke = Optional.of(shouldChoke);
+        }
+
+        @Override
+        public boolean isPeerChoking() {
+            return peerChoking;
+        }
+
+        @Override
+        public void setPeerChoking(boolean peerChoking) {
+            this.peerChoking = peerChoking;
+        }
+
+        void updateConnection(IPeerConnection connection) {
+
+            if (!shouldChoke.isPresent()) {
+                if (peerInterested && choking) {
+                    if (mightUnchoke()) {
+                        shouldChoke = Optional.of(Boolean.FALSE); // should unchoke
+                    }
+                } else if (!peerInterested && !choking) {
+                    shouldChoke = Optional.of(Boolean.TRUE);
+                }
+            }
+
+            shouldChoke.ifPresent(shouldChoke -> {
+                if (shouldChoke != choking) {
+                    if (shouldChoke) {
+                        // choke immediately
+                        choking = true;
+                        connection.postMessage(Choke.instance());
+                        lastChoked = System.currentTimeMillis();
+                    } else if (mightUnchoke()) {
+                        choking = false;
+                        connection.postMessage(Unchoke.instance());
+                    }
+                }
+                this.shouldChoke = Optional.empty();
+            });
+        }
+
+        private boolean mightUnchoke() {
+            // unchoke depending on last choked time to avoid fibrillation
+            return System.currentTimeMillis() - lastChoked >= CHOKING_THRESHOLD.toMillis();
+        }
     }
 }
