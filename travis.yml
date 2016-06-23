@@ -1,0 +1,12 @@
+---
+language: java
+jdk:
+  - oraclejdk8
+
+branches:
+  only:
+    - master
+
+os:
+  - linux
+  - osx
