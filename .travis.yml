@@ -9,7 +9,6 @@ branches:
 
 os:
   - linux
-  - osx
 
 script:
   - mvn verify
