@@ -13,7 +13,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class ChunkDescriptor implements IChunkDescriptor {
 
-    private DataStatus status;
+    private volatile DataStatus status;
     private DataAccess[] files;
 
     private long offsetInFirstChunkFile;

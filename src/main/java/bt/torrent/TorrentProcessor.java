@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +65,7 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
 
         peerBans = new HashMap<>();
 
-        incomingConnections = new HashSet<>();
+        incomingConnections = ConcurrentHashMap.newKeySet();
 
         HandshakeHandler outgoingHandler = new OutgoingHandshakeHandler(torrent, peerRegistry.getLocalPeer(),
                 configurationService.getHandshakeTimeOut());
@@ -93,21 +92,18 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
 
     @Override
     public void run() {
+        while (torrentDescriptor.isActive()) {
 
-        lock.lock();
-        try {
-            while (torrentDescriptor.isActive()) {
+            doProcess();
 
-                doProcess();
-
-                try {
-                    timer.await(1, TimeUnit.MILLISECONDS);
-                } catch (InterruptedException e) {
-                    LOGGER.warn("Interrupted while awaiting timer", e);
-                }
+            lock.lock();
+            try {
+                timer.await(1, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                LOGGER.warn("Interrupted while awaiting timer", e);
+            } finally {
+                lock.unlock();
             }
-        } finally {
-            lock.unlock();
         }
     }
 
@@ -242,7 +238,6 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
                 LOGGER.info("Unexpected error in peer connection. Adding ban for peer: " + connection.getRemotePeer(), e);
                 peerBans.put(connection.getRemotePeer(), System.currentTimeMillis());
                 workers.remove();
-                removeConnection(connection);
             }
         }
     }
@@ -259,14 +254,12 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
             IPeerConnection connection = workers.next().getKey();
             if (connection.isClosed()) {
                 workers.remove();
-                removeConnection(connection);
             } else if (System.currentTimeMillis() - connection.getLastActive() >= configurationService.getMaxPeerInactivityInterval()) {
                 if (!connection.isClosed()) {
                     LOGGER.info("Closing inactive connection; peer: " + connection.getRemotePeer());
                     connection.closeQuietly();
                 }
                 workers.remove();
-                removeConnection(connection);
             }
         }
     }
@@ -330,12 +323,5 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
         if (existing == null && LOGGER.isDebugEnabled()) {
             LOGGER.debug("Added connection for peer: " + connection.getRemotePeer());
         }
-    }
-
-    private void removeConnection(IPeerConnection connection) {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Removing connection for peer: " + connection.getRemotePeer());
-        }
-        connectionWorkers.remove(connection);
     }
 }

@@ -53,7 +53,9 @@ public class DataWorker implements IDataWorker {
 
     private void shutdown() {
         shutdown = true;
-        t.interrupt();
+        if (t != null) {
+            t.interrupt();
+        }
     }
 
     @Override

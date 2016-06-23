@@ -99,6 +99,12 @@ public class BtRuntimeBuilder {
             });
         }
 
-        return Guice.createInjector(module);
+        Injector injector = Guice.createInjector(module);
+
+        IShutdownService shutdownService = injector.getInstance(IShutdownService.class);
+        ExecutorService executor = injector.getInstance(ExecutorService.class);
+        shutdownService.addShutdownHook(executor::shutdownNow);
+
+        return injector;
     }
 }

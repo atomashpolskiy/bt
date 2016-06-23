@@ -222,8 +222,14 @@ public class ConnectionWorker {
                 // TODO: what if peer just doesn't respond? or if some block writes have failed?
                 // being overly optimistical here, need to add some fallback strategy to restart piece
                 // (prob. with another peer, i.e. in another conn worker)
+                if (connectionState.isPeerChoking()) {
+                    pieceManager.unselectPieceForPeer(connection, currentPiece.get());
+                    currentPiece = Optional.empty();
+                    requestQueue.clear();
+                    pendingRequests.clear();
+                }
             } else {
-                if (pieceManager.mightSelectPieceForPeer(connection)) {
+                if (pieceManager.piecesLeft() > 0 && pieceManager.mightSelectPieceForPeer(connection)) {
                     if (!connectionState.isInterested()) {
                         connection.postMessage(Interested.instance());
                         connectionState.setInterested(true);

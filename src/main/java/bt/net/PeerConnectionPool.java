@@ -213,6 +213,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private void acceptIncomingConnection(SocketChannel incomingChannel) {
         executor.execute(() -> {
             try {
+                incomingChannel.configureBlocking(false);
                 PeerConnection incomingConnection = connectionFactory.createConnection(incomingChannel);
                 initConnection(incomingConnection, incomingHandshakeHandler, true);
             } catch (IOException e) {

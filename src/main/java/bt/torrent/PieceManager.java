@@ -172,6 +172,16 @@ public class PieceManager implements IPieceManager {
         return assignedPiece.isPresent()? assignedPiece : selectAndAssignPiece(peer);
     }
 
+    @Override
+    public void unselectPieceForPeer(IPeerConnection peer, Integer pieceIndex) {
+        Integer assignedPieceIndex = assignments.getAssignedPiece(peer)
+                .orElseThrow(() -> new BtException("Peer " + peer + " is not assigned to any piece"));
+        if (!assignedPieceIndex.equals(pieceIndex)) {
+            throw new BtException("Peer " + peer + " is not assigned to piece #" + pieceIndex);
+        }
+        assignments.removeAssignment(peer);
+    }
+
     private Optional<Integer> selectAndAssignPiece(IPeerConnection peer) {
 
         pieceSelectorHelper.getKnownPeers().stream()

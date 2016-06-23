@@ -149,7 +149,6 @@ public class Bt {
         public CompletableFuture<?> startAsync(Consumer<TorrentProcessingState> listener, long period) {
 
             ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
-            shutdownService.addShutdownHook(scheduledExecutor::shutdownNow);
 
             this.listener = Optional.of(listener);
             listenerFuture = Optional.of(scheduledExecutor.scheduleAtFixedRate(

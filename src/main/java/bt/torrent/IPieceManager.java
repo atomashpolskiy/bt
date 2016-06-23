@@ -24,6 +24,8 @@ public interface IPieceManager {
 
     Optional<Integer> selectPieceForPeer(IPeerConnection peer);
 
+    void unselectPieceForPeer(IPeerConnection peer, Integer pieceIndex);
+
     List<Request> buildRequestsForPiece(Integer pieceIndex);
 
     int piecesLeft();

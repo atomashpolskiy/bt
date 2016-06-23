@@ -102,7 +102,7 @@ public class SharedTrackerFeature implements BtTestRuntimeFeature {
 
         KnownPeersService() {
             knownPeers = new ConcurrentHashMap<>();
-            lock = new ReentrantReadWriteLock();
+            lock = new ReentrantReadWriteLock(true);
         }
 
         private Set<Peer> getPeersSnapshot(URL trackerUrl) {

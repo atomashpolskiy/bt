@@ -1,6 +1,5 @@
 package bt.service;
 
-import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 import java.util.concurrent.ExecutorService;
@@ -10,13 +9,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ExecutorServiceProvider implements Provider<ExecutorService> {
 
-    private IShutdownService shutdownService;
     private ExecutorService executorService;
     private final Object lock;
 
-    @Inject
-    public ExecutorServiceProvider(IShutdownService shutdownService) {
-        this.shutdownService = shutdownService;
+    public ExecutorServiceProvider() {
         lock = new Object();
     }
 
@@ -35,7 +31,6 @@ public class ExecutorServiceProvider implements Provider<ExecutorService> {
                             return new Thread(r, "bt-pool-thread-" + threadId.getAndIncrement());
                         }
                     });
-                    shutdownService.addShutdownHook(executorService::shutdownNow);
                 }
             }
         }

@@ -46,7 +46,7 @@ public class PeerConnection implements IPeerConnection {
         this.remotePeer = remotePeer;
         this.channel = channel;
 
-        in = ByteBuffer.allocate(BUFFER_CAPACITY);
+        in = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
 
         lastActive = new AtomicLong();
         messageHolder = new Message[1];
