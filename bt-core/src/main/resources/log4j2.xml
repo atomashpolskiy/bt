@@ -17,7 +17,7 @@
             <appender-ref ref="A1"/>
         </logger>
 
-        <logger name="bt" level="debug" additivity="false">
+        <logger name="bt" level="info" additivity="false">
             <appender-ref ref="A1"/>
         </logger>
 
