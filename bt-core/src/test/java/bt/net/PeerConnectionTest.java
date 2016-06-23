@@ -87,15 +87,19 @@ public class PeerConnectionTest {
 
         private ServerSocketChannel channel;
         private volatile SocketChannel clientSocket;
+        private final Object lock;
 
         Server(ServerSocketChannel channel) {
             this.channel = channel;
+            lock = new Object();
         }
 
         @Override
         public void run() {
             try {
-                clientSocket = channel.accept();
+                synchronized (lock) {
+                    clientSocket = channel.accept();
+                }
             } catch (IOException e) {
                 throw new RuntimeException("Unexpected I/O error", e);
             }
@@ -103,7 +107,9 @@ public class PeerConnectionTest {
 
         public void writeMessage(Message message) throws InvalidMessageException, IOException {
             ByteBuffer buffer = ByteBuffer.wrap(Protocol.toByteArray(message));
-            clientSocket.write(buffer);
+            synchronized (lock) {
+                clientSocket.write(buffer);
+            }
         }
 
         @Override
