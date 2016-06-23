@@ -98,10 +98,59 @@ public class Swarm_IT extends BaseBtTest {
         seeder.getDataDescriptor().getChunkDescriptors().forEach(IChunkDescriptor::verify);
         CompletableFuture<?> seederFuture = seeder.startAsync(state -> {
             if (leecherCount.get() == 0) {
-                seeder.stop();
                 leechers.forEach(TorrentHandle::stop);
+                seeder.stop();
             }
         }, 5000);
+
+        ConcurrentMap<TorrentHandle, Boolean> finishedLeechers = new ConcurrentHashMap<>();
+        leechers.forEach(leecher -> {
+            finishedLeechers.put(leecher, Boolean.FALSE);
+            leecher.startAsync(state -> {
+                if (state.getPiecesRemaining() == 0 && !finishedLeechers.get(leecher)) {
+                    synchronized (leechers) {
+                        if (!finishedLeechers.get(leecher)) {
+                            finishedLeechers.put(leecher, Boolean.TRUE);
+                            leecherCount.decrementAndGet();
+                        }
+                    }
+                }
+            }, 5000);
+        });
+
+        seederFuture.join();
+
+        assertEquals(20, swarm.getSeeders().size());
+        assertEquals(0, swarm.getLeechers().size());
+    }
+
+    @Test
+    public void testSwarm_ManySeedersManyLeechers() {
+
+        List<TorrentHandle> seeders = swarm.getSeeders().stream()
+                .map(SwarmPeer::getHandle).collect(Collectors.toList());
+
+        List<TorrentHandle> leechers = swarm.getLeechers().stream()
+                .map(SwarmPeer::getHandle).collect(Collectors.toList());
+
+        AtomicInteger leecherCount = new AtomicInteger(leechers.size());
+
+        TorrentHandle mainSeeder = seeders.iterator().next();
+        CompletableFuture<?> seederFuture = mainSeeder.startAsync(
+                state -> {
+                    if (leecherCount.get() == 0) {
+                        leechers.forEach(TorrentHandle::stop);
+                        seeders.forEach(TorrentHandle::stop);
+                        mainSeeder.stop();
+                    }
+                }, 5000
+        );
+
+        for (int i = 1; i < seeders.size(); i++) {
+            TorrentHandle seeder = seeders.get(i);
+            seeder.getDataDescriptor().getChunkDescriptors().forEach(IChunkDescriptor::verify);
+            seederFuture = seeder.startAsync();
+        }
 
         ConcurrentMap<TorrentHandle, Boolean> finishedLeechers = new ConcurrentHashMap<>();
         leechers.forEach(leecher -> {
