@@ -8,9 +8,11 @@ import bt.protocol.Choke;
 import bt.protocol.Have;
 import bt.protocol.Interested;
 import bt.protocol.InvalidMessageException;
+import bt.protocol.KeepAlive;
 import bt.protocol.Message;
 import bt.protocol.NotInterested;
 import bt.protocol.Piece;
+import bt.protocol.Port;
 import bt.protocol.Request;
 import bt.protocol.Unchoke;
 import org.slf4j.Logger;
@@ -116,78 +118,77 @@ public class ConnectionWorker {
         Message message = connection.readMessageNow();
         if (message != null) {
 
-            switch (message.getType()) {
-                case KEEPALIVE: {
-                    break;
-                }
-                case BITFIELD: {
-                    Bitfield bitfield = (Bitfield) message;
-                    pieceManager.peerHasBitfield(connection, bitfield.getBitfield());
-                    break;
-                }
-                case CHOKE: {
-                    connectionState.setPeerChoking(true);
-                    break;
-                }
-                case UNCHOKE: {
-                    connectionState.setPeerChoking(false);
-                    break;
-                }
-                case INTERESTED: {
-                    connectionState.setPeerInterested(true);
-                    break;
-                }
-                case NOT_INTERESTED: {
-                    connectionState.setPeerInterested(false);
-                    break;
-                }
-                case HAVE: {
-                    Have have = (Have) message;
-                    pieceManager.peerHasPiece(connection, have.getPieceIndex());
-                    break;
-                }
-                case REQUEST: {
-                    if (!connectionState.isChoking()) {
-                        Request request = (Request) message;
-                        requestConsumer.accept(request);
-                    }
-                    break;
-                }
-                case CANCEL: {
-                    Cancel cancel = (Cancel) message;
-                    cancelledPeerRequests.add(Mapper.mapper().buildKey(
-                            cancel.getPieceIndex(), cancel.getOffset(), cancel.getLength()));
-                    break;
-                }
-                case PIECE: {
-                    Piece piece = (Piece) message;
+            Class<? extends Message> type = message.getClass();
 
-                    int pieceIndex = piece.getPieceIndex(),
-                        offset = piece.getOffset();
-                    byte[] block = piece.getBlock();
-                    // check that this block was requested in the first place
-                    Object key = Mapper.mapper().buildKey(pieceIndex, offset, block.length);
-                    if (!pendingRequests.remove(key)) {
-                        throw new BtException("Received unexpected block " + piece +
-                                " from peer: " + connection.getRemotePeer());
-                    } else {
-                        if (LOGGER.isTraceEnabled()) {
-                            LOGGER.trace(requestQueue.size() + " requests left in queue {piece #" + currentPiece.get() + "}");
-                        }
-                        BlockWrite blockWrite = blockConsumer.apply(piece);
-                        pendingWrites.put(key, blockWrite);
-
-                    }
-                    break;
-                }
-                case PORT: {
-                    // ignore
-                    break;
-                }
-                default: {
-                    throw new BtException("Unexpected message type: " + message);
-                }
+            if (KeepAlive.class.equals(type)) {
+                return;
             }
+            if (Bitfield.class.equals(type)) {
+                Bitfield bitfield = (Bitfield) message;
+                pieceManager.peerHasBitfield(connection, bitfield.getBitfield());
+                return;
+            }
+            if (Choke.class.equals(type)) {
+                connectionState.setPeerChoking(true);
+                return;
+            }
+            if (Unchoke.class.equals(type)) {
+                connectionState.setPeerChoking(false);
+                return;
+            }
+            if (Interested.class.equals(type)) {
+                connectionState.setPeerInterested(true);
+                return;
+            }
+            if (NotInterested.class.equals(type)) {
+                connectionState.setPeerInterested(false);
+                return;
+            }
+            if (Have.class.equals(type)) {
+                Have have = (Have) message;
+                pieceManager.peerHasPiece(connection, have.getPieceIndex());
+                return;
+            }
+            if (Request.class.equals(type)) {
+                if (!connectionState.isChoking()) {
+                    Request request = (Request) message;
+                    requestConsumer.accept(request);
+                }
+                return;
+            }
+            if (Cancel.class.equals(type)) {
+                Cancel cancel = (Cancel) message;
+                cancelledPeerRequests.add(Mapper.mapper().buildKey(
+                cancel.getPieceIndex(), cancel.getOffset(), cancel.getLength()));
+                return;
+            }
+            if (Piece.class.equals(type)) {
+                Piece piece = (Piece) message;
+
+                int pieceIndex = piece.getPieceIndex(),
+                    offset = piece.getOffset();
+                byte[] block = piece.getBlock();
+                // check that this block was requested in the first place
+                Object key = Mapper.mapper().buildKey(pieceIndex, offset, block.length);
+                if (!pendingRequests.remove(key)) {
+                    throw new BtException("Received unexpected block " + piece +
+                            " from peer: " + connection.getRemotePeer());
+                } else {
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace(requestQueue.size() + " requests left in queue {piece #" + currentPiece.get() + "}");
+                    }
+                    BlockWrite blockWrite = blockConsumer.apply(piece);
+                    pendingWrites.put(key, blockWrite);
+
+                }
+                return;
+            }
+            if (Port.class.equals(type)) {
+                // ignore
+                return;
+            }
+
+            throw new BtException("Unexpected message type: " + message);
         }
     }
 

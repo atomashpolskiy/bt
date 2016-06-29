@@ -4,8 +4,7 @@ import bt.protocol.Bitfield;
 import bt.protocol.Handshake;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
-import bt.protocol.MessageType;
-import bt.protocol.Protocol;
+import bt.protocol.ProtocolTest;
 import bt.protocol.Request;
 import org.junit.After;
 import org.junit.Before;
@@ -24,7 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
 
-public class PeerConnectionTest {
+public class PeerConnectionTest extends ProtocolTest {
 
     private ServerSocketChannel serverChannel;
     private Server server;
@@ -45,25 +44,25 @@ public class PeerConnectionTest {
 
     @Test
     public void testConnection() throws InvalidMessageException, IOException {
-        IPeerConnection connection = new PeerConnection(mock(Peer.class), clientChannel);
+        IPeerConnection connection = new PeerConnection(protocol, mock(Peer.class), clientChannel);
 
         Message message;
 
-        server.writeMessage(new Handshake(new byte[20], new byte[20]));
+        server.writeMessage(new Handshake(new byte[8], new byte[20], new byte[20]));
         message = connection.readMessageNow();
         assertNotNull(message);
-        assertEquals(MessageType.HANDSHAKE, message.getType());
+        assertEquals(Handshake.class, message.getClass());
 
         server.writeMessage(new Bitfield(new byte[2 << 9]));
         message = connection.readMessageNow();
         assertNotNull(message);
-        assertEquals(MessageType.BITFIELD, message.getType());
+        assertEquals(Bitfield.class, message.getClass());
         assertEquals(2 << 9, ((Bitfield) message).getBitfield().length);
 
         server.writeMessage(new Request(1, 2, 3));
         message = connection.readMessageNow();
         assertNotNull(message);
-        assertEquals(MessageType.REQUEST, message.getType());
+        assertEquals(Request.class, message.getClass());
         assertEquals(1, ((Request) message).getPieceIndex());
         assertEquals(2, ((Request) message).getOffset());
         assertEquals(3, ((Request) message).getLength());
@@ -83,7 +82,7 @@ public class PeerConnectionTest {
         }
     }
 
-    private static class Server implements Runnable, Closeable {
+    private class Server implements Runnable, Closeable {
 
         private ServerSocketChannel channel;
         private volatile SocketChannel clientSocket;
@@ -106,7 +105,7 @@ public class PeerConnectionTest {
         }
 
         public void writeMessage(Message message) throws InvalidMessageException, IOException {
-            ByteBuffer buffer = ByteBuffer.wrap(Protocol.toByteArray(message));
+            ByteBuffer buffer = ByteBuffer.wrap(protocol.toByteArray(message));
             synchronized (lock) {
                 clientSocket.write(buffer);
             }

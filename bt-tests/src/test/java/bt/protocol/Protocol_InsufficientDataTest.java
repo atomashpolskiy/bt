@@ -2,9 +2,7 @@ package bt.protocol;
 
 import org.junit.Test;
 
-import static bt.protocol.ProtocolTestUtil.assertInsufficientDataAndNothingConsumed;
-
-public class Protocol_InsufficientDataTest {
+public class Protocol_InsufficientDataTest extends ProtocolTest {
 
     private byte[] HANDSHAKE_INSUFFICIENT_DATA = new byte[]{
             19,/*--protocol-name*/66,105,116,84,111,114,114,101,110,116,32,112,114,111,116,111,99,111,108,
@@ -13,7 +11,7 @@ public class Protocol_InsufficientDataTest {
     @Test
     public void testProtocol_Handshake_InsufficientBytes() throws Exception {
         assertInsufficientDataAndNothingConsumed(
-                MessageType.HANDSHAKE, HANDSHAKE_INSUFFICIENT_DATA);
+                Handshake.class, HANDSHAKE_INSUFFICIENT_DATA);
     }
 
     private byte[] INSUFFICIENT_DATA_1 = new byte[]{};
@@ -44,41 +42,33 @@ public class Protocol_InsufficientDataTest {
     private byte[] CANCEL_INSUFFICIENT_DATA = new byte[]{
             0,0,0,13,8,/*--piece-index*/0,0,0,1,/*--offset*/0/*--pending-data...*/};
 
-    private byte[] PORT_INSUFFICIENT_DATA = new byte[]{0,0,0,3,9,/*--port*/24/*--pending-data...*/};
-
     @Test
     public void testProtocol_Have_InsufficientBytes() throws Exception {
         assertInsufficientDataAndNothingConsumed(
-                MessageType.HAVE, HAVE_INSUFFICIENT_DATA);
+                Have.class, HAVE_INSUFFICIENT_DATA);
     }
 
     @Test
     public void testProtocol_Bitfield_InsufficientBytes() throws Exception {
         assertInsufficientDataAndNothingConsumed(
-                MessageType.BITFIELD, BITFIELD_INSUFFICIENT_DATA);
+                Bitfield.class, BITFIELD_INSUFFICIENT_DATA);
     }
 
     @Test
     public void testProtocol_Request_InsufficientBytes() throws Exception {
         assertInsufficientDataAndNothingConsumed(
-                MessageType.REQUEST, REQUEST_INSUFFICIENT_DATA);
+                Request.class, REQUEST_INSUFFICIENT_DATA);
     }
 
     @Test
     public void testProtocol_Piece_InsufficientBytes() throws Exception {
         assertInsufficientDataAndNothingConsumed(
-                MessageType.PIECE, PIECE_INSUFFICIENT_DATA);
+                Piece.class, PIECE_INSUFFICIENT_DATA);
     }
 
     @Test
     public void testProtocol_Cancel_InsufficientBytes() throws Exception {
         assertInsufficientDataAndNothingConsumed(
-                MessageType.CANCEL, CANCEL_INSUFFICIENT_DATA);
-    }
-
-    @Test
-    public void testProtocol_Port_InsufficientBytes() throws Exception {
-        assertInsufficientDataAndNothingConsumed(
-                MessageType.PORT, PORT_INSUFFICIENT_DATA);
+                Cancel.class, CANCEL_INSUFFICIENT_DATA);
     }
 }

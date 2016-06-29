@@ -4,6 +4,7 @@ import bt.data.DataAccessFactory;
 import bt.data.IDataDescriptor;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
+import bt.net.IHandshakeHandlerFactory;
 import bt.net.IPeerConnectionPool;
 import bt.service.IConfigurationService;
 import bt.service.IPeerRegistry;
@@ -76,10 +77,11 @@ public class Bt {
             IPeerRegistry peerRegistry = runtime.service(IPeerRegistry.class);
             IPeerConnectionPool connectionPool = runtime.service(IPeerConnectionPool.class);
             IConfigurationService configurationService = runtime.service(IConfigurationService.class);
+            IHandshakeHandlerFactory handshakeHandlerFactory = runtime.service(IHandshakeHandlerFactory.class);
 
             PieceManager pieceManager = new PieceManager(pieceSelector, descriptor.getDataDescriptor().getChunkDescriptors());
             TorrentProcessor processor = new TorrentProcessor(peerRegistry, connectionPool, configurationService,
-                    pieceManager, dataWorker, torrent, descriptor);
+                    handshakeHandlerFactory, pieceManager, dataWorker, torrent, descriptor);
             connectionPool.addConnectionListener(processor);
 
             ExecutorService executorService = runtime.service(ExecutorService.class);

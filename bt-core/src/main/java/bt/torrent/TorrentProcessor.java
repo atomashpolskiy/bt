@@ -3,9 +3,9 @@ package bt.torrent;
 import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.net.HandshakeHandler;
+import bt.net.IHandshakeHandlerFactory;
 import bt.net.IPeerConnection;
 import bt.net.IPeerConnectionPool;
-import bt.net.OutgoingHandshakeHandler;
 import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.InvalidMessageException;
@@ -53,8 +53,9 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
     private Condition timer;
 
     public TorrentProcessor(IPeerRegistry peerRegistry, IPeerConnectionPool connectionPool,
-                            IConfigurationService configurationService, IPieceManager pieceManager,
-                            IDataWorker dataWorker, Torrent torrent, ITorrentDescriptor torrentDescriptor) {
+                            IConfigurationService configurationService, IHandshakeHandlerFactory handshakeHandlerFactory,
+                            IPieceManager pieceManager, IDataWorker dataWorker, Torrent torrent,
+                            ITorrentDescriptor torrentDescriptor) {
 
         this.configurationService = configurationService;
         this.pieceManager = pieceManager;
@@ -67,8 +68,7 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
 
         incomingConnections = ConcurrentHashMap.newKeySet();
 
-        HandshakeHandler outgoingHandler = new OutgoingHandshakeHandler(torrent, peerRegistry.getLocalPeer(),
-                configurationService.getHandshakeTimeOut());
+        HandshakeHandler outgoingHandler = handshakeHandlerFactory.getOutgoingHandler(torrent);
         connectionRequestor = new ConnectionRequestor(peerRegistry, connectionPool,
                 outgoingHandler, configurationService, torrent);
 

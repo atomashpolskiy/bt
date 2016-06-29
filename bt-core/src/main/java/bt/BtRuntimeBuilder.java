@@ -2,8 +2,15 @@ package bt;
 
 import bt.metainfo.IMetadataService;
 import bt.metainfo.MetadataService;
+import bt.net.HandshakeHandlerFactory;
+import bt.net.IHandshakeHandlerFactory;
 import bt.net.IPeerConnectionPool;
 import bt.net.PeerConnectionPool;
+import bt.protocol.HandshakeFactory;
+import bt.protocol.IHandshakeFactory;
+import bt.protocol.Protocol;
+import bt.protocol.ProtocolChain;
+import bt.protocol.StandardBittorrentProtocol;
 import bt.service.AdhocTorrentRegistry;
 import bt.service.ConfigurationService;
 import bt.service.ExecutorServiceProvider;
@@ -25,6 +32,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
 
 import java.util.ArrayList;
@@ -83,6 +91,9 @@ public class BtRuntimeBuilder {
             binder.bind(ITorrentRegistry.class).to(AdhocTorrentRegistry.class).in(Singleton.class);
             binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).in(Singleton.class);
             binder.bind(IDataWorkerFactory.class).to(DataWorkerFactory.class).in(Singleton.class);
+            binder.bind(Protocol.class).to(ProtocolChain.class).in(Singleton.class);
+            binder.bind(IHandshakeFactory.class).to(HandshakeFactory.class).in(Singleton.class);
+            binder.bind(IHandshakeHandlerFactory.class).to(HandshakeHandlerFactory.class).in(Singleton.class);
 
             binder.bind(IShutdownService.class).to(shutdownServiceType).in(Singleton.class);
 
@@ -91,6 +102,10 @@ public class BtRuntimeBuilder {
             } else {
                 binder.bind(ExecutorService.class).toInstance(executorService);
             }
+
+            // Guice requires to explicitly create an empty multi-binder
+            Multibinder<Protocol> protocols = Multibinder.newSetBinder(binder, Protocol.class);
+            protocols.addBinding().to(StandardBittorrentProtocol.class);
         };
 
         if (adapters != null) {

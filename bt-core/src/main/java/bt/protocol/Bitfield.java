@@ -8,17 +8,12 @@ public class Bitfield implements Message {
         this.bitfield = bitfield;
     }
 
-    @Override
-    public MessageType getType() {
-        return MessageType.BITFIELD;
-    }
-
     public byte[] getBitfield() {
         return bitfield;
     }
 
     @Override
     public String toString() {
-        return "[" + getType().name() + "] bitfield {" + bitfield.length + " bytes}";
+        return "[" + this.getClass().getSimpleName() + "] bitfield {" + bitfield.length + " bytes}";
     }
 }

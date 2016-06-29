@@ -2,11 +2,10 @@ package bt.net;
 
 import bt.BtException;
 import bt.protocol.Message;
-import bt.service.IConfigurationService;
+import bt.protocol.Protocol;
 import bt.service.INetworkService;
 import bt.service.IPeerRegistry;
 import bt.service.IShutdownService;
-import bt.service.ITorrentRegistry;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,13 +46,13 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private ReentrantLock connectionLock;
 
     @Inject
-    public PeerConnectionPool(INetworkService networkService, ITorrentRegistry torrentRegistry, IPeerRegistry peerRegistry,
-                              IConfigurationService configurationService, IShutdownService shutdownService) {
+    public PeerConnectionPool(INetworkService networkService, Protocol protocol, IPeerRegistry peerRegistry,
+                              IShutdownService shutdownService, IHandshakeHandlerFactory handshakeHandlerFactory) {
 
         SocketChannelFactory socketChannelFactory = new SocketChannelFactory(networkService);
-        this.connectionFactory = new PeerConnectionFactory(peerRegistry, socketChannelFactory);
+        this.connectionFactory = new PeerConnectionFactory(protocol, peerRegistry, socketChannelFactory);
 
-        this.incomingHandshakeHandler = new IncomingHandshakeHandler(torrentRegistry, peerRegistry, configurationService);
+        this.incomingHandshakeHandler = handshakeHandlerFactory.getIncomingHandler();
 
         pendingConnections = new ConcurrentHashMap<>();
         connections = new ConcurrentHashMap<>();

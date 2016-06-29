@@ -18,11 +18,6 @@ public class Request implements Message {
         this.length = length;
     }
 
-    @Override
-    public MessageType getType() {
-        return MessageType.REQUEST;
-    }
-
     public int getPieceIndex() {
         return pieceIndex;
     }
@@ -37,7 +32,7 @@ public class Request implements Message {
 
     @Override
     public String toString() {
-        return "[" + getType().name() + "] piece index {" + pieceIndex + "}, offset {" + offset +
+        return "[" + this.getClass().getSimpleName() + "] piece index {" + pieceIndex + "}, offset {" + offset +
                 "}, length {" + length + "}";
     }
 }

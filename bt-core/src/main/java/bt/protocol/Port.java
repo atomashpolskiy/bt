@@ -13,17 +13,12 @@ public class Port implements Message {
         this.port = port;
     }
 
-    @Override
-    public MessageType getType() {
-        return MessageType.PORT;
-    }
-
     public int getPort() {
         return port;
     }
 
     @Override
     public String toString() {
-        return "[" + getType().name() + "] port {" + port + "}";
+        return "[" + this.getClass().getSimpleName() + "] port {" + port + "}";
     }
 }

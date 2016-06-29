@@ -13,17 +13,12 @@ public class Have implements Message {
         this.pieceIndex = pieceIndex;
     }
 
-    @Override
-    public MessageType getType() {
-        return MessageType.HAVE;
-    }
-
     public int getPieceIndex() {
         return pieceIndex;
     }
 
     @Override
     public String toString() {
-        return "[" + getType().name() + "] piece index {" + pieceIndex + "}";
+        return "[" + this.getClass().getSimpleName() + "] piece index {" + pieceIndex + "}";
     }
 }

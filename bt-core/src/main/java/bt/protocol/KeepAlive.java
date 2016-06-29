@@ -5,11 +5,6 @@ public class KeepAlive implements Message {
     private KeepAlive() {
     }
 
-    @Override
-    public MessageType getType() {
-        return MessageType.KEEPALIVE;
-    }
-
     private static final KeepAlive instance = new KeepAlive();
 
     public static KeepAlive instance() {
@@ -18,6 +13,6 @@ public class KeepAlive implements Message {
 
     @Override
     public String toString() {
-        return "[" + getType().name() + "]";
+        return "[" + this.getClass().getSimpleName() + "]";
     }
 }

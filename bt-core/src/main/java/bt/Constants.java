@@ -2,6 +2,9 @@ package bt;
 
 public class Constants {
 
+    public static final String PROTOCOL_NAME = "BitTorrent protocol";
+    public static final int HANDSHAKE_RESERVED_LENGTH = 8;
+
     public static final int INFO_HASH_LENGTH = 20;
     public static final int PEER_ID_LENGTH = 20;
 

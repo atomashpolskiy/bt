@@ -5,11 +5,6 @@ public class Interested implements Message {
     private Interested() {
     }
 
-    @Override
-    public MessageType getType() {
-        return MessageType.INTERESTED;
-    }
-
     private static final Interested instance = new Interested();
 
     public static Interested instance() {
@@ -18,6 +13,6 @@ public class Interested implements Message {
 
     @Override
     public String toString() {
-        return "[" + getType().name() + "]";
+        return "[" + this.getClass().getSimpleName() + "]";
     }
 }

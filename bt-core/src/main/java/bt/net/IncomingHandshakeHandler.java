@@ -2,11 +2,9 @@ package bt.net;
 
 import bt.metainfo.Torrent;
 import bt.protocol.Handshake;
-import bt.protocol.InvalidMessageException;
+import bt.protocol.IHandshakeFactory;
 import bt.protocol.Message;
-import bt.protocol.MessageType;
 import bt.service.IConfigurationService;
-import bt.service.IPeerRegistry;
 import bt.service.ITorrentRegistry;
 import bt.torrent.ITorrentDescriptor;
 import org.slf4j.Logger;
@@ -18,14 +16,14 @@ public class IncomingHandshakeHandler implements HandshakeHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IncomingHandshakeHandler.class);
 
+    private IHandshakeFactory handshakeFactory;
     private ITorrentRegistry torrentRegistry;
-    private IPeerRegistry peerRegistry;
     private IConfigurationService configurationService;
 
-    public IncomingHandshakeHandler(ITorrentRegistry torrentRegistry, IPeerRegistry peerRegistry,
+    public IncomingHandshakeHandler(IHandshakeFactory handshakeFactory, ITorrentRegistry torrentRegistry,
                                     IConfigurationService configurationService) {
+        this.handshakeFactory = handshakeFactory;
         this.torrentRegistry = torrentRegistry;
-        this.peerRegistry = peerRegistry;
         this.configurationService = configurationService;
     }
 
@@ -34,25 +32,21 @@ public class IncomingHandshakeHandler implements HandshakeHandler {
 
         Message firstMessage = connection.readMessage(configurationService.getHandshakeTimeOut());
         if (firstMessage != null) {
-            if (firstMessage.getType() == MessageType.HANDSHAKE) {
+            if (Handshake.class.equals(firstMessage.getClass())) {
 
                 Handshake handshake = (Handshake) firstMessage;
                 Torrent torrent = torrentRegistry.getTorrent(handshake.getInfoHash());
 
                 Optional<ITorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
                 if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {
-                    try {
-                        byte[] infoHash = torrent.getInfoHash();
-                        connection.postMessage(new Handshake(infoHash, peerRegistry.getLocalPeer().getPeerId()));
-                        connection.setTag(infoHash);
-                        return true;
-                    } catch (InvalidMessageException e) {
-                        LOGGER.error("Failed to build a handshake response for the incoming connection", e);
-                    }
+                    byte[] infoHash = torrent.getInfoHash();
+                    connection.postMessage(handshakeFactory.createHandshake(torrent));
+                    connection.setTag(infoHash);
+                    return true;
                 }
             } else {
                 if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Received message of unexpected type " + firstMessage.getType().name() +
+                    LOGGER.trace("Received message of unexpected type " + firstMessage.getClass().getSimpleName() +
                             " as handshake; remote peer: " + connection.getRemotePeer());
                 }
             }

@@ -17,11 +17,6 @@ public class Piece implements Message {
         this.block = block;
     }
 
-    @Override
-    public MessageType getType() {
-        return MessageType.PIECE;
-    }
-
     public int getPieceIndex() {
         return pieceIndex;
     }
@@ -36,7 +31,7 @@ public class Piece implements Message {
 
     @Override
     public String toString() {
-        return "[" + getType().name() + "] piece index {" + pieceIndex + "}, offset {" + offset +
+        return "[" + this.getClass().getSimpleName() + "] piece index {" + pieceIndex + "}, offset {" + offset +
                 "}, block {" + block.length + " bytes}";
     }
 }

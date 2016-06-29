@@ -4,12 +4,10 @@ import bt.BtException;
 import bt.Constants;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
-import bt.protocol.MessageType;
 import bt.protocol.Protocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
@@ -27,6 +25,7 @@ public class PeerConnection implements IPeerConnection {
     private static final int BUFFER_CAPACITY = Constants.MAX_BLOCK_SIZE * 2;
 
     private Object tag;
+    private Protocol protocol;
     private Peer remotePeer;
 
     private SocketChannel channel;
@@ -41,8 +40,9 @@ public class PeerConnection implements IPeerConnection {
     private final ReentrantLock readLock;
     private final Condition condition;
 
-    PeerConnection(Peer remotePeer, SocketChannel channel) {
+    PeerConnection(Protocol protocol, Peer remotePeer, SocketChannel channel) {
 
+        this.protocol = protocol;
         this.remotePeer = remotePeer;
         this.channel = channel;
 
@@ -113,21 +113,23 @@ public class PeerConnection implements IPeerConnection {
 
     private Message readFromBuffer() throws InvalidMessageException {
 
-        MessageType messageType = Protocol.readMessageType(readBytes);
+        Class<? extends Message> messageType = protocol.readMessageType(readBytes);
         if (messageType == null) {
             // protocol failed to determine the message type
             // due to the insufficient data; exiting...
             return null;
 
         } else {
-            int consumed = Protocol.fromByteArray(messageHolder, readBytes);
-            if (consumed == 0) {
+            int consumed = protocol.fromByteArray(messageHolder, readBytes);
+            if (consumed < 0) {
                 // protocol failed to read the message fully
                 // because some data hasn't arrived yet; exiting...
                 return null;
             } else {
-                // remove consumed bytes from the beginning of the buffer
-                readBytes = Arrays.copyOfRange(readBytes, consumed, readBytes.length);
+                if (consumed > 0) {
+                    // remove consumed bytes from the beginning of the buffer
+                    readBytes = Arrays.copyOfRange(readBytes, consumed, readBytes.length);
+                }
                 // and return the message
                 if (LOGGER.isTraceEnabled()) {
                     LOGGER.trace("Received message from peer: " + remotePeer + " -- " + messageHolder[0]);
@@ -188,7 +190,7 @@ public class PeerConnection implements IPeerConnection {
         }
 
         try {
-            channel.write(ByteBuffer.wrap(Protocol.toByteArray(message)));
+            channel.write(ByteBuffer.wrap(protocol.toByteArray(message)));
         } catch (IOException e) {
             throw new BtException("Unexpected error in connection for peer: " + remotePeer, e);
         } catch (InvalidMessageException e) {
