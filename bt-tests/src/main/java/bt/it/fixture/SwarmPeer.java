@@ -11,10 +11,10 @@ import java.util.Objects;
 public class SwarmPeer {
 
     private File localRoot;
-    private TorrentFiles files;
+    private ITorrentFiles files;
     private TorrentHandle handle;
 
-    SwarmPeer(File localRoot, TorrentFiles files, BtRuntime runtime) {
+    SwarmPeer(File localRoot, ITorrentFiles files, BtRuntime runtime) {
 
         this.localRoot = Objects.requireNonNull(localRoot);
         this.files = Objects.requireNonNull(files);

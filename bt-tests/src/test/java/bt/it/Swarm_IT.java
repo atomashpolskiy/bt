@@ -2,13 +2,11 @@ package bt.it;
 
 import bt.data.IChunkDescriptor;
 import bt.it.fixture.BaseBtTest;
-import bt.it.fixture.BtTestRuntimeFeature;
 import bt.it.fixture.PersonalizedThreadNamesFeature;
 import bt.it.fixture.SharedTrackerFeature;
 import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
-import bt.service.ConfigurationService;
-import bt.service.IConfigurationService;
+import bt.it.fixture.TestConfigurationFeature;
 import bt.torrent.TorrentHandle;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,20 +23,11 @@ import static org.junit.Assert.assertEquals;
 
 public class Swarm_IT extends BaseBtTest {
 
-    private static BtTestRuntimeFeature testConfiguration =
-            (runtimeBuilder, binder) -> binder.bind(IConfigurationService.class).toInstance(
-                    new ConfigurationService() {
-                        @Override
-                        public long getPeerRefreshThreshold() {
-                            return 5000;
-                        }
-                    });
-
     @Rule
     public Swarm swarm = buildSwarm().files(getSingleFile()).seeders(10).leechers(10).startingPort(6891).build();
 
     public Swarm_IT() {
-        super(Arrays.asList(new SharedTrackerFeature(), new PersonalizedThreadNamesFeature(), testConfiguration));
+        super(Arrays.asList(new SharedTrackerFeature(), new PersonalizedThreadNamesFeature(), new TestConfigurationFeature()));
     }
 
     @Test

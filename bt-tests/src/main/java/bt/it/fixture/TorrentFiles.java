@@ -13,7 +13,7 @@ import java.util.StringTokenizer;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
-public class TorrentFiles {
+public class TorrentFiles implements ITorrentFiles {
 
     public static Builder builder(URL metainfoUrl) {
         return new Builder(metainfoUrl);
@@ -27,10 +27,12 @@ public class TorrentFiles {
         this.files = files;
     }
 
+    @Override
     public URL getMetainfoUrl() {
         return metainfoUrl;
     }
 
+    @Override
     public void createFiles(File root) {
         createRoot(root);
         files.forEach((path, content) -> {
@@ -39,12 +41,14 @@ public class TorrentFiles {
         });
     }
 
+    @Override
     public void createRoot(File root) {
         if ((root.exists() && !root.isDirectory()) || (!root.exists() && !root.mkdirs())) {
             throw new RuntimeException("Failed to create directory: " + root);
         }
     }
 
+    @Override
     public boolean verifyFiles(File root) {
 
         for (Map.Entry<String, byte[]> entry : files.entrySet()) {
@@ -114,7 +118,7 @@ public class TorrentFiles {
             return this;
         }
 
-        public TorrentFiles build() {
+        public ITorrentFiles build() {
             if (files.isEmpty()) {
                 throw new RuntimeException("Can't build -- no files");
             }

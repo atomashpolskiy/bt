@@ -1,13 +1,23 @@
 package bt.it.fixture;
 
+import bt.BtException;
+import bt.BtRuntime;
+import bt.data.DataAccessFactory;
+import bt.data.DataStatus;
+import bt.data.IChunkDescriptor;
+import bt.data.IDataDescriptor;
+import bt.data.IDataDescriptorFactory;
+import bt.metainfo.Torrent;
 import org.junit.rules.ExternalResource;
 
 import java.io.File;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -44,17 +54,19 @@ public class Swarm extends ExternalResource {
 
     private void deleteRecursive(File file) {
 
-        if (file.isDirectory()) {
-            File[] children = file.listFiles();
-            if (children != null) {
-                for (File child : children) {
-                    deleteRecursive(child);
+        if (file.exists()) {
+            if (file.isDirectory()) {
+                File[] children = file.listFiles();
+                if (children != null) {
+                    for (File child : children) {
+                        deleteRecursive(child);
+                    }
                 }
             }
-        }
 
-        if (!file.delete()) {
-            throw new RuntimeException("Failed to delete file: " + file.getPath());
+            if (!file.delete()) {
+                throw new RuntimeException("Failed to delete file: " + file.getPath());
+            }
         }
     }
 
@@ -65,14 +77,18 @@ public class Swarm extends ExternalResource {
 
     public static class SwarmBuilder {
 
+        private static final URL NOFILES_METAINFO_URL = BaseBtTest.class.getResource("no-files.torrent");
+
         private File root;
         private BtTestRuntimeFactory runtimeFactory;
         private Collection<BtTestRuntimeFeature> features;
 
+        private boolean withoutFiles;
+
         private int seedersCount;
         private int leechersCount;
         private int startingPort;
-        private TorrentFiles files;
+        private ITorrentFiles files;
 
         private SwarmBuilder(File root, BtTestRuntimeFactory runtimeFactory) {
             this.root = Objects.requireNonNull(root);
@@ -107,24 +123,34 @@ public class Swarm extends ExternalResource {
             return this;
         }
 
-        public SwarmBuilder files(TorrentFiles files) {
+        public SwarmBuilder withoutFiles() {
+            this.files = null;
+            withoutFiles = true;
+            return this;
+        }
+
+        public SwarmBuilder files(ITorrentFiles files) {
             this.files = files;
+            withoutFiles = false;
             return this;
         }
 
         public Swarm build() {
             checkPort(startingPort);
-            Objects.requireNonNull(files);
+
+            if (!withoutFiles) {
+                Objects.requireNonNull(files);
+            }
 
             int port = startingPort;
 
             Collection<SwarmPeer> peers = new ArrayList<>(seedersCount + leechersCount + 1);
             for (int i = 0; i < seedersCount; i++) {
-                peers.add(createSeeder(port, new File(root, String.valueOf(port)), files));
+                peers.add(createSeeder(port, new File(root, String.valueOf(port)), withoutFiles? mockSeederFiles() : files));
                 port++;
             }
             for (int i = 0; i < leechersCount; i++) {
-                peers.add(createLeecher(port, new File(root, String.valueOf(port)), files));
+                peers.add(createLeecher(port, new File(root, String.valueOf(port)), withoutFiles? mockLeecherFiles() : files));
                 port++;
             }
 
@@ -137,16 +163,28 @@ public class Swarm extends ExternalResource {
             }
         }
 
-        private SwarmPeer createSeeder(int port, File localRoot, TorrentFiles files) {
+        private SwarmPeer createSeeder(int port, File localRoot, ITorrentFiles files) {
             files.createFiles(localRoot);
-            return createLeecher(port, localRoot, files);
+            files.createRoot(localRoot);
+            return new SwarmPeer(localRoot, files, createPeerRuntime(port));
         }
 
-        private SwarmPeer createLeecher(int port, File localRoot, TorrentFiles files) {
+        private SwarmPeer createLeecher(int port, File localRoot, ITorrentFiles files) {
             files.createRoot(localRoot);
+            return new SwarmPeer(localRoot, files, createPeerRuntime(port));
+        }
+
+        private BtRuntime createPeerRuntime(int port) {
+
             BtTestRuntimeBuilder runtimeBuilder = runtimeFactory.buildRuntime(localhostAddress(), port);
             features.forEach(runtimeBuilder::feature);
-            return new SwarmPeer(localRoot, files, runtimeBuilder.build());
+
+            if (withoutFiles) {
+                runtimeBuilder.feature((rb, binder) -> {
+                    binder.bind(IDataDescriptorFactory.class).to(MockDataDescriptorFactory.class);
+                });
+            }
+            return runtimeBuilder.build();
         }
 
         protected static InetAddress localhostAddress() {
@@ -156,6 +194,94 @@ public class Swarm extends ExternalResource {
                 // not going to happen
                 throw new RuntimeException("Unexpected error", e);
             }
+        }
+
+        private static ITorrentFiles mockSeederFiles() {
+            return mockFiles(true);
+        }
+
+        private static ITorrentFiles mockLeecherFiles() {
+            return mockFiles(false);
+        }
+
+        private static ITorrentFiles mockFiles(boolean seeder) {
+            return new ITorrentFiles() {
+                @Override
+                public URL getMetainfoUrl() {
+                    return NOFILES_METAINFO_URL;
+                }
+
+                @Override
+                public void createFiles(File root) {
+                    // do nothing
+                }
+
+                @Override
+                public void createRoot(File root) {
+                    // do nothing
+                }
+
+                @Override
+                public boolean verifyFiles(File root) {
+                    return seeder; // for leechers this always returns false
+                }
+            };
+        }
+    }
+
+    private static class MockDataDescriptorFactory implements IDataDescriptorFactory {
+
+        @Override
+        public IDataDescriptor createDescriptor(Torrent torrent, DataAccessFactory dataAccessFactory) {
+            return new IDataDescriptor() {
+
+                private List<IChunkDescriptor> descriptors = Collections.singletonList(new IChunkDescriptor() {
+                    @Override
+                    public DataStatus getStatus() {
+                        return DataStatus.VERIFIED;
+                    }
+
+                    @Override
+                    public long getSize() {
+                        return 8;
+                    }
+
+                    @Override
+                    public long getBlockSize() {
+                        return 1;
+                    }
+
+                    @Override
+                    public byte[] getBitfield() {
+                        return new byte[]{-1};
+                    }
+
+                    @Override
+                    public byte[] readBlock(long offset, int length) {
+                        throw new BtException("Unexpected read request");
+                    }
+
+                    @Override
+                    public void writeBlock(byte[] block, long offset) {
+                        throw new BtException("Unexpected write request");
+                    }
+
+                    @Override
+                    public boolean verify() {
+                        return true;
+                    }
+                });
+
+                @Override
+                public List<IChunkDescriptor> getChunkDescriptors() {
+                    return descriptors;
+                }
+
+                @Override
+                public void close() {
+                    // do nothing
+                }
+            };
         }
     }
 }

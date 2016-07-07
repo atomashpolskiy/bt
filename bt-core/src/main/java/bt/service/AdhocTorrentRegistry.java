@@ -1,7 +1,7 @@
 package bt.service;
 
 import bt.data.DataAccessFactory;
-import bt.data.DataDescriptor;
+import bt.data.IDataDescriptorFactory;
 import bt.metainfo.Torrent;
 import bt.torrent.ITorrentDescriptor;
 import bt.torrent.TorrentDescriptor;
@@ -15,17 +15,17 @@ import java.util.concurrent.ConcurrentMap;
 public class AdhocTorrentRegistry implements ITorrentRegistry {
 
     private ITrackerService trackerService;
-    private IConfigurationService configurationService;
+    private IDataDescriptorFactory dataDescriptorFactory;
 
     private ConcurrentMap<String, Torrent> torrents;
     private ConcurrentMap<Torrent, ITorrentDescriptor> descriptors;
 
     @Inject
-    public AdhocTorrentRegistry(ITrackerService trackerService, IConfigurationService configurationService,
+    public AdhocTorrentRegistry(ITrackerService trackerService, IDataDescriptorFactory dataDescriptorFactory,
                                 IShutdownService shutdownService) {
 
         this.trackerService = trackerService;
-        this.configurationService = configurationService;
+        this.dataDescriptorFactory = dataDescriptorFactory;
 
         shutdownService.addShutdownHook(() -> descriptors.values().forEach(it -> it.getDataDescriptor().close()));
 
@@ -49,7 +49,7 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
         return getDescriptor(torrent).orElseGet(() -> {
 
             ITorrentDescriptor descriptor = new TorrentDescriptor(trackerService, torrent,
-                    new DataDescriptor(dataAccessFactory, configurationService, torrent));
+                    dataDescriptorFactory.createDescriptor(torrent, dataAccessFactory));
             ITorrentDescriptor existing = descriptors.putIfAbsent(torrent, descriptor);
             if (existing != null) {
                 descriptor = existing;

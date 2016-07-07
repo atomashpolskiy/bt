@@ -1,5 +1,7 @@
 package bt;
 
+import bt.data.DataDescriptorFactory;
+import bt.data.IDataDescriptorFactory;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.MetadataService;
 import bt.net.ExtendedHandshakeHandler;
@@ -116,6 +118,7 @@ public class BtRuntimeBuilder {
             binder.bind(IConfigurationService.class).to(ConfigurationService.class).in(Singleton.class);
             binder.bind(IPeerRegistry.class).to(PeerRegistry.class).in(Singleton.class);
             binder.bind(ITorrentRegistry.class).to(AdhocTorrentRegistry.class).in(Singleton.class);
+            binder.bind(IDataDescriptorFactory.class).to(DataDescriptorFactory.class).in(Singleton.class);
             binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).in(Singleton.class);
             binder.bind(IDataWorkerFactory.class).to(DataWorkerFactory.class).in(Singleton.class);
             binder.bind(Protocol.class).to(ProtocolChain.class).in(Singleton.class);
