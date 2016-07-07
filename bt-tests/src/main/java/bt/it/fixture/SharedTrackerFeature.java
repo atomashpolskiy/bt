@@ -1,5 +1,6 @@
 package bt.it.fixture;
 
+import bt.BtRuntimeBuilder;
 import bt.Constants;
 import bt.metainfo.Torrent;
 import bt.net.InetPeer;
@@ -8,7 +9,6 @@ import bt.tracker.ITrackerService;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
 import bt.tracker.TrackerResponse;
-import com.google.inject.Binder;
 
 import java.net.URL;
 import java.util.Collection;
@@ -22,9 +22,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class SharedTrackerFeature implements BtTestRuntimeFeature {
 
     @Override
-    public void contributeToRuntime(BtTestRuntimeBuilder runtimeBuilder, Binder binder) {
-        Peer peer = new InetPeer(runtimeBuilder.getAddress(), runtimeBuilder.getPort());
-        binder.bind(ITrackerService.class).toInstance(new PeerTrackerService(peer));
+    public void contributeToRuntime(BtTestRuntimeConfiguration configuration, BtRuntimeBuilder runtimeBuilder) {
+        Peer peer = new InetPeer(configuration.getAddress(), configuration.getPort());
+        runtimeBuilder.adapter(binder -> binder.bind(ITrackerService.class).toInstance(new PeerTrackerService(peer)));
     }
 
     private static class PeerTrackerService implements ITrackerService {

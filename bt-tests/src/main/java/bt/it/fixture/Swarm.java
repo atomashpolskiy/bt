@@ -180,8 +180,8 @@ public class Swarm extends ExternalResource {
             features.forEach(runtimeBuilder::feature);
 
             if (withoutFiles) {
-                runtimeBuilder.feature((rb, binder) -> {
-                    binder.bind(IDataDescriptorFactory.class).to(MockDataDescriptorFactory.class);
+                runtimeBuilder.feature((configuration, builder) -> {
+                    builder.adapter(binder -> binder.bind(IDataDescriptorFactory.class).to(MockDataDescriptorFactory.class));
                 });
             }
             return runtimeBuilder.build();

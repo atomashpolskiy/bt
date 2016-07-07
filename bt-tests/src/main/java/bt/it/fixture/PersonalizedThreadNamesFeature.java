@@ -1,6 +1,6 @@
 package bt.it.fixture;
 
-import com.google.inject.Binder;
+import bt.BtRuntimeBuilder;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PersonalizedThreadNamesFeature implements BtTestRuntimeFeature {
 
     @Override
-    public void contributeToRuntime(BtTestRuntimeBuilder runtimeBuilder, Binder binder) {
+    public void contributeToRuntime(BtTestRuntimeConfiguration configuration, BtRuntimeBuilder runtimeBuilder) {
         ThreadPoolExecutor executor = new ThreadPoolExecutor(2, 2, 1, TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<>(2), new ThreadFactory() {
 
@@ -22,10 +22,12 @@ public class PersonalizedThreadNamesFeature implements BtTestRuntimeFeature {
             public Thread newThread(Runnable r) {
                 return new Thread(r,
                         "bt-test-pool-" + threadId.getAndIncrement() +
-                                " {peer: " + runtimeBuilder.getAddress() + ":" + runtimeBuilder.getPort() + "}");
+                                " {peer: " + configuration.getAddress() + ":" + configuration.getPort() + "}");
             }
         });
 
-        binder.bind(ExecutorService.class).toInstance(executor);
+        runtimeBuilder.adapter(binder -> {
+            binder.bind(ExecutorService.class).toInstance(executor);;
+        });
     }
 }

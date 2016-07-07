@@ -46,23 +46,24 @@ public class BtTestRuntimeBuilder {
         return this;
     }
 
-    public InetAddress getAddress() {
-        return address;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
     public BtRuntime build() {
 
         builder.shutdownService(OnDemandShutdownService.class);
 
         if (features != null) {
-            builder.adapter(binder -> {
-                features.forEach(feature -> {
-                    feature.contributeToRuntime(this, binder);
-                });
+            BtTestRuntimeConfiguration configuration = new BtTestRuntimeConfiguration() {
+                @Override
+                public InetAddress getAddress() {
+                    return address;
+                }
+
+                @Override
+                public int getPort() {
+                    return port;
+                }
+            };
+            features.forEach(feature -> {
+                feature.contributeToRuntime(configuration, builder);
             });
         }
 

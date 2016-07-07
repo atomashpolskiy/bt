@@ -1,8 +1,8 @@
 package bt.it.fixture;
 
-import com.google.inject.Binder;
+import bt.BtRuntimeBuilder;
 
 public interface BtTestRuntimeFeature {
 
-    void contributeToRuntime(BtTestRuntimeBuilder runtimeBuilder, Binder binder);
+    void contributeToRuntime(BtTestRuntimeConfiguration configuration, BtRuntimeBuilder runtimeBuilder);
 }
