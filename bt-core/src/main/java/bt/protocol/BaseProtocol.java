@@ -62,40 +62,36 @@ public abstract class BaseProtocol implements Protocol {
     }
 
     @Override
-    public final int fromByteArray(Message[] messageHolder, byte[] data) {
+    public final int fromByteArray(MessageContext context, byte[] data) {
 
-        Objects.requireNonNull(messageHolder);
+        Objects.requireNonNull(context);
         Objects.requireNonNull(data);
 
-        if (messageHolder.length == 0) {
-            throw new BtException("Invalid message holder");
-        }
-
         if (data.length == 0) {
-            return -1;
+            return 0;
         }
 
         Class<? extends Message> messageType = readMessageType(data);
         if (messageType == null) {
-            return -1;
+            return 0;
         }
 
         if (Handshake.class.equals(messageType)) {
-            return decodeHandshake(messageHolder, data);
+            return decodeHandshake(context, data);
         }
         if (KeepAlive.class.equals(messageType)) {
-            messageHolder[0] = KeepAlive.instance();
+            context.setMessage(KeepAlive.instance());
             return KEEPALIVE.length;
         }
 
-        int consumed = fromByteArray(messageHolder, messageType,
+        int consumed = fromByteArray(context, messageType,
                 Arrays.copyOfRange(data, MESSAGE_PREFIX_SIZE, data.length),
                 getInt(data, 0) - MESSAGE_TYPE_SIZE);
 
-        if (consumed >= 0) {
+        if (context.getMessage() != null) {
             return consumed + MESSAGE_PREFIX_SIZE;
         }
-        return -1;
+        return 0;
     }
 
     @Override
@@ -141,9 +137,9 @@ public abstract class BaseProtocol implements Protocol {
         return message;
     }
 
-    private static int decodeHandshake(Message[] messageHolder, byte[] data) throws InvalidMessageException {
+    private static int decodeHandshake(MessageContext context, byte[] data) throws InvalidMessageException {
 
-        int consumed = -1;
+        int consumed = 0;
         int offset = HANDSHAKE_RESERVED_OFFSET;
         int length = HANDSHAKE_RESERVED_LENGTH + Constants.INFO_HASH_LENGTH + Constants.PEER_ID_LENGTH;
         int limit = offset + length;
@@ -169,7 +165,7 @@ public abstract class BaseProtocol implements Protocol {
             from = to;
             byte[] peerId = Arrays.copyOfRange(data, from, limit);
 
-            messageHolder[0] = new Handshake(reserved, infoHash, peerId);
+            context.setMessage(new Handshake(reserved, infoHash, peerId));
             consumed = limit;
         }
 

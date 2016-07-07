@@ -66,7 +66,7 @@ public class ProtocolChain extends BaseProtocol {
     }
 
     @Override
-    public int fromByteArray(Message[] messageHolder, Class<? extends Message> messageType,
+    public int fromByteArray(MessageContext context, Class<? extends Message> messageType,
                              byte[] payload, int declaredPayloadLength) {
 
         assertSupported(Objects.requireNonNull(messageType));
@@ -74,13 +74,13 @@ public class ProtocolChain extends BaseProtocol {
         int consumed;
         for (Protocol delegate : delegates) {
             if (delegate.isSupported(messageType)) {
-                consumed = delegate.fromByteArray(messageHolder, messageType, payload, declaredPayloadLength);
-                if (consumed >= 0) {
+                consumed = delegate.fromByteArray(context, messageType, payload, declaredPayloadLength);
+                if (context.getMessage() != null) {
                     return consumed;
                 }
             }
         }
-        return -1;
+        return 0;
     }
 
     @Override

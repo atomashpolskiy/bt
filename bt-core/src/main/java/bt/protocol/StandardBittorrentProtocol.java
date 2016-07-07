@@ -114,48 +114,48 @@ public class StandardBittorrentProtocol extends BaseProtocol {
     }
 
     @Override
-    public int fromByteArray(Message[] messageHolder, Class<? extends Message> messageType,
+    public int fromByteArray(MessageContext context, Class<? extends Message> messageType,
                              byte[] data, int payloadLength) {
 
         assertSupported(Objects.requireNonNull(messageType));
 
         if (Choke.class.equals(messageType)) {
             verifyPayloadLength(messageType, 0, payloadLength);
-            messageHolder[0] = Choke.instance();
+            context.setMessage(Choke.instance());
             return 0;
         }
         if (Unchoke.class.equals(messageType)) {
             verifyPayloadLength(messageType, 0, payloadLength);
-            messageHolder[0] = Unchoke.instance();
+            context.setMessage(Unchoke.instance());
             return 0;
         }
         if (Interested.class.equals(messageType)) {
             verifyPayloadLength(messageType, 0, payloadLength);
-            messageHolder[0] = Interested.instance();
+            context.setMessage(Interested.instance());
             return 0;
         }
         if (NotInterested.class.equals(messageType)) {
             verifyPayloadLength(messageType, 0, payloadLength);
-            messageHolder[0] = NotInterested.instance();
+            context.setMessage(NotInterested.instance());
             return 0;
         }
         if (Have.class.equals(messageType)) {
             verifyPayloadLength(messageType, 4, payloadLength);
-            return decodeHave(messageHolder, data);
+            return decodeHave(context, data);
         }
         if (Bitfield.class.equals(messageType)) {
-            return decodeBitfield(messageHolder, data, payloadLength);
+            return decodeBitfield(context, data, payloadLength);
         }
         if (Request.class.equals(messageType)) {
             verifyPayloadLength(messageType, 12, payloadLength);
-            return decodeRequest(messageHolder, data);
+            return decodeRequest(context, data);
         }
         if (Piece.class.equals(messageType)) {
-            return decodePiece(messageHolder, data, payloadLength);
+            return decodePiece(context, data, payloadLength);
         }
         if (Cancel.class.equals(messageType)) {
             verifyPayloadLength(messageType, 12, payloadLength);
-            return decodeCancel(messageHolder, data);
+            return decodeCancel(context, data);
         }
 
         // algorithm malfunction
@@ -242,14 +242,14 @@ public class StandardBittorrentProtocol extends BaseProtocol {
         return message;
     }
 
-    private static int decodeHave(Message[] messageHolder, byte[] data) throws InvalidMessageException {
+    private static int decodeHave(MessageContext context, byte[] data) throws InvalidMessageException {
 
-        int consumed = -1;
+        int consumed = 0;
         int length = Integer.BYTES;
 
         if (data.length >= length) {
             int pieceIndex = getInt(data, 0);
-            messageHolder[0] = new Have(pieceIndex);
+            context.setMessage(new Have(pieceIndex));
             consumed = length;
         }
 
@@ -267,13 +267,13 @@ public class StandardBittorrentProtocol extends BaseProtocol {
         return message;
     }
 
-    private static int decodeBitfield(Message[] messageHolder, byte[] data, int length) {
+    private static int decodeBitfield(MessageContext context, byte[] data, int length) {
 
-        int consumed = -1;
+        int consumed = 0;
 
         if (data.length >= length) {
             byte[] bitfield = Arrays.copyOfRange(data, 0, length);
-            messageHolder[0] = new Bitfield(bitfield);
+            context.setMessage(new Bitfield(bitfield));
             consumed = length;
         }
 
@@ -297,9 +297,9 @@ public class StandardBittorrentProtocol extends BaseProtocol {
         return message;
     }
 
-    private static int decodeRequest(Message[] messageHolder, byte[] data) throws InvalidMessageException {
+    private static int decodeRequest(MessageContext context, byte[] data) throws InvalidMessageException {
 
-        int consumed = -1;
+        int consumed = 0;
         int length = Integer.BYTES * 3;
 
         if (data.length >= length) {
@@ -308,7 +308,7 @@ public class StandardBittorrentProtocol extends BaseProtocol {
             int blockOffset = getInt(data, Integer.BYTES);
             int blockLength = getInt(data, Integer.BYTES * 2);
 
-            messageHolder[0] = new Request(pieceIndex, blockOffset, blockLength);
+            context.setMessage(new Request(pieceIndex, blockOffset, blockLength));
             consumed = length;
         }
 
@@ -336,9 +336,9 @@ public class StandardBittorrentProtocol extends BaseProtocol {
         return message;
     }
 
-    private static int decodePiece(Message[] messageHolder, byte[] data, int length) throws InvalidMessageException {
+    private static int decodePiece(MessageContext context, byte[] data, int length) throws InvalidMessageException {
 
-        int consumed = -1;
+        int consumed = 0;
 
         if (data.length >= length) {
 
@@ -346,7 +346,7 @@ public class StandardBittorrentProtocol extends BaseProtocol {
             int blockOffset = getInt(data, Integer.BYTES);
             byte[] block = Arrays.copyOfRange(data, Integer.BYTES * 2, length);
 
-            messageHolder[0] = new Piece(pieceIndex, blockOffset, block);
+            context.setMessage(new Piece(pieceIndex, blockOffset, block));
             consumed = length;
         }
 
@@ -370,9 +370,9 @@ public class StandardBittorrentProtocol extends BaseProtocol {
         return message;
     }
 
-    private static int decodeCancel(Message[] messageHolder, byte[] data) throws InvalidMessageException {
+    private static int decodeCancel(MessageContext context, byte[] data) throws InvalidMessageException {
 
-        int consumed = -1;
+        int consumed = 0;
         int length = Integer.BYTES * 3;
 
         if (data.length >= length) {
@@ -381,7 +381,7 @@ public class StandardBittorrentProtocol extends BaseProtocol {
             int blockOffset = getInt(data, Integer.BYTES);
             int blockLength = getInt(data, Integer.BYTES * 2);
 
-            messageHolder[0] = new Cancel(pieceIndex, blockOffset, blockLength);
+            context.setMessage(new Cancel(pieceIndex, blockOffset, blockLength));
             consumed = length;
         }
 

@@ -4,6 +4,7 @@ import bt.BtException;
 import bt.Constants;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
+import bt.protocol.MessageContext;
 import bt.protocol.Protocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +36,6 @@ public class PeerConnection implements IPeerConnection {
     private AtomicLong lastActive;
 
     private byte[] readBytes;
-    private Message[] messageHolder;
 
     private final ReentrantLock readLock;
     private final Condition condition;
@@ -49,7 +49,6 @@ public class PeerConnection implements IPeerConnection {
         in = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
 
         lastActive = new AtomicLong();
-        messageHolder = new Message[1];
 
         readLock = new ReentrantLock(true);
         condition = readLock.newCondition();
@@ -103,9 +102,6 @@ public class PeerConnection implements IPeerConnection {
             }
         } catch (InvalidMessageException | IOException e) {
             throw new BtException("Unexpected error in connection for peer: " + remotePeer, e);
-        } finally {
-            // always nullify the message holder
-            messageHolder[0] = null;
         }
 
         return null;
@@ -120,8 +116,9 @@ public class PeerConnection implements IPeerConnection {
             return null;
 
         } else {
-            int consumed = protocol.fromByteArray(messageHolder, readBytes);
-            if (consumed < 0) {
+            MessageContext context = new MessageContext(remotePeer);
+            int consumed = protocol.fromByteArray(context, readBytes);
+            if (context.getMessage() == null) {
                 // protocol failed to read the message fully
                 // because some data hasn't arrived yet; exiting...
                 return null;
@@ -132,9 +129,9 @@ public class PeerConnection implements IPeerConnection {
                 }
                 // and return the message
                 if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Received message from peer: " + remotePeer + " -- " + messageHolder[0]);
+                    LOGGER.trace("Received message from peer: " + remotePeer + " -- " + context.getMessage());
                 }
-                return messageHolder[0];
+                return context.getMessage();
             }
         }
     }

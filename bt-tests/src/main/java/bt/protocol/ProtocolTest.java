@@ -1,5 +1,7 @@
 package bt.protocol;
 
+import bt.net.Peer;
+
 import java.util.Arrays;
 import java.util.HashSet;
 
@@ -8,6 +10,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 public abstract class ProtocolTest {
 
@@ -33,15 +36,15 @@ public abstract class ProtocolTest {
             assertEquals(expectedType, actualType);
         }
 
-        Message[] holder = new Message[1];
-        int consumed = protocol.fromByteArray(holder, data);
+        MessageContext context = createContext();
+        int consumed = protocol.fromByteArray(context, data);
 
         // check that buffer is not changed
         assertArrayEquals(copy, data);
 
-        assertEquals(-1, consumed);
+        assertEquals(0, consumed);
 
-        Message decoded = holder[0];
+        Message decoded = context.getMessage();
         assertNull(decoded);
     }
 
@@ -52,15 +55,15 @@ public abstract class ProtocolTest {
 
         assertEquals(expectedType, protocol.readMessageType(data));
 
-        Message[] holder = new Message[1];
-        int consumed = protocol.fromByteArray(holder, data);
+        MessageContext context = createContext();
+        int consumed = protocol.fromByteArray(context, data);
 
         // check that buffer is not changed
         assertArrayEquals(copy, data);
 
         assertEquals(messageLength, consumed);
 
-        Message decodedMessage = holder[0];
+        Message decodedMessage = context.getMessage();
         assertMessageEquals(expectedMessage, decodedMessage);
 
         byte[] encoded = protocol.toByteArray(decodedMessage);
@@ -137,6 +140,10 @@ public abstract class ProtocolTest {
         throw new AssertionError("Unexpected message type: " + expectedType.getSimpleName().toLowerCase());
     }
 
+    protected static MessageContext createContext() {
+        return new MessageContext(mock(Peer.class));
+    }
+
     protected void testProtocol_InvalidLength(Class<? extends Message> type, int declaredLength, int expectedLength,
                                               byte[] data) throws Exception {
 
@@ -147,7 +154,7 @@ public abstract class ProtocolTest {
 
         InvalidMessageException e = null;
         try {
-            protocol.fromByteArray(new Message[1], data);
+            protocol.fromByteArray(createContext(), data);
         } catch (InvalidMessageException e1) {
             e = e1;
         }

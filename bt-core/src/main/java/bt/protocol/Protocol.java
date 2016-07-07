@@ -25,27 +25,27 @@ public interface Protocol {
 
     /**
      * Tries to decode message from the byte buffer. If decoding is successful, then the result is set
-     * into the first position in {@code messageHolder}
+     * into the message {@code context}
      *
-     * @param messageHolder Length must not be less than 1 (must be a non-empty array)
+     * @param context Message context. In case of success the decoded message must be put into this context.
      * @param data Byte buffer of arbitrary length containing (a part of) the message
-     * @return Number of bytes consumed (-1 if the provided data is insufficient)
+     * @return Number of bytes consumed (0 if the provided data is insufficient)
      * @throws InvalidMessageException if data is invalid
      */
-    int fromByteArray(Message[] messageHolder, byte[] data);
+    int fromByteArray(MessageContext context, byte[] data);
 
     /**
      * Tries to decode message from the byte buffer. If decoding is successful, then the result is set
-     * into the first position in {@code messageHolder}
+     * into the message {@code context}
      *
-     * @param messageHolder Length must not be less than 1 (must be a non-empty array)
+     * @param context Message context. In case of success the decoded message must be put into this context.
      * @param messageType Expected message type
      * @param payload Byte buffer of arbitrary length containing message payload
      * @param declaredPayloadLength Payload length (excluding message type ID) as declared in the original message
-     * @return Number of bytes consumed (-1 if the provided data is insufficient)
+     * @return Number of bytes consumed (0 if the provided data is insufficient)
      * @throws InvalidMessageException if message type is not supported or the data is invalid
      */
-    int fromByteArray(Message[] messageHolder, Class<? extends Message> messageType,
+    int fromByteArray(MessageContext context, Class<? extends Message> messageType,
                       byte[] payload, int declaredPayloadLength);
 
     /**
