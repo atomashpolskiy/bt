@@ -81,7 +81,7 @@ public class MetadataService implements IMetadataService {
                     + Arrays.toString(validationResult.getMessages().toArray()));
         }
 
-        Map<String, BEObject> root = beMap.getValue();
+        Map<String, BEObject<?>> root = beMap.getValue();
 
         try {
             byte[] trackerUrl = (byte[]) root.get(TRACKER_URL_KEY).getValue();
@@ -90,7 +90,7 @@ public class MetadataService implements IMetadataService {
             BEMap info = (BEMap) root.get(INFOMAP_KEY);
             torrent.setInfoHash(CryptoUtil.getSha1Digest(info.getContent()));
 
-            Map<String, BEObject> infoMap = info.getValue();
+            Map<String, BEObject<?>> infoMap = info.getValue();
 
             if (infoMap.get(TORRENT_NAME_KEY) != null) {
                 byte[] name = (byte[]) infoMap.get(TORRENT_NAME_KEY).getValue();
@@ -112,7 +112,7 @@ public class MetadataService implements IMetadataService {
                 List<TorrentFile> torrentFiles = new ArrayList<>(files.size() + 1);
                 for (BEMap file : files) {
 
-                    Map<String, BEObject> fileMap = file.getValue();
+                    Map<String, BEObject<?>> fileMap = file.getValue();
                     DefaultTorrentFile torrentFile = new DefaultTorrentFile();
 
                     BigInteger fileSize = (BigInteger) fileMap.get(FILE_SIZE_KEY).getValue();
@@ -121,7 +121,7 @@ public class MetadataService implements IMetadataService {
                     List<BEString> pathElements = (List<BEString>) fileMap.get(FILE_PATH_ELEMENTS_KEY).getValue();
 
                     torrentFile.setPathElements(pathElements.stream()
-                            .map(bytes -> new String(bytes.getValue(), defaultCharset))
+                            .map(bytes -> bytes.getValue(defaultCharset))
                             .collect(Collectors.toList()));
 
                     torrentFiles.add(torrentFile);

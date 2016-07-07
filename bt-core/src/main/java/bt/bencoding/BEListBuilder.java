@@ -1,14 +1,15 @@
 package bt.bencoding;
 
 import bt.bencoding.model.BEList;
+import bt.bencoding.model.BEObject;
 
 import java.util.ArrayList;
 import java.util.List;
 
 class BEListBuilder extends BEPrefixedTypeBuilder<BEList> {
 
-    private final List<Object> objects;
-    private BEObjectBuilder<?> builder;
+    private final List<BEObject<?>> objects;
+    private BEObjectBuilder<? extends BEObject<?>> builder;
 
     BEListBuilder() {
         objects = new ArrayList<>();

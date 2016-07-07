@@ -114,7 +114,7 @@ public class BEParserTest {
 
         byte[][] expected = new byte[][] {"a".getBytes(charset), "b".getBytes(charset)};
 
-        Map<String, BEObject> map = parser.readMap().getValue();
+        Map<String, BEObject<?>> map = parser.readMap().getValue();
 
         Object o = map.get("spam");
         assertNotNull(o);

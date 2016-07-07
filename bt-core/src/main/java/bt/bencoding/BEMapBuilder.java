@@ -9,9 +9,9 @@ import java.util.Map;
 
 class BEMapBuilder extends BEPrefixedTypeBuilder<BEMap> {
 
-    private final Map<String, BEObject> map;
+    private final Map<String, BEObject<?>> map;
     private BEStringBuilder keyBuilder;
-    private BEObjectBuilder<?> valueBuilder;
+    private BEObjectBuilder<? extends BEObject<?>> valueBuilder;
 
     private Charset keyCharset;
 
@@ -34,7 +34,7 @@ class BEMapBuilder extends BEPrefixedTypeBuilder<BEMap> {
             }
         } else {
             if (!valueBuilder.accept(b)) {
-                map.put(new String(keyBuilder.build().getValue(), keyCharset), valueBuilder.build());
+                map.put(keyBuilder.build().getValue(keyCharset), valueBuilder.build());
                 keyBuilder = null;
                 valueBuilder = null;
                 return accept(b, false);

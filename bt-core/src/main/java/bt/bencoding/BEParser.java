@@ -97,7 +97,7 @@ public class BEParser implements AutoCloseable {
         }
     }
 
-    static BEObjectBuilder<?> builderForType(BEType type) {
+    static BEObjectBuilder<? extends BEObject<?>> builderForType(BEType type) {
         switch (type) {
             case STRING: {
                 return new BEStringBuilder();

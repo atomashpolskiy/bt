@@ -80,7 +80,7 @@ public class TrackerResponseHandler {
 
         TrackerResponse response;
 
-        Map<String, BEObject> responseMap = root.getValue();
+        Map<String, BEObject<?>> responseMap = root.getValue();
         if (responseMap.get(FAILURE_REASON_KEY) != null) {
             response = new TrackerResponse(false);
 
