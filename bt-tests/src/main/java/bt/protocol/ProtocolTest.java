@@ -3,7 +3,9 @@ package bt.protocol;
 import bt.net.Peer;
 
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Objects;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -16,8 +18,12 @@ public abstract class ProtocolTest {
 
     protected final Protocol protocol;
 
-    public ProtocolTest(Protocol... extensions) {
-        this.protocol = new ProtocolChain(new HashSet<>(Arrays.asList(extensions)));
+    public ProtocolTest() {
+        this.protocol = new StandardBittorrentProtocol(Collections.emptyMap());
+    }
+
+    public ProtocolTest(Map<Integer, MessageHandler<?>> extraHandlers) {
+        this.protocol = new StandardBittorrentProtocol(Objects.requireNonNull(extraHandlers));
     }
     
     protected void assertInsufficientDataAndNothingConsumed(byte[] data) throws Exception {

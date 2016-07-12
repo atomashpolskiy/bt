@@ -1,94 +1,103 @@
 package bt.protocol.ext;
 
 import bt.BtException;
-import bt.protocol.BaseProtocol;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.MessageContext;
+import bt.protocol.MessageHandler;
 import com.google.inject.Inject;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 
-public class ExtendedProtocol extends BaseProtocol {
+public class ExtendedProtocol implements MessageHandler<Message> {
 
-    private static final int EXTENDED_ID = 20;
+    public static final int EXTENDED_MESSAGE_ID = 20;
     private static final int HANDSHAKE_TYPE_ID = 0;
 
-    private ExtendedMessageHandler<?> extendedHandshakeHandler;
-    private Map<Class<? extends Message>, ExtendedMessageHandler<?>> handlers;
+    private MessageHandler<?> extendedHandshakeHandler;
+
+    private Map<Class<? extends Message>, MessageHandler<?>> handlers;
+    private Map<String, Class<? extends Message>> uniqueTypes;
+    private Map<String, MessageHandler<?>> handlersByTypeName;
 
     private ExtendedMessageTypeMapping messageTypeMapping;
-    private Map<String, ExtendedMessageHandler<?>> handlersByTypeName;
 
     @Inject
     public ExtendedProtocol(ExtendedMessageTypeMapping messageTypeMapping,
-                            Map<String, ExtendedMessageHandler<?>> handlersByTypeName) {
+                            Map<String, MessageHandler<?>> handlersByTypeName) {
 
         this.messageTypeMapping = messageTypeMapping;
 
-        Map<Class<? extends Message>, ExtendedMessageHandler<?>> handlers = new HashMap<>();
+        Map<Class<? extends Message>, MessageHandler<?>> handlers = new HashMap<>();
         extendedHandshakeHandler = new ExtendedHandshakeMessageHandler();
         handlers.put(ExtendedHandshake.class, extendedHandshakeHandler);
 
-        Set<Class<? extends ExtendedMessage>> seenMessageTypes = new HashSet<>();
-        handlersByTypeName.values().forEach(handler -> {
+        Map<String, Class<? extends Message>> uniqueTypes = new HashMap<>();
+        handlersByTypeName.forEach((typeName, handler) -> {
 
-            Class<? extends ExtendedMessage> messageType = Objects.requireNonNull(handler.getMessageType());
-            if (seenMessageTypes.contains(messageType)) {
-                throw new BtException("Encountered duplicate handler for " + messageType.getSimpleName());
+            if (handler.getSupportedTypes().isEmpty()) {
+                throw new BtException("No supported types declared in handler: " + handler.getClass().getName());
+            } else {
+                uniqueTypes.put(typeName, handler.getSupportedTypes().iterator().next());
             }
-            seenMessageTypes.add(messageType);
 
-            handlers.put(handler.getMessageType(), handler);
+            handler.getSupportedTypes().forEach(messageType -> {
+                if (handlers.keySet().contains(messageType)) {
+                    throw new BtException("Encountered duplicate handler for message type: " + messageType.getSimpleName());
+                }
+                handlers.put(messageType, handler);
+            });
         });
 
         this.handlers = Collections.unmodifiableMap(handlers);
         this.handlersByTypeName = handlersByTypeName;
+        this.uniqueTypes = uniqueTypes;
     }
 
     @Override
-    public boolean isSupported(Class<? extends Message> messageType) {
-        return handlers.containsKey(messageType);
-    }
-
-    @Override
-    public boolean isSupported(byte messageTypeId) {
-        return messageTypeId == EXTENDED_ID;
-    }
-
-    @Override
-    public Set<Class<? extends Message>> getSupportedTypes() {
+    public Collection<Class<? extends Message>> getSupportedTypes() {
         return handlers.keySet();
     }
 
     @Override
-    public Class<? extends Message> getMessageType(byte messageTypeId) {
-        if (messageTypeId != EXTENDED_ID) {
-            throw new InvalidMessageException("Unsupported message type ID: " + messageTypeId);
+    public Class<? extends Message> readMessageType(byte[] data) {
+        if (data.length == 0) {
+            return null;
         }
-        return ExtendedMessage.class; // return generic super-type (dirty, but should be sufficient for upstream protocol's needs)
+        Integer messageTypeId = (int) data[0];
+        if (messageTypeId == HANDSHAKE_TYPE_ID) {
+            return ExtendedHandshake.class;
+        }
+
+        Class<? extends Message> messageType;
+        String typeName = messageTypeMapping.getTypeNameForId(messageTypeId);
+        if (typeName == null) {
+            throw new InvalidMessageException("Unknown message type ID: " + messageTypeId);
+        }
+        messageType = uniqueTypes.get(typeName);
+        if (messageType == null) {
+            messageType = handlersByTypeName.get(typeName).readMessageType(Arrays.copyOfRange(data, 1, data.length));
+        }
+        return messageType;
     }
 
     @Override
-    public int fromByteArray(MessageContext context, Class<? extends Message> messageType, byte[] payload, int declaredPayloadLength) {
+    public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
 
-        assertSupported(Objects.requireNonNull(messageType));
-        if (payload.length < declaredPayloadLength) {
+        if (data.length < declaredPayloadLength) {
             // not ready yet
             return 0;
         }
 
-        int typeId = payload[0];
+        int typeId = data[0];
         // TODO: start parsing at non-zero index (skip the beginning) and stop parsing when complete (ignoring the trailing bytes)
-        payload = Arrays.copyOfRange(payload, 1, declaredPayloadLength);
+        data = Arrays.copyOfRange(data, 1, declaredPayloadLength);
 
-        ExtendedMessageHandler<?> handler;
+        MessageHandler<?> handler;
         if (typeId == HANDSHAKE_TYPE_ID) {
             handler = extendedHandshakeHandler;
         } else {
@@ -98,20 +107,21 @@ public class ExtendedProtocol extends BaseProtocol {
             }
             handler = handlersByTypeName.get(extendedType);
         }
-        return handler.fromByteArray(context, payload);
+        return handler.decodePayload(context, data, declaredPayloadLength - 1);
+    }
+
+    @Override
+    public byte[] encodePayload(Message message) {
+        Class<? extends Message> messageType = message.getClass();
+        return doEncode(message, messageType);
     }
 
     @SuppressWarnings("unchecked")
-    @Override
-    protected byte[] doEncode(Message message) {
-        Class<? extends Message> messageType = message.getClass();
-        assertSupported(messageType);
-        return ((ExtendedMessageHandler<ExtendedMessage>) handlers.get(messageType)).toByteArray((ExtendedMessage) message);
-    }
-
-    private void assertSupported(Class<? extends Message> messageType) {
-        if (!isSupported(messageType)) {
-            throw new InvalidMessageException("Unsupported message type: " + messageType.getSimpleName());
-        }
+    private <T extends Message> byte[] doEncode(Message message, Class<T> messageType) {
+        byte[] payload = ((MessageHandler<T>) handlers.get(messageType)).encodePayload((T) message);
+        byte[] bytes = new byte[payload.length + 1];
+        bytes[0] = messageTypeMapping.getIdForTypeName(messageTypeMapping.getTypeNameForJavaType(messageType)).byteValue();
+        System.arraycopy(payload, 0, bytes, 1, payload.length);
+        return bytes;
     }
 }

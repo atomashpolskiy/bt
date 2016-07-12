@@ -4,6 +4,7 @@ import bt.BtException;
 import bt.bencoding.model.BEInteger;
 import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
+import bt.protocol.Message;
 
 import java.math.BigInteger;
 import java.util.Collections;
@@ -11,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class ExtendedHandshake implements ExtendedMessage {
+public class ExtendedHandshake implements Message {
 
     public static final String MESSAGE_TYPE_MAPPING_KEY = "m";
 

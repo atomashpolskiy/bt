@@ -15,6 +15,7 @@ public class ExtendedHandshakeHandler implements HandshakeHandler {
 
     @Override
     public boolean handleConnection(PeerConnection connection) {
+        connection.postMessage(extendedHandshakeProvider.get());
         return true;
     }
 }

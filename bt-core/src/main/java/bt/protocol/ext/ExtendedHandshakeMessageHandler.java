@@ -8,44 +8,36 @@ import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
+import bt.protocol.Message;
 import bt.protocol.MessageContext;
+import bt.protocol.MessageHandler;
 
 import java.io.ByteArrayOutputStream;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-class ExtendedHandshakeMessageHandler implements ExtendedMessageHandler<ExtendedHandshake> {
+class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshake> {
 
+    private Collection<Class<? extends ExtendedHandshake>> supportedTypes;
     private ConcurrentMap<Peer, Map<Integer, String>> peerTypeMappings;
 
     ExtendedHandshakeMessageHandler() {
         peerTypeMappings = new ConcurrentHashMap<>();
+        supportedTypes = Collections.singleton(ExtendedHandshake.class);
     }
 
     @Override
-    public Class<ExtendedHandshake> getMessageType() {
+    public Collection<Class<? extends ExtendedHandshake>> getSupportedTypes() {
+        return supportedTypes;
+    }
+
+    @Override
+    public Class<? extends ExtendedHandshake> readMessageType(byte[] data) {
         return ExtendedHandshake.class;
-    }
-
-    @Override
-    public int fromByteArray(MessageContext context, byte[] data) {
-
-        try (BEParser parser = new BEParser(data)) {
-            BEMap message = parser.readMap();
-
-            Map<String, BEObject<?>> value = message.getValue();
-            processTypeMapping(context.getPeer(), value.get(ExtendedHandshake.MESSAGE_TYPE_MAPPING_KEY));
-            context.setMessage(new ExtendedHandshake(value));
-            return message.getContent().length;
-        } catch (Exception e) {
-            // TODO: parser should be configurable to return null instead of throwing an exception;
-            // otherwise need to treat exceptions differently depending on their type
-            // (i.e. incorrect message vs incomplete message)
-            throw new BtException("Failed to decode extended handshake", e);
-        }
     }
 
     private void processTypeMapping(Peer peer, BEObject mappingObj) {
@@ -79,8 +71,28 @@ class ExtendedHandshakeMessageHandler implements ExtendedMessageHandler<Extended
         return existing;
     }
 
+
+
     @Override
-    public byte[] toByteArray(ExtendedHandshake message) {
+    public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
+
+        try (BEParser parser = new BEParser(data)) {
+            BEMap message = parser.readMap();
+
+            Map<String, BEObject<?>> value = message.getValue();
+            processTypeMapping(context.getPeer(), value.get(ExtendedHandshake.MESSAGE_TYPE_MAPPING_KEY));
+            context.setMessage(new ExtendedHandshake(value));
+            return message.getContent().length;
+        } catch (Exception e) {
+            // TODO: parser should be configurable to return null instead of throwing an exception;
+            // otherwise need to treat exceptions differently depending on their type
+            // (i.e. incorrect message vs incomplete message)
+            throw new BtException("Failed to decode extended handshake", e);
+        }
+    }
+
+    @Override
+    public byte[] encodePayload(ExtendedHandshake message) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         new BEMap(null, message.getData()).writeTo(out);
         return out.toByteArray();
