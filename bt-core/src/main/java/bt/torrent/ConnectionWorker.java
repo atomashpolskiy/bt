@@ -12,7 +12,6 @@ import bt.protocol.KeepAlive;
 import bt.protocol.Message;
 import bt.protocol.NotInterested;
 import bt.protocol.Piece;
-import bt.protocol.Port;
 import bt.protocol.Request;
 import bt.protocol.Unchoke;
 import org.slf4j.Logger;
@@ -181,10 +180,6 @@ public class ConnectionWorker {
                     pendingWrites.put(key, blockWrite);
 
                 }
-                return;
-            }
-            if (Port.class.equals(type)) {
-                // ignore
                 return;
             }
 

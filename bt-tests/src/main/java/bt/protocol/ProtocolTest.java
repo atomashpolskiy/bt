@@ -137,11 +137,6 @@ public abstract class ProtocolTest {
             assertEquals(expectedCancel.getLength(), actualCancel.getLength());
             return;
         }
-        if (Port.class.equals(expectedType)) {
-            Port expectedPort = (Port) expected, actualPort = (Port) actual;
-            assertEquals(expectedPort.getPort(), actualPort.getPort());
-            return;
-        }
 
         throw new AssertionError("Unexpected message type: " + expectedType.getSimpleName().toLowerCase());
     }
