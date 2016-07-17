@@ -1,4 +1,4 @@
-package bt.protocol.ext;
+package bt.runtime.protocol.ext;
 
 import bt.protocol.MessageHandler;
 import com.google.inject.Inject;

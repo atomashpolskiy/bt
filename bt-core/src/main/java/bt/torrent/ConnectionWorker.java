@@ -1,7 +1,7 @@
 package bt.torrent;
 
 import bt.BtException;
-import bt.net.IPeerConnection;
+import bt.net.Peer;
 import bt.protocol.Bitfield;
 import bt.protocol.Cancel;
 import bt.protocol.Choke;
@@ -18,37 +18,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class ConnectionWorker {
+public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionWorker.class);
 
     private static final int MAX_PENDING_REQUESTS = 3;
 
     private IPieceManager pieceManager;
+    private IDataWorker dataWorker;
 
-    private Consumer<Request> requestConsumer;
-    private Function<Piece, BlockWrite> blockConsumer;
-    private Supplier<BlockRead> blockSupplier;
+    private Consumer<BlockWrite> blockConsumer;
 
-    private final IPeerConnection connection;
+    private final Peer peer;
     private ConnectionState connectionState;
 
     private long lastBuiltRequests;
-
-    private long received;
-    private long sent;
 
     private Optional<Integer> currentPiece;
 
@@ -57,18 +54,17 @@ public class ConnectionWorker {
     private Map<Object, BlockWrite> pendingWrites;
     private Set<Object> cancelledPeerRequests;
 
-    private volatile boolean initialized;
+    private Deque<Message> outgoingMessages;
 
-    ConnectionWorker(IPeerConnection connection, IPieceManager pieceManager, Consumer<Request> requestConsumer,
-                     Function<Piece, BlockWrite> blockConsumer, Supplier<BlockRead> blockSupplier) {
+    ConnectionWorker(Peer peer, IPieceManager pieceManager, IDataWorker dataWorker,
+                     Consumer<BlockWrite> blockConsumer) {
 
         this.pieceManager = pieceManager;
+        this.dataWorker = dataWorker;
 
-        this.requestConsumer = requestConsumer;
         this.blockConsumer = blockConsumer;
-        this.blockSupplier = blockSupplier;
 
-        this.connection = connection;
+        this.peer = peer;
         connectionState = new ConnectionState();
 
         currentPiece = Optional.empty();
@@ -77,120 +73,115 @@ public class ConnectionWorker {
         pendingRequests = new HashSet<>();
         pendingWrites = new HashMap<>();
         cancelledPeerRequests = new HashSet<>();
-    }
 
-    public long getReceived() {
-        return received;
-    }
-
-    public long getSent() {
-        return sent;
-    }
-
-    public IConnectionState getState() {
-        return connectionState;
-    }
-
-    public void doWork() {
+        outgoingMessages = new LinkedBlockingDeque<>();
 
         // TODO: this is temporary fix, need to incorporate bitfield sending into the connection initialization chain
-        if (!initialized && pieceManager.haveAnyData()) {
+        if (pieceManager.haveAnyData()) {
             Bitfield bitfield = new Bitfield(pieceManager.getBitfield());
-            connection.postMessage(bitfield);
-            initialized = true;
-        }
-
-        checkConnection();
-        processIncomingMessages();
-        processOutgoingMessages();
-        connectionState.updateConnection(connection);
-    }
-
-    private void checkConnection() {
-        if (connection.isClosed()) {
-            throw new BtException("Connection is closed: " + connection.getRemotePeer());
+            outgoingMessages.add(bitfield);
         }
     }
 
-    private void processIncomingMessages() {
+    // TODO: this is a hack, remove
+    public void addMessage(Message message) {
+        outgoingMessages.addFirst(message);
+    }
+    public void shutdown() {
+        if (currentPiece.isPresent()) {
+            pieceManager.unselectPieceForPeer(peer, currentPiece.get());
+        }
+    }
 
-        Message message = connection.readMessageNow();
-        if (message != null) {
+    @Override
+    public void accept(Message message) {
+        Class<? extends Message> type = message.getClass();
 
-            Class<? extends Message> type = message.getClass();
-
-            if (KeepAlive.class.equals(type)) {
-                return;
-            }
-            if (Bitfield.class.equals(type)) {
-                Bitfield bitfield = (Bitfield) message;
-                pieceManager.peerHasBitfield(connection, bitfield.getBitfield());
-                return;
-            }
-            if (Choke.class.equals(type)) {
-                connectionState.setPeerChoking(true);
-                return;
-            }
-            if (Unchoke.class.equals(type)) {
-                connectionState.setPeerChoking(false);
-                return;
-            }
-            if (Interested.class.equals(type)) {
-                connectionState.setPeerInterested(true);
-                return;
-            }
-            if (NotInterested.class.equals(type)) {
-                connectionState.setPeerInterested(false);
-                return;
-            }
-            if (Have.class.equals(type)) {
-                Have have = (Have) message;
-                pieceManager.peerHasPiece(connection, have.getPieceIndex());
-                return;
-            }
-            if (Request.class.equals(type)) {
-                if (!connectionState.isChoking()) {
-                    Request request = (Request) message;
-                    requestConsumer.accept(request);
+        if (KeepAlive.class.equals(type)) {
+            return;
+        }
+        if (Bitfield.class.equals(type)) {
+            Bitfield bitfield = (Bitfield) message;
+            pieceManager.peerHasBitfield(peer, bitfield.getBitfield());
+            return;
+        }
+        if (Choke.class.equals(type)) {
+            connectionState.setPeerChoking(true);
+            return;
+        }
+        if (Unchoke.class.equals(type)) {
+            connectionState.setPeerChoking(false);
+            return;
+        }
+        if (Interested.class.equals(type)) {
+            connectionState.setPeerInterested(true);
+            return;
+        }
+        if (NotInterested.class.equals(type)) {
+            connectionState.setPeerInterested(false);
+            return;
+        }
+        if (Have.class.equals(type)) {
+            Have have = (Have) message;
+            pieceManager.peerHasPiece(peer, have.getPieceIndex());
+            return;
+        }
+        if (Request.class.equals(type)) {
+            if (!connectionState.isChoking()) {
+                Request request = (Request) message;
+                if (!dataWorker.addBlockRequest(peer,
+                            request.getPieceIndex(), request.getOffset(), request.getLength())) {
+                    connectionState.setChoking(true);
                 }
-                return;
             }
-            if (Cancel.class.equals(type)) {
-                Cancel cancel = (Cancel) message;
-                cancelledPeerRequests.add(Mapper.mapper().buildKey(
-                cancel.getPieceIndex(), cancel.getOffset(), cancel.getLength()));
-                return;
-            }
-            if (Piece.class.equals(type)) {
-                Piece piece = (Piece) message;
+            return;
+        }
+        if (Cancel.class.equals(type)) {
+            Cancel cancel = (Cancel) message;
+            cancelledPeerRequests.add(Mapper.mapper().buildKey(
+            cancel.getPieceIndex(), cancel.getOffset(), cancel.getLength()));
+            return;
+        }
+        if (Piece.class.equals(type)) {
+            Piece piece = (Piece) message;
 
-                int pieceIndex = piece.getPieceIndex(),
-                    offset = piece.getOffset();
-                byte[] block = piece.getBlock();
-                // check that this block was requested in the first place
-                Object key = Mapper.mapper().buildKey(pieceIndex, offset, block.length);
-                if (!pendingRequests.remove(key)) {
-                    throw new BtException("Received unexpected block " + piece +
-                            " from peer: " + connection.getRemotePeer());
-                } else {
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace(requestQueue.size() + " requests left in queue {piece #" + currentPiece.get() + "}");
-                    }
-                    BlockWrite blockWrite = blockConsumer.apply(piece);
+            int pieceIndex = piece.getPieceIndex(),
+                offset = piece.getOffset();
+            byte[] block = piece.getBlock();
+            // check that this block was requested in the first place
+            Object key = Mapper.mapper().buildKey(pieceIndex, offset, block.length);
+            if (!pendingRequests.remove(key)) {
+                throw new BtException("Received unexpected block " + piece +
+                        " from peer: " + peer);
+            } else {
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace(requestQueue.size() + " requests left in queue {piece #" + currentPiece.get() + "}");
+                }
+                BlockWrite blockWrite = dataWorker.addBlock(peer, piece.getPieceIndex(),
+                        piece.getOffset(), piece.getBlock());
+                if (!blockWrite.isComplete() || blockWrite.isSuccess()) {
                     pendingWrites.put(key, blockWrite);
-
+                    blockConsumer.accept(blockWrite);
                 }
-                return;
             }
-
-            throw new BtException("Unexpected message type: " + message);
         }
+
+        connectionState.updateConnection();
     }
 
-    private void processOutgoingMessages() {
+    @Override
+    public Message get() {
+
+        if (outgoingMessages.isEmpty()) {
+            prepareOutgoingMessages();
+        }
+        return outgoingMessages.poll();
+    }
+
+    private void prepareOutgoingMessages() {
 
         BlockRead block;
-        while ((block = blockSupplier.get()) != null) {
+        while ((block = dataWorker.getCompletedBlockRequest(peer)) != null) {
             int pieceIndex = block.getPieceIndex(),
                 offset = block.getOffset(),
                 length = block.getLength();
@@ -198,7 +189,7 @@ public class ConnectionWorker {
             // check that peer hadn't sent cancel while we were preparing the requested block
             if (!cancelledPeerRequests.remove(Mapper.mapper().buildKey(pieceIndex, offset, length))) {
                 try {
-                    connection.postMessage(new Piece(pieceIndex, offset, block.getBlock()));
+                    outgoingMessages.add(new Piece(pieceIndex, offset, block.getBlock()));
                 } catch (InvalidMessageException e) {
                     throw new BtException("Failed to send PIECE", e);
                 }
@@ -210,7 +201,7 @@ public class ConnectionWorker {
                 if (pieceManager.checkPieceCompleted(currentPiece.get())) {
                     if (LOGGER.isDebugEnabled()) {
                         LOGGER.debug("Finished downloading piece #" + currentPiece.get() +
-                                "; peer: " + connection.getRemotePeer());
+                                "; peer: " + peer);
                     }
                     currentPiece = Optional.empty();
                     pendingWrites.clear();
@@ -219,20 +210,20 @@ public class ConnectionWorker {
                 // being overly optimistical here, need to add some fallback strategy to restart piece
                 // (prob. with another peer, i.e. in another conn worker)
                 if (connectionState.isPeerChoking()) {
-                    pieceManager.unselectPieceForPeer(connection, currentPiece.get());
+                    pieceManager.unselectPieceForPeer(peer, currentPiece.get());
                     currentPiece = Optional.empty();
                     requestQueue.clear();
                     pendingRequests.clear();
                 }
             } else {
-                if (pieceManager.piecesLeft() > 0 && pieceManager.mightSelectPieceForPeer(connection)) {
+                if (pieceManager.piecesLeft() > 0 && pieceManager.mightSelectPieceForPeer(peer)) {
                     if (!connectionState.isInterested()) {
-                        connection.postMessage(Interested.instance());
+                        outgoingMessages.add(Interested.instance());
                         connectionState.setInterested(true);
                     }
 
                 } else if (connectionState.isInterested()) {
-                    connection.postMessage(NotInterested.instance());
+                    outgoingMessages.add(NotInterested.instance());
                     connectionState.setInterested(false);
                 }
             }
@@ -240,11 +231,11 @@ public class ConnectionWorker {
 
         if (!connectionState.isPeerChoking()) {
             if (!currentPiece.isPresent()) {
-                Optional<Integer> nextPiece = pieceManager.selectPieceForPeer(connection);
+                Optional<Integer> nextPiece = pieceManager.selectPieceForPeer(peer);
                 if (nextPiece.isPresent()) {
                     if (LOGGER.isDebugEnabled()) {
                         LOGGER.debug("Begin downloading piece #" + nextPiece.get() +
-                                "; peer: " + connection.getRemotePeer());
+                                "; peer: " + peer);
                     }
                     currentPiece = nextPiece;
                     requestQueue.addAll(pieceManager.buildRequestsForPiece(nextPiece.get()));
@@ -295,21 +286,23 @@ public class ConnectionWorker {
                 Object key = Mapper.mapper().buildKey(
                             request.getPieceIndex(), request.getOffset(), request.getLength());
                 if (!pendingRequests.contains(key)) {
-                    connection.postMessage(request);
+                    outgoingMessages.add(request);
                     pendingRequests.add(key);
                 }
             }
         }
+
+        connectionState.updateConnection();
     }
 
     @Override
     public String toString() {
-        return "Worker {peer: " + connection.getRemotePeer() + "}";
+        return "Worker {peer: " + peer + "}";
     }
 
-    static class ConnectionState implements IConnectionState {
+    class ConnectionState implements IConnectionState {
 
-        private static final Duration CHOKING_THRESHOLD = Duration.ofMillis(10000);
+        private final Duration CHOKING_THRESHOLD = Duration.ofMillis(10000);
 
         private boolean interested;
         private boolean peerInterested;
@@ -366,7 +359,7 @@ public class ConnectionWorker {
             this.peerChoking = peerChoking;
         }
 
-        void updateConnection(IPeerConnection connection) {
+        void updateConnection() {
 
             if (!shouldChoke.isPresent()) {
                 if (peerInterested && choking) {
@@ -383,11 +376,11 @@ public class ConnectionWorker {
                     if (shouldChoke) {
                         // choke immediately
                         choking = true;
-                        connection.postMessage(Choke.instance());
+                        outgoingMessages.addFirst(Choke.instance());
                         lastChoked = System.currentTimeMillis();
                     } else if (mightUnchoke()) {
                         choking = false;
-                        connection.postMessage(Unchoke.instance());
+                        outgoingMessages.addFirst(Unchoke.instance());
                     }
                 }
                 this.shouldChoke = Optional.empty();

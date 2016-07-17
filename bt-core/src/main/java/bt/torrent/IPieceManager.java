@@ -1,6 +1,7 @@
 package bt.torrent;
 
 import bt.net.IPeerConnection;
+import bt.net.Peer;
 import bt.protocol.Request;
 
 import java.util.List;
@@ -12,19 +13,19 @@ public interface IPieceManager {
 
     byte[] getBitfield();
 
-    void peerHasBitfield(IPeerConnection peer, byte[] peerBitfield);
+    void peerHasBitfield(Peer peer, byte[] peerBitfield);
 
-    void peerHasPiece(IPeerConnection peer, Integer pieceIndex);
+    void peerHasPiece(Peer peer, Integer pieceIndex);
 
     boolean checkPieceCompleted(Integer pieceIndex);
 
     boolean checkPieceVerified(Integer pieceIndex);
 
-    boolean mightSelectPieceForPeer(IPeerConnection peer);
+    boolean mightSelectPieceForPeer(Peer peer);
 
-    Optional<Integer> selectPieceForPeer(IPeerConnection peer);
+    Optional<Integer> selectPieceForPeer(Peer peer);
 
-    void unselectPieceForPeer(IPeerConnection peer, Integer pieceIndex);
+    void unselectPieceForPeer(Peer peer, Integer pieceIndex);
 
     List<Request> buildRequestsForPiece(Integer pieceIndex);
 

@@ -36,6 +36,7 @@ public class StandardBittorrentProtocol implements Protocol {
     private static final byte[] HANDSHAKE_PREFIX;
     private static final int HANDSHAKE_RESERVED_OFFSET;
     private static final int HANDSHAKE_RESERVED_LENGTH = 8;
+    private static final int HANDSHAKE_DATA_OFFSET;
 
     private static final byte[] KEEPALIVE = new byte[]{0,0,0,0};
 
@@ -46,9 +47,11 @@ public class StandardBittorrentProtocol implements Protocol {
         int prefixLength = 1;
 
         HANDSHAKE_RESERVED_OFFSET = 1 + protocolNameLength;
-        HANDSHAKE_PREFIX = new byte[1 + protocolNameLength + HANDSHAKE_RESERVED_LENGTH];
+        HANDSHAKE_PREFIX = new byte[HANDSHAKE_RESERVED_OFFSET];
         HANDSHAKE_PREFIX[0] = (byte) protocolNameLength;
         System.arraycopy(PROTOCOL_NAME_BYTES, 0, HANDSHAKE_PREFIX, prefixLength, protocolNameLength);
+
+        HANDSHAKE_DATA_OFFSET = HANDSHAKE_PREFIX.length + HANDSHAKE_RESERVED_LENGTH;
     }
 
     private Map<Integer, MessageHandler<?>> handlers;
@@ -182,7 +185,7 @@ public class StandardBittorrentProtocol implements Protocol {
 
         if (Handshake.class.equals(message.getClass())) {
             Handshake handshake = (Handshake) message;
-            return handshake(handshake.getInfoHash(), handshake.getPeerId());
+            return handshake(handshake.getReserved(), handshake.getInfoHash(), handshake.getPeerId());
         }
         if (KeepAlive.class.equals(message.getClass())) {
             return keepAlive();
@@ -213,8 +216,12 @@ public class StandardBittorrentProtocol implements Protocol {
     }
 
     // handshake: <pstrlen><pstr><reserved><info_hash><peer_id>
-    private static byte[] handshake(byte[] infoHash, byte[] peerId) {
+    private static byte[] handshake(byte[] reserved, byte[] infoHash, byte[] peerId) {
 
+        if (reserved.length != HANDSHAKE_RESERVED_LENGTH) {
+            throw new InvalidMessageException("Invalid reserved bytes: expected " + HANDSHAKE_RESERVED_LENGTH
+                    + " bytes, received " + reserved.length);
+        }
         if (infoHash.length != Constants.INFO_HASH_LENGTH) {
             throw new InvalidMessageException("Invalid info hash: expected " + Constants.INFO_HASH_LENGTH
                     + " bytes, received " + infoHash.length);
@@ -224,10 +231,12 @@ public class StandardBittorrentProtocol implements Protocol {
                     + " bytes, received " + peerId.length);
         }
 
-        byte[] message = new byte[HANDSHAKE_PREFIX.length + Constants.INFO_HASH_LENGTH + Constants.PEER_ID_LENGTH];
+        byte[] message = new byte[HANDSHAKE_PREFIX.length + HANDSHAKE_RESERVED_LENGTH
+                + Constants.INFO_HASH_LENGTH + Constants.PEER_ID_LENGTH];
         System.arraycopy(HANDSHAKE_PREFIX, 0, message, 0, HANDSHAKE_PREFIX.length);
-        System.arraycopy(infoHash, 0, message, HANDSHAKE_PREFIX.length, infoHash.length);
-        System.arraycopy(peerId, 0, message, HANDSHAKE_PREFIX.length + infoHash.length, peerId.length);
+        System.arraycopy(reserved, 0, message, HANDSHAKE_RESERVED_OFFSET, HANDSHAKE_RESERVED_LENGTH);
+        System.arraycopy(infoHash, 0, message, HANDSHAKE_DATA_OFFSET, infoHash.length);
+        System.arraycopy(peerId, 0, message, HANDSHAKE_DATA_OFFSET + infoHash.length, peerId.length);
 
         return message;
     }

@@ -3,8 +3,9 @@ package bt.torrent;
 import bt.BtException;
 import bt.data.DataStatus;
 import bt.data.IChunkDescriptor;
-import bt.net.IPeerConnection;
+import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
+import bt.protocol.Protocols;
 import bt.protocol.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,7 +99,7 @@ public class PieceManager implements IPieceManager {
     // TODO: Check if peer has everything (i.e. is a seeder) and store him separately
     // this should help to improve performance of the next piece selection algorithm
     @Override
-    public void peerHasBitfield(IPeerConnection peer, byte[] peerBitfield) {
+    public void peerHasBitfield(Peer peer, byte[] peerBitfield) {
 
         if (peerBitfield.length == bitfield.length) {
             byte[] bs = Arrays.copyOf(peerBitfield, peerBitfield.length);
@@ -109,7 +110,7 @@ public class PieceManager implements IPieceManager {
     }
 
     @Override
-    public void peerHasPiece(IPeerConnection peer, Integer pieceIndex) {
+    public void peerHasPiece(Peer peer, Integer pieceIndex) {
         validatePieceIndex(pieceIndex);
         pieceSelectorHelper.addPeerPiece(peer, pieceIndex);
     }
@@ -127,14 +128,14 @@ public class PieceManager implements IPieceManager {
     private boolean checkPieceCompleted(Integer pieceIndex, boolean verifiedOnly) {
         boolean completed = false;
         try {
-            if (getBit(bitfield, pieceIndex) == 1) {
+            if (Protocols.getBit(bitfield, pieceIndex) == 1) {
                 completed = true;
 
             } else {
                 IChunkDescriptor chunk = chunks.get(pieceIndex);
                 switch (chunk.getStatus()) {
                     case VERIFIED: {
-                        setBit(bitfield, pieceIndex);
+                        Protocols.setBit(bitfield, pieceIndex);
                         haveAnyData = true;
                         completePieces.incrementAndGet();
                         completed = true;
@@ -158,8 +159,8 @@ public class PieceManager implements IPieceManager {
     }
 
     @Override
-    public boolean mightSelectPieceForPeer(IPeerConnection peer) {
-        if (peer.isClosed() || assignments.getAssignedPiece(peer).isPresent()) {
+    public boolean mightSelectPieceForPeer(Peer peer) {
+        if (/*peer.isClosed() ||*/ assignments.getAssignedPiece(peer).isPresent()) {
             return false;
         }
         Optional<Integer> piece = pieceSelectorHelper.selectPieceForPeer(peer, selectionValidator);
@@ -167,25 +168,26 @@ public class PieceManager implements IPieceManager {
     }
 
     @Override
-    public Optional<Integer> selectPieceForPeer(IPeerConnection peer) {
+    public Optional<Integer> selectPieceForPeer(Peer peer) {
         Optional<Integer> assignedPiece = assignments.getAssignedPiece(peer);
         return assignedPiece.isPresent()? assignedPiece : selectAndAssignPiece(peer);
     }
 
     @Override
-    public void unselectPieceForPeer(IPeerConnection peer, Integer pieceIndex) {
+    public void unselectPieceForPeer(Peer peer, Integer pieceIndex) {
         Integer assignedPieceIndex = assignments.getAssignedPiece(peer)
                 .orElseThrow(() -> new BtException("Peer " + peer + " is not assigned to any piece"));
         if (!assignedPieceIndex.equals(pieceIndex)) {
             throw new BtException("Peer " + peer + " is not assigned to piece #" + pieceIndex);
         }
         assignments.removeAssignment(peer);
+        pieceSelectorHelper.removePeerBitfield(peer);
     }
 
-    private Optional<Integer> selectAndAssignPiece(IPeerConnection peer) {
+    private Optional<Integer> selectAndAssignPiece(Peer peer) {
 
-        pieceSelectorHelper.getKnownPeers().stream()
-                .filter(IPeerConnection::isClosed).forEach(assignments::removeAssignment);
+//        pieceSelectorHelper.getKnownPeers().stream()
+//                .filter(Peer::isClosed).forEach(assignments::removeAssignment);
 
         Optional<Integer> piece = pieceSelectorHelper.selectPieceForPeer(peer, selectionValidator);
         if (piece.isPresent()) {
@@ -238,44 +240,9 @@ public class PieceManager implements IPieceManager {
         }
     }
 
-    /**
-     * Sets n-th bit in the bitfield
-     * (which is considered a continuous bit array of bits, indexed starting with 0 from left to right)
-     */
-    private static void setBit(byte[] bitfield, int bitAbsIndex) {
-
-        int byteIndex = (int) (bitAbsIndex / 8d);
-        if (byteIndex >= bitfield.length) {
-            throw new BtException("bit index is too large: " + bitAbsIndex);
-        }
-
-        int bitIndex = bitAbsIndex % 8;
-        int shift = (7 - bitIndex);
-        int bitMask = 0b1 << shift;
-        byte currentByte = bitfield[byteIndex];
-        bitfield[byteIndex] = (byte) (currentByte | bitMask);
-    }
-
-    /**
-     * Gets n-th bit in the bitfield
-     * (which is considered a continuous bit array of bits, indexed starting with 0 from left to right)
-     */
-    private static int getBit(byte[] bitfield, int bitAbsIndex) {
-
-        int byteIndex = (int) (bitAbsIndex / 8d);
-        if (byteIndex >= bitfield.length) {
-            throw new BtException("bit index is too large: " + bitAbsIndex);
-        }
-
-        int bitIndex = bitAbsIndex % 8;
-        int shift = (7 - bitIndex);
-        int bitMask = 0b1 << shift ;
-        return (bitfield[byteIndex] & bitMask) >> shift;
-    }
-
     private static class PieceSelectorHelper {
 
-        private Map<IPeerConnection, byte[]> peerBitfields;
+        private Map<Peer, byte[]> peerBitfields;
 
         private PieceStats stats;
         private PieceSelector selector;
@@ -293,33 +260,37 @@ public class PieceManager implements IPieceManager {
             this.bitfieldLength = bitfieldLength;
         }
 
-        Collection<IPeerConnection> getKnownPeers() {
+        Collection<Peer> getKnownPeers() {
             return peerBitfields.keySet();
         }
 
-        void addPeerBitfield(IPeerConnection peer, byte[] peerBitfield) {
+        void addPeerBitfield(Peer peer, byte[] peerBitfield) {
             peerBitfields.put(peer, peerBitfield);
             stats.addBitfield(peerBitfield);
         }
 
-        void addPeerPiece(IPeerConnection peer, Integer pieceIndex) {
+        void removePeerBitfield(Peer peer) {
+            stats.removeBitfield(peerBitfields.get(peer));
+        }
+
+        void addPeerPiece(Peer peer, Integer pieceIndex) {
             byte[] peerBitfield = peerBitfields.get(peer);
             if (peerBitfield == null) {
                 peerBitfield = new byte[bitfieldLength];
                 peerBitfields.put(peer, peerBitfield);
             }
 
-            setBit(peerBitfield, pieceIndex);
+            Protocols.setBit(peerBitfield, pieceIndex);
             stats.addPiece(pieceIndex);
         }
 
-        Optional<Integer> selectPieceForPeer(IPeerConnection peer, Predicate<Integer> validator) {
+        Optional<Integer> selectPieceForPeer(Peer peer, Predicate<Integer> validator) {
 
             byte[] peerBitfield = peerBitfields.get(peer);
             if (peerBitfield != null) {
                 Integer[] pieces = getNextPieces();
                 for (Integer piece : pieces) {
-                    if (getBit(peerBitfield, piece) != 0 && validator.test(piece)) {
+                    if (Protocols.getBit(peerBitfield, piece) != 0 && validator.test(piece)) {
                         return Optional.of(piece);
                     }
                 }
@@ -330,13 +301,13 @@ public class PieceManager implements IPieceManager {
         Integer[] getNextPieces() {
 
             // update the aggregate bitfield for disconnected peers
-            Iterator<Map.Entry<IPeerConnection, byte[]>> iter = peerBitfields.entrySet().iterator();
+            Iterator<Map.Entry<Peer, byte[]>> iter = peerBitfields.entrySet().iterator();
             while (iter.hasNext()) {
-                Map.Entry<IPeerConnection, byte[]> peerBitfield = iter.next();
-                if (peerBitfield.getKey().isClosed()) {
-                    stats.removeBitfield(peerBitfield.getValue());
-                    iter.remove();
-                }
+                Map.Entry<Peer, byte[]> peerBitfield = iter.next();
+//                if (peerBitfield.getKey().isClosed()) {
+//                    stats.removeBitfield(peerBitfield.getValue());
+//                    iter.remove();
+//                }
             }
 
             return selector.getNextPieces(stats, peerBitfields.size(),
@@ -355,7 +326,7 @@ public class PieceManager implements IPieceManager {
 
         void addBitfield(byte[] bitfield) {
             for (int i = 0; i < pieceTotals.length; i++) {
-                if (getBit(bitfield, i) == 1) {
+                if (Protocols.getBit(bitfield, i) == 1) {
                     pieceTotals[i]++;
                     changesCount++;
                 }
@@ -364,7 +335,7 @@ public class PieceManager implements IPieceManager {
 
         void removeBitfield(byte[] bitfield) {
             for (int i = 0; i < pieceTotals.length; i++) {
-                if (getBit(bitfield, i) == 1) {
+                if (Protocols.getBit(bitfield, i) == 1) {
                     pieceTotals[i]--;
                     changesCount--;
                 }
@@ -397,38 +368,38 @@ public class PieceManager implements IPieceManager {
 
     private static class Assignments {
 
-        private Map<IPeerConnection, Integer> assignedPieces;
-        private Map<Integer, IPeerConnection> assignedPeers;
+        private Map<Peer, Integer> assignedPieces;
+        private Map<Integer, Peer> assignedPeers;
 
         Assignments() {
             assignedPieces = new HashMap<>();
             assignedPeers = new HashMap<>();
         }
 
-        void assignPiece(IPeerConnection peer, Integer pieceIndex) {
-            refreshAssignments();
+        void assignPiece(Peer peer, Integer pieceIndex) {
+//            refreshAssignments();
             assignedPieces.put(peer, pieceIndex);
             assignedPeers.put(pieceIndex, peer);
         }
 
-        Optional<Integer> getAssignedPiece(IPeerConnection peer) {
-            refreshAssignments();
+        Optional<Integer> getAssignedPiece(Peer peer) {
+//            refreshAssignments();
             return Optional.ofNullable(assignedPieces.get(peer));
         }
 
-        Optional<IPeerConnection> getAssignee(Integer pieceIndex) {
-            refreshAssignments();
+        Optional<Peer> getAssignee(Integer pieceIndex) {
+//            refreshAssignments();
             return Optional.ofNullable(assignedPeers.get(pieceIndex));
         }
 
         void removeAssignee(Integer pieceIndex) {
-            IPeerConnection assignee = assignedPeers.remove(pieceIndex);
+            Peer assignee = assignedPeers.remove(pieceIndex);
             if (assignee != null) {
                 assignedPieces.remove(assignee);
             }
         }
 
-        void removeAssignment(IPeerConnection peer) {
+        void removeAssignment(Peer peer) {
             Integer assignedPiece = assignedPieces.remove(peer);
             if (assignedPiece != null) {
                 assignedPeers.remove(assignedPiece);
@@ -436,13 +407,13 @@ public class PieceManager implements IPieceManager {
         }
 
         private void refreshAssignments() {
-            Iterator<Map.Entry<IPeerConnection, Integer>> iter = assignedPieces.entrySet().iterator();
+            Iterator<Map.Entry<Peer, Integer>> iter = assignedPieces.entrySet().iterator();
             while (iter.hasNext()) {
-                Map.Entry<IPeerConnection, Integer> entry = iter.next();
-                if (entry.getKey().isClosed()) {
-                    assignedPeers.remove(entry.getValue());
-                    iter.remove();
-                }
+                Map.Entry<Peer, Integer> entry = iter.next();
+//                if (entry.getKey().isClosed()) {
+//                    assignedPeers.remove(entry.getValue());
+//                    iter.remove();
+//                }
             }
         }
     }

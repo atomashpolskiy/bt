@@ -8,18 +8,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.Set;
 
-public class OutgoingHandshakeHandler implements HandshakeHandler {
+public class OutgoingHandshakeHandler implements ConnectionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OutgoingHandshakeHandler.class);
 
     private IHandshakeFactory handshakeFactory;
     private Torrent torrent;
+    private Set<HandshakeHandler> handshakeHandlers;
     private long handshakeTimeout;
 
-    public OutgoingHandshakeHandler(IHandshakeFactory handshakeFactory, Torrent torrent, long handshakeTimeout) {
+    public OutgoingHandshakeHandler(IHandshakeFactory handshakeFactory, Torrent torrent,
+                                    Set<HandshakeHandler> handshakeHandlers, long handshakeTimeout) {
         this.handshakeFactory = handshakeFactory;
         this.torrent = torrent;
+        this.handshakeHandlers = handshakeHandlers;
         this.handshakeTimeout = handshakeTimeout;
     }
 
@@ -27,14 +31,21 @@ public class OutgoingHandshakeHandler implements HandshakeHandler {
     public boolean handleConnection(PeerConnection connection) {
 
         Handshake handshake = handshakeFactory.createHandshake(torrent);
+        handshakeHandlers.forEach(handler ->
+                            handler.amendOutgoingHandshake(handshake));
         connection.postMessage(handshake);
 
         Message firstMessage = connection.readMessage(handshakeTimeout);
         if (firstMessage != null) {
             if (Handshake.class.equals(firstMessage.getClass())) {
-                byte[] incomingInfoHash = ((Handshake) firstMessage).getInfoHash();
+                Handshake peerHandshake = (Handshake) firstMessage;
+                byte[] incomingInfoHash = peerHandshake.getInfoHash();
                 if (Arrays.equals(torrent.getInfoHash(), incomingInfoHash)) {
                     connection.setTag(torrent.getInfoHash());
+
+                    handshakeHandlers.forEach(handler ->
+                            handler.processIncomingHandshake(connection.getRemotePeer(), peerHandshake));
+
                     return true;
                 }
             } else {

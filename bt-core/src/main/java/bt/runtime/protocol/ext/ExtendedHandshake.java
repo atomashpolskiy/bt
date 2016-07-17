@@ -1,4 +1,4 @@
-package bt.protocol.ext;
+package bt.runtime.protocol.ext;
 
 import bt.BtException;
 import bt.bencoding.model.BEInteger;
@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public class ExtendedHandshake implements Message {
 
@@ -21,13 +22,25 @@ public class ExtendedHandshake implements Message {
     }
 
     private Map<String, BEObject<?>> data;
+    private Set<String> supportedMessageTypes;
 
     ExtendedHandshake(Map<String, BEObject<?>> data) {
         this.data = Collections.unmodifiableMap(data);
+
+        BEMap supportedMessageTypes = (BEMap) data.get(MESSAGE_TYPE_MAPPING_KEY);
+        if (supportedMessageTypes != null) {
+            this.supportedMessageTypes = Collections.unmodifiableSet(supportedMessageTypes.getValue().keySet());
+        } else {
+            this.supportedMessageTypes = Collections.emptySet();
+        }
     }
 
     public Map<String, BEObject<?>> getData() {
         return data;
+    }
+
+    public Set<String> getSupportedMessageTypes() {
+        return supportedMessageTypes;
     }
 
     public static class Builder {

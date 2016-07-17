@@ -1,22 +1,9 @@
 package bt.tracker;
 
-import bt.BtException;
-import bt.net.InetPeer;
 import bt.net.Peer;
-
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
+import bt.tracker.CompactPeerInfo.AddressType;
 
 public class TrackerResponse {
-
-    private static final int ADDRESS_LENGTH = 4;
-    private static final int PORT_LENGTH = 2;
-    private static final int PEER_LENGTH = ADDRESS_LENGTH + PORT_LENGTH;
 
     private boolean success;
     private String errorMessage;
@@ -25,13 +12,11 @@ public class TrackerResponse {
     private byte[] trackerId;
     private int seederCount;
     private int leecherCount;
-    private byte[] peers;
 
-    private final List<Peer> peerList;
+    private CompactPeerInfo peerInfo;
 
     protected TrackerResponse(boolean success) {
         this.success = success;
-        peerList = new ArrayList<>();
     }
 
     public boolean isSuccess() {
@@ -63,51 +48,7 @@ public class TrackerResponse {
     }
 
     public Iterable<Peer> getPeers() {
-
-        return () -> {
-
-            if (!peerList.isEmpty()) {
-                return peerList.iterator();
-            }
-
-            return new Iterator<Peer>() {
-
-                private int i;
-
-                @Override
-                public boolean hasNext() {
-                    return i < peers.length;
-                }
-
-                @Override
-                public Peer next() {
-
-                    if (!hasNext()) {
-                        throw new NoSuchElementException("No more peers left");
-                    }
-
-                    int from, to;
-                    InetAddress inetAddress;
-                    int port;
-
-                    from = i;
-                    to = i = i + ADDRESS_LENGTH;
-                    try {
-                        inetAddress = InetAddress.getByAddress(Arrays.copyOfRange(peers, from, to));
-                    } catch (UnknownHostException e) {
-                        throw new BtException("Failed to get next peer", e);
-                    }
-
-                    from = to;
-                    to = i = i + PORT_LENGTH;
-                    port = (((peers[from] << 8) & 0xFF00) + (peers[to - 1] & 0x00FF));
-
-                    Peer peer = new InetPeer(inetAddress, port);
-                    peerList.add(peer);
-                    return peer;
-                }
-            };
-        };
+        return peerInfo;
     }
 
     void setErrorMessage(String errorMessage) {
@@ -135,10 +76,6 @@ public class TrackerResponse {
     }
 
     public void setPeers(byte[] peers) {
-        if (peers.length % PEER_LENGTH != 0) {
-            throw new BtException("Invalid peers string -- length (" + peers.length
-                    + ") is not divisible by " + PEER_LENGTH);
-        }
-        this.peers = peers;
+        peerInfo = new CompactPeerInfo(peers, AddressType.IPV4);
     }
 }

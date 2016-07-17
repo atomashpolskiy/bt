@@ -1,4 +1,4 @@
-package bt.protocol.ext;
+package bt.runtime.protocol.ext;
 
 import bt.BtException;
 import bt.protocol.InvalidMessageException;
@@ -107,7 +107,11 @@ public class ExtendedProtocol implements MessageHandler<Message> {
             }
             handler = handlersByTypeName.get(extendedType);
         }
-        return handler.decodePayload(context, data, declaredPayloadLength - 1);
+        int consumed = handler.decodePayload(context, data, declaredPayloadLength - 1);
+        if (consumed > 0) {
+            consumed += 1; // type ID was trimmed when passing data to handler
+        }
+        return consumed;
     }
 
     @Override
@@ -120,7 +124,13 @@ public class ExtendedProtocol implements MessageHandler<Message> {
     private <T extends Message> byte[] doEncode(Message message, Class<T> messageType) {
         byte[] payload = ((MessageHandler<T>) handlers.get(messageType)).encodePayload((T) message);
         byte[] bytes = new byte[payload.length + 1];
-        bytes[0] = messageTypeMapping.getIdForTypeName(messageTypeMapping.getTypeNameForJavaType(messageType)).byteValue();
+
+        if (ExtendedHandshake.class.equals(messageType)) {
+            bytes[0] = HANDSHAKE_TYPE_ID;
+        } else {
+            bytes[0] = messageTypeMapping.getIdForTypeName(messageTypeMapping.getTypeNameForJavaType(messageType)).byteValue();
+        }
+
         System.arraycopy(payload, 0, bytes, 1, payload.length);
         return bytes;
     }

@@ -1,5 +1,7 @@
 package bt.protocol;
 
+import bt.BtException;
+
 public class Protocols {
 
     //-------------------------//
@@ -48,5 +50,40 @@ public class Protocols {
             throw new InvalidMessageException("Unexpected payload length for " + type.getSimpleName() + ": " + actualLength +
                     " (expected " + expectedLength + ")");
         }
+    }
+
+    /**
+     * Sets n-th bit in the byte array
+     * (which is considered a continuous bit array of bits, indexed starting with 0 from left to right)
+     */
+    public static void setBit(byte[] bytes, int bitAbsIndex) {
+
+        int byteIndex = (int) (bitAbsIndex / 8d);
+        if (byteIndex >= bytes.length) {
+            throw new BtException("bit index is too large: " + bitAbsIndex);
+        }
+
+        int bitIndex = bitAbsIndex % 8;
+        int shift = (7 - bitIndex);
+        int bitMask = 0b1 << shift;
+        byte currentByte = bytes[byteIndex];
+        bytes[byteIndex] = (byte) (currentByte | bitMask);
+    }
+
+    /**
+     * Gets n-th bit in the byte array
+     * (which is considered a continuous bit array of bits, indexed starting with 0 from left to right)
+     */
+    public static int getBit(byte[] bytes, int bitAbsIndex) {
+
+        int byteIndex = (int) (bitAbsIndex / 8d);
+        if (byteIndex >= bytes.length) {
+            throw new BtException("bit index is too large: " + bitAbsIndex);
+        }
+
+        int bitIndex = bitAbsIndex % 8;
+        int shift = (7 - bitIndex);
+        int bitMask = 0b1 << shift ;
+        return (bytes[byteIndex] & bitMask) >> shift;
     }
 }

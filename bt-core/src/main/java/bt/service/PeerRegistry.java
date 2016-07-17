@@ -3,37 +3,26 @@ package bt.service;
 import bt.metainfo.Torrent;
 import bt.net.InetPeer;
 import bt.net.Peer;
-import bt.tracker.ITrackerService;
-import bt.tracker.Tracker;
-import bt.tracker.TrackerResponse;
 import com.google.inject.Inject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class PeerRegistry implements IPeerRegistry {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PeerRegistry.class);
-
-    private ITrackerService trackerService;
-    private IConfigurationService configurationService;
+    private Set<PeerSource> peerSources;
     private final Peer localPeer;
 
     ConcurrentMap<Torrent, Long> lastQueryTimes;
 
     @Inject
-    public PeerRegistry(INetworkService networkService, IIdService idService, ITrackerService trackerService,
-                        IConfigurationService configurationService) {
+    public PeerRegistry(INetworkService networkService, IIdService idService, Set<PeerSource> peerSources) {
 
-        this.trackerService = trackerService;
-        this.configurationService = configurationService;
+        this.peerSources = peerSources;
 
         localPeer = new InetPeer(networkService.getInetAddress(), networkService.getPort(), idService.getPeerId());
         lastQueryTimes = new ConcurrentHashMap<>();
@@ -52,23 +41,10 @@ public class PeerRegistry implements IPeerRegistry {
     @Override
     public Collection<Peer> getPeersForTorrent(Torrent torrent) {
 
-        Long lastQueryTime = lastQueryTimes.get(torrent);
-        if (lastQueryTime != null &&
-                System.currentTimeMillis() - lastQueryTime <= configurationService.getPeerRefreshThreshold()) {
-            return Collections.emptyList();
+        Collection<Peer> peers = new HashSet<>();
+        for (PeerSource peerSource : peerSources) {
+            peers.addAll(peerSource.getPeersForTorrent(torrent));
         }
-
-        Tracker tracker = trackerService.getTracker(torrent.getTrackerUrl());
-        TrackerResponse response = tracker.request(torrent).query();
-        lastQueryTimes.put(torrent, System.currentTimeMillis());
-        if (response.isSuccess()) {
-            List<Peer> peers = new ArrayList<>();
-            response.getPeers().forEach(peers::add);
-            return peers;
-        } else {
-            LOGGER.warn("Failed to get peers for torrent -- " +
-                    "unexpected error during interaction with the tracker: " + response.getErrorMessage());
-            return Collections.emptyList();
-        }
+        return peers;
     }
 }

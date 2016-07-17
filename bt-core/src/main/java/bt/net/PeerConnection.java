@@ -150,7 +150,7 @@ public class PeerConnection implements IPeerConnection {
                 try {
                     readLock.lock();
                     try {
-                        condition.await(WAIT_BETWEEN_READS, TimeUnit.MILLISECONDS);
+                        condition.await(timeout < WAIT_BETWEEN_READS? timeout : WAIT_BETWEEN_READS, TimeUnit.MILLISECONDS);
                     } catch (InterruptedException e) {
                         // continue..
                     }

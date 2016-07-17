@@ -1,6 +1,10 @@
 package bt.net;
 
+import bt.protocol.Handshake;
+
 public interface HandshakeHandler {
 
-    boolean handleConnection(PeerConnection connection);
+    void processIncomingHandshake(Peer peer, Handshake peerHandshake);
+
+    void amendOutgoingHandshake(Handshake handshake);
 }

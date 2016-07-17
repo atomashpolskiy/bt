@@ -40,6 +40,8 @@ public class DataWorker implements IDataWorker {
     public void run() {
 
         t = Thread.currentThread();
+        t.setPriority(Thread.MIN_PRIORITY);
+
         while (!shutdown) {
             try {
                 pendingOps.take().execute();

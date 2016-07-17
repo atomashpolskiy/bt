@@ -3,6 +3,7 @@ package bt.net;
 import bt.BtException;
 import bt.protocol.Message;
 import bt.protocol.Protocol;
+import bt.service.IConfigurationService;
 import bt.service.INetworkService;
 import bt.service.IPeerRegistry;
 import bt.service.IShutdownService;
@@ -14,7 +15,10 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -22,37 +26,45 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class PeerConnectionPool implements IPeerConnectionPool {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionPool.class);
 
     private PeerConnectionFactory connectionFactory;
+    private IConfigurationService configurationService;
 
-    private ExecutorService incomingAcceptor;
-    private HandshakeHandler incomingHandshakeHandler;
+    private MessageDispatcher messageDispatcher;
+
+    private ScheduledExecutorService cleaner;
+    private ConnectionHandler incomingConnectionHandler;
 
     private ExecutorService executor;
 
-    private Map<Peer, CompletableFuture<IPeerConnection>> pendingConnections;
-    private ConcurrentMap<Peer, ManagedPeerConnection> connections;
-    private Set<Consumer<IPeerConnection>> connectionListeners;
+    private final Map<Peer, CompletableFuture<IPeerConnection>> pendingConnections;
+    private ConcurrentMap<Peer, PeerConnection> connections;
+    private Set<PeerActivityListener> connectionListeners;
     private ReentrantReadWriteLock listenerLock;
     private ReentrantLock connectionLock;
 
     @Inject
     public PeerConnectionPool(INetworkService networkService, Protocol protocol, IPeerRegistry peerRegistry,
-                              IShutdownService shutdownService, IHandshakeHandlerFactory handshakeHandlerFactory) {
+                              IShutdownService shutdownService, IConnectionHandlerFactory connectionHandlerFactory,
+                              IConfigurationService configurationService) {
 
         SocketChannelFactory socketChannelFactory = new SocketChannelFactory(networkService);
         this.connectionFactory = new PeerConnectionFactory(protocol, peerRegistry, socketChannelFactory);
 
-        this.incomingHandshakeHandler = handshakeHandlerFactory.getIncomingHandler();
+        this.incomingConnectionHandler = connectionHandlerFactory.getIncomingHandler();
+        this.configurationService = configurationService;
 
         pendingConnections = new ConcurrentHashMap<>();
         connections = new ConcurrentHashMap<>();
@@ -61,9 +73,12 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         connectionLock = new ReentrantLock();
 
         IncomingAcceptor acceptor = new IncomingAcceptor(socketChannelFactory);
-        incomingAcceptor = Executors.newSingleThreadExecutor(
+        ExecutorService incomingAcceptor = Executors.newSingleThreadExecutor(
                 runnable -> new Thread(runnable, "PeerConnectionPool-IncomingAcceptor"));
         incomingAcceptor.execute(acceptor);
+
+        cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, "PeerConnectionPool-Cleaner"));
+        cleaner.scheduleAtFixedRate(new Cleaner(), 1000, 1000, TimeUnit.MILLISECONDS);
 
         executor = Executors.newCachedThreadPool(
                 new ThreadFactory() {
@@ -80,13 +95,15 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         );
 
         shutdownService.addShutdownHook(acceptor::shutdown);
-        shutdownService.addShutdownHook(() -> incomingAcceptor.shutdownNow());
-        shutdownService.addShutdownHook(() -> executor.shutdownNow());
+        shutdownService.addShutdownHook(incomingAcceptor::shutdown);
+        shutdownService.addShutdownHook(executor::shutdown);
         shutdownService.addShutdownHook(this::shutdown);
+
+        messageDispatcher = new MessageDispatcher(shutdownService, this);
     }
 
     @Override
-    public void addConnectionListener(Consumer<IPeerConnection> listener) {
+    public void addConnectionListener(PeerActivityListener listener) {
         listenerLock.writeLock().lock();
         try {
             connectionListeners.add(listener);
@@ -96,7 +113,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     }
 
     @Override
-    public void removeConnectionListener(Consumer<IPeerConnection> listener) {
+    public void removeConnectionListener(PeerActivityListener listener) {
         listenerLock.writeLock().lock();
         try {
             connectionListeners.remove(listener);
@@ -111,15 +128,14 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     }
 
     @Override
-    public CompletableFuture<IPeerConnection> requestConnection(Peer peer, HandshakeHandler handshakeHandler) {
+    public CompletableFuture<IPeerConnection> requestConnection(Peer peer, ConnectionHandler connectionHandler) {
 
         CompletableFuture<IPeerConnection> connection = getExistingOrPendingConnection(peer);
         if (connection != null) {
             return connection;
         }
 
-        connectionLock.lock();
-        try {
+        synchronized (pendingConnections) {
             connection = getExistingOrPendingConnection(peer);
             if (connection != null) {
                 return connection;
@@ -128,18 +144,15 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             connection = CompletableFuture.supplyAsync(() -> {
                 try {
                     PeerConnection newConnection = connectionFactory.createConnection(peer);
-                    if (!initConnection(newConnection, handshakeHandler, false)) {
+                    if (!initConnection(newConnection, connectionHandler, true)) {
                         throw new BtException("Failed to initialize new connection for peer: " + peer);
                     }
                     return connections.get(newConnection.getRemotePeer());
                 } catch (IOException e) {
                     throw new BtException("Failed to create new outgoing connection for peer: " + peer, e);
                 } finally {
-                    connectionLock.lock();
-                    try {
+                    synchronized (pendingConnections) {
                         pendingConnections.remove(peer);
-                    } finally {
-                        connectionLock.unlock();
                     }
                 }
             }, executor);
@@ -147,8 +160,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             pendingConnections.put(peer, connection);
             return connection;
 
-        } finally {
-            connectionLock.unlock();
         }
     }
 
@@ -209,128 +220,137 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         }
     }
 
+    private class Cleaner implements Runnable {
+
+        @Override
+        public void run() {
+
+            if (connections.isEmpty()) {
+                return;
+            }
+
+            connectionLock.lock();
+            try {
+                Iterator<PeerConnection> iter = connections.values().iterator();
+                while (iter.hasNext()) {
+
+                    PeerConnection connection = iter.next();
+                    if (connection.isClosed()) {
+                        purgeConnection(connection);
+                        iter.remove();
+
+                    } else if (System.currentTimeMillis() - connection.getLastActive()
+                            >= configurationService.getMaxPeerInactivityInterval()) {
+
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Removing inactive peer connection: " + connection.getRemotePeer());
+                        }
+                        connection.closeQuietly();
+                        purgeConnection(connection);
+                        iter.remove();
+                    }
+                    // can send keep-alives here based on lastActiveTime
+                }
+            } finally {
+                connectionLock.unlock();
+            }
+        }
+    }
+
     private void acceptIncomingConnection(SocketChannel incomingChannel) {
         executor.execute(() -> {
             try {
                 incomingChannel.configureBlocking(false);
                 PeerConnection incomingConnection = connectionFactory.createConnection(incomingChannel);
-                initConnection(incomingConnection, incomingHandshakeHandler, true);
+                initConnection(incomingConnection, incomingConnectionHandler, true);
             } catch (IOException e) {
                 LOGGER.error("Failed to process incoming connection", e);
             }
         });
     }
 
-    private boolean initConnection(PeerConnection newConnection, HandshakeHandler handshakeHandler, boolean shouldNotifyListeners) {
-        boolean success = handshakeHandler.handleConnection(newConnection);
+    private boolean initConnection(PeerConnection newConnection, ConnectionHandler connectionHandler, boolean shouldNotifyListeners) {
+        boolean success = connectionHandler.handleConnection(newConnection);
         if (success) {
             success = addConnection(newConnection, shouldNotifyListeners);
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Successfully performed handshake for connection, remote peer: " +
-                        newConnection.getRemotePeer() + "; handshake handler: " + handshakeHandler.getClass().getName());
+                        newConnection.getRemotePeer() + "; handshake handler: " + connectionHandler.getClass().getName());
             }
         } else {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Failed to perform handshake for connection, remote peer: " +
-                        newConnection.getRemotePeer() + "; handshake handler: " + handshakeHandler.getClass().getName());
+                        newConnection.getRemotePeer() + "; handshake handler: " + connectionHandler.getClass().getName());
             }
             newConnection.closeQuietly();
         }
         return success;
     }
 
-    private boolean addConnection(PeerConnection connection, boolean shouldNotifyListeners) {
+    private boolean addConnection(PeerConnection newConnection, boolean shouldNotifyListeners) {
 
         boolean added = true;
 
-        ManagedPeerConnection newConnection = new ManagedPeerConnection(connection);
-        ManagedPeerConnection existingConnection = connections.putIfAbsent(connection.getRemotePeer(), newConnection);
+        connectionLock.lock();
+        PeerConnection existingConnection;
+        try {
+            existingConnection = connections.putIfAbsent(newConnection.getRemotePeer(), newConnection);
+        } finally {
+            connectionLock.unlock();
+        }
         if (existingConnection != null) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Connection already exists for peer: " + connection.getRemotePeer());
+                LOGGER.debug("Connection already exists for peer: " + newConnection.getRemotePeer());
             }
-            connection.closeQuietly();
+            newConnection.closeQuietly();
             newConnection = existingConnection;
             added = false;
         }
 
         if (added && shouldNotifyListeners) {
+
+            Collection<Consumer<Message>> consumers = new ArrayList<>();
+            Collection<Supplier<Message>> suppliers = new ArrayList<>();
+
             listenerLock.readLock().lock();
             try {
-                for (Consumer<IPeerConnection> listener : connectionListeners) {
-                    listener.accept(newConnection);
+                for (PeerActivityListener listener : connectionListeners) {
+                    listener.onPeerConnected(newConnection.getTag(), newConnection.getRemotePeer(),
+                            consumers::add, suppliers::add);
                 }
             } finally {
                 listenerLock.readLock().unlock();
             }
+
+            messageDispatcher.addMessageConsumers(newConnection.getRemotePeer(), consumers);
+            messageDispatcher.addMessageSuppliers(newConnection.getRemotePeer(), suppliers);
         }
         return added;
     }
 
-    private class ManagedPeerConnection implements IPeerConnection {
-
-        private IPeerConnection delegate;
-
-        ManagedPeerConnection(IPeerConnection delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public Object getTag() {
-            return delegate.getTag();
-        }
-
-        @Override
-        public Message readMessageNow() {
-            return delegate.readMessageNow();
-        }
-
-        @Override
-        public Message readMessage(long timeout) {
-            return delegate.readMessage(timeout);
-        }
-
-        @Override
-        public void postMessage(Message message) {
-            delegate.postMessage(message);
-        }
-
-        @Override
-        public Peer getRemotePeer() {
-            return delegate.getRemotePeer();
-        }
-
-        @Override
-        public void closeQuietly() {
-            purgeConnection();
-            delegate.closeQuietly();
-        }
-
-        @Override
-        public void close() throws IOException {
-            purgeConnection();
-            delegate.close();
-        }
-
-        private void purgeConnection() {
-            ManagedPeerConnection purged = connections.remove(delegate.getRemotePeer());
-            if (purged != null && LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Removing peer connection: " + purged.getRemotePeer());
+    private void purgeConnection(PeerConnection connection) {
+        PeerConnection purged = connections.remove(connection.getRemotePeer());
+        if (purged != null) {
+            for (PeerActivityListener listener : connectionListeners) {
+                listener.onPeerDisconnected(connection.getRemotePeer());
             }
-        }
-
-        @Override
-        public boolean isClosed() {
-            return delegate.isClosed();
-        }
-
-        @Override
-        public long getLastActive() {
-            return delegate.getLastActive();
         }
     }
 
     private void shutdown() {
-        connections.values().forEach(ManagedPeerConnection::closeQuietly);
+        shutdownCleaner();
+        connections.values().forEach(PeerConnection::closeQuietly);
+    }
+
+    private void shutdownCleaner() {
+        cleaner.shutdown();
+        try {
+            cleaner.awaitTermination(1000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if (!cleaner.isShutdown()) {
+            cleaner.shutdownNow();
+        }
     }
 }

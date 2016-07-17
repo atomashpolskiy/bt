@@ -1,26 +1,23 @@
 package bt.torrent;
 
-import bt.BtException;
 import bt.metainfo.Torrent;
-import bt.net.HandshakeHandler;
-import bt.net.IHandshakeHandlerFactory;
-import bt.net.IPeerConnection;
+import bt.net.ConnectionHandler;
+import bt.net.IConnectionHandlerFactory;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
+import bt.net.PeerActivityListener;
 import bt.protocol.Have;
 import bt.protocol.InvalidMessageException;
+import bt.protocol.Message;
 import bt.service.IConfigurationService;
 import bt.service.IPeerRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -28,8 +25,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
-public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
+public class TorrentProcessor implements Runnable, PeerActivityListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TorrentProcessor.class);
 
@@ -42,18 +40,17 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
 
     private Map<Peer, Long> peerBans;
 
-    private Set<IPeerConnection> incomingConnections;
     private ConnectionRequestor connectionRequestor;
 
-    private ConcurrentMap<IPeerConnection, ConnectionWorker> connectionWorkers;
+    private ConcurrentMap<Peer, ConnectionWorker> connectionWorkers;
 
-    private List<BlockWrite> pendingBlockWrites;
+    private Set<BlockWrite> pendingBlockWrites;
 
     private ReentrantLock lock;
     private Condition timer;
 
     public TorrentProcessor(IPeerRegistry peerRegistry, IPeerConnectionPool connectionPool,
-                            IConfigurationService configurationService, IHandshakeHandlerFactory handshakeHandlerFactory,
+                            IConfigurationService configurationService, IConnectionHandlerFactory connectionHandlerFactory,
                             IPieceManager pieceManager, IDataWorker dataWorker, Torrent torrent,
                             ITorrentDescriptor torrentDescriptor) {
 
@@ -66,28 +63,16 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
 
         peerBans = new HashMap<>();
 
-        incomingConnections = ConcurrentHashMap.newKeySet();
-
-        HandshakeHandler outgoingHandler = handshakeHandlerFactory.getOutgoingHandler(torrent);
+        ConnectionHandler outgoingHandler = connectionHandlerFactory.getOutgoingHandler(torrent);
         connectionRequestor = new ConnectionRequestor(peerRegistry, connectionPool,
                 outgoingHandler, configurationService, torrent);
 
         connectionWorkers = new ConcurrentHashMap<>();
 
-        pendingBlockWrites = new ArrayList<>();
+        pendingBlockWrites = ConcurrentHashMap.newKeySet();
 
         lock = new ReentrantLock();
         timer = lock.newCondition();
-    }
-
-    @Override
-    public synchronized void accept(IPeerConnection connection) {
-        if (torrent.getInfoHash().equals(connection.getTag())) {
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Accepted incoming connection from peer: " + connection.getRemotePeer());
-            }
-            incomingConnections.add(connection);
-        }
     }
 
     @Override
@@ -105,16 +90,14 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
                 lock.unlock();
             }
         }
+        // TODO: remove listener from connection pool
     }
 
     private void doProcess() {
 
         try {
             processBannedPeers();
-            processIncomingConnections();
             requestConnectionsIfNeeded();
-            processActiveConnections();
-            processInactiveConnections();
             processPendingBlockWrites();
 
         } catch (Exception e) {
@@ -138,25 +121,42 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
         }
     }
 
-    private void processIncomingConnections() {
+    private void requestConnectionsIfNeeded() {
+        if (connectionWorkers.size() < configurationService.getMaxActiveConnectionsPerTorrent()) {
+            connectionRequestor.requestConnections();
+        }
+    }
 
-        if (incomingConnections.isEmpty()) {
+    @Override
+    public void onPeerConnected(Object torrentId, Peer peer, Consumer<Consumer<Message>> messageConsumers,
+                                Consumer<Supplier<Message>> messageSuppliers) {
+
+        if (connectionWorkers.size() >= configurationService.getMaxActiveConnectionsPerTorrent()
+                || peerBans.containsKey(peer)) {
             return;
         }
 
-        Iterator<IPeerConnection> iter = incomingConnections.iterator();
-        while (iter.hasNext() && connectionWorkers.size() < configurationService.getMaxActiveConnectionsPerTorrent()) {
+        if (torrent.getInfoHash().equals(torrentId)) {
+            ConnectionWorker worker = new ConnectionWorker(peer, pieceManager, dataWorker,
+                blockWrite -> pendingBlockWrites.add(blockWrite));
 
-            IPeerConnection connection = iter.next();
-            if (!peerBans.containsKey(connection.getRemotePeer())) {
-                addConnection(connection);
+            ConnectionWorker existing = connectionWorkers.putIfAbsent(peer, worker);
+
+            if (existing == null) {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Added connection for peer: " + peer);
+                }
+                messageConsumers.accept(worker);
+                messageSuppliers.accept(worker);
             }
         }
     }
 
-    private void requestConnectionsIfNeeded() {
-        if (connectionWorkers.size() < configurationService.getMaxActiveConnectionsPerTorrent()) {
-            connectionRequestor.requestConnections();
+    @Override
+    public void onPeerDisconnected(Peer peer) {
+        ConnectionWorker removed = connectionWorkers.remove(peer);
+        if (removed != null) {
+            removed.shutdown();
         }
     }
 
@@ -164,7 +164,7 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
 
         private IPeerRegistry peerRegistry;
         private IPeerConnectionPool pool;
-        private HandshakeHandler handshakeHandler;
+        private ConnectionHandler connectionHandler;
         private IConfigurationService configurationService;
         private Torrent torrent;
 
@@ -172,11 +172,11 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
         private long lastRequestedPeers;
         private Map<Peer, Long> lastRequestedConnections;
 
-        ConnectionRequestor(IPeerRegistry peerRegistry, IPeerConnectionPool pool, HandshakeHandler handshakeHandler,
+        ConnectionRequestor(IPeerRegistry peerRegistry, IPeerConnectionPool pool, ConnectionHandler connectionHandler,
                             IConfigurationService configurationService, Torrent torrent) {
             this.peerRegistry = peerRegistry;
             this.pool = pool;
-            this.handshakeHandler = handshakeHandler;
+            this.connectionHandler = connectionHandler;
             this.configurationService = configurationService;
             this.torrent = torrent;
 
@@ -196,8 +196,8 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
                     Long lastRequestedConnection = lastRequestedConnections.get(peer);
                     if (lastRequestedConnection == null || currentTimeMillis - lastRequestedConnection >= 60000) {
                         lastRequestedConnections.put(peer, currentTimeMillis);
-                        pool.requestConnection(peer, handshakeHandler)
-                                .thenAccept(TorrentProcessor.this::addConnection);
+                        // TODO: remove this from here (should move to MessageDispatcher probably)
+                        pool.requestConnection(peer, connectionHandler);
                     }
                 }
             }
@@ -213,54 +213,6 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
 
         private boolean mightConnect(Peer peer) {
             return !peerBans.containsKey(peer);
-        }
-    }
-
-    private void processActiveConnections() {
-
-        if (connectionWorkers.isEmpty()) {
-            return;
-        }
-
-        Iterator<Map.Entry<IPeerConnection, ConnectionWorker>> workers = connectionWorkers.entrySet().iterator();
-        while (workers.hasNext()) {
-
-            Map.Entry<IPeerConnection, ConnectionWorker> entry = workers.next();
-            ConnectionWorker worker = entry.getValue();
-            try {
-                worker.doWork();
-            } catch (Throwable e) {
-                IPeerConnection connection = entry.getKey();
-                if (!connection.isClosed()) {
-                    LOGGER.error("Closing peer connection (" + connection.getRemotePeer() + ") due to an error", e);
-                    connection.closeQuietly();
-                }
-                LOGGER.info("Unexpected error in peer connection. Adding ban for peer: " + connection.getRemotePeer(), e);
-                peerBans.put(connection.getRemotePeer(), System.currentTimeMillis());
-                workers.remove();
-            }
-        }
-    }
-
-    private void processInactiveConnections() {
-
-        if (connectionWorkers.isEmpty()) {
-            return;
-        }
-
-        Iterator<Map.Entry<IPeerConnection, ConnectionWorker>> workers = connectionWorkers.entrySet().iterator();
-        while (workers.hasNext()) {
-
-            IPeerConnection connection = workers.next().getKey();
-            if (connection.isClosed()) {
-                workers.remove();
-            } else if (System.currentTimeMillis() - connection.getLastActive() >= configurationService.getMaxPeerInactivityInterval()) {
-                if (!connection.isClosed()) {
-                    LOGGER.info("Closing inactive connection; peer: " + connection.getRemotePeer());
-                    connection.closeQuietly();
-                }
-                workers.remove();
-            }
         }
     }
 
@@ -280,10 +232,8 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
                 if (pendingBlockWrite.isSuccess() && pieceManager.checkPieceVerified(pieceIndex)) {
                     try {
                         Have have = new Have(pieceIndex);
-                        for (IPeerConnection connection : connectionWorkers.keySet()) {
-                            if (!connection.isClosed()) {
-                                connection.postMessage(have);
-                            }
+                        for (ConnectionWorker worker : connectionWorkers.values()) {
+                            worker.addMessage(have);
                         }
                     } catch (InvalidMessageException e) {
                         LOGGER.error("Unexpected error while announcing new completed pieces", e);
@@ -291,37 +241,6 @@ public class TorrentProcessor implements Runnable, Consumer<IPeerConnection> {
                 }
                 iter.remove();
             }
-        }
-    }
-
-    private void addConnection(IPeerConnection connection) {
-
-        ConnectionWorker existing = connectionWorkers.putIfAbsent(connection,
-                new ConnectionWorker(connection, pieceManager,
-                    request -> {
-                        IConnectionState state = Objects.requireNonNull(connectionWorkers.get(connection)).getState();
-                        if (state.isChoking()) {
-                            // should not happen
-                            throw new BtException("Received request to read block from choked worker");
-                        }
-
-                        if (!dataWorker.addBlockRequest(connection.getRemotePeer(),
-                                    request.getPieceIndex(), request.getOffset(), request.getLength())) {
-                            state.setChoking(true);
-                        }
-                    },
-                    piece -> {
-                        BlockWrite blockWrite = dataWorker.addBlock(connection.getRemotePeer(), piece.getPieceIndex(),
-                                piece.getOffset(), piece.getBlock());
-                        if (!blockWrite.isComplete() || blockWrite.isSuccess()) {
-                            pendingBlockWrites.add(blockWrite);
-                        }
-                        return blockWrite;
-                    },
-                    () -> dataWorker.getCompletedBlockRequest(connection.getRemotePeer())));
-
-        if (existing == null && LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Added connection for peer: " + connection.getRemotePeer());
         }
     }
 }

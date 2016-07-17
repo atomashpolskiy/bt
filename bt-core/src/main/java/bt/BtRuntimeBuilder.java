@@ -4,10 +4,10 @@ import bt.data.DataDescriptorFactory;
 import bt.data.IDataDescriptorFactory;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.MetadataService;
-import bt.net.ExtendedHandshakeHandler;
+import bt.net.ConnectionHandler;
+import bt.net.ConnectionHandlerFactory;
 import bt.net.HandshakeHandler;
-import bt.net.HandshakeHandlerFactory;
-import bt.net.IHandshakeHandlerFactory;
+import bt.net.IConnectionHandlerFactory;
 import bt.net.IPeerConnectionPool;
 import bt.net.PeerConnectionPool;
 import bt.protocol.HandshakeFactory;
@@ -15,11 +15,15 @@ import bt.protocol.IHandshakeFactory;
 import bt.protocol.MessageHandler;
 import bt.protocol.Protocol;
 import bt.protocol.StandardBittorrentProtocol;
-import bt.protocol.ext.AlphaSortedMessageTypeMapping;
-import bt.protocol.ext.ExtendedHandshake;
-import bt.protocol.ext.ExtendedHandshakeProvider;
-import bt.protocol.ext.ExtendedMessageTypeMapping;
-import bt.protocol.ext.ExtendedProtocol;
+import bt.runtime.PeerExchangeAdapter;
+import bt.runtime.net.ext.ExtendedConnectionHandler;
+import bt.runtime.net.ext.ExtendedHandshakeHandler;
+import bt.runtime.protocol.ext.AlphaSortedMessageTypeMapping;
+import bt.runtime.protocol.ext.ExtendedHandshake;
+import bt.runtime.protocol.ext.ExtendedHandshakeProvider;
+import bt.runtime.protocol.ext.ExtendedMessageTypeMapping;
+import bt.runtime.protocol.ext.ExtendedProtocol;
+import bt.runtime.protocol.ext.pex.PeerExchangeMessageHandler;
 import bt.service.AdhocTorrentRegistry;
 import bt.service.ConfigurationService;
 import bt.service.ExecutorServiceProvider;
@@ -33,9 +37,11 @@ import bt.service.IdService;
 import bt.service.JVMShutdownService;
 import bt.service.NetworkService;
 import bt.service.PeerRegistry;
+import bt.service.PeerSource;
 import bt.torrent.DataWorkerFactory;
 import bt.torrent.IDataWorkerFactory;
 import bt.tracker.ITrackerService;
+import bt.tracker.TrackerPeerSource;
 import bt.tracker.TrackerService;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -66,6 +72,12 @@ public class BtRuntimeBuilder {
 
     private BtRuntimeBuilder() {
         shutdownServiceType = JVMShutdownService.class;
+
+        // default extended protocol handlers
+        extendedMessageHandler("ut_pex",  new PeerExchangeMessageHandler());
+
+        // default adapters
+        adapter(new PeerExchangeAdapter());
     }
 
     public <T extends IShutdownService> BtRuntimeBuilder shutdownService(Class<T> shutdownServiceType) {
@@ -115,13 +127,16 @@ public class BtRuntimeBuilder {
             binder.bind(IIdService.class).to(IdService.class).in(Singleton.class);
             binder.bind(ITrackerService.class).to(TrackerService.class).in(Singleton.class);
             binder.bind(IConfigurationService.class).to(ConfigurationService.class).in(Singleton.class);
-            binder.bind(IPeerRegistry.class).to(PeerRegistry.class).in(Singleton.class);
             binder.bind(ITorrentRegistry.class).to(AdhocTorrentRegistry.class).in(Singleton.class);
             binder.bind(IDataDescriptorFactory.class).to(DataDescriptorFactory.class).in(Singleton.class);
             binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).in(Singleton.class);
             binder.bind(IDataWorkerFactory.class).to(DataWorkerFactory.class).in(Singleton.class);
             binder.bind(IHandshakeFactory.class).to(HandshakeFactory.class).in(Singleton.class);
-            binder.bind(IHandshakeHandlerFactory.class).to(HandshakeHandlerFactory.class).in(Singleton.class);
+            binder.bind(IConnectionHandlerFactory.class).to(ConnectionHandlerFactory.class).in(Singleton.class);
+
+            binder.bind(IPeerRegistry.class).to(PeerRegistry.class).in(Singleton.class);
+            Multibinder<PeerSource> peerSources = Multibinder.newSetBinder(binder, PeerSource.class);
+            peerSources.addBinding().to(TrackerPeerSource.class);
 
             binder.bind(IShutdownService.class).to(shutdownServiceType).in(Singleton.class);
 
@@ -137,6 +152,7 @@ public class BtRuntimeBuilder {
                         MapBinder.newMapBinder(binder, new TypeLiteral<Integer>(){}, new TypeLiteral<MessageHandler<?>>(){});
             MapBinder<String, MessageHandler<?>> extendedMessageHandlerMapBinder =
                         MapBinder.newMapBinder(binder, new TypeLiteral<String>(){}, new TypeLiteral<MessageHandler<?>>(){});
+            Multibinder<ConnectionHandler> extraConnectionHandlers = Multibinder.newSetBinder(binder, ConnectionHandler.class);
             Multibinder<HandshakeHandler> extraHandshakeHandlers = Multibinder.newSetBinder(binder, HandshakeHandler.class);
 
             if (extendedMessageHandlers != null && extendedMessageHandlers.size() > 0) {
@@ -150,6 +166,7 @@ public class BtRuntimeBuilder {
                 extendedMessageHandlers.forEach((key, value) ->
                         extendedMessageHandlerMapBinder.addBinding(key).toInstance(value));
 
+                extraConnectionHandlers.addBinding().to(ExtendedConnectionHandler.class);
                 extraHandshakeHandlers.addBinding().to(ExtendedHandshakeHandler.class);
             }
         };

@@ -1,4 +1,4 @@
-package bt.protocol.ext;
+package bt.runtime.protocol.ext;
 
 import bt.BtException;
 import bt.bencoding.BEParser;
@@ -8,7 +8,6 @@ import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
-import bt.protocol.Message;
 import bt.protocol.MessageContext;
 import bt.protocol.MessageHandler;
 

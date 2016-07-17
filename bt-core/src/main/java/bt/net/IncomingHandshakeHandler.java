@@ -11,19 +11,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
+import java.util.Set;
 
-public class IncomingHandshakeHandler implements HandshakeHandler {
+public class IncomingHandshakeHandler implements ConnectionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IncomingHandshakeHandler.class);
 
     private IHandshakeFactory handshakeFactory;
     private ITorrentRegistry torrentRegistry;
+    private Set<HandshakeHandler> handshakeHandlers;
     private IConfigurationService configurationService;
 
     public IncomingHandshakeHandler(IHandshakeFactory handshakeFactory, ITorrentRegistry torrentRegistry,
-                                    IConfigurationService configurationService) {
+                                    Set<HandshakeHandler> handshakeHandlers, IConfigurationService configurationService) {
         this.handshakeFactory = handshakeFactory;
         this.torrentRegistry = torrentRegistry;
+        this.handshakeHandlers = handshakeHandlers;
         this.configurationService = configurationService;
     }
 
@@ -34,14 +37,23 @@ public class IncomingHandshakeHandler implements HandshakeHandler {
         if (firstMessage != null) {
             if (Handshake.class.equals(firstMessage.getClass())) {
 
-                Handshake handshake = (Handshake) firstMessage;
-                Torrent torrent = torrentRegistry.getTorrent(handshake.getInfoHash());
+                Handshake peerHandshake = (Handshake) firstMessage;
+                Torrent torrent = torrentRegistry.getTorrent(peerHandshake.getInfoHash());
 
                 Optional<ITorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
                 if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {
                     byte[] infoHash = torrent.getInfoHash();
-                    connection.postMessage(handshakeFactory.createHandshake(torrent));
+
+                    Handshake handshake = handshakeFactory.createHandshake(torrent);
+                    handshakeHandlers.forEach(handler ->
+                            handler.amendOutgoingHandshake(handshake));
+
+                    connection.postMessage(handshake);
                     connection.setTag(infoHash);
+
+                    handshakeHandlers.forEach(handler ->
+                            handler.processIncomingHandshake(connection.getRemotePeer(), peerHandshake));
+
                     return true;
                 }
             } else {
