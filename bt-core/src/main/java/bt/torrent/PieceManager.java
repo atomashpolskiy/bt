@@ -125,7 +125,8 @@ public class PieceManager implements IPieceManager {
         return checkPieceCompleted(pieceIndex, true);
     }
 
-    private boolean checkPieceCompleted(Integer pieceIndex, boolean verifiedOnly) {
+    // TODO: problem with concurrent completePieces update in case chunk.getStatus == VERIFIED
+    private synchronized boolean checkPieceCompleted(Integer pieceIndex, boolean verifiedOnly) {
         boolean completed = false;
         try {
             if (Protocols.getBit(bitfield, pieceIndex) == 1) {

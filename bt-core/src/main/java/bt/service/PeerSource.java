@@ -1,11 +1,14 @@
 package bt.service;
 
-import bt.metainfo.Torrent;
 import bt.net.Peer;
 
 import java.util.Collection;
 
 public interface PeerSource {
 
-    Collection<Peer> getPeersForTorrent(Torrent torrent);
+    boolean isRefreshable();
+
+    boolean refresh();
+
+    Collection<Peer> query();
 }

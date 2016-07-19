@@ -4,28 +4,70 @@ import bt.metainfo.Torrent;
 import bt.net.InetPeer;
 import bt.net.Peer;
 import com.google.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public class PeerRegistry implements IPeerRegistry {
 
-    private Set<PeerSource> peerSources;
+    private static final Logger LOGGER = LoggerFactory.getLogger(PeerRegistry.class);
+
+    private Map<Torrent, List<Consumer<Peer>>> consumers;
     private final Peer localPeer;
 
-    ConcurrentMap<Torrent, Long> lastQueryTimes;
-
     @Inject
-    public PeerRegistry(INetworkService networkService, IIdService idService, Set<PeerSource> peerSources) {
+    public PeerRegistry(IShutdownService shutdownService, INetworkService networkService,
+                        IIdService idService, Set<PeerSourceFactory> peerSourceFactories) {
 
-        this.peerSources = peerSources;
-
+        consumers = new ConcurrentHashMap<>();
         localPeer = new InetPeer(networkService.getInetAddress(), networkService.getPort(), idService.getPeerId());
-        lastQueryTimes = new ConcurrentHashMap<>();
+
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "Peer Registry"));
+        executor.scheduleAtFixedRate(() -> {
+
+            for (Torrent torrent : consumers.keySet()) {
+
+                List<Consumer<Peer>> peerConsumers = consumers.get(torrent);
+                for (PeerSourceFactory peerSourceFactory : peerSourceFactories) {
+
+                    PeerSource peerSource = peerSourceFactory.getPeerSource(torrent);
+                    try {
+                        if (peerSource.isRefreshable() && peerSource.refresh()) {
+
+                            Collection<Peer> discoveredPeers = peerSource.query();
+                            for (Peer peer : discoveredPeers) {
+                                Iterator<Consumer<Peer>> iter = peerConsumers.iterator();
+                                while (iter.hasNext()) {
+                                    Consumer<Peer> consumer = iter.next();
+                                    try {
+                                        consumer.accept(peer);
+                                    } catch (Exception e) {
+                                        LOGGER.warn("Error in peer consumer", e);
+                                        iter.remove();
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        LOGGER.warn("Error when querying peer source: " + peerSource, e);
+                    }
+                }
+            }
+        }, 1, 5, TimeUnit.SECONDS);
+
+        shutdownService.addShutdownHook(executor::shutdown);
     }
 
     @Override
@@ -39,12 +81,16 @@ public class PeerRegistry implements IPeerRegistry {
     }
 
     @Override
-    public Collection<Peer> getPeersForTorrent(Torrent torrent) {
+    public void addPeerConsumer(Torrent torrent, Consumer<Peer> consumer) {
 
-        Collection<Peer> peers = new HashSet<>();
-        for (PeerSource peerSource : peerSources) {
-            peers.addAll(peerSource.getPeersForTorrent(torrent));
+        List<Consumer<Peer>> peerConsumers = consumers.get(torrent);
+        if (peerConsumers == null) {
+            peerConsumers = new ArrayList<>();
+            List<Consumer<Peer>> existing = consumers.putIfAbsent(torrent, peerConsumers);
+            if (existing != null) {
+                peerConsumers = existing;
+            }
         }
-        return peers;
+        peerConsumers.add(consumer);
     }
 }

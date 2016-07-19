@@ -4,7 +4,7 @@ import bt.metainfo.Torrent;
 import bt.net.Peer;
 
 import java.net.InetAddress;
-import java.util.Collection;
+import java.util.function.Consumer;
 
 public interface IPeerRegistry {
 
@@ -12,5 +12,5 @@ public interface IPeerRegistry {
 
     Peer getOrCreatePeer(InetAddress inetAddress, int port);
 
-    Collection<Peer> getPeersForTorrent(Torrent torrent);
+    void addPeerConsumer(Torrent torrent, Consumer<Peer> consumer);
 }

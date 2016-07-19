@@ -78,14 +78,16 @@ public class Bt {
             IPeerConnectionPool connectionPool = runtime.service(IPeerConnectionPool.class);
             IConfigurationService configurationService = runtime.service(IConfigurationService.class);
             IConnectionHandlerFactory connectionHandlerFactory = runtime.service(IConnectionHandlerFactory.class);
+            IShutdownService shutdownService = runtime.service(IShutdownService.class);
 
             PieceManager pieceManager = new PieceManager(pieceSelector, descriptor.getDataDescriptor().getChunkDescriptors());
-            TorrentProcessor processor = new TorrentProcessor(peerRegistry, connectionPool, configurationService,
-                    connectionHandlerFactory, pieceManager, dataWorker, torrent, descriptor);
+            TorrentProcessor processor = new TorrentProcessor(connectionPool, configurationService,
+                    connectionHandlerFactory, pieceManager, dataWorker, torrent, descriptor, shutdownService);
+
+            peerRegistry.addPeerConsumer(torrent, processor);
             connectionPool.addConnectionListener(processor);
 
             ExecutorService executorService = runtime.service(ExecutorService.class);
-            IShutdownService shutdownService = runtime.service(IShutdownService.class);
             return new DefaultTorrentHandle(executorService, shutdownService, pieceManager, descriptor, processor, dataWorker);
         }
     }

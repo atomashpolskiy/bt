@@ -135,4 +135,9 @@ public class PeerExchange implements Message {
             return new PeerExchange(added, dropped);
         }
     }
+
+    @Override
+    public String toString() {
+        return "[" + this.getClass().getSimpleName() + "] added peers {" + added + "}, dropped peers {" + dropped + "}";
+    }
 }

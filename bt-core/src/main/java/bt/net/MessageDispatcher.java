@@ -43,7 +43,7 @@ public class MessageDispatcher implements Closeable {
         Condition timer = lock.newCondition();
 
         ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "Message Dispatcher"));
-        executor.submit(() -> {
+        executor.execute(() -> {
             while (!shutdown) {
 
                 Peer disconnectedPeer;

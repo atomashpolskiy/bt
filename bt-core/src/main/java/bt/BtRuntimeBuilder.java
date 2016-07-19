@@ -37,11 +37,11 @@ import bt.service.IdService;
 import bt.service.JVMShutdownService;
 import bt.service.NetworkService;
 import bt.service.PeerRegistry;
-import bt.service.PeerSource;
+import bt.service.PeerSourceFactory;
 import bt.torrent.DataWorkerFactory;
 import bt.torrent.IDataWorkerFactory;
 import bt.tracker.ITrackerService;
-import bt.tracker.TrackerPeerSource;
+import bt.tracker.TrackerPeerSourceFactory;
 import bt.tracker.TrackerService;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -135,8 +135,8 @@ public class BtRuntimeBuilder {
             binder.bind(IConnectionHandlerFactory.class).to(ConnectionHandlerFactory.class).in(Singleton.class);
 
             binder.bind(IPeerRegistry.class).to(PeerRegistry.class).in(Singleton.class);
-            Multibinder<PeerSource> peerSources = Multibinder.newSetBinder(binder, PeerSource.class);
-            peerSources.addBinding().to(TrackerPeerSource.class);
+            Multibinder<PeerSourceFactory> peerSources = Multibinder.newSetBinder(binder, PeerSourceFactory.class);
+            peerSources.addBinding().to(TrackerPeerSourceFactory.class);
 
             binder.bind(IShutdownService.class).to(shutdownServiceType).in(Singleton.class);
 

@@ -43,6 +43,11 @@ public class ExtendedHandshake implements Message {
         return supportedMessageTypes;
     }
 
+    @Override
+    public String toString() {
+        return "[" + this.getClass().getSimpleName() + "] supported messages {" + supportedMessageTypes + "}";
+    }
+
     public static class Builder {
 
         private Map<String, BEObject<?>> messageTypeMap;
