@@ -48,6 +48,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private ConnectionHandler incomingConnectionHandler;
 
     private ExecutorService executor;
+    private ScheduledExecutorService connectionRequestor;
 
     private final Map<Peer, CompletableFuture<IPeerConnection>> pendingConnections;
     private ConcurrentMap<Peer, PeerConnection> connections;
@@ -94,6 +95,10 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 }
         );
 
+        connectionRequestor = Executors.newSingleThreadScheduledExecutor(r ->
+                new Thread(r, "TorrentSession-ConnectionRequestor"));
+
+        shutdownService.addShutdownHook(connectionRequestor::shutdown);
         shutdownService.addShutdownHook(acceptor::shutdown);
         shutdownService.addShutdownHook(incomingAcceptor::shutdown);
         shutdownService.addShutdownHook(executor::shutdown);
@@ -147,7 +152,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                     if (!initConnection(newConnection, connectionHandler, true)) {
                         throw new BtException("Failed to initialize new connection for peer: " + peer);
                     }
-                    return connections.get(newConnection.getRemotePeer());
+                    return (IPeerConnection) connections.get(newConnection.getRemotePeer());
                 } catch (IOException e) {
                     throw new BtException("Failed to create new outgoing connection for peer: " + peer, e);
                 } finally {
@@ -155,7 +160,12 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                         pendingConnections.remove(peer);
                     }
                 }
-            }, executor);
+            }, executor).whenComplete((acquiredConnection, throwable) -> {
+                if (throwable != null) {
+                    LOGGER.error("Failed to connect to peer: " + peer + "; will retry in 5 minutes", throwable);
+                    connectionRequestor.schedule(() -> requestConnection(peer, connectionHandler), 5, TimeUnit.MINUTES);
+                }
+            });
 
             pendingConnections.put(peer, connection);
             return connection;

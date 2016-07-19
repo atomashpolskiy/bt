@@ -85,9 +85,11 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
 
                 long lruEventTime = Long.MAX_VALUE;
                 for (MessageWorker worker : workers.values()) {
-                    long workerLruEventTime = worker.getLastSentPEXMessageToPeer();
-                    if (workerLruEventTime < lruEventTime) {
-                        lruEventTime = workerLruEventTime;
+                    if (worker.isPEXSupported()) {
+                        long workerLruEventTime = worker.getLastSentPEXMessageToPeer();
+                        if (workerLruEventTime < lruEventTime) {
+                            lruEventTime = workerLruEventTime;
+                        }
                     }
                 }
 
@@ -147,6 +149,10 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         MessageWorker(PeerExchangePeerSource peerSource) {
             this.peerSource = peerSource;
             lastSentPEXMessageToPeer = 0;
+        }
+
+        boolean isPEXSupported() {
+            return peerSupportsPEX;
         }
 
         long getLastSentPEXMessageToPeer() {

@@ -17,7 +17,7 @@ class TrackerPeerSource implements PeerSource {
     private static final Logger LOGGER = LoggerFactory.getLogger(TrackerPeerSource.class);
 
     // TODO: probably should move this to ITracker interface
-    private static final Duration REFRESH_THRESHOLD = Duration.ofSeconds(5);
+    private static final Duration REFRESH_THRESHOLD = Duration.ofMinutes(5);
 
     private Tracker tracker;
     private Torrent torrent;

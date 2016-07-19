@@ -10,7 +10,6 @@ import bt.protocol.Have;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.service.IConfigurationService;
-import bt.service.IShutdownService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,8 +17,6 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -47,12 +44,10 @@ public class TorrentProcessor implements Runnable, PeerActivityListener, Consume
     private ReentrantLock lock;
     private Condition timer;
 
-    private ScheduledExecutorService connectionRequestor;
-
     public TorrentProcessor(IPeerConnectionPool connectionPool, IConfigurationService configurationService,
                             IConnectionHandlerFactory connectionHandlerFactory,
                             IPieceManager pieceManager, IDataWorker dataWorker, Torrent torrent,
-                            ITorrentDescriptor torrentDescriptor, IShutdownService shutdownService) {
+                            ITorrentDescriptor torrentDescriptor) {
 
         this.connectionPool = connectionPool;
         this.configurationService = configurationService;
@@ -70,11 +65,6 @@ public class TorrentProcessor implements Runnable, PeerActivityListener, Consume
 
         lock = new ReentrantLock();
         timer = lock.newCondition();
-
-        connectionRequestor = Executors.newSingleThreadScheduledExecutor(r ->
-                new Thread(r, "TorrentSession-ConnectionRequestor"));
-
-        shutdownService.addShutdownHook(connectionRequestor::shutdown);
     }
 
     @Override
@@ -116,14 +106,7 @@ public class TorrentProcessor implements Runnable, PeerActivityListener, Consume
         }
 
         if (!connectionWorkers.containsKey(peer)) {
-            connectionPool.requestConnection(peer, outgoingHandler)
-                    .exceptionally(throwable -> {
-                        if (LOGGER.isDebugEnabled()) {
-                            LOGGER.debug("Failed to connect to peer: " + peer + "; will retry in 5 minutes");
-                        }
-                        connectionRequestor.schedule(() -> onPeerDiscovered(peer), 5, TimeUnit.MINUTES);
-                        return null;
-                    });
+            connectionPool.requestConnection(peer, outgoingHandler);
         }
     }
 
