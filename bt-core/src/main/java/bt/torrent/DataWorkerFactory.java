@@ -2,23 +2,23 @@ package bt.torrent;
 
 import bt.data.IDataDescriptor;
 import bt.service.IConfigurationService;
-import bt.service.IShutdownService;
+import bt.service.IRuntimeLifecycleBinder;
 import com.google.inject.Inject;
 
 public class DataWorkerFactory implements IDataWorkerFactory {
 
     private IConfigurationService configurationService;
-    private IShutdownService shutdownService;
+    private IRuntimeLifecycleBinder lifecycleBinder;
 
     @Inject
-    public DataWorkerFactory(IConfigurationService configurationService, IShutdownService shutdownService) {
+    public DataWorkerFactory(IConfigurationService configurationService, IRuntimeLifecycleBinder lifecycleBinder) {
         this.configurationService = configurationService;
-        this.shutdownService = shutdownService;
+        this.lifecycleBinder = lifecycleBinder;
     }
 
     @Override
     public IDataWorker createWorker(IDataDescriptor dataDescriptor) {
-        return new DataWorker(shutdownService, dataDescriptor.getChunkDescriptors(),
+        return new DataWorker(lifecycleBinder, dataDescriptor.getChunkDescriptors(),
                 configurationService.getReadRequestQueueMaxLength());
     }
 }

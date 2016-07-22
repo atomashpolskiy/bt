@@ -1,6 +1,5 @@
 package bt.it;
 
-import bt.data.IChunkDescriptor;
 import bt.it.fixture.BaseBtTest;
 import bt.it.fixture.PersonalizedThreadNamesFeature;
 import bt.it.fixture.SharedTrackerFeature;
@@ -36,7 +35,6 @@ public class Swarm_IT extends BaseBtTest {
         TorrentHandle seeder = swarm.getSeeders().iterator().next().getHandle(),
                       leecher = swarm.getLeechers().iterator().next().getHandle();
 
-        seeder.getDataDescriptor().getChunkDescriptors().forEach(IChunkDescriptor::verify);
         seeder.startAsync();
 
         leecher.startAsync(state -> {
@@ -58,10 +56,7 @@ public class Swarm_IT extends BaseBtTest {
 
         TorrentHandle leecher = swarm.getLeechers().iterator().next().getHandle();
 
-        seeders.forEach(seeder -> {
-            seeder.getDataDescriptor().getChunkDescriptors().forEach(IChunkDescriptor::verify);
-            seeder.startAsync();
-        });
+        seeders.forEach(TorrentHandle::startAsync);
 
         leecher.startAsync(state -> {
             if (state.getPiecesRemaining() == 0) {
@@ -84,7 +79,6 @@ public class Swarm_IT extends BaseBtTest {
 
         AtomicInteger leecherCount = new AtomicInteger(leechers.size());
 
-        seeder.getDataDescriptor().getChunkDescriptors().forEach(IChunkDescriptor::verify);
         CompletableFuture<?> seederFuture = seeder.startAsync(state -> {
             if (leecherCount.get() == 0) {
                 leechers.forEach(TorrentHandle::stop);
@@ -137,7 +131,6 @@ public class Swarm_IT extends BaseBtTest {
 
         for (int i = 1; i < seeders.size(); i++) {
             TorrentHandle seeder = seeders.get(i);
-            seeder.getDataDescriptor().getChunkDescriptors().forEach(IChunkDescriptor::verify);
             seederFuture = seeder.startAsync();
         }
 

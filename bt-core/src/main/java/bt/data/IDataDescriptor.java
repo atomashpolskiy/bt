@@ -1,9 +1,9 @@
 package bt.data;
 
+import java.io.Closeable;
 import java.util.List;
 
-public interface IDataDescriptor {
+public interface IDataDescriptor extends Closeable {
 
     List<IChunkDescriptor> getChunkDescriptors();
-    void close();
 }

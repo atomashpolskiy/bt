@@ -3,7 +3,7 @@ package bt.torrent;
 import bt.BtException;
 import bt.data.IChunkDescriptor;
 import bt.net.Peer;
-import bt.service.IShutdownService;
+import bt.service.IRuntimeLifecycleBinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,8 +11,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Consumer;
 
 public class DataWorker implements IDataWorker {
 
@@ -23,17 +26,25 @@ public class DataWorker implements IDataWorker {
     private BlockingQueue<BlockOp> pendingOps;
     private Map<Peer, BlockingQueue<BlockRead>> completedBlockRequests;
 
+    private Set<Consumer<Integer>> verifiedPieceListeners;
+
     private volatile Thread t;
     private volatile boolean shutdown;
 
-    public DataWorker(IShutdownService shutdownService, List<IChunkDescriptor> chunks, int maxQueueLength) {
+    public DataWorker(IRuntimeLifecycleBinder lifecycleBinder, List<IChunkDescriptor> chunks, int maxQueueLength) {
 
         this.chunks = chunks;
 
         pendingOps = new LinkedBlockingQueue<>(maxQueueLength);
         completedBlockRequests = new HashMap<>();
+        verifiedPieceListeners = ConcurrentHashMap.newKeySet();
 
-        shutdownService.addShutdownHook(this::shutdown);
+        lifecycleBinder.onShutdown(this::shutdown);
+    }
+
+    @Override
+    public void addVerifiedPieceListener(Consumer<Integer> listener) {
+        verifiedPieceListeners.add(listener);
     }
 
     @Override
@@ -160,8 +171,12 @@ public class DataWorker implements IDataWorker {
                     LOGGER.trace("Successfully processed block (" + toString() + ") from peer: " + peer);
                 }
                 // TODO: perform verification asynchronously in a separate dedicated thread
-                if (chunk.verify() && LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Successfully verified block (" + toString() + ")");
+                if (chunk.verify()) {
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Successfully verified block (" + toString() + ")");
+                    }
+                    Integer pieceIndex = blockWrite.getPieceIndex();
+                    verifiedPieceListeners.forEach(listener -> listener.accept(pieceIndex));
                 }
             } catch (Exception e) {
                 LOGGER.error("Failed to process block (" + toString() + ") from peer: " + peer, e);

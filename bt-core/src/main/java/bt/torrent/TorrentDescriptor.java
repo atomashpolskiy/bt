@@ -1,6 +1,7 @@
 package bt.torrent;
 
 import bt.BtException;
+import bt.data.IChunkDescriptor;
 import bt.data.IDataDescriptor;
 import bt.metainfo.Torrent;
 import bt.tracker.ITrackerService;
@@ -37,6 +38,8 @@ public class TorrentDescriptor implements ITorrentDescriptor {
         if (active) {
             return;
         }
+
+        dataDescriptor.getChunkDescriptors().forEach(IChunkDescriptor::verify);
 
         TrackerResponse response = tracker.request(torrent).start();
         if (response != null && !response.isSuccess()) {

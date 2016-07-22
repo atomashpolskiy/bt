@@ -8,7 +8,7 @@ import bt.net.PeerActivityListener;
 import bt.protocol.Message;
 import bt.runtime.protocol.ext.ExtendedHandshake;
 import bt.runtime.protocol.ext.pex.PeerExchange;
-import bt.service.IShutdownService;
+import bt.service.IRuntimeLifecycleBinder;
 import bt.service.PeerSource;
 import bt.service.PeerSourceFactory;
 import com.google.inject.Inject;
@@ -45,7 +45,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     private ReentrantReadWriteLock peerEventsLock;
 
     @Inject
-    public PeerExchangePeerSourceFactory(IShutdownService shutdownService, IPeerConnectionPool connectionPool) {
+    public PeerExchangePeerSourceFactory(IRuntimeLifecycleBinder lifecycleBinder, IPeerConnectionPool connectionPool) {
         connectionPool.addConnectionListener(new Listener());
 
         workers = new ConcurrentHashMap<>();
@@ -54,9 +54,9 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         peerEventsLock = new ReentrantReadWriteLock();
 
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "PEX-Cleaner"));
-        executor.scheduleAtFixedRate(new Cleaner(), CLEANER_INTERVAL.toMillis(), CLEANER_INTERVAL.toMillis(), TimeUnit.MILLISECONDS);
-
-        shutdownService.addShutdownHook(executor::shutdown);
+        lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(
+                new Cleaner(), CLEANER_INTERVAL.toMillis(), CLEANER_INTERVAL.toMillis(), TimeUnit.MILLISECONDS));
+        lifecycleBinder.onShutdown(executor::shutdown);
     }
 
     @Override

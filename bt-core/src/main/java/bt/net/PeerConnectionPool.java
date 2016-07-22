@@ -6,7 +6,7 @@ import bt.protocol.Protocol;
 import bt.service.IConfigurationService;
 import bt.service.INetworkService;
 import bt.service.IPeerRegistry;
-import bt.service.IShutdownService;
+import bt.service.IRuntimeLifecycleBinder;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +58,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     @Inject
     public PeerConnectionPool(INetworkService networkService, Protocol protocol, IPeerRegistry peerRegistry,
-                              IShutdownService shutdownService, IConnectionHandlerFactory connectionHandlerFactory,
+                              IRuntimeLifecycleBinder lifecycleBinder, IConnectionHandlerFactory connectionHandlerFactory,
                               IConfigurationService configurationService) {
 
         SocketChannelFactory socketChannelFactory = new SocketChannelFactory(networkService);
@@ -76,10 +76,10 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         IncomingAcceptor acceptor = new IncomingAcceptor(socketChannelFactory);
         ExecutorService incomingAcceptor = Executors.newSingleThreadExecutor(
                 runnable -> new Thread(runnable, "PeerConnectionPool-IncomingAcceptor"));
-        incomingAcceptor.execute(acceptor);
+        lifecycleBinder.onStartup(() -> incomingAcceptor.execute(acceptor));
 
         cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, "PeerConnectionPool-Cleaner"));
-        cleaner.scheduleAtFixedRate(new Cleaner(), 1000, 1000, TimeUnit.MILLISECONDS);
+        lifecycleBinder.onStartup(() -> cleaner.scheduleAtFixedRate(new Cleaner(), 1000, 1000, TimeUnit.MILLISECONDS));
 
         executor = Executors.newCachedThreadPool(
                 new ThreadFactory() {
@@ -98,13 +98,13 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         connectionRequestor = Executors.newSingleThreadScheduledExecutor(r ->
                 new Thread(r, "TorrentSession-ConnectionRequestor"));
 
-        shutdownService.addShutdownHook(connectionRequestor::shutdown);
-        shutdownService.addShutdownHook(acceptor::shutdown);
-        shutdownService.addShutdownHook(incomingAcceptor::shutdown);
-        shutdownService.addShutdownHook(executor::shutdown);
-        shutdownService.addShutdownHook(this::shutdown);
+        lifecycleBinder.onShutdown(connectionRequestor::shutdown);
+        lifecycleBinder.onShutdown(acceptor::shutdown);
+        lifecycleBinder.onShutdown(incomingAcceptor::shutdown);
+        lifecycleBinder.onShutdown(executor::shutdown);
+        lifecycleBinder.onShutdown(this::shutdown);
 
-        messageDispatcher = new MessageDispatcher(shutdownService, this);
+        messageDispatcher = new MessageDispatcher(lifecycleBinder, this);
     }
 
     @Override
@@ -112,16 +112,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         listenerLock.writeLock().lock();
         try {
             connectionListeners.add(listener);
-        } finally {
-            listenerLock.writeLock().unlock();
-        }
-    }
-
-    @Override
-    public void removeConnectionListener(PeerActivityListener listener) {
-        listenerLock.writeLock().lock();
-        try {
-            connectionListeners.remove(listener);
         } finally {
             listenerLock.writeLock().unlock();
         }
@@ -190,30 +180,34 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     private class IncomingAcceptor implements Runnable {
 
+        private SocketChannelFactory socketChannelFactory;
         private ServerSocketChannel serverChannel;
-        private SocketAddress localAddress;
 
         private volatile boolean shutdown;
 
         IncomingAcceptor(SocketChannelFactory socketChannelFactory) {
-            try {
-                serverChannel = socketChannelFactory.getIncomingChannel();
-                this.localAddress = serverChannel.getLocalAddress();
-                LOGGER.info("Opened server channel for incoming connections @ " + localAddress);
-            } catch (IOException e) {
-                throw new BtException("Failed to create incoming connections listener " +
-                        "-- unexpected I/O exception happened when creating an incoming channel", e);
-            }
+            this.socketChannelFactory = socketChannelFactory;
         }
 
         @Override
         public void run() {
+
+            SocketAddress localAddress;
+            try {
+                serverChannel = socketChannelFactory.getIncomingChannel();
+                localAddress = serverChannel.getLocalAddress();
+                LOGGER.info("Opening server channel for incoming connections @ " + localAddress);
+            } catch (IOException e) {
+                throw new BtException("Failed to create incoming connections listener " +
+                        "-- unexpected I/O exception happened when creating an incoming channel", e);
+            }
+
             try {
                 while (!shutdown) {
                     acceptIncomingConnection(serverChannel.accept());
                 }
             } catch (IOException e) {
-                LOGGER.error("Unexpected I/O error when listening to the incoming channel: " + localAddress, e);
+                LOGGER.error("Unexpected I/O error when listening to the incoming channel @ " + localAddress, e);
             }
         }
 

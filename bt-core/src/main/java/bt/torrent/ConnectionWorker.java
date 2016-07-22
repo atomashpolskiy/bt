@@ -40,8 +40,6 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
     private IPieceManager pieceManager;
     private IDataWorker dataWorker;
 
-    private Consumer<BlockWrite> blockConsumer;
-
     private final Peer peer;
     private ConnectionState connectionState;
 
@@ -56,13 +54,10 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
 
     private Deque<Message> outgoingMessages;
 
-    ConnectionWorker(Peer peer, IPieceManager pieceManager, IDataWorker dataWorker,
-                     Consumer<BlockWrite> blockConsumer) {
+    ConnectionWorker(Peer peer, IPieceManager pieceManager, IDataWorker dataWorker) {
 
         this.pieceManager = pieceManager;
         this.dataWorker = dataWorker;
-
-        this.blockConsumer = blockConsumer;
 
         this.peer = peer;
         connectionState = new ConnectionState();
@@ -161,7 +156,6 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
                         piece.getOffset(), piece.getBlock());
                 if (!blockWrite.isComplete() || blockWrite.isSuccess()) {
                     pendingWrites.put(key, blockWrite);
-                    blockConsumer.accept(blockWrite);
                 }
             }
         }

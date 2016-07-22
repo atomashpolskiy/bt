@@ -24,50 +24,53 @@ public class PeerRegistry implements IPeerRegistry {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerRegistry.class);
 
+    private Set<PeerSourceFactory> peerSourceFactories;
     private Map<Torrent, List<Consumer<Peer>>> consumers;
     private final Peer localPeer;
 
     @Inject
-    public PeerRegistry(IShutdownService shutdownService, INetworkService networkService,
+    public PeerRegistry(IRuntimeLifecycleBinder lifecycleBinder, INetworkService networkService,
                         IIdService idService, Set<PeerSourceFactory> peerSourceFactories) {
 
+        this.peerSourceFactories = peerSourceFactories;
         consumers = new ConcurrentHashMap<>();
         localPeer = new InetPeer(networkService.getInetAddress(), networkService.getPort(), idService.getPeerId());
 
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "Peer Registry"));
-        executor.scheduleAtFixedRate(() -> {
+        lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(this::collectAndVisitPeers, 1, 5, TimeUnit.SECONDS));
+        lifecycleBinder.onShutdown(executor::shutdown);
+    }
 
-            for (Torrent torrent : consumers.keySet()) {
+    private void collectAndVisitPeers() {
 
-                List<Consumer<Peer>> peerConsumers = consumers.get(torrent);
-                for (PeerSourceFactory peerSourceFactory : peerSourceFactories) {
+        for (Torrent torrent : consumers.keySet()) {
 
-                    PeerSource peerSource = peerSourceFactory.getPeerSource(torrent);
-                    try {
-                        if (peerSource.isRefreshable() && peerSource.refresh()) {
+            List<Consumer<Peer>> peerConsumers = consumers.get(torrent);
+            for (PeerSourceFactory peerSourceFactory : peerSourceFactories) {
 
-                            Collection<Peer> discoveredPeers = peerSource.query();
-                            for (Peer peer : discoveredPeers) {
-                                Iterator<Consumer<Peer>> iter = peerConsumers.iterator();
-                                while (iter.hasNext()) {
-                                    Consumer<Peer> consumer = iter.next();
-                                    try {
-                                        consumer.accept(peer);
-                                    } catch (Exception e) {
-                                        LOGGER.warn("Error in peer consumer", e);
-                                        iter.remove();
-                                    }
+                PeerSource peerSource = peerSourceFactory.getPeerSource(torrent);
+                try {
+                    if (peerSource.isRefreshable() && peerSource.refresh()) {
+
+                        Collection<Peer> discoveredPeers = peerSource.query();
+                        for (Peer peer : discoveredPeers) {
+                            Iterator<Consumer<Peer>> iter = peerConsumers.iterator();
+                            while (iter.hasNext()) {
+                                Consumer<Peer> consumer = iter.next();
+                                try {
+                                    consumer.accept(peer);
+                                } catch (Exception e) {
+                                    LOGGER.warn("Error in peer consumer", e);
+                                    iter.remove();
                                 }
                             }
                         }
-                    } catch (Exception e) {
-                        LOGGER.warn("Error when querying peer source: " + peerSource, e);
                     }
+                } catch (Exception e) {
+                    LOGGER.warn("Error when querying peer source: " + peerSource, e);
                 }
             }
-        }, 1, 5, TimeUnit.SECONDS);
-
-        shutdownService.addShutdownHook(executor::shutdown);
+        }
     }
 
     @Override

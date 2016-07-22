@@ -3,7 +3,6 @@ package bt.it.fixture;
 import bt.BtRuntime;
 import bt.BtRuntimeBuilder;
 import bt.service.INetworkService;
-import bt.service.OnDemandShutdownService;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -47,8 +46,6 @@ public class BtTestRuntimeBuilder {
     }
 
     public BtRuntime build() {
-
-        builder.shutdownService(OnDemandShutdownService.class);
 
         if (features != null) {
             BtTestRuntimeConfiguration configuration = new BtTestRuntimeConfiguration() {

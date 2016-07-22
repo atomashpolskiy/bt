@@ -31,6 +31,7 @@ import bt.service.IConfigurationService;
 import bt.service.IIdService;
 import bt.service.INetworkService;
 import bt.service.IPeerRegistry;
+import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IShutdownService;
 import bt.service.ITorrentRegistry;
 import bt.service.IdService;
@@ -38,6 +39,7 @@ import bt.service.JVMShutdownService;
 import bt.service.NetworkService;
 import bt.service.PeerRegistry;
 import bt.service.PeerSourceFactory;
+import bt.service.RuntimeLifecycleBinder;
 import bt.torrent.DataWorkerFactory;
 import bt.torrent.IDataWorkerFactory;
 import bt.tracker.ITrackerService;
@@ -65,29 +67,16 @@ public class BtRuntimeBuilder {
         return new BtRuntimeBuilder();
     }
 
-    private Class<? extends IShutdownService> shutdownServiceType;
-    private ExecutorService executorService;
     private Map<String, MessageHandler<?>> extendedMessageHandlers;
     private List<BtAdapter> adapters;
 
     private BtRuntimeBuilder() {
-        shutdownServiceType = JVMShutdownService.class;
 
         // default extended protocol handlers
         extendedMessageHandler("ut_pex",  new PeerExchangeMessageHandler());
 
         // default adapters
         adapter(new PeerExchangeAdapter());
-    }
-
-    public <T extends IShutdownService> BtRuntimeBuilder shutdownService(Class<T> shutdownServiceType) {
-        this.shutdownServiceType = Objects.requireNonNull(shutdownServiceType);
-        return this;
-    }
-
-    public BtRuntimeBuilder executorService(ExecutorService executorService) {
-        this.executorService = Objects.requireNonNull(executorService);
-        return this;
     }
 
     public BtRuntimeBuilder extendedMessageHandler(String messageTypeName, MessageHandler<?> handler) {
@@ -133,18 +122,13 @@ public class BtRuntimeBuilder {
             binder.bind(IDataWorkerFactory.class).to(DataWorkerFactory.class).in(Singleton.class);
             binder.bind(IHandshakeFactory.class).to(HandshakeFactory.class).in(Singleton.class);
             binder.bind(IConnectionHandlerFactory.class).to(ConnectionHandlerFactory.class).in(Singleton.class);
+            binder.bind(ExecutorService.class).toProvider(ExecutorServiceProvider.class);
+            binder.bind(IShutdownService.class).to(JVMShutdownService.class).in(Singleton.class);
+            binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
 
             binder.bind(IPeerRegistry.class).to(PeerRegistry.class).in(Singleton.class);
             Multibinder<PeerSourceFactory> peerSources = Multibinder.newSetBinder(binder, PeerSourceFactory.class);
             peerSources.addBinding().to(TrackerPeerSourceFactory.class);
-
-            binder.bind(IShutdownService.class).to(shutdownServiceType).in(Singleton.class);
-
-            if (executorService == null) {
-                binder.bind(ExecutorService.class).toProvider(ExecutorServiceProvider.class);
-            } else {
-                binder.bind(ExecutorService.class).toInstance(executorService);
-            }
 
             binder.bind(Protocol.class).to(StandardBittorrentProtocol.class).in(Singleton.class);
 

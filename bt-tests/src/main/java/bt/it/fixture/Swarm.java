@@ -9,8 +9,11 @@ import bt.data.IDataDescriptor;
 import bt.data.IDataDescriptorFactory;
 import bt.metainfo.Torrent;
 import org.junit.rules.ExternalResource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.URL;
@@ -23,6 +26,8 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class Swarm extends ExternalResource {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Swarm.class);
 
     public static SwarmBuilder builder(File root, BtTestRuntimeFactory runtimeFactory) {
         return new SwarmBuilder(root, runtimeFactory);
@@ -41,6 +46,13 @@ public class Swarm extends ExternalResource {
     }
 
     public void shutdown() {
+        peers.forEach(peer -> {
+            try {
+                peer.close();
+            } catch (IOException e) {
+                LOGGER.warn("Error on swarm shutdown", e);
+            }
+        });
         deleteRecursive(root);
     }
 

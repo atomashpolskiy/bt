@@ -1,12 +1,10 @@
 package bt.net;
 
 import bt.protocol.Message;
-import bt.service.IShutdownService;
+import bt.service.IRuntimeLifecycleBinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -21,7 +19,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class MessageDispatcher implements Closeable {
+public class MessageDispatcher {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageDispatcher.class);
 
@@ -30,20 +28,40 @@ public class MessageDispatcher implements Closeable {
 
     private Queue<Peer> disconnectedPeers;
 
-    private volatile boolean shutdown;
-
-    public MessageDispatcher(IShutdownService shutdownService, IPeerConnectionPool pool) {
+    public MessageDispatcher(IRuntimeLifecycleBinder lifecycleBinder, IPeerConnectionPool pool) {
 
         consumers = new ConcurrentHashMap<>();
         suppliers = new ConcurrentHashMap<>();
 
         disconnectedPeers = new LinkedBlockingQueue<>();
 
-        ReentrantLock lock = new ReentrantLock();
-        Condition timer = lock.newCondition();
-
         ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "Message Dispatcher"));
-        executor.execute(() -> {
+        Worker worker = new Worker(pool);
+        lifecycleBinder.onStartup(() -> executor.execute(worker));
+        lifecycleBinder.onShutdown(worker::shutdown);
+        lifecycleBinder.onShutdown(executor::shutdown);
+    }
+
+    private class Worker implements Runnable {
+
+        private IPeerConnectionPool pool;
+
+        private ReentrantLock lock;
+        private Condition timer;
+
+        private volatile boolean shutdown;
+
+        Worker(IPeerConnectionPool pool) {
+
+            this.pool = pool;
+
+            lock = new ReentrantLock();
+            timer = lock.newCondition();
+        }
+
+        @Override
+        public void run() {
+
             while (!shutdown) {
 
                 Peer disconnectedPeer;
@@ -132,10 +150,11 @@ public class MessageDispatcher implements Closeable {
                     lock.unlock();
                 }
             }
-        });
+        }
 
-        shutdownService.addShutdownHook(this);
-        shutdownService.addShutdownHook(executor::shutdown);
+        public void shutdown() {
+            shutdown = true;
+        }
     }
 
     void removePeer(Peer peer) {
@@ -149,10 +168,5 @@ public class MessageDispatcher implements Closeable {
 
     void addMessageSuppliers(Peer recipient, Collection<Supplier<Message>> messageSuppliers) {
         suppliers.put(recipient, messageSuppliers);
-    }
-
-    @Override
-    public void close() throws IOException {
-        shutdown = true;
     }
 }

@@ -1,14 +1,12 @@
 package bt;
 
 import bt.data.DataAccessFactory;
-import bt.data.IDataDescriptor;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
 import bt.net.IConnectionHandlerFactory;
 import bt.net.IPeerConnectionPool;
 import bt.service.IConfigurationService;
 import bt.service.IPeerRegistry;
-import bt.service.IShutdownService;
 import bt.service.ITorrentRegistry;
 import bt.torrent.IDataWorker;
 import bt.torrent.IDataWorkerFactory;
@@ -18,7 +16,7 @@ import bt.torrent.PieceSelector;
 import bt.torrent.RarestFirstSelector;
 import bt.torrent.TorrentHandle;
 import bt.torrent.TorrentProcessingState;
-import bt.torrent.TorrentProcessor;
+import bt.torrent.TorrentSession;
 
 import java.net.URL;
 import java.util.Objects;
@@ -80,54 +78,61 @@ public class Bt {
             IConnectionHandlerFactory connectionHandlerFactory = runtime.service(IConnectionHandlerFactory.class);
 
             PieceManager pieceManager = new PieceManager(pieceSelector, descriptor.getDataDescriptor().getChunkDescriptors());
-            TorrentProcessor processor = new TorrentProcessor(connectionPool, configurationService,
-                    connectionHandlerFactory, pieceManager, dataWorker, torrent, descriptor);
+            TorrentSession session = new TorrentSession(connectionPool, configurationService,
+                    connectionHandlerFactory, pieceManager, dataWorker, torrent);
 
-            peerRegistry.addPeerConsumer(torrent, processor);
-            connectionPool.addConnectionListener(processor);
+            dataWorker.addVerifiedPieceListener(session::onPieceVerified);
+            peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);
+            connectionPool.addConnectionListener(session);
 
-            IShutdownService shutdownService = runtime.service(IShutdownService.class);
             ExecutorService executorService = runtime.service(ExecutorService.class);
-            return new DefaultTorrentHandle(executorService, shutdownService, pieceManager, descriptor, processor, dataWorker);
+
+            TorrentHandle handle = new DefaultTorrentHandle(executorService, descriptor, session, dataWorker) {
+                @Override
+                public CompletableFuture<?> startAsync() {
+                    ensureRuntimeStarted();
+                    return super.startAsync();
+                }
+
+                @Override
+                public CompletableFuture<?> startAsync(Consumer<TorrentProcessingState> listener, long period) {
+                    ensureRuntimeStarted();
+                    return super.startAsync(listener, period);
+                }
+
+                private void ensureRuntimeStarted() {
+                    if (!runtime.isRunning()) {
+                        runtime.startup();
+                    }
+                }
+            };
+            runtime.registerTorrentHandle(handle);
+            return handle;
         }
     }
 
     private static class DefaultTorrentHandle implements TorrentHandle {
 
         private Executor executor;
-        private IShutdownService shutdownService;
-        private PieceManager pieceManager;
         private ITorrentDescriptor delegate;
-        private TorrentProcessor processor;
+        private TorrentSession session;
         private IDataWorker dataWorker;
 
         private Optional<CompletableFuture<?>> future;
         private Optional<Consumer<TorrentProcessingState>> listener;
         private Optional<ScheduledFuture<?>> listenerFuture;
 
-        DefaultTorrentHandle(Executor executor, IShutdownService shutdownService, PieceManager pieceManager,
-                             ITorrentDescriptor delegate, TorrentProcessor processor, IDataWorker dataWorker) {
+        DefaultTorrentHandle(Executor executor, ITorrentDescriptor delegate,
+                             TorrentSession session, IDataWorker dataWorker) {
 
             this.executor = executor;
-            this.shutdownService = shutdownService;
-            this.pieceManager = pieceManager;
             this.delegate = delegate;
-            this.processor = processor;
+            this.session = session;
             this.dataWorker = dataWorker;
 
             future = Optional.empty();
             listener = Optional.empty();
             listenerFuture = Optional.empty();
-        }
-
-        @Override
-        public boolean isActive() {
-            return delegate.isActive();
-        }
-
-        @Override
-        public void start() {
-            doStart().join();
         }
 
         @Override
@@ -137,16 +142,6 @@ public class Bt {
             } finally {
                 future.ifPresent(future -> future.complete(null));
             }
-        }
-
-        @Override
-        public void complete() {
-            delegate.complete();
-        }
-
-        @Override
-        public IDataDescriptor getDataDescriptor() {
-            return delegate.getDataDescriptor();
         }
 
         @Override
@@ -164,6 +159,11 @@ public class Bt {
 
         @Override
         public CompletableFuture<?> startAsync() {
+
+            if (future.isPresent()) {
+                return future.get();
+            }
+
             CompletableFuture<?> future = doStart();
             this.future = Optional.of(future);
             return future;
@@ -171,26 +171,22 @@ public class Bt {
 
         private CompletableFuture<?> doStart() {
 
-            if (isActive()) {
+            if (delegate.isActive()) {
                 throw new BtException("Can't start -- already running");
             }
 
             delegate.start();
 
-            CompletableFuture<?> processorFuture = CompletableFuture.runAsync(processor, executor),
-                                 dataWorkerFuture = CompletableFuture.runAsync(dataWorker, executor);
+            CompletableFuture<?> future = CompletableFuture.runAsync(dataWorker, executor);
 
-            CompletableFuture<?> future = CompletableFuture.anyOf(processorFuture, dataWorkerFuture);
-
-            future.thenRun(shutdownService::shutdownNow)
-                    .thenRun(() -> listener.ifPresent(listener -> listener.accept(getState())))
+            future.thenRun(() -> listener.ifPresent(listener -> listener.accept(getState())))
                     .thenRun(() -> listenerFuture.ifPresent(listener -> listener.cancel(true)));
 
             return future;
         }
 
         private TorrentProcessingState getState() {
-            return () -> pieceManager.piecesLeft();
+            return session.getState();
         }
     }
 }
