@@ -4,6 +4,7 @@ import bt.BtException;
 import bt.Constants;
 import com.google.inject.Inject;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
@@ -12,8 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import static bt.protocol.Protocols.getInt;
-import static bt.protocol.Protocols.getIntBytes;
+import static bt.protocol.Protocols.readInt;
 import static bt.protocol.Protocols.verifyPayloadLength;
 
 public class StandardBittorrentProtocol implements Protocol {
@@ -109,59 +109,65 @@ public class StandardBittorrentProtocol implements Protocol {
     }
 
     @Override
-    public final Class<? extends Message> readMessageType(byte[] prefix) {
+    public final Class<? extends Message> readMessageType(ByteBuffer buffer) {
 
-        Objects.requireNonNull(prefix);
+        Objects.requireNonNull(buffer);
 
-        if (prefix.length == 0) {
+        if (!buffer.hasRemaining()) {
             return null;
+        }
 
-        } else if (prefix[0] == Constants.PROTOCOL_NAME.length()) {
+        buffer.mark();
+        byte first = buffer.get();
+        if (first == Constants.PROTOCOL_NAME.length()) {
             return Handshake.class;
+        }
+        buffer.reset();
 
-        } else if (prefix.length >= MESSAGE_LENGTH_PREFIX_SIZE) {
-            int length = getInt(prefix, 0);
-            if (length == 0) {
-                return KeepAlive.class;
-            }
+        Integer length = readInt(buffer);
+        if (length == null) {
+            return null;
+        } else if (length == 0) {
+            return KeepAlive.class;
+        }
 
-            if (prefix.length >= MESSAGE_PREFIX_SIZE) {
+        if (buffer.hasRemaining()) {
+            int messageTypeId = buffer.get();
+            Class<? extends Message> messageType;
 
-                int messageTypeId = prefix[MESSAGE_LENGTH_PREFIX_SIZE];
-                Class<? extends Message> messageType;
-
-                messageType = uniqueTypes.get(messageTypeId);
-                if (messageType == null) {
-                    MessageHandler<?> handler = handlers.get(messageTypeId);
-                    if (handler == null) {
-                        throw new InvalidMessageException("Unknown message type ID: " + messageTypeId);
-                    }
-                    messageType = handler.readMessageType(Arrays.copyOfRange(prefix, MESSAGE_PREFIX_SIZE, prefix.length));
+            messageType = uniqueTypes.get(messageTypeId);
+            if (messageType == null) {
+                MessageHandler<?> handler = handlers.get(messageTypeId);
+                if (handler == null) {
+                    throw new InvalidMessageException("Unknown message type ID: " + messageTypeId);
                 }
-                return messageType;
+                messageType = handler.readMessageType(buffer);
             }
+            return messageType;
         }
 
         return null;
     }
 
     @Override
-    public final int fromByteArray(MessageContext context, byte[] data) {
+    public final int fromByteArray(MessageContext context, ByteBuffer buffer) {
 
         Objects.requireNonNull(context);
-        Objects.requireNonNull(data);
+        Objects.requireNonNull(buffer);
 
-        if (data.length == 0) {
+        if (!buffer.hasRemaining()) {
             return 0;
         }
 
-        Class<? extends Message> messageType = readMessageType(data);
+        buffer.mark();
+        Class<? extends Message> messageType = readMessageType(buffer);
         if (messageType == null) {
             return 0;
         }
 
         if (Handshake.class.equals(messageType)) {
-            return decodeHandshake(context, data);
+            buffer.reset();
+            return decodeHandshake(context, buffer);
         }
         if (KeepAlive.class.equals(messageType)) {
             context.setMessage(KeepAlive.instance());
@@ -169,8 +175,10 @@ public class StandardBittorrentProtocol implements Protocol {
         }
 
         MessageHandler<?> handler = Objects.requireNonNull(handlersByType.get(messageType));
-        int consumed = handler.decodePayload(context, Arrays.copyOfRange(data, MESSAGE_PREFIX_SIZE, data.length),
-                getInt(data, 0) - MESSAGE_TYPE_SIZE);
+        buffer.reset();
+        Integer length = Objects.requireNonNull(readInt(buffer));
+        buffer.get(); // skip message ID
+        int consumed = handler.decodePayload(context, buffer, length - MESSAGE_TYPE_SIZE);
 
         if (context.getMessage() != null) {
             return consumed + MESSAGE_PREFIX_SIZE;
@@ -179,16 +187,16 @@ public class StandardBittorrentProtocol implements Protocol {
     }
 
     @Override
-    public final byte[] toByteArray(Message message) {
+    public final boolean toByteArray(Message message, ByteBuffer buffer) {
 
         Objects.requireNonNull(message);
 
         if (Handshake.class.equals(message.getClass())) {
             Handshake handshake = (Handshake) message;
-            return handshake(handshake.getReserved(), handshake.getInfoHash(), handshake.getPeerId());
+            return writeHandshake(buffer, handshake.getReserved(), handshake.getInfoHash(), handshake.getPeerId());
         }
         if (KeepAlive.class.equals(message.getClass())) {
-            return keepAlive();
+            return writeKeepAlive(buffer);
         }
 
         Integer messageId = idMap.get(message.getClass());
@@ -196,27 +204,45 @@ public class StandardBittorrentProtocol implements Protocol {
             throw new InvalidMessageException("Unknown message type: " + message.getClass().getSimpleName());
         }
 
-        byte[] payload = doEncode(message, messageId);
+        if (buffer.remaining() < MESSAGE_PREFIX_SIZE) {
+            return false;
+        }
 
-        byte[] bytes = new byte[MESSAGE_PREFIX_SIZE + payload.length];
-        System.arraycopy(getIntBytes(payload.length + MESSAGE_TYPE_SIZE), 0, bytes, 0, Integer.BYTES);
-        bytes[MESSAGE_LENGTH_PREFIX_SIZE] = messageId.byteValue();
-        System.arraycopy(payload, 0, bytes, MESSAGE_PREFIX_SIZE, payload.length);
-        return bytes;
+        int begin = buffer.position();
+        buffer.position(begin + MESSAGE_PREFIX_SIZE);
+        if (doEncode(message, messageId, buffer)) {
+            int end = buffer.position();
+            int payloadLength = end - begin - MESSAGE_PREFIX_SIZE;
+            if (payloadLength < 0) {
+                throw new BtException("Unexpected payload length: " + payloadLength);
+            }
+            buffer.position(begin);
+            buffer.putInt(payloadLength + MESSAGE_TYPE_SIZE);
+            buffer.put(messageId.byteValue());
+            buffer.position(end);
+            return true;
+        } else {
+            buffer.position(begin);
+            return false;
+        }
     }
 
     @SuppressWarnings("unchecked")
-    private <T extends Message> byte[] doEncode(T message, Integer messageId) {
-        return ((MessageHandler<T>)handlers.get(messageId)).encodePayload(message);
+    private <T extends Message> boolean doEncode(T message, Integer messageId, ByteBuffer buffer) {
+        return ((MessageHandler<T>)handlers.get(messageId)).encodePayload(message, buffer);
     }
 
     // keep-alive: <len=0000>
-    private static byte[] keepAlive() {
-        return KEEPALIVE;
+    private static boolean writeKeepAlive(ByteBuffer buffer) {
+        if (buffer.remaining() < KEEPALIVE.length) {
+            return false;
+        }
+        buffer.put(KEEPALIVE);
+        return true;
     }
 
     // handshake: <pstrlen><pstr><reserved><info_hash><peer_id>
-    private static byte[] handshake(byte[] reserved, byte[] infoHash, byte[] peerId) {
+    private static boolean writeHandshake(ByteBuffer buffer, byte[] reserved, byte[] infoHash, byte[] peerId) {
 
         if (reserved.length != HANDSHAKE_RESERVED_LENGTH) {
             throw new InvalidMessageException("Invalid reserved bytes: expected " + HANDSHAKE_RESERVED_LENGTH
@@ -231,43 +257,46 @@ public class StandardBittorrentProtocol implements Protocol {
                     + " bytes, received " + peerId.length);
         }
 
-        byte[] message = new byte[HANDSHAKE_PREFIX.length + HANDSHAKE_RESERVED_LENGTH
-                + Constants.INFO_HASH_LENGTH + Constants.PEER_ID_LENGTH];
-        System.arraycopy(HANDSHAKE_PREFIX, 0, message, 0, HANDSHAKE_PREFIX.length);
-        System.arraycopy(reserved, 0, message, HANDSHAKE_RESERVED_OFFSET, HANDSHAKE_RESERVED_LENGTH);
-        System.arraycopy(infoHash, 0, message, HANDSHAKE_DATA_OFFSET, infoHash.length);
-        System.arraycopy(peerId, 0, message, HANDSHAKE_DATA_OFFSET + infoHash.length, peerId.length);
+        int length = HANDSHAKE_PREFIX.length + HANDSHAKE_RESERVED_LENGTH +
+                Constants.INFO_HASH_LENGTH + Constants.PEER_ID_LENGTH;
+        if (buffer.remaining() < length) {
+            return false;
+        }
 
-        return message;
+        buffer.put(HANDSHAKE_PREFIX);
+        buffer.put(reserved);
+        buffer.put(infoHash);
+        buffer.put(peerId);
+
+        return true;
     }
 
-    private static int decodeHandshake(MessageContext context, byte[] data) {
+    private static int decodeHandshake(MessageContext context, ByteBuffer buffer) {
 
         int consumed = 0;
         int offset = HANDSHAKE_RESERVED_OFFSET;
         int length = HANDSHAKE_RESERVED_LENGTH + Constants.INFO_HASH_LENGTH + Constants.PEER_ID_LENGTH;
         int limit = offset + length;
 
-        if (data.length >= limit) {
+        if (buffer.remaining() >= limit) {
 
-            byte[] protocolNameBytes = Arrays.copyOfRange(data, 1, 1 + Constants.PROTOCOL_NAME.length());
+            buffer.get(); // skip message ID
+
+            byte[] protocolNameBytes = new byte[Constants.PROTOCOL_NAME.length()];
+            buffer.get(protocolNameBytes);
             if (!Arrays.equals(PROTOCOL_NAME_BYTES, protocolNameBytes)) {
                 throw new InvalidMessageException("Unexpected protocol name (decoded with ASCII): " +
                         new String(protocolNameBytes, Charset.forName("ASCII")));
             }
 
-            int from, to;
+            byte[] reserved = new byte[HANDSHAKE_RESERVED_LENGTH];
+            buffer.get(reserved);
 
-            from = offset;
-            to = offset + HANDSHAKE_RESERVED_LENGTH;
-            byte[] reserved = Arrays.copyOfRange(data, from, to);
+            byte[] infoHash = new byte[Constants.INFO_HASH_LENGTH];
+            buffer.get(infoHash);
 
-            from = to;
-            to = to + Constants.INFO_HASH_LENGTH;
-            byte[] infoHash = Arrays.copyOfRange(data, from, to);
-
-            from = to;
-            byte[] peerId = Arrays.copyOfRange(data, from, limit);
+            byte[] peerId = new byte[Constants.PEER_ID_LENGTH];
+            buffer.get(peerId);
 
             context.setMessage(new Handshake(reserved, infoHash, peerId));
             consumed = limit;
@@ -292,7 +321,7 @@ public class StandardBittorrentProtocol implements Protocol {
         }
 
         @Override
-        public Class<? extends T> readMessageType(byte[] data) {
+        public Class<? extends T> readMessageType(ByteBuffer buffer) {
             return type;
         }
     }
@@ -306,15 +335,15 @@ public class StandardBittorrentProtocol implements Protocol {
         }
 
         @Override
-        public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
+        public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
             verifyPayloadLength(Choke.class, 0, declaredPayloadLength);
             context.setMessage(Choke.instance());
             return 0;
         }
 
         @Override
-        public byte[] encodePayload(Choke message) {
-            return new byte[0];
+        public boolean encodePayload(Choke message, ByteBuffer buffer) {
+            return true;
         }
     }
 
@@ -325,15 +354,15 @@ public class StandardBittorrentProtocol implements Protocol {
         }
 
         @Override
-        public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
+        public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
             verifyPayloadLength(Unchoke.class, 0, declaredPayloadLength);
             context.setMessage(Unchoke.instance());
             return 0;
         }
 
         @Override
-        public byte[] encodePayload(Unchoke message) {
-            return new byte[0];
+        public boolean encodePayload(Unchoke message, ByteBuffer buffer) {
+            return true;
         }
     }
 
@@ -344,15 +373,15 @@ public class StandardBittorrentProtocol implements Protocol {
         }
 
         @Override
-        public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
+        public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
             verifyPayloadLength(Interested.class, 0, declaredPayloadLength);
             context.setMessage(Interested.instance());
             return 0;
         }
 
         @Override
-        public byte[] encodePayload(Interested message) {
-            return new byte[0];
+        public boolean encodePayload(Interested message, ByteBuffer buffer) {
+            return true;
         }
     }
 
@@ -363,15 +392,15 @@ public class StandardBittorrentProtocol implements Protocol {
         }
 
         @Override
-        public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
+        public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
             verifyPayloadLength(NotInterested.class, 0, declaredPayloadLength);
             context.setMessage(NotInterested.instance());
             return 0;
         }
 
         @Override
-        public byte[] encodePayload(NotInterested message) {
-            return new byte[0];
+        public boolean encodePayload(NotInterested message, ByteBuffer buffer) {
+            return true;
         }
     }
 
@@ -384,31 +413,36 @@ public class StandardBittorrentProtocol implements Protocol {
         }
 
         @Override
-        public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
+        public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
             verifyPayloadLength(Have.class, 4, declaredPayloadLength);
-            return decodeHave(context, data);
+            return decodeHave(context, buffer);
         }
 
         @Override
-        public byte[] encodePayload(Have message) {
-            return have(message.getPieceIndex());
+        public boolean encodePayload(Have message, ByteBuffer buffer) {
+            return writeHave(message.getPieceIndex(), buffer);
         }
 
         // have: <len=0005><id=4><piece index>
-        private static byte[] have(int pieceIndex) {
+        private static boolean writeHave(int pieceIndex, ByteBuffer buffer) {
             if (pieceIndex < 0) {
                 throw new InvalidMessageException("Invalid piece index: " + pieceIndex);
             }
-            return getIntBytes(pieceIndex);
+            if (buffer.remaining() < Integer.BYTES) {
+                return false;
+            }
+
+            buffer.putInt(pieceIndex);
+            return true;
         }
 
-        private static int decodeHave(MessageContext context, byte[] data) {
+        private static int decodeHave(MessageContext context, ByteBuffer buffer) {
 
             int consumed = 0;
             int length = Integer.BYTES;
 
-            if (data.length >= length) {
-                int pieceIndex = getInt(data, 0);
+            if (buffer.remaining() >= length) {
+                Integer pieceIndex = Objects.requireNonNull(readInt(buffer));
                 context.setMessage(new Have(pieceIndex));
                 consumed = length;
             }
@@ -424,42 +458,44 @@ public class StandardBittorrentProtocol implements Protocol {
         }
 
         @Override
-        public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
+        public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
             verifyPayloadLength(Request.class, 12, declaredPayloadLength);
-            return decodeRequest(context, data);
+            return decodeRequest(context, buffer);
         }
 
         @Override
-        public byte[] encodePayload(Request message) {
-            return request(message.getPieceIndex(), message.getOffset(), message.getLength());
+        public boolean encodePayload(Request message, ByteBuffer buffer) {
+            return writeRequest(message.getPieceIndex(), message.getOffset(), message.getLength(), buffer);
         }
 
         // request: <len=0013><id=6><index><begin><length>
-        private static byte[] request(int pieceIndex, int offset, int length) {
+        private static boolean writeRequest(int pieceIndex, int offset, int length, ByteBuffer buffer) {
 
             if (pieceIndex < 0 || offset < 0 || length <= 0) {
                 throw new InvalidMessageException("Invalid arguments: pieceIndex (" + pieceIndex
                         + "), offset (" + offset + "), length (" + length + ")");
             }
+            if (buffer.remaining() < Integer.BYTES * 3) {
+                return false;
+            }
 
-            int messageLength = Integer.BYTES * 3;
-            byte[] message = new byte[messageLength];
-            System.arraycopy(getIntBytes(pieceIndex), 0, message, 0, Integer.BYTES);
-            System.arraycopy(getIntBytes(offset), 0, message, Integer.BYTES, Integer.BYTES);
-            System.arraycopy(getIntBytes(length), 0, message, Integer.BYTES * 2, Integer.BYTES);
-            return message;
+            buffer.putInt(pieceIndex);
+            buffer.putInt(offset);
+            buffer.putInt(length);
+
+            return true;
         }
 
-        private static int decodeRequest(MessageContext context, byte[] data) {
+        private static int decodeRequest(MessageContext context, ByteBuffer buffer) {
 
             int consumed = 0;
             int length = Integer.BYTES * 3;
 
-            if (data.length >= length) {
+            if (buffer.remaining() >= length) {
 
-                int pieceIndex = getInt(data, 0);
-                int blockOffset = getInt(data, Integer.BYTES);
-                int blockLength = getInt(data, Integer.BYTES * 2);
+                int pieceIndex = Objects.requireNonNull(readInt(buffer));
+                int blockOffset = Objects.requireNonNull(readInt(buffer));
+                int blockLength = Objects.requireNonNull(readInt(buffer));
 
                 context.setMessage(new Request(pieceIndex, blockOffset, blockLength));
                 consumed = length;
@@ -476,42 +512,44 @@ public class StandardBittorrentProtocol implements Protocol {
         }
 
         @Override
-        public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
+        public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
             verifyPayloadLength(Cancel.class, 12, declaredPayloadLength);
-            return decodeCancel(context, data);
+            return decodeCancel(context, buffer);
         }
 
         @Override
-        public byte[] encodePayload(Cancel message) {
-            return cancel(message.getPieceIndex(), message.getOffset(), message.getLength());
+        public boolean encodePayload(Cancel message, ByteBuffer buffer) {
+            return writeCancel(message.getPieceIndex(), message.getOffset(), message.getLength(), buffer);
         }
 
         // cancel: <len=0013><id=8><index><begin><length>
-        private static byte[] cancel(int pieceIndex, int offset, int length) {
+        private static boolean writeCancel(int pieceIndex, int offset, int length, ByteBuffer buffer) {
 
             if (pieceIndex < 0 || offset < 0 || length <= 0) {
                 throw new InvalidMessageException("Invalid arguments: pieceIndex (" + pieceIndex
                         + "), offset (" + offset + "), length (" + length + ")");
             }
+            if (buffer.remaining() < Integer.BYTES * 3) {
+                return false;
+            }
 
-            int messageLength = Integer.BYTES * 3;
-            byte[] message = new byte[messageLength];
-            System.arraycopy(getIntBytes(pieceIndex), 0, message, 0, Integer.BYTES);
-            System.arraycopy(getIntBytes(offset), 0, message, Integer.BYTES, Integer.BYTES);
-            System.arraycopy(getIntBytes(length), 0, message, Integer.BYTES * 2, Integer.BYTES);
-            return message;
+            buffer.putInt(pieceIndex);
+            buffer.putInt(offset);
+            buffer.putInt(length);
+
+            return true;
         }
 
-        private static int decodeCancel(MessageContext context, byte[] data) {
+        private static int decodeCancel(MessageContext context, ByteBuffer buffer) {
 
             int consumed = 0;
             int length = Integer.BYTES * 3;
 
-            if (data.length >= length) {
+            if (buffer.remaining() >= length) {
 
-                int pieceIndex = getInt(data, 0);
-                int blockOffset = getInt(data, Integer.BYTES);
-                int blockLength = getInt(data, Integer.BYTES * 2);
+                int pieceIndex = Objects.requireNonNull(readInt(buffer));
+                int blockOffset = Objects.requireNonNull(readInt(buffer));
+                int blockLength = Objects.requireNonNull(readInt(buffer));
 
                 context.setMessage(new Cancel(pieceIndex, blockOffset, blockLength));
                 consumed = length;
@@ -530,22 +568,27 @@ public class StandardBittorrentProtocol implements Protocol {
         }
 
         @Override
-        public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
-            return decodeBitfield(context, data, declaredPayloadLength);
+        public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
+            return decodeBitfield(context, buffer, declaredPayloadLength);
         }
 
         @Override
-        public byte[] encodePayload(Bitfield message) {
-            return message.getBitfield();
+        public boolean encodePayload(Bitfield message, ByteBuffer buffer) {
+            if (buffer.remaining() < message.getBitfield().length) {
+                return false;
+            }
+            buffer.put(message.getBitfield());
+            return true;
         }
 
         // bitfield: <len=0001+X><id=5><bitfield>
-        private static int decodeBitfield(MessageContext context, byte[] data, int length) {
+        private static int decodeBitfield(MessageContext context, ByteBuffer buffer, int length) {
 
             int consumed = 0;
 
-            if (data.length >= length) {
-                byte[] bitfield = data.length > length? Arrays.copyOfRange(data, 0, length) : data;
+            if (buffer.remaining() >= length) {
+                byte[] bitfield = new byte[length];
+                buffer.get(bitfield);
                 context.setMessage(new Bitfield(bitfield));
                 consumed = length;
             }
@@ -561,17 +604,17 @@ public class StandardBittorrentProtocol implements Protocol {
         }
 
         @Override
-        public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
-            return decodePiece(context, data, declaredPayloadLength);
+        public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
+            return decodePiece(context, buffer, declaredPayloadLength);
         }
 
         @Override
-        public byte[] encodePayload(Piece message) {
-            return piece(message.getPieceIndex(), message.getOffset(), message.getBlock());
+        public boolean encodePayload(Piece message, ByteBuffer buffer) {
+            return writePiece(message.getPieceIndex(), message.getOffset(), message.getBlock(), buffer);
         }
 
         // piece: <len=0009+X><id=7><index><begin><block>
-        private static byte[] piece(int pieceIndex, int offset, byte[] block) {
+        private static boolean writePiece(int pieceIndex, int offset, byte[] block, ByteBuffer buffer) {
 
             if (pieceIndex < 0 || offset < 0) {
                 throw new InvalidMessageException("Invalid arguments: pieceIndex (" + pieceIndex
@@ -580,24 +623,27 @@ public class StandardBittorrentProtocol implements Protocol {
             if (block.length == 0) {
                 throw new InvalidMessageException("Invalid block: empty");
             }
+            if (buffer.remaining() < Integer.BYTES * 2 + block.length) {
+                return false;
+            }
 
-            int messageLength = Integer.BYTES * 2 + block.length;
-            byte[] message = new byte[messageLength];
-            System.arraycopy(getIntBytes(pieceIndex), 0, message, 0, Integer.BYTES);
-            System.arraycopy(getIntBytes(offset), 0, message, Integer.BYTES, Integer.BYTES);
-            System.arraycopy(block, 0, message, Integer.BYTES * 2, block.length);
-            return message;
+            buffer.putInt(pieceIndex);
+            buffer.putInt(offset);
+            buffer.put(block);
+
+            return true;
         }
 
-        private static int decodePiece(MessageContext context, byte[] data, int length) {
+        private static int decodePiece(MessageContext context, ByteBuffer buffer, int length) {
 
             int consumed = 0;
 
-            if (data.length >= length) {
+            if (buffer.remaining() >= length) {
 
-                int pieceIndex = getInt(data, 0);
-                int blockOffset = getInt(data, Integer.BYTES);
-                byte[] block = Arrays.copyOfRange(data, Integer.BYTES * 2, length);
+                int pieceIndex = Objects.requireNonNull(readInt(buffer));
+                int blockOffset = Objects.requireNonNull(readInt(buffer));
+                byte[] block = new byte[length - Integer.BYTES * 2];
+                buffer.get(block);
 
                 context.setMessage(new Piece(pieceIndex, blockOffset, block));
                 consumed = length;

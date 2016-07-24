@@ -7,7 +7,7 @@ import bt.protocol.MessageContext;
 import bt.protocol.MessageHandler;
 import com.google.inject.Inject;
 
-import java.util.Arrays;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -64,11 +64,11 @@ public class ExtendedProtocol implements MessageHandler<Message> {
     }
 
     @Override
-    public Class<? extends Message> readMessageType(byte[] data) {
-        if (data.length == 0) {
+    public Class<? extends Message> readMessageType(ByteBuffer buffer) {
+        if (!buffer.hasRemaining()) {
             return null;
         }
-        Integer messageTypeId = (int) data[0];
+        Integer messageTypeId = (int) buffer.get();
         if (messageTypeId == HANDSHAKE_TYPE_ID) {
             return ExtendedHandshake.class;
         }
@@ -80,22 +80,21 @@ public class ExtendedProtocol implements MessageHandler<Message> {
         }
         messageType = uniqueTypes.get(typeName);
         if (messageType == null) {
-            messageType = handlersByTypeName.get(typeName).readMessageType(Arrays.copyOfRange(data, 1, data.length));
+            messageType = handlersByTypeName.get(typeName).readMessageType(buffer);
         }
         return messageType;
     }
 
     @Override
-    public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
+    public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
 
-        if (data.length < declaredPayloadLength) {
+        if (buffer.remaining() < declaredPayloadLength) {
             // not ready yet
             return 0;
         }
 
-        int typeId = data[0];
+        int typeId = buffer.get();
         // TODO: start parsing at non-zero index (skip the beginning) and stop parsing when complete (ignoring the trailing bytes)
-        data = Arrays.copyOfRange(data, 1, declaredPayloadLength);
 
         MessageHandler<?> handler;
         if (typeId == HANDSHAKE_TYPE_ID) {
@@ -107,7 +106,7 @@ public class ExtendedProtocol implements MessageHandler<Message> {
             }
             handler = handlersByTypeName.get(extendedType);
         }
-        int consumed = handler.decodePayload(context, data, declaredPayloadLength - 1);
+        int consumed = handler.decodePayload(context, buffer, declaredPayloadLength - 1);
         if (consumed > 0) {
             consumed += 1; // type ID was trimmed when passing data to handler
         }
@@ -115,23 +114,30 @@ public class ExtendedProtocol implements MessageHandler<Message> {
     }
 
     @Override
-    public byte[] encodePayload(Message message) {
+    public boolean encodePayload(Message message, ByteBuffer buffer) {
         Class<? extends Message> messageType = message.getClass();
-        return doEncode(message, messageType);
+        return doEncode(message, messageType, buffer);
     }
 
     @SuppressWarnings("unchecked")
-    private <T extends Message> byte[] doEncode(Message message, Class<T> messageType) {
-        byte[] payload = ((MessageHandler<T>) handlers.get(messageType)).encodePayload((T) message);
-        byte[] bytes = new byte[payload.length + 1];
+    private <T extends Message> boolean doEncode(Message message, Class<T> messageType, ByteBuffer buffer) {
 
-        if (ExtendedHandshake.class.equals(messageType)) {
-            bytes[0] = HANDSHAKE_TYPE_ID;
-        } else {
-            bytes[0] = messageTypeMapping.getIdForTypeName(messageTypeMapping.getTypeNameForJavaType(messageType)).byteValue();
+        if (!buffer.hasRemaining()) {
+            return false;
         }
 
-        System.arraycopy(payload, 0, bytes, 1, payload.length);
-        return bytes;
+        int begin = buffer.position();
+        if (ExtendedHandshake.class.equals(messageType)) {
+            buffer.put((byte) HANDSHAKE_TYPE_ID);
+        } else {
+            buffer.put(messageTypeMapping.getIdForTypeName(
+                    messageTypeMapping.getTypeNameForJavaType(messageType)).byteValue());
+        }
+
+        boolean encoded = ((MessageHandler<T>) handlers.get(messageType)).encodePayload((T) message, buffer);
+        if (!encoded) {
+            buffer.position(begin);
+        }
+        return encoded;
     }
 }

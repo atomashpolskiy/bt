@@ -1,5 +1,6 @@
 package bt.net;
 
+import bt.Constants;
 import bt.protocol.Bitfield;
 import bt.protocol.Handshake;
 import bt.protocol.InvalidMessageException;
@@ -21,6 +22,7 @@ import java.nio.channels.spi.SelectorProvider;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 public class PeerConnectionTest extends ProtocolTest {
@@ -105,7 +107,9 @@ public class PeerConnectionTest extends ProtocolTest {
         }
 
         public void writeMessage(Message message) throws InvalidMessageException, IOException {
-            ByteBuffer buffer = ByteBuffer.wrap(protocol.toByteArray(message));
+            ByteBuffer buffer = ByteBuffer.allocate(Constants.MAX_BLOCK_SIZE);
+            assertTrue("Protocol failed to serialize message", protocol.toByteArray(message, buffer));
+            buffer.flip();
             synchronized (lock) {
                 clientSocket.write(buffer);
             }

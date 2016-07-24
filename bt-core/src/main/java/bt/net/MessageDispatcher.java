@@ -84,7 +84,7 @@ public class MessageDispatcher {
                             try {
                                 message = connection.readMessageNow();
                             } catch (Exception e) {
-                                LOGGER.error("Error when reading message", e);
+                                LOGGER.error("Error when reading message from peer: " + peer, e);
                                 iter.remove();
                                 suppliers.remove(peer);
                             }

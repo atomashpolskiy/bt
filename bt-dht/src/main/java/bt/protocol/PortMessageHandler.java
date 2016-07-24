@@ -2,10 +2,11 @@ package bt.protocol;
 
 import bt.BtException;
 
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Objects;
 
-import static bt.protocol.Protocols.getShort;
 import static bt.protocol.Protocols.getShortBytes;
 import static bt.protocol.Protocols.verifyPayloadLength;
 
@@ -27,36 +28,41 @@ public class PortMessageHandler implements MessageHandler<Port> {
     }
 
     @Override
-    public Class<? extends Port> readMessageType(byte[] data) {
+    public Class<? extends Port> readMessageType(ByteBuffer buffer) {
         return Port.class;
     }
 
     @Override
-    public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
+    public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
         verifyPayloadLength(Port.class, EXPECTED_PAYLOAD_LENGTH, declaredPayloadLength);
-        return decodePort(context, data);
+        return decodePort(context, buffer);
     }
 
     @Override
-    public byte[] encodePayload(Port message) {
-        return port(message.getPort());
+    public boolean encodePayload(Port message, ByteBuffer buffer) {
+        return writePort(message.getPort(), buffer);
     }
 
     // port: <len=0003><id=9><listen-port>
-    private static byte[] port(int port) {
+    private static boolean writePort(int port, ByteBuffer buffer) {
         if (port < 0 || port > Short.MAX_VALUE * 2 + 1) {
             throw new BtException("Invalid port: " + port);
         }
-        return getShortBytes(port);
+        if (buffer.remaining() < Short.BYTES) {
+            return false;
+        }
+
+        buffer.put(getShortBytes(port));
+        return true;
     }
 
-    private static int decodePort(MessageContext context, byte[] data) throws InvalidMessageException {
+    private static int decodePort(MessageContext context, ByteBuffer buffer) throws InvalidMessageException {
 
         int consumed = 0;
         int length = Short.BYTES;
 
-        if (data.length >= length) {
-            int port = getShort(data, 0);
+        if (buffer.remaining() >= length) {
+            int port = Objects.requireNonNull(Protocols.readShort(buffer));
             context.setMessage(new Port(port));
             consumed = length;
         }

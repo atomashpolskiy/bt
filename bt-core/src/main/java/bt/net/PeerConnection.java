@@ -1,8 +1,5 @@
 package bt.net;
 
-import bt.BtException;
-import bt.Constants;
-import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.MessageContext;
 import bt.protocol.Protocol;
@@ -10,9 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
@@ -23,30 +18,27 @@ public class PeerConnection implements IPeerConnection {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnection.class);
 
     private static final long WAIT_BETWEEN_READS = 100L;
-    private static final int BUFFER_CAPACITY = Constants.MAX_BLOCK_SIZE * 2;
 
     private Object tag;
-    private Protocol protocol;
     private Peer remotePeer;
 
     private SocketChannel channel;
-    private ByteBuffer in;
+    private PeerConnectionMessageReader messageReader;
+    private PeerConnectionMessageWriter messageWriter;
 
     private volatile boolean closed;
     private AtomicLong lastActive;
-
-    private byte[] readBytes;
 
     private final ReentrantLock readLock;
     private final Condition condition;
 
     PeerConnection(Protocol protocol, Peer remotePeer, SocketChannel channel) {
 
-        this.protocol = protocol;
         this.remotePeer = remotePeer;
         this.channel = channel;
 
-        in = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
+        messageReader = new PeerConnectionMessageReader(protocol, channel, () -> new MessageContext(remotePeer));
+        messageWriter = new PeerConnectionMessageWriter(protocol, channel);
 
         lastActive = new AtomicLong();
 
@@ -65,75 +57,11 @@ public class PeerConnection implements IPeerConnection {
 
     @Override
     public synchronized Message readMessageNow() {
-
-        try {
-            if (readBytes != null && readBytes.length > 0) {
-                Message message = readFromBuffer();
-                if (message != null) {
-                    return message;
-                }
-            }
-
-            int read = channel.read(in);
-            if (read > 0) {
-
-                updateLastActive();
-
-                in.rewind();
-
-                // first bytes arrived for this connection
-                if (readBytes == null) {
-                    readBytes = new byte[read];
-                    in.get(readBytes);
-
-                } else {
-                    // preserve leftovers from the previous reads if there are any
-                    // and append fresh data to the end of the buffer
-                    int offset = readBytes.length;
-                    byte[] bytes = readBytes;
-                    readBytes = new byte[offset + read];
-                    System.arraycopy(bytes, 0, readBytes, 0, bytes.length);
-                    in.get(readBytes, offset, read);
-                }
-
-                in.clear();
-
-                return readFromBuffer();
-            }
-        } catch (InvalidMessageException | IOException e) {
-            throw new BtException("Unexpected error in connection for peer: " + remotePeer, e);
+        Message message = messageReader.readMessage();
+        if (message != null) {
+            updateLastActive();
         }
-
-        return null;
-    }
-
-    private Message readFromBuffer() throws InvalidMessageException {
-
-        Class<? extends Message> messageType = protocol.readMessageType(readBytes);
-        if (messageType == null) {
-            // protocol failed to determine the message type
-            // due to the insufficient data; exiting...
-            return null;
-
-        } else {
-            MessageContext context = new MessageContext(remotePeer);
-            int consumed = protocol.fromByteArray(context, readBytes);
-            if (context.getMessage() == null) {
-                // protocol failed to read the message fully
-                // because some data hasn't arrived yet; exiting...
-                return null;
-            } else {
-                if (consumed > 0) {
-                    // remove consumed bytes from the beginning of the buffer
-                    readBytes = Arrays.copyOfRange(readBytes, consumed, readBytes.length);
-                }
-                // and return the message
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Received message from peer: " + remotePeer + " -- " + context.getMessage());
-                }
-                return context.getMessage();
-            }
-        }
+        return message;
     }
 
     @Override
@@ -179,20 +107,11 @@ public class PeerConnection implements IPeerConnection {
 
     @Override
     public synchronized void postMessage(Message message) {
-
         updateLastActive();
-
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Sending message to peer: " + remotePeer + " -- " + message);
         }
-
-        try {
-            channel.write(ByteBuffer.wrap(protocol.toByteArray(message)));
-        } catch (IOException e) {
-            throw new BtException("Unexpected error in connection for peer: " + remotePeer, e);
-        } catch (InvalidMessageException e) {
-            throw new BtException("Failed to serialize outgoing message for peer: " + remotePeer + " -- " + message, e);
-        }
+        messageWriter.writeMessage(message);
     }
 
     private void updateLastActive() {

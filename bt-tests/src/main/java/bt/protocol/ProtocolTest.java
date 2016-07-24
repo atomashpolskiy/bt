@@ -2,6 +2,7 @@ package bt.protocol;
 
 import bt.net.Peer;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -33,9 +34,13 @@ public abstract class ProtocolTest {
     protected void assertInsufficientDataAndNothingConsumed(Class<? extends Message> expectedType,
                                                                 byte[] data) throws Exception {
 
+        ByteBuffer buffer = ByteBuffer.wrap(data).asReadOnlyBuffer();
+        buffer.mark();
+
         byte[] copy = Arrays.copyOf(data, data.length);
 
-        Class<? extends Message> actualType = protocol.readMessageType(data);
+        Class<? extends Message> actualType = protocol.readMessageType(buffer);
+        buffer.reset();
         if (expectedType == null) {
             assertNull(actualType);
         } else {
@@ -43,7 +48,8 @@ public abstract class ProtocolTest {
         }
 
         MessageContext context = createContext();
-        int consumed = protocol.fromByteArray(context, data);
+        int consumed = protocol.fromByteArray(context, buffer);
+        buffer.reset();
 
         // check that buffer is not changed
         assertArrayEquals(copy, data);
@@ -57,22 +63,30 @@ public abstract class ProtocolTest {
     protected void assertDecodedAndHasAttributes(Class<? extends Message> expectedType, int messageLength,
                                                Message expectedMessage, byte[] data) throws Exception {
 
-        byte[] copy = Arrays.copyOf(data, data.length);
+        ByteBuffer in = ByteBuffer.wrap(data).asReadOnlyBuffer();
+        in.mark();
 
-        assertEquals(expectedType, protocol.readMessageType(data));
+        assertEquals(expectedType, protocol.readMessageType(in));
+        in.reset();
 
         MessageContext context = createContext();
-        int consumed = protocol.fromByteArray(context, data);
-
-        // check that buffer is not changed
-        assertArrayEquals(copy, data);
+        int consumed = protocol.fromByteArray(context, in);
+        in.reset();
 
         assertEquals(messageLength, consumed);
 
         Message decodedMessage = context.getMessage();
         assertMessageEquals(expectedMessage, decodedMessage);
 
-        byte[] encoded = protocol.toByteArray(decodedMessage);
+        ByteBuffer out = ByteBuffer.allocate(messageLength);
+        out.mark();
+        assertTrue("Protocol failed to serialize message of length: " + messageLength,
+                protocol.toByteArray(decodedMessage, out));
+        assertEquals(messageLength, out.position());
+
+        byte[] encoded = new byte[messageLength];
+        out.reset();
+        out.get(encoded);
 
         if (data.length > messageLength) {
             data = Arrays.copyOfRange(data, 0, messageLength);
@@ -148,6 +162,9 @@ public abstract class ProtocolTest {
     protected void testProtocol_InvalidLength(Class<? extends Message> type, int declaredLength, int expectedLength,
                                               byte[] data) throws Exception {
 
+        ByteBuffer buffer = ByteBuffer.wrap(data).asReadOnlyBuffer();
+        buffer.mark();
+
         int payloadLength = declaredLength - 1;
 
         String expectedMessage = "Unexpected payload length for " + type.getSimpleName() + ": " + payloadLength +
@@ -155,10 +172,11 @@ public abstract class ProtocolTest {
 
         InvalidMessageException e = null;
         try {
-            protocol.fromByteArray(createContext(), data);
+            protocol.fromByteArray(createContext(), buffer);
         } catch (InvalidMessageException e1) {
             e = e1;
         }
+        buffer.reset();
 
         assertNotNull(e);
         assertTrue("Expected message: {" + expectedMessage + "}, actual was: {" + e.getMessage() + "}",

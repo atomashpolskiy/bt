@@ -2,6 +2,8 @@ package bt.protocol;
 
 import bt.BtException;
 
+import java.nio.ByteBuffer;
+
 public class Protocols {
 
     //-------------------------//
@@ -31,6 +33,16 @@ public class Protocols {
                 + ((bytes[offset + 2] << 8) & 0x0000FF00) + (bytes[offset + 3] & 0x000000FF);
     }
 
+    public static Integer readInt(ByteBuffer buffer) {
+
+        if (buffer.remaining() < Integer.BYTES) {
+            return null;
+        }
+        // TODO: switch to ByteBuffer.getInt
+        return ((buffer.get() << 24) & 0xFF000000) + ((buffer.get() << 16) & 0x00FF0000)
+                + ((buffer.get() << 8) & 0x0000FF00) + (buffer.get() & 0x000000FF);
+    }
+
     /**
      * {@code bytes.length} must be at least {@code offset + java.lang.Short.BYTES}
      */
@@ -43,6 +55,15 @@ public class Protocols {
         // intentionally do not check bytes.length,
         // just take the first 2 bytes (starting with the offset)
         return ((bytes[offset] << 8) & 0xFF00) + (bytes[offset + 1] & 0x00FF);
+    }
+
+    public static Integer readShort(ByteBuffer buffer) {
+
+        if (buffer.remaining() < Integer.BYTES) {
+            return null;
+        }
+        // TODO: switch to ByteBuffer.getShort
+        return ((buffer.get() << 8) & 0xFF00) + (buffer.get() & 0x00FF);
     }
 
     public static void verifyPayloadLength(Class<? extends Message> type, int expectedLength, int actualLength) {

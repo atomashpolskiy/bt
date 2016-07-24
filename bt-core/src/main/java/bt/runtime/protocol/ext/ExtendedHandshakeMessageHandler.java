@@ -12,6 +12,7 @@ import bt.protocol.MessageContext;
 import bt.protocol.MessageHandler;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,7 +36,7 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
     }
 
     @Override
-    public Class<? extends ExtendedHandshake> readMessageType(byte[] data) {
+    public Class<? extends ExtendedHandshake> readMessageType(ByteBuffer buffer) {
         return ExtendedHandshake.class;
     }
 
@@ -73,9 +74,11 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
 
 
     @Override
-    public int decodePayload(MessageContext context, byte[] data, int declaredPayloadLength) {
+    public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
 
-        try (BEParser parser = new BEParser(data)) {
+        byte[] payload = new byte[declaredPayloadLength];
+        buffer.get(payload);
+        try (BEParser parser = new BEParser(payload)) {
             BEMap message = parser.readMap();
 
             Map<String, BEObject<?>> value = message.getValue();
@@ -91,9 +94,17 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
     }
 
     @Override
-    public byte[] encodePayload(ExtendedHandshake message) {
+    public boolean encodePayload(ExtendedHandshake message, ByteBuffer buffer) {
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         new BEMap(null, message.getData()).writeTo(out);
-        return out.toByteArray();
+
+        byte[] payload = out.toByteArray();
+        if (buffer.remaining() < payload.length) {
+            return false;
+        }
+
+        buffer.put(payload);
+        return true;
     }
 }
