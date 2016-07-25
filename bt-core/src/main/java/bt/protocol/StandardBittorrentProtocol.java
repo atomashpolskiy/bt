@@ -36,7 +36,6 @@ public class StandardBittorrentProtocol implements Protocol {
     private static final byte[] HANDSHAKE_PREFIX;
     private static final int HANDSHAKE_RESERVED_OFFSET;
     private static final int HANDSHAKE_RESERVED_LENGTH = 8;
-    private static final int HANDSHAKE_DATA_OFFSET;
 
     private static final byte[] KEEPALIVE = new byte[]{0,0,0,0};
 
@@ -50,8 +49,6 @@ public class StandardBittorrentProtocol implements Protocol {
         HANDSHAKE_PREFIX = new byte[HANDSHAKE_RESERVED_OFFSET];
         HANDSHAKE_PREFIX[0] = (byte) protocolNameLength;
         System.arraycopy(PROTOCOL_NAME_BYTES, 0, HANDSHAKE_PREFIX, prefixLength, protocolNameLength);
-
-        HANDSHAKE_DATA_OFFSET = HANDSHAKE_PREFIX.length + HANDSHAKE_RESERVED_LENGTH;
     }
 
     private Map<Integer, MessageHandler<?>> handlers;

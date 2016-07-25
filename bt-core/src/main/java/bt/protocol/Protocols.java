@@ -34,13 +34,10 @@ public class Protocols {
     }
 
     public static Integer readInt(ByteBuffer buffer) {
-
         if (buffer.remaining() < Integer.BYTES) {
             return null;
         }
-        // TODO: switch to ByteBuffer.getInt
-        return ((buffer.get() << 24) & 0xFF000000) + ((buffer.get() << 16) & 0x00FF0000)
-                + ((buffer.get() << 8) & 0x0000FF00) + (buffer.get() & 0x000000FF);
+        return buffer.getInt();
     }
 
     /**
