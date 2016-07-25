@@ -14,30 +14,30 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ExtendedProtocol extends BaseMessageHandler<Message> {
+public class ExtendedProtocol extends BaseMessageHandler<ExtendedMessage> {
 
     public static final int EXTENDED_MESSAGE_ID = 20;
     private static final int HANDSHAKE_TYPE_ID = 0;
 
-    private MessageHandler<?> extendedHandshakeHandler;
+    private MessageHandler<ExtendedHandshake> extendedHandshakeHandler;
 
-    private Map<Class<? extends Message>, MessageHandler<?>> handlers;
-    private Map<String, Class<? extends Message>> uniqueTypes;
-    private Map<String, MessageHandler<?>> handlersByTypeName;
+    private Map<Class<? extends ExtendedMessage>, MessageHandler<? extends ExtendedMessage>> handlers;
+    private Map<String, Class<? extends ExtendedMessage>> uniqueTypes;
+    private Map<String, MessageHandler<? extends ExtendedMessage>> handlersByTypeName;
 
     private ExtendedMessageTypeMapping messageTypeMapping;
 
     @Inject
     public ExtendedProtocol(ExtendedMessageTypeMapping messageTypeMapping,
-                            Map<String, MessageHandler<?>> handlersByTypeName) {
+                            Map<String, MessageHandler<? extends ExtendedMessage>> handlersByTypeName) {
 
         this.messageTypeMapping = messageTypeMapping;
 
-        Map<Class<? extends Message>, MessageHandler<?>> handlers = new HashMap<>();
+        Map<Class<? extends ExtendedMessage>, MessageHandler<? extends ExtendedMessage>> handlers = new HashMap<>();
         extendedHandshakeHandler = new ExtendedHandshakeMessageHandler();
         handlers.put(ExtendedHandshake.class, extendedHandshakeHandler);
 
-        Map<String, Class<? extends Message>> uniqueTypes = new HashMap<>();
+        Map<String, Class<? extends ExtendedMessage>> uniqueTypes = new HashMap<>();
         handlersByTypeName.forEach((typeName, handler) -> {
 
             if (handler.getSupportedTypes().isEmpty()) {
@@ -60,12 +60,12 @@ public class ExtendedProtocol extends BaseMessageHandler<Message> {
     }
 
     @Override
-    public Collection<Class<? extends Message>> getSupportedTypes() {
+    public Collection<Class<? extends ExtendedMessage>> getSupportedTypes() {
         return handlers.keySet();
     }
 
     @Override
-    public Class<? extends Message> readMessageType(ByteBuffer buffer) {
+    public Class<? extends ExtendedMessage> readMessageType(ByteBuffer buffer) {
         if (!buffer.hasRemaining()) {
             return null;
         }
@@ -74,7 +74,7 @@ public class ExtendedProtocol extends BaseMessageHandler<Message> {
             return ExtendedHandshake.class;
         }
 
-        Class<? extends Message> messageType;
+        Class<? extends ExtendedMessage> messageType;
         String typeName = messageTypeMapping.getTypeNameForId(messageTypeId);
         if (typeName == null) {
             throw new InvalidMessageException("Unknown message type ID: " + messageTypeId);
@@ -108,6 +108,12 @@ public class ExtendedProtocol extends BaseMessageHandler<Message> {
         return consumed;
     }
 
+    @Override
+    public boolean doEncode(ExtendedMessage message, ByteBuffer buffer) {
+        Class<? extends Message> messageType = message.getClass();
+        return doEncode(message, messageType, buffer);
+    }
+
     @SuppressWarnings("unchecked")
     private <T extends Message> boolean doEncode(Message message, Class<T> messageType, ByteBuffer buffer) {
 
@@ -128,11 +134,5 @@ public class ExtendedProtocol extends BaseMessageHandler<Message> {
             buffer.position(begin);
         }
         return encoded;
-    }
-
-    @Override
-    public boolean doEncode(Message message, ByteBuffer buffer) {
-        Class<? extends Message> messageType = message.getClass();
-        return doEncode(message, messageType, buffer);
     }
 }

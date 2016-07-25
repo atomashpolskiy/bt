@@ -21,6 +21,7 @@ import bt.runtime.net.ext.ExtendedHandshakeHandler;
 import bt.runtime.protocol.ext.AlphaSortedMessageTypeMapping;
 import bt.runtime.protocol.ext.ExtendedHandshake;
 import bt.runtime.protocol.ext.ExtendedHandshakeProvider;
+import bt.runtime.protocol.ext.ExtendedMessage;
 import bt.runtime.protocol.ext.ExtendedMessageTypeMapping;
 import bt.runtime.protocol.ext.ExtendedProtocol;
 import bt.runtime.protocol.ext.pex.PeerExchangeMessageHandler;
@@ -67,7 +68,7 @@ public class BtRuntimeBuilder {
         return new BtRuntimeBuilder();
     }
 
-    private Map<String, MessageHandler<?>> extendedMessageHandlers;
+    private Map<String, MessageHandler<? extends ExtendedMessage>> extendedMessageHandlers;
     private List<BtAdapter> adapters;
 
     private BtRuntimeBuilder() {
@@ -79,7 +80,8 @@ public class BtRuntimeBuilder {
         adapter(new PeerExchangeAdapter());
     }
 
-    public BtRuntimeBuilder extendedMessageHandler(String messageTypeName, MessageHandler<?> handler) {
+    public BtRuntimeBuilder extendedMessageHandler(String messageTypeName,
+                                                   MessageHandler<? extends ExtendedMessage> handler) {
 
         Objects.requireNonNull(messageTypeName);
         Objects.requireNonNull(handler);
@@ -135,8 +137,9 @@ public class BtRuntimeBuilder {
 
             MapBinder<Integer, MessageHandler<?>> extraMessageHandlerMapBinder =
                         MapBinder.newMapBinder(binder, new TypeLiteral<Integer>(){}, new TypeLiteral<MessageHandler<?>>(){});
-            MapBinder<String, MessageHandler<?>> extendedMessageHandlerMapBinder =
-                        MapBinder.newMapBinder(binder, new TypeLiteral<String>(){}, new TypeLiteral<MessageHandler<?>>(){});
+            MapBinder<String, MessageHandler<? extends ExtendedMessage>> extendedMessageHandlerMapBinder =
+                        MapBinder.newMapBinder(binder, new TypeLiteral<String>(){},
+                                new TypeLiteral<MessageHandler<? extends ExtendedMessage>>(){});
             Multibinder<ConnectionHandler> extraConnectionHandlers = Multibinder.newSetBinder(binder, ConnectionHandler.class);
             Multibinder<HandshakeHandler> extraHandshakeHandlers = Multibinder.newSetBinder(binder, HandshakeHandler.class);
 

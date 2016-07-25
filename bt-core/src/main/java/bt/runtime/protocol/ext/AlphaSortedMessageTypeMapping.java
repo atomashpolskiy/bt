@@ -16,7 +16,7 @@ public class AlphaSortedMessageTypeMapping implements ExtendedMessageTypeMapping
     private Map<Class<?>, String> typeMap;
 
     @Inject
-    public AlphaSortedMessageTypeMapping(Map<String, MessageHandler<?>> handlersByTypeName) {
+    public AlphaSortedMessageTypeMapping(Map<String, MessageHandler<? extends ExtendedMessage>> handlersByTypeName) {
 
         typeMap = new HashMap<>();
 
