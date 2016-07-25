@@ -1,6 +1,6 @@
 package bt.runtime.protocol.ext;
 
-import bt.protocol.MessageHandler;
+import bt.protocol.handler.MessageHandler;
 import com.google.inject.Inject;
 
 import java.util.HashMap;

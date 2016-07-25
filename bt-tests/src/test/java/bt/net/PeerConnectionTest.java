@@ -46,7 +46,7 @@ public class PeerConnectionTest extends ProtocolTest {
 
     @Test
     public void testConnection() throws InvalidMessageException, IOException {
-        IPeerConnection connection = new PeerConnection(protocol, mock(Peer.class), clientChannel);
+        IPeerConnection connection = new PeerConnection(messageHandler, mock(Peer.class), clientChannel);
 
         Message message;
 
@@ -108,7 +108,7 @@ public class PeerConnectionTest extends ProtocolTest {
 
         public void writeMessage(Message message) throws InvalidMessageException, IOException {
             ByteBuffer buffer = ByteBuffer.allocate(Constants.MAX_BLOCK_SIZE);
-            assertTrue("Protocol failed to serialize message", protocol.toByteArray(message, buffer));
+            assertTrue("Protocol failed to serialize message", messageHandler.encode(message, buffer));
             buffer.flip();
             synchronized (lock) {
                 clientSocket.write(buffer);

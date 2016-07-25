@@ -2,7 +2,7 @@ package bt.net;
 
 import bt.protocol.Message;
 import bt.protocol.MessageContext;
-import bt.protocol.Protocol;
+import bt.protocol.handler.MessageHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,13 +32,13 @@ public class PeerConnection implements IPeerConnection {
     private final ReentrantLock readLock;
     private final Condition condition;
 
-    PeerConnection(Protocol protocol, Peer remotePeer, SocketChannel channel) {
+    PeerConnection(MessageHandler<Message> messageHandler, Peer remotePeer, SocketChannel channel) {
 
         this.remotePeer = remotePeer;
         this.channel = channel;
 
-        messageReader = new PeerConnectionMessageReader(protocol, channel, () -> new MessageContext(remotePeer));
-        messageWriter = new PeerConnectionMessageWriter(protocol, channel);
+        messageReader = new PeerConnectionMessageReader(messageHandler, channel, () -> new MessageContext(remotePeer));
+        messageWriter = new PeerConnectionMessageWriter(messageHandler, channel);
 
         lastActive = new AtomicLong();
 

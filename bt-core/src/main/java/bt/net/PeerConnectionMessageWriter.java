@@ -3,7 +3,7 @@ package bt.net;
 import bt.BtException;
 import bt.Constants;
 import bt.protocol.Message;
-import bt.protocol.Protocol;
+import bt.protocol.handler.MessageHandler;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -14,12 +14,12 @@ class PeerConnectionMessageWriter {
     private static final int BUFFER_CAPACITY = Constants.MAX_BLOCK_SIZE * 2;
     private static final int WRITE_ATTEMPTS = 10;
 
-    private Protocol protocol;
+    private MessageHandler<Message> messageHandler;
     private SocketChannel channel;
     private ByteBuffer buffer;
 
-    PeerConnectionMessageWriter(Protocol protocol, SocketChannel channel) {
-        this.protocol = protocol;
+    PeerConnectionMessageWriter(MessageHandler<Message> messageHandler, SocketChannel channel) {
+        this.messageHandler = messageHandler;
         this.channel = channel;
         buffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
     }
@@ -27,11 +27,11 @@ class PeerConnectionMessageWriter {
     void writeMessage(Message message) {
 
         int begin = buffer.position();
-        if (!protocol.toByteArray(message, buffer)) {
+        if (!messageHandler.encode(message, buffer)) {
             buffer.position(begin);
             buffer.compact();
             begin = 0;
-            if (!protocol.toByteArray(message, buffer)) {
+            if (!messageHandler.encode(message, buffer)) {
                 throw new BtException("Insufficient space in buffer for message: " + message);
             }
         }

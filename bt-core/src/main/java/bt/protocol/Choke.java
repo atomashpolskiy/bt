@@ -1,6 +1,6 @@
 package bt.protocol;
 
-public class Choke implements Message {
+public final class Choke implements Message {
 
     private Choke() {
     }
@@ -14,5 +14,10 @@ public class Choke implements Message {
     @Override
     public String toString() {
         return "[" + this.getClass().getSimpleName() + "]";
+    }
+
+    @Override
+    public Integer getMessageId() {
+        return StandardBittorrentProtocol.CHOKE_ID;
     }
 }

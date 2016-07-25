@@ -2,7 +2,7 @@ package bt.net;
 
 import bt.BtException;
 import bt.protocol.Message;
-import bt.protocol.Protocol;
+import bt.protocol.handler.MessageHandler;
 import bt.service.IConfigurationService;
 import bt.service.INetworkService;
 import bt.service.IPeerRegistry;
@@ -57,12 +57,12 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private ReentrantLock connectionLock;
 
     @Inject
-    public PeerConnectionPool(INetworkService networkService, Protocol protocol, IPeerRegistry peerRegistry,
+    public PeerConnectionPool(INetworkService networkService, MessageHandler<Message> messageHandler, IPeerRegistry peerRegistry,
                               IRuntimeLifecycleBinder lifecycleBinder, IConnectionHandlerFactory connectionHandlerFactory,
                               IConfigurationService configurationService) {
 
         SocketChannelFactory socketChannelFactory = new SocketChannelFactory(networkService);
-        this.connectionFactory = new PeerConnectionFactory(protocol, peerRegistry, socketChannelFactory);
+        this.connectionFactory = new PeerConnectionFactory(messageHandler, peerRegistry, socketChannelFactory);
 
         this.incomingConnectionHandler = connectionHandlerFactory.getIncomingHandler();
         this.configurationService = configurationService;

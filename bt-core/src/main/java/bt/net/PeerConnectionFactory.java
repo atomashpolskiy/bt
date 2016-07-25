@@ -1,6 +1,7 @@
 package bt.net;
 
-import bt.protocol.Protocol;
+import bt.protocol.Message;
+import bt.protocol.handler.MessageHandler;
 import bt.service.IPeerRegistry;
 
 import java.io.IOException;
@@ -10,12 +11,12 @@ import java.nio.channels.SocketChannel;
 
 public class PeerConnectionFactory {
 
-    private Protocol protocol;
+    private MessageHandler<Message> messageHandler;
     private SocketChannelFactory socketChannelFactory;
     private IPeerRegistry peerRegistry;
 
-    public PeerConnectionFactory(Protocol protocol, IPeerRegistry peerRegistry, SocketChannelFactory socketChannelFactory) {
-        this.protocol = protocol;
+    public PeerConnectionFactory(MessageHandler<Message> messageHandler, IPeerRegistry peerRegistry, SocketChannelFactory socketChannelFactory) {
+        this.messageHandler = messageHandler;
         this.peerRegistry = peerRegistry;
         this.socketChannelFactory = socketChannelFactory;
     }
@@ -23,7 +24,7 @@ public class PeerConnectionFactory {
     public PeerConnection createConnection(SocketChannel channel) throws IOException {
 
         Peer peer = getPeerForAddress((InetSocketAddress) channel.getRemoteAddress());
-        return new PeerConnection(protocol, peer, channel);
+        return new PeerConnection(messageHandler, peer, channel);
     }
 
     private Peer getPeerForAddress(InetSocketAddress address) {
@@ -46,6 +47,6 @@ public class PeerConnectionFactory {
             throw new IOException("Failed to create peer connection @ " + inetAddress + ":" + port, e);
         }
 
-        return new PeerConnection(protocol, peer, channel);
+        return new PeerConnection(messageHandler, peer, channel);
     }
 }

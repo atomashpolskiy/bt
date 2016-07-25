@@ -3,7 +3,7 @@ package bt.runtime.protocol.ext.pex;
 import bt.bencoding.BEParser;
 import bt.bencoding.model.BEMap;
 import bt.protocol.MessageContext;
-import bt.protocol.MessageHandler;
+import bt.protocol.handler.MessageHandler;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -29,9 +29,9 @@ public class PeerExchangeMessageHandler implements MessageHandler<PeerExchange> 
     }
 
     @Override
-    public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
+    public int decode(MessageContext context, ByteBuffer buffer) {
 
-        byte[] payload = new byte[declaredPayloadLength];
+        byte[] payload = new byte[buffer.remaining()];
         buffer.get(payload);
         try (BEParser parser = new BEParser(payload)) {
             BEMap messageContent = parser.readMap();
@@ -42,7 +42,7 @@ public class PeerExchangeMessageHandler implements MessageHandler<PeerExchange> 
     }
 
     @Override
-    public boolean encodePayload(PeerExchange message, ByteBuffer buffer) {
+    public boolean encode(PeerExchange message, ByteBuffer buffer) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         message.writeTo(bos);
 

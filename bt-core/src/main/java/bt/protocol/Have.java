@@ -1,6 +1,6 @@
 package bt.protocol;
 
-public class Have implements Message {
+public final class Have implements Message {
 
     private int pieceIndex;
 
@@ -20,5 +20,10 @@ public class Have implements Message {
     @Override
     public String toString() {
         return "[" + this.getClass().getSimpleName() + "] piece index {" + pieceIndex + "}";
+    }
+
+    @Override
+    public Integer getMessageId() {
+        return StandardBittorrentProtocol.HAVE_ID;
     }
 }

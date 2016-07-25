@@ -9,7 +9,7 @@ import bt.bencoding.model.BEObject;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.MessageContext;
-import bt.protocol.MessageHandler;
+import bt.protocol.handler.MessageHandler;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -71,12 +71,10 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
         return existing;
     }
 
-
-
     @Override
-    public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
+    public int decode(MessageContext context, ByteBuffer buffer) {
 
-        byte[] payload = new byte[declaredPayloadLength];
+        byte[] payload = new byte[buffer.remaining()];
         buffer.get(payload);
         try (BEParser parser = new BEParser(payload)) {
             BEMap message = parser.readMap();
@@ -94,7 +92,7 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
     }
 
     @Override
-    public boolean encodePayload(ExtendedHandshake message, ByteBuffer buffer) {
+    public boolean encode(ExtendedHandshake message, ByteBuffer buffer) {
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         new BEMap(null, message.getData()).writeTo(out);

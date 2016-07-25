@@ -1,6 +1,6 @@
 package bt.protocol;
 
-public class Cancel implements Message {
+public final class Cancel implements Message {
 
     private int pieceIndex;
     private int offset;
@@ -34,5 +34,10 @@ public class Cancel implements Message {
     public String toString() {
         return "[" + this.getClass().getSimpleName() + "] piece index {" + pieceIndex + "}, offset {" + offset +
                 "}, length {" + length + "}";
+    }
+
+    @Override
+    public Integer getMessageId() {
+        return StandardBittorrentProtocol.CANCEL_ID;
     }
 }

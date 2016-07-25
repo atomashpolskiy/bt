@@ -1,6 +1,7 @@
 package bt.protocol;
 
 import bt.net.Peer;
+import bt.protocol.handler.MessageHandler;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -17,14 +18,14 @@ import static org.mockito.Mockito.mock;
 
 public abstract class ProtocolTest {
 
-    protected final Protocol protocol;
+    protected final MessageHandler<Message> messageHandler;
 
     public ProtocolTest() {
-        this.protocol = new StandardBittorrentProtocol(Collections.emptyMap());
+        this.messageHandler = new StandardBittorrentProtocol(Collections.emptyMap());
     }
 
     public ProtocolTest(Map<Integer, MessageHandler<?>> extraHandlers) {
-        this.protocol = new StandardBittorrentProtocol(Objects.requireNonNull(extraHandlers));
+        this.messageHandler = new StandardBittorrentProtocol(Objects.requireNonNull(extraHandlers));
     }
     
     protected void assertInsufficientDataAndNothingConsumed(byte[] data) throws Exception {
@@ -39,7 +40,7 @@ public abstract class ProtocolTest {
 
         byte[] copy = Arrays.copyOf(data, data.length);
 
-        Class<? extends Message> actualType = protocol.readMessageType(buffer);
+        Class<? extends Message> actualType = messageHandler.readMessageType(buffer);
         buffer.reset();
         if (expectedType == null) {
             assertNull(actualType);
@@ -48,7 +49,7 @@ public abstract class ProtocolTest {
         }
 
         MessageContext context = createContext();
-        int consumed = protocol.fromByteArray(context, buffer);
+        int consumed = messageHandler.decode(context, buffer);
         buffer.reset();
 
         // check that buffer is not changed
@@ -66,11 +67,11 @@ public abstract class ProtocolTest {
         ByteBuffer in = ByteBuffer.wrap(data).asReadOnlyBuffer();
         in.mark();
 
-        assertEquals(expectedType, protocol.readMessageType(in));
+        assertEquals(expectedType, messageHandler.readMessageType(in));
         in.reset();
 
         MessageContext context = createContext();
-        int consumed = protocol.fromByteArray(context, in);
+        int consumed = messageHandler.decode(context, in);
         in.reset();
 
         assertEquals(messageLength, consumed);
@@ -81,7 +82,7 @@ public abstract class ProtocolTest {
         ByteBuffer out = ByteBuffer.allocate(messageLength);
         out.mark();
         assertTrue("Protocol failed to serialize message of length: " + messageLength,
-                protocol.toByteArray(decodedMessage, out));
+                messageHandler.encode(decodedMessage, out));
         assertEquals(messageLength, out.position());
 
         byte[] encoded = new byte[messageLength];
@@ -172,7 +173,7 @@ public abstract class ProtocolTest {
 
         InvalidMessageException e = null;
         try {
-            protocol.fromByteArray(createContext(), buffer);
+            messageHandler.decode(createContext(), buffer);
         } catch (InvalidMessageException e1) {
             e = e1;
         }

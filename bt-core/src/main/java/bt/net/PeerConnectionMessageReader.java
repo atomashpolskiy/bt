@@ -4,7 +4,7 @@ import bt.BtException;
 import bt.Constants;
 import bt.protocol.Message;
 import bt.protocol.MessageContext;
-import bt.protocol.Protocol;
+import bt.protocol.handler.MessageHandler;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -16,7 +16,7 @@ class PeerConnectionMessageReader {
 
     private static final int BUFFER_CAPACITY = Constants.MAX_BLOCK_SIZE * 2;
 
-    private Protocol protocol;
+    private MessageHandler<Message> messageHandler;
     private ReadableByteChannel channel;
     private ByteBuffer buffer, readOnlyBuffer;
     private int dataStartsAtIndex;
@@ -24,9 +24,10 @@ class PeerConnectionMessageReader {
     private Supplier<MessageContext> newContextSupplier;
     private MessageContext context;
 
-    PeerConnectionMessageReader(Protocol protocol, ReadableByteChannel channel, Supplier<MessageContext> newContextSupplier) {
+    PeerConnectionMessageReader(MessageHandler<Message> messageHandler, ReadableByteChannel channel,
+                                Supplier<MessageContext> newContextSupplier) {
 
-        this.protocol = protocol;
+        this.messageHandler = messageHandler;
         this.channel = channel;
 
         buffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
@@ -72,7 +73,7 @@ class PeerConnectionMessageReader {
         readOnlyBuffer.position(dataStartsAtIndex);
         readOnlyBuffer.limit(dataEndsAtIndex);
 
-        int consumed = protocol.fromByteArray(context, readOnlyBuffer);
+        int consumed = messageHandler.decode(context, readOnlyBuffer);
         if (consumed > 0) {
             if (dataEndsAtIndex - consumed < dataStartsAtIndex) {
                 throw new BtException("Unexpected amount of bytes consumed: " + consumed);

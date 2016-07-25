@@ -3,7 +3,7 @@ package bt.protocol;
 import bt.BtException;
 import bt.Constants;
 
-public class Handshake implements Message {
+public final class Handshake implements Message {
 
     private static final int UPPER_RESERVED_BOUND = 8 * 8 - 1;
 
@@ -51,5 +51,10 @@ public class Handshake implements Message {
     @Override
     public String toString() {
         return "[" + this.getClass().getSimpleName() + "]";
+    }
+
+    @Override
+    public Integer getMessageId() {
+        throw new UnsupportedOperationException();
     }
 }

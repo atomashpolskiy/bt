@@ -6,6 +6,10 @@ import java.nio.ByteBuffer;
 
 public class Protocols {
 
+    public static final int MESSAGE_LENGTH_PREFIX_SIZE = 4;
+    public static final int MESSAGE_TYPE_SIZE = 1;
+    public static final int MESSAGE_PREFIX_SIZE = MESSAGE_LENGTH_PREFIX_SIZE + MESSAGE_TYPE_SIZE;
+
     //-------------------------//
     //--- utility functions ---//
     //-------------------------//

@@ -1,6 +1,6 @@
 package bt.protocol;
 
-public class Unchoke implements Message {
+public final class Unchoke implements Message {
 
     private Unchoke() {
     }
@@ -14,5 +14,10 @@ public class Unchoke implements Message {
     @Override
     public String toString() {
         return "[" + this.getClass().getSimpleName() + "]";
+    }
+
+    @Override
+    public Integer getMessageId() {
+        return StandardBittorrentProtocol.UNCHOKE_ID;
     }
 }

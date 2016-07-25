@@ -1,6 +1,6 @@
 package bt.protocol;
 
-public class Bitfield implements Message {
+public final class Bitfield implements Message {
 
     private byte[] bitfield;
 
@@ -15,5 +15,10 @@ public class Bitfield implements Message {
     @Override
     public String toString() {
         return "[" + this.getClass().getSimpleName() + "] bitfield {" + bitfield.length + " bytes}";
+    }
+
+    @Override
+    public Integer getMessageId() {
+        return StandardBittorrentProtocol.BITFIELD_ID;
     }
 }

@@ -1,6 +1,6 @@
 package bt.protocol;
 
-public class Interested implements Message {
+public final class Interested implements Message {
 
     private Interested() {
     }
@@ -14,5 +14,10 @@ public class Interested implements Message {
     @Override
     public String toString() {
         return "[" + this.getClass().getSimpleName() + "]";
+    }
+
+    @Override
+    public Integer getMessageId() {
+        return StandardBittorrentProtocol.INTERESTED_ID;
     }
 }

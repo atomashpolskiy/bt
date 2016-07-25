@@ -1,6 +1,6 @@
 package bt.protocol;
 
-public class KeepAlive implements Message {
+public final class KeepAlive implements Message {
 
     private KeepAlive() {
     }
@@ -14,5 +14,10 @@ public class KeepAlive implements Message {
     @Override
     public String toString() {
         return "[" + this.getClass().getSimpleName() + "]";
+    }
+
+    @Override
+    public Integer getMessageId() {
+        throw new UnsupportedOperationException();
     }
 }

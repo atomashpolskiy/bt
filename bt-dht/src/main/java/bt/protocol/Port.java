@@ -1,6 +1,6 @@
 package bt.protocol;
 
-public class Port implements Message {
+public final class Port implements Message {
 
     private int port;
 
@@ -20,5 +20,10 @@ public class Port implements Message {
     @Override
     public String toString() {
         return "[" + this.getClass().getSimpleName() + "] port {" + port + "}";
+    }
+
+    @Override
+    public Integer getMessageId() {
+        return PortMessageHandler.PORT_ID;
     }
 }

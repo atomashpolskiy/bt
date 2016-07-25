@@ -1,10 +1,11 @@
 package bt.runtime.protocol.ext;
 
 import bt.BtException;
+import bt.protocol.handler.BaseMessageHandler;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.MessageContext;
-import bt.protocol.MessageHandler;
+import bt.protocol.handler.MessageHandler;
 import com.google.inject.Inject;
 
 import java.nio.ByteBuffer;
@@ -13,7 +14,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ExtendedProtocol implements MessageHandler<Message> {
+public class ExtendedProtocol extends BaseMessageHandler<Message> {
 
     public static final int EXTENDED_MESSAGE_ID = 20;
     private static final int HANDSHAKE_TYPE_ID = 0;
@@ -86,16 +87,9 @@ public class ExtendedProtocol implements MessageHandler<Message> {
     }
 
     @Override
-    public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
-
-        if (buffer.remaining() < declaredPayloadLength) {
-            // not ready yet
-            return 0;
-        }
+    public int doDecode(MessageContext context, ByteBuffer buffer) {
 
         int typeId = buffer.get();
-        // TODO: start parsing at non-zero index (skip the beginning) and stop parsing when complete (ignoring the trailing bytes)
-
         MessageHandler<?> handler;
         if (typeId == HANDSHAKE_TYPE_ID) {
             handler = extendedHandshakeHandler;
@@ -106,17 +100,12 @@ public class ExtendedProtocol implements MessageHandler<Message> {
             }
             handler = handlersByTypeName.get(extendedType);
         }
-        int consumed = handler.decodePayload(context, buffer, declaredPayloadLength - 1);
+
+        int consumed = handler.decode(context, buffer);
         if (consumed > 0) {
             consumed += 1; // type ID was trimmed when passing data to handler
         }
         return consumed;
-    }
-
-    @Override
-    public boolean encodePayload(Message message, ByteBuffer buffer) {
-        Class<? extends Message> messageType = message.getClass();
-        return doEncode(message, messageType, buffer);
     }
 
     @SuppressWarnings("unchecked")
@@ -134,10 +123,16 @@ public class ExtendedProtocol implements MessageHandler<Message> {
                     messageTypeMapping.getTypeNameForJavaType(messageType)).byteValue());
         }
 
-        boolean encoded = ((MessageHandler<T>) handlers.get(messageType)).encodePayload((T) message, buffer);
+        boolean encoded = ((MessageHandler<T>) handlers.get(messageType)).encode((T) message, buffer);
         if (!encoded) {
             buffer.position(begin);
         }
         return encoded;
+    }
+
+    @Override
+    public boolean doEncode(Message message, ByteBuffer buffer) {
+        Class<? extends Message> messageType = message.getClass();
+        return doEncode(message, messageType, buffer);
     }
 }

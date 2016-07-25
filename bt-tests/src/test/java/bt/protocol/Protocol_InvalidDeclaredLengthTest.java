@@ -4,13 +4,13 @@ import org.junit.Test;
 
 public class Protocol_InvalidDeclaredLengthTest extends ProtocolTest {
 
-    private byte[] CHOKE_INVALID_DATA = new byte[]{0,0,0,3,0};
+    private byte[] CHOKE_INVALID_DATA = new byte[]{0,0,0,3, StandardBittorrentProtocol.CHOKE_ID,1,2};
 
-    private byte[] UNCHOKE_INVALID_DATA = new byte[]{0,0,0,2,1};
+    private byte[] UNCHOKE_INVALID_DATA = new byte[]{0,0,0,2,StandardBittorrentProtocol.UNCHOKE_ID,1};
 
-    private byte[] INTERESTED_INVALID_DATA = new byte[]{0,0,0,4,2};
+    private byte[] INTERESTED_INVALID_DATA = new byte[]{0,0,0,4,StandardBittorrentProtocol.INTERESTED_ID,1,2,3};
 
-    private byte[] NOT_INTERESTED_INVALID_DATA = new byte[]{0,0,0,9,3};
+    private byte[] NOT_INTERESTED_INVALID_DATA = new byte[]{0,0,0,9,StandardBittorrentProtocol.NOT_INTERESTED_ID,1,2,3,4,5,6,7,8};
 
     @Test
     public void testProtocol_Choke_InvalidLength() throws Exception {

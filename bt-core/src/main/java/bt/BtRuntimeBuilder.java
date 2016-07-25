@@ -12,8 +12,8 @@ import bt.net.IPeerConnectionPool;
 import bt.net.PeerConnectionPool;
 import bt.protocol.HandshakeFactory;
 import bt.protocol.IHandshakeFactory;
-import bt.protocol.MessageHandler;
-import bt.protocol.Protocol;
+import bt.protocol.Message;
+import bt.protocol.handler.MessageHandler;
 import bt.protocol.StandardBittorrentProtocol;
 import bt.runtime.PeerExchangeAdapter;
 import bt.runtime.net.ext.ExtendedConnectionHandler;
@@ -130,7 +130,8 @@ public class BtRuntimeBuilder {
             Multibinder<PeerSourceFactory> peerSources = Multibinder.newSetBinder(binder, PeerSourceFactory.class);
             peerSources.addBinding().to(TrackerPeerSourceFactory.class);
 
-            binder.bind(Protocol.class).to(StandardBittorrentProtocol.class).in(Singleton.class);
+            binder.bind(new TypeLiteral<MessageHandler<Message>>(){})
+                    .to(StandardBittorrentProtocol.class).in(Singleton.class);
 
             MapBinder<Integer, MessageHandler<?>> extraMessageHandlerMapBinder =
                         MapBinder.newMapBinder(binder, new TypeLiteral<Integer>(){}, new TypeLiteral<MessageHandler<?>>(){});

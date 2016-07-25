@@ -1,6 +1,7 @@
 package bt.protocol;
 
 import bt.BtException;
+import bt.protocol.handler.BaseMessageHandler;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
@@ -10,7 +11,7 @@ import java.util.Objects;
 import static bt.protocol.Protocols.getShortBytes;
 import static bt.protocol.Protocols.verifyPayloadLength;
 
-public class PortMessageHandler implements MessageHandler<Port> {
+public class PortMessageHandler extends BaseMessageHandler<Port> {
 
     public static final int PORT_ID = 9;
 
@@ -33,13 +34,13 @@ public class PortMessageHandler implements MessageHandler<Port> {
     }
 
     @Override
-    public int decodePayload(MessageContext context, ByteBuffer buffer, int declaredPayloadLength) {
-        verifyPayloadLength(Port.class, EXPECTED_PAYLOAD_LENGTH, declaredPayloadLength);
+    public int doDecode(MessageContext context, ByteBuffer buffer) {
+        verifyPayloadLength(Port.class, EXPECTED_PAYLOAD_LENGTH, buffer.remaining());
         return decodePort(context, buffer);
     }
 
     @Override
-    public boolean encodePayload(Port message, ByteBuffer buffer) {
+    public boolean doEncode(Port message, ByteBuffer buffer) {
         return writePort(message.getPort(), buffer);
     }
 

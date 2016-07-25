@@ -6,7 +6,7 @@ import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEString;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
-import bt.protocol.Message;
+import bt.runtime.protocol.ext.ExtendedMessage;
 import bt.tracker.CompactPeerInfo;
 import bt.tracker.CompactPeerInfo.AddressType;
 
@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.stream.Collectors;
 
-public class PeerExchange implements Message {
+public class PeerExchange extends ExtendedMessage {
 
     private static final String ADDED_IPV4_KEY = "added";
     private static final String ADDED_IPV6_KEY = "added6";
