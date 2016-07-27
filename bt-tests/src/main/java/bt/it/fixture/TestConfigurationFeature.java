@@ -8,7 +8,7 @@ public class TestConfigurationFeature implements BtTestRuntimeFeature {
 
     @Override
     public void contributeToRuntime(BtTestRuntimeConfiguration configuration, BtRuntimeBuilder runtimeBuilder) {
-        runtimeBuilder.adapter(binder ->
+        runtimeBuilder.module(binder ->
                 binder.bind(IConfigurationService.class).toInstance(
                             new ConfigurationService() {
                                 @Override

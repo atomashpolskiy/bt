@@ -26,8 +26,8 @@ public class PersonalizedThreadNamesFeature implements BtTestRuntimeFeature {
             }
         });
 
-        runtimeBuilder.adapter(binder -> {
-            binder.bind(ExecutorService.class).toInstance(executor);;
+        runtimeBuilder.module(binder -> {
+            binder.bind(ExecutorService.class).toInstance(executor);
         });
     }
 }

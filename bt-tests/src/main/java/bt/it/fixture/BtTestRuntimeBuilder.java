@@ -22,7 +22,7 @@ public class BtTestRuntimeBuilder {
         this.port = port;
 
         builder = BtRuntimeBuilder.builder();
-        builder.adapter(binder -> {
+        builder.module(binder -> {
             binder.bind(INetworkService.class).toInstance(new INetworkService() {
                 @Override
                 public InetAddress getInetAddress() {
@@ -59,9 +59,7 @@ public class BtTestRuntimeBuilder {
                     return port;
                 }
             };
-            features.forEach(feature -> {
-                feature.contributeToRuntime(configuration, builder);
-            });
+            features.forEach(feature -> feature.contributeToRuntime(configuration, builder));
         }
 
         return builder.build();

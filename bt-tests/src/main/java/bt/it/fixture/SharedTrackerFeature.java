@@ -24,7 +24,7 @@ public class SharedTrackerFeature implements BtTestRuntimeFeature {
     @Override
     public void contributeToRuntime(BtTestRuntimeConfiguration configuration, BtRuntimeBuilder runtimeBuilder) {
         Peer peer = new InetPeer(configuration.getAddress(), configuration.getPort());
-        runtimeBuilder.adapter(binder -> binder.bind(ITrackerService.class).toInstance(new PeerTrackerService(peer)));
+        runtimeBuilder.module(binder -> binder.bind(ITrackerService.class).toInstance(new PeerTrackerService(peer)));
     }
 
     private static class PeerTrackerService implements ITrackerService {
