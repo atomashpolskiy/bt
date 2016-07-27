@@ -3,7 +3,6 @@ package bt;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IRuntimeLifecycleBinder.LifecycleEvent;
 import bt.service.IShutdownService;
-import bt.torrent.TorrentHandle;
 import com.google.inject.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +17,7 @@ public class BtRuntime {
     private static final Logger LOGGER = LoggerFactory.getLogger(BtRuntime.class);
 
     private Injector injector;
-    private Set<TorrentHandle> knownHandles;
+    private Set<BtClient> knownHandles;
     private AtomicBoolean started;
     private final Object lock;
 
@@ -48,7 +47,7 @@ public class BtRuntime {
     public void shutdown() {
         if (started.compareAndSet(true, false)) {
             synchronized (lock) {
-                knownHandles.forEach(TorrentHandle::stop);
+                knownHandles.forEach(BtClient::stop);
                 runHooks(LifecycleEvent.SHUTDOWN, e -> LOGGER.error("Error on runtime shutdown", e));
                 service(IShutdownService.class).shutdownNow();
             }
@@ -67,7 +66,7 @@ public class BtRuntime {
                 });
     }
 
-    void registerTorrentHandle(TorrentHandle handle) {
+    void registerTorrentHandle(BtClient handle) {
         knownHandles.add(handle);
     }
 }

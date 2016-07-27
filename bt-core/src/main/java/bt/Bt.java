@@ -14,8 +14,7 @@ import bt.torrent.ITorrentDescriptor;
 import bt.torrent.PieceManager;
 import bt.torrent.PieceSelector;
 import bt.torrent.RarestFirstSelector;
-import bt.torrent.TorrentHandle;
-import bt.torrent.TorrentProcessingState;
+import bt.torrent.TorrentSessionState;
 import bt.torrent.TorrentSession;
 
 import java.net.URL;
@@ -29,89 +28,157 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class Bt {
 
-    public static Builder torrentWorker(BtRuntime runtime) {
-        return new Builder(runtime);
+    public static Bt client(BtRuntime runtime) {
+        return new Bt(runtime);
     }
 
-    public static class Builder {
+    private BtRuntime runtime;
+
+    private URL metainfoUrl;
+    private PieceSelector pieceSelector;
+    private boolean eagerInit;
+
+    private Bt(BtRuntime runtime) {
+        this.runtime = Objects.requireNonNull(runtime);
+        pieceSelector = RarestFirstSelector.randomized();
+    }
+
+    public Bt url(URL metainfoUrl) {
+        this.metainfoUrl = Objects.requireNonNull(metainfoUrl);
+        return this;
+    }
+
+    public Bt selector(PieceSelector pieceSelector) {
+        this.pieceSelector = Objects.requireNonNull(pieceSelector);
+        return this;
+    }
+
+    public Bt eagerInit() {
+        eagerInit = true;
+        return this;
+    }
+
+    public BtClient build(DataAccessFactory dataAccessFactory) {
+
+        Objects.requireNonNull(metainfoUrl, "Missing metainfo file URL");
+
+        BtClient handle;
+        if (eagerInit) {
+            handle = createClient(dataAccessFactory);
+        } else {
+            handle = new LazyBtClient(() -> createClient(dataAccessFactory));
+        }
+        runtime.registerTorrentHandle(handle);
+        return handle;
+    }
+
+    private BtClient createClient(DataAccessFactory dataAccessFactory) {
+
+        IMetadataService metadataService = runtime.service(IMetadataService.class);
+        Torrent torrent = metadataService.fromUrl(metainfoUrl);
+
+        ITorrentRegistry torrentRegistry = runtime.service(ITorrentRegistry.class);
+        ITorrentDescriptor descriptor = torrentRegistry.getOrCreateDescriptor(torrent, dataAccessFactory);
+
+        IDataWorkerFactory dataWorkerFactory = runtime.service(IDataWorkerFactory.class);
+        IDataWorker dataWorker = dataWorkerFactory.createWorker(descriptor.getDataDescriptor());
+
+        IPeerRegistry peerRegistry = runtime.service(IPeerRegistry.class);
+        IPeerConnectionPool connectionPool = runtime.service(IPeerConnectionPool.class);
+        IConfigurationService configurationService = runtime.service(IConfigurationService.class);
+        IConnectionHandlerFactory connectionHandlerFactory = runtime.service(IConnectionHandlerFactory.class);
+
+        PieceManager pieceManager = new PieceManager(pieceSelector, descriptor.getDataDescriptor().getChunkDescriptors());
+        TorrentSession session = new TorrentSession(connectionPool, configurationService,
+                connectionHandlerFactory, pieceManager, dataWorker, torrent);
+
+        dataWorker.addVerifiedPieceListener(session::onPieceVerified);
+        peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);
+        connectionPool.addConnectionListener(session);
+
+        ExecutorService executorService = runtime.service(ExecutorService.class);
+        return new RuntimeAwareBtClient(runtime, new DefaultBtClient(executorService, descriptor, session, dataWorker));
+    }
+
+    private static class LazyBtClient implements BtClient {
+
+        private Supplier<BtClient> clientSupplier;
+        private volatile BtClient delegate;
+
+        LazyBtClient(Supplier<BtClient> clientSupplier) {
+            this.clientSupplier = clientSupplier;
+        }
+
+        private synchronized void initClient() {
+            if (delegate == null) {
+                delegate = clientSupplier.get();
+            }
+        }
+
+        @Override
+        public CompletableFuture<?> startAsync() {
+            if (delegate == null) {
+                initClient();
+            }
+            return delegate.startAsync();
+        }
+
+        @Override
+        public CompletableFuture<?> startAsync(Consumer<TorrentSessionState> listener, long period) {
+            if (delegate == null) {
+                initClient();
+            }
+            return delegate.startAsync(listener, period);
+        }
+
+        @Override
+        public void stop() {
+            if (delegate == null) {
+                initClient();
+            }
+            delegate.stop();
+        }
+    }
+
+    private static class RuntimeAwareBtClient implements BtClient {
 
         private BtRuntime runtime;
+        private BtClient delegate;
 
-        private URL metainfoUrl;
-        private PieceSelector pieceSelector;
-
-        private Builder(BtRuntime runtime) {
-            this.runtime = Objects.requireNonNull(runtime);
+        RuntimeAwareBtClient(BtRuntime runtime, BtClient delegate) {
+            this.runtime = runtime;
+            this.delegate = delegate;
         }
 
-        public Builder metainfoUrl(URL metainfoUrl) {
-            this.metainfoUrl = Objects.requireNonNull(metainfoUrl);
-            return this;
+        @Override
+        public CompletableFuture<?> startAsync() {
+            ensureRuntimeStarted();
+            return delegate.startAsync();
         }
 
-        public Builder pieceSelector(PieceSelector pieceSelector) {
-            this.pieceSelector = Objects.requireNonNull(pieceSelector);
-            return this;
+        @Override
+        public CompletableFuture<?> startAsync(Consumer<TorrentSessionState> listener, long period) {
+            ensureRuntimeStarted();
+            return delegate.startAsync(listener, period);
         }
 
-        public TorrentHandle build(DataAccessFactory dataAccessFactory) {
-
-            if (pieceSelector == null) {
-                pieceSelector = RarestFirstSelector.randomized();
+        private void ensureRuntimeStarted() {
+            if (!runtime.isRunning()) {
+                runtime.startup();
             }
+        }
 
-            IMetadataService metadataService = runtime.service(IMetadataService.class);
-            Torrent torrent = metadataService.fromUrl(metainfoUrl);
-
-            ITorrentRegistry torrentRegistry = runtime.service(ITorrentRegistry.class);
-            ITorrentDescriptor descriptor = torrentRegistry.getOrCreateDescriptor(torrent, dataAccessFactory);
-
-            IDataWorkerFactory dataWorkerFactory = runtime.service(IDataWorkerFactory.class);
-            IDataWorker dataWorker = dataWorkerFactory.createWorker(descriptor.getDataDescriptor());
-
-            IPeerRegistry peerRegistry = runtime.service(IPeerRegistry.class);
-            IPeerConnectionPool connectionPool = runtime.service(IPeerConnectionPool.class);
-            IConfigurationService configurationService = runtime.service(IConfigurationService.class);
-            IConnectionHandlerFactory connectionHandlerFactory = runtime.service(IConnectionHandlerFactory.class);
-
-            PieceManager pieceManager = new PieceManager(pieceSelector, descriptor.getDataDescriptor().getChunkDescriptors());
-            TorrentSession session = new TorrentSession(connectionPool, configurationService,
-                    connectionHandlerFactory, pieceManager, dataWorker, torrent);
-
-            dataWorker.addVerifiedPieceListener(session::onPieceVerified);
-            peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);
-            connectionPool.addConnectionListener(session);
-
-            ExecutorService executorService = runtime.service(ExecutorService.class);
-
-            TorrentHandle handle = new DefaultTorrentHandle(executorService, descriptor, session, dataWorker) {
-                @Override
-                public CompletableFuture<?> startAsync() {
-                    ensureRuntimeStarted();
-                    return super.startAsync();
-                }
-
-                @Override
-                public CompletableFuture<?> startAsync(Consumer<TorrentProcessingState> listener, long period) {
-                    ensureRuntimeStarted();
-                    return super.startAsync(listener, period);
-                }
-
-                private void ensureRuntimeStarted() {
-                    if (!runtime.isRunning()) {
-                        runtime.startup();
-                    }
-                }
-            };
-            runtime.registerTorrentHandle(handle);
-            return handle;
+        @Override
+        public void stop() {
+            delegate.stop();
         }
     }
 
-    private static class DefaultTorrentHandle implements TorrentHandle {
+    private static class DefaultBtClient implements BtClient {
 
         private Executor executor;
         private ITorrentDescriptor delegate;
@@ -119,11 +186,11 @@ public class Bt {
         private IDataWorker dataWorker;
 
         private Optional<CompletableFuture<?>> future;
-        private Optional<Consumer<TorrentProcessingState>> listener;
+        private Optional<Consumer<TorrentSessionState>> listener;
         private Optional<ScheduledFuture<?>> listenerFuture;
 
-        DefaultTorrentHandle(Executor executor, ITorrentDescriptor delegate,
-                             TorrentSession session, IDataWorker dataWorker) {
+        DefaultBtClient(Executor executor, ITorrentDescriptor delegate,
+                        TorrentSession session, IDataWorker dataWorker) {
 
             this.executor = executor;
             this.delegate = delegate;
@@ -145,7 +212,7 @@ public class Bt {
         }
 
         @Override
-        public CompletableFuture<?> startAsync(Consumer<TorrentProcessingState> listener, long period) {
+        public CompletableFuture<?> startAsync(Consumer<TorrentSessionState> listener, long period) {
 
             ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
 
@@ -185,7 +252,7 @@ public class Bt {
             return future;
         }
 
-        private TorrentProcessingState getState() {
+        private TorrentSessionState getState() {
             return session.getState();
         }
     }

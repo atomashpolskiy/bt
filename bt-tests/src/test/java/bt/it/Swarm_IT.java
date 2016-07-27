@@ -6,7 +6,7 @@ import bt.it.fixture.SharedTrackerFeature;
 import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
 import bt.it.fixture.TestConfigurationFeature;
-import bt.torrent.TorrentHandle;
+import bt.BtClient;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -32,7 +32,7 @@ public class Swarm_IT extends BaseBtTest {
     @Test
     public void testSwarm_OneSeederOneLeecher() {
 
-        TorrentHandle seeder = swarm.getSeeders().iterator().next().getHandle(),
+        BtClient seeder = swarm.getSeeders().iterator().next().getHandle(),
                       leecher = swarm.getLeechers().iterator().next().getHandle();
 
         seeder.startAsync();
@@ -51,16 +51,16 @@ public class Swarm_IT extends BaseBtTest {
     @Test
     public void testSwarm_ManySeedersOneLeecher() {
 
-        List<TorrentHandle> seeders = swarm.getSeeders().stream()
+        List<BtClient> seeders = swarm.getSeeders().stream()
                 .map(SwarmPeer::getHandle).collect(Collectors.toList());
 
-        TorrentHandle leecher = swarm.getLeechers().iterator().next().getHandle();
+        BtClient leecher = swarm.getLeechers().iterator().next().getHandle();
 
-        seeders.forEach(TorrentHandle::startAsync);
+        seeders.forEach(BtClient::startAsync);
 
         leecher.startAsync(state -> {
             if (state.getPiecesRemaining() == 0) {
-                seeders.forEach(TorrentHandle::stop);
+                seeders.forEach(BtClient::stop);
                 leecher.stop();
             }
         }, 1000).join();
@@ -72,21 +72,21 @@ public class Swarm_IT extends BaseBtTest {
     @Test
     public void testSwarm_OneSeederManyLeechers() {
 
-        TorrentHandle seeder = swarm.getSeeders().iterator().next().getHandle();
+        BtClient seeder = swarm.getSeeders().iterator().next().getHandle();
 
-        List<TorrentHandle> leechers = swarm.getLeechers().stream()
+        List<BtClient> leechers = swarm.getLeechers().stream()
                 .map(SwarmPeer::getHandle).collect(Collectors.toList());
 
         AtomicInteger leecherCount = new AtomicInteger(leechers.size());
 
         CompletableFuture<?> seederFuture = seeder.startAsync(state -> {
             if (leecherCount.get() == 0) {
-                leechers.forEach(TorrentHandle::stop);
+                leechers.forEach(BtClient::stop);
                 seeder.stop();
             }
         }, 5000);
 
-        ConcurrentMap<TorrentHandle, Boolean> finishedLeechers = new ConcurrentHashMap<>();
+        ConcurrentMap<BtClient, Boolean> finishedLeechers = new ConcurrentHashMap<>();
         leechers.forEach(leecher -> {
             finishedLeechers.put(leecher, Boolean.FALSE);
             leecher.startAsync(state -> {
@@ -110,31 +110,31 @@ public class Swarm_IT extends BaseBtTest {
     @Test
     public void testSwarm_ManySeedersManyLeechers() {
 
-        List<TorrentHandle> seeders = swarm.getSeeders().stream()
+        List<BtClient> seeders = swarm.getSeeders().stream()
                 .map(SwarmPeer::getHandle).collect(Collectors.toList());
 
-        List<TorrentHandle> leechers = swarm.getLeechers().stream()
+        List<BtClient> leechers = swarm.getLeechers().stream()
                 .map(SwarmPeer::getHandle).collect(Collectors.toList());
 
         AtomicInteger leecherCount = new AtomicInteger(leechers.size());
 
-        TorrentHandle mainSeeder = seeders.iterator().next();
+        BtClient mainSeeder = seeders.iterator().next();
         CompletableFuture<?> seederFuture = mainSeeder.startAsync(
                 state -> {
                     if (leecherCount.get() == 0) {
-                        leechers.forEach(TorrentHandle::stop);
-                        seeders.forEach(TorrentHandle::stop);
+                        leechers.forEach(BtClient::stop);
+                        seeders.forEach(BtClient::stop);
                         mainSeeder.stop();
                     }
                 }, 5000
         );
 
         for (int i = 1; i < seeders.size(); i++) {
-            TorrentHandle seeder = seeders.get(i);
+            BtClient seeder = seeders.get(i);
             seederFuture = seeder.startAsync();
         }
 
-        ConcurrentMap<TorrentHandle, Boolean> finishedLeechers = new ConcurrentHashMap<>();
+        ConcurrentMap<BtClient, Boolean> finishedLeechers = new ConcurrentHashMap<>();
         leechers.forEach(leecher -> {
             finishedLeechers.put(leecher, Boolean.FALSE);
             leecher.startAsync(state -> {

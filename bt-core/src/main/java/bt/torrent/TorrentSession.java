@@ -100,7 +100,7 @@ public class TorrentSession implements PeerActivityListener {
         }
     }
 
-    public TorrentProcessingState getState() {
+    public TorrentSessionState getState() {
         return () -> pieceManager.piecesLeft();
     }
 }

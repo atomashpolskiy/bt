@@ -1,6 +1,6 @@
 package bt.torrent;
 
-public interface TorrentProcessingState {
+public interface TorrentSessionState {
 
     int getPiecesRemaining();
 }

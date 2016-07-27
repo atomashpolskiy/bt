@@ -3,7 +3,7 @@ package bt.it.fixture;
 import bt.Bt;
 import bt.BtRuntime;
 import bt.data.file.FileSystemDataAccessFactory;
-import bt.torrent.TorrentHandle;
+import bt.BtClient;
 
 import java.io.Closeable;
 import java.io.File;
@@ -16,7 +16,7 @@ public class SwarmPeer implements Closeable {
     private ITorrentFiles files;
     private BtRuntime runtime;
 
-    private TorrentHandle handle;
+    private BtClient handle;
 
     SwarmPeer(File localRoot, ITorrentFiles files, BtRuntime runtime) {
 
@@ -24,12 +24,12 @@ public class SwarmPeer implements Closeable {
         this.files = Objects.requireNonNull(files);
         this.runtime = runtime;
 
-        handle = Bt.torrentWorker(runtime)
-                .metainfoUrl(files.getMetainfoUrl())
+        handle = Bt.client(runtime)
+                .url(files.getMetainfoUrl())
                 .build(new FileSystemDataAccessFactory(localRoot));
     }
 
-    public TorrentHandle getHandle() {
+    public BtClient getHandle() {
         return handle;
     }
 
