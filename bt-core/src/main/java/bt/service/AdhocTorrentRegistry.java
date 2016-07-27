@@ -1,9 +1,9 @@
 package bt.service;
 
 import bt.data.DataAccessFactory;
-import bt.data.IChunkDescriptor;
 import bt.data.IDataDescriptorFactory;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.torrent.ITorrentDescriptor;
 import bt.torrent.TorrentDescriptor;
 import bt.tracker.ITrackerService;
@@ -19,7 +19,7 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
     private IDataDescriptorFactory dataDescriptorFactory;
     private IShutdownService shutdownService;
 
-    private ConcurrentMap<String, Torrent> torrents;
+    private ConcurrentMap<TorrentId, Torrent> torrents;
     private ConcurrentMap<Torrent, ITorrentDescriptor> descriptors;
 
     @Inject
@@ -35,8 +35,8 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
     }
 
     @Override
-    public Torrent getTorrent(byte[] infoHash) {
-        return torrents.get(new String(infoHash));
+    public Torrent getTorrent(TorrentId torrentId) {
+        return torrents.get(torrentId);
     }
 
     @Override
@@ -57,7 +57,7 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
             } else {
                 shutdownService.addShutdownHook(descriptor.getDataDescriptor());
             }
-            torrents.putIfAbsent(new String(torrent.getInfoHash()), torrent);
+            torrents.putIfAbsent(torrent.getTorrentId(), torrent);
             return descriptor;
         });
     }

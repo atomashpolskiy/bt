@@ -1,7 +1,8 @@
 package bt.protocol;
 
 import bt.BtException;
-import bt.Constants;
+import bt.metainfo.TorrentId;
+import bt.net.PeerId;
 import bt.protocol.handler.BitfieldHandler;
 import bt.protocol.handler.CancelHandler;
 import bt.protocol.handler.ChokeHandler;
@@ -26,6 +27,8 @@ import static bt.protocol.Protocols.readInt;
 
 public class StandardBittorrentProtocol implements Protocol<Message>, MessageHandler<Message> {
 
+    private static final String PROTOCOL_NAME = "BitTorrent protocol";
+
     public static final int CHOKE_ID = 0;
     public static final int UNCHOKE_ID = 1;
     public static final int INTERESTED_ID = 2;
@@ -45,7 +48,7 @@ public class StandardBittorrentProtocol implements Protocol<Message>, MessageHan
 
     static {
 
-        PROTOCOL_NAME_BYTES = Constants.PROTOCOL_NAME.getBytes(Charset.forName("ASCII"));
+        PROTOCOL_NAME_BYTES = PROTOCOL_NAME.getBytes(Charset.forName("ASCII"));
         int protocolNameLength = PROTOCOL_NAME_BYTES.length;
         int prefixLength = 1;
 
@@ -125,7 +128,7 @@ public class StandardBittorrentProtocol implements Protocol<Message>, MessageHan
 
         buffer.mark();
         byte first = buffer.get();
-        if (first == Constants.PROTOCOL_NAME.length()) {
+        if (first == PROTOCOL_NAME.length()) {
             return Handshake.class;
         }
         buffer.reset();
@@ -194,7 +197,7 @@ public class StandardBittorrentProtocol implements Protocol<Message>, MessageHan
 
         if (Handshake.class.equals(message.getClass())) {
             Handshake handshake = (Handshake) message;
-            return writeHandshake(buffer, handshake.getReserved(), handshake.getInfoHash(), handshake.getPeerId());
+            return writeHandshake(buffer, handshake.getReserved(), handshake.getTorrentId(), handshake.getPeerId());
         }
         if (KeepAlive.class.equals(message.getClass())) {
             return writeKeepAlive(buffer);
@@ -216,31 +219,23 @@ public class StandardBittorrentProtocol implements Protocol<Message>, MessageHan
     }
 
     // handshake: <pstrlen><pstr><reserved><info_hash><peer_id>
-    private static boolean writeHandshake(ByteBuffer buffer, byte[] reserved, byte[] infoHash, byte[] peerId) {
+    private static boolean writeHandshake(ByteBuffer buffer, byte[] reserved, TorrentId torrentId, PeerId peerId) {
 
         if (reserved.length != HANDSHAKE_RESERVED_LENGTH) {
             throw new InvalidMessageException("Invalid reserved bytes: expected " + HANDSHAKE_RESERVED_LENGTH
                     + " bytes, received " + reserved.length);
         }
-        if (infoHash.length != Constants.INFO_HASH_LENGTH) {
-            throw new InvalidMessageException("Invalid info hash: expected " + Constants.INFO_HASH_LENGTH
-                    + " bytes, received " + infoHash.length);
-        }
-        if (peerId.length != Constants.PEER_ID_LENGTH) {
-            throw new InvalidMessageException("Invalid peer ID: expected " + Constants.PEER_ID_LENGTH
-                    + " bytes, received " + peerId.length);
-        }
 
         int length = HANDSHAKE_PREFIX.length + HANDSHAKE_RESERVED_LENGTH +
-                Constants.INFO_HASH_LENGTH + Constants.PEER_ID_LENGTH;
+                TorrentId.length() + PeerId.length();
         if (buffer.remaining() < length) {
             return false;
         }
 
         buffer.put(HANDSHAKE_PREFIX);
         buffer.put(reserved);
-        buffer.put(infoHash);
-        buffer.put(peerId);
+        buffer.put(torrentId.getBytes());
+        buffer.put(peerId.getBytes());
 
         return true;
     }
@@ -249,14 +244,14 @@ public class StandardBittorrentProtocol implements Protocol<Message>, MessageHan
 
         int consumed = 0;
         int offset = HANDSHAKE_RESERVED_OFFSET;
-        int length = HANDSHAKE_RESERVED_LENGTH + Constants.INFO_HASH_LENGTH + Constants.PEER_ID_LENGTH;
+        int length = HANDSHAKE_RESERVED_LENGTH + TorrentId.length() + PeerId.length();
         int limit = offset + length;
 
         if (buffer.remaining() >= limit) {
 
             buffer.get(); // skip message ID
 
-            byte[] protocolNameBytes = new byte[Constants.PROTOCOL_NAME.length()];
+            byte[] protocolNameBytes = new byte[PROTOCOL_NAME.length()];
             buffer.get(protocolNameBytes);
             if (!Arrays.equals(PROTOCOL_NAME_BYTES, protocolNameBytes)) {
                 throw new InvalidMessageException("Unexpected protocol name (decoded with ASCII): " +
@@ -266,13 +261,13 @@ public class StandardBittorrentProtocol implements Protocol<Message>, MessageHan
             byte[] reserved = new byte[HANDSHAKE_RESERVED_LENGTH];
             buffer.get(reserved);
 
-            byte[] infoHash = new byte[Constants.INFO_HASH_LENGTH];
+            byte[] infoHash = new byte[TorrentId.length()];
             buffer.get(infoHash);
 
-            byte[] peerId = new byte[Constants.PEER_ID_LENGTH];
+            byte[] peerId = new byte[PeerId.length()];
             buffer.get(peerId);
 
-            context.setMessage(new Handshake(reserved, infoHash, peerId));
+            context.setMessage(new Handshake(reserved, TorrentId.fromBytes(infoHash), PeerId.fromBytes(peerId)));
             consumed = limit;
         }
 

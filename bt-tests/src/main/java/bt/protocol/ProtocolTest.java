@@ -109,8 +109,8 @@ public abstract class ProtocolTest {
 
         if (Handshake.class.equals(expectedType)) {
             Handshake expectedHandshake = (Handshake) expected, actualHandshake = (Handshake) actual;
-            assertArrayEquals(expectedHandshake.getInfoHash(), actualHandshake.getInfoHash());
-            assertArrayEquals(expectedHandshake.getPeerId(), actualHandshake.getPeerId());
+            assertEquals(expectedHandshake.getTorrentId(), actualHandshake.getTorrentId());
+            assertEquals(expectedHandshake.getPeerId(), actualHandshake.getPeerId());
             return;
         }
         if (KeepAlive.class.equals(expectedType)

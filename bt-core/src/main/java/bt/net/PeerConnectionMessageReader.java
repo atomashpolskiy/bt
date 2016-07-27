@@ -1,7 +1,6 @@
 package bt.net;
 
 import bt.BtException;
-import bt.Constants;
 import bt.protocol.Message;
 import bt.protocol.MessageContext;
 import bt.protocol.handler.MessageHandler;
@@ -14,8 +13,6 @@ import java.util.function.Supplier;
 
 class PeerConnectionMessageReader {
 
-    private static final int BUFFER_CAPACITY = Constants.MAX_BLOCK_SIZE * 2;
-
     private MessageHandler<Message> messageHandler;
     private ReadableByteChannel channel;
     private ByteBuffer buffer, readOnlyBuffer;
@@ -25,12 +22,12 @@ class PeerConnectionMessageReader {
     private MessageContext context;
 
     PeerConnectionMessageReader(MessageHandler<Message> messageHandler, ReadableByteChannel channel,
-                                Supplier<MessageContext> newContextSupplier) {
+                                Supplier<MessageContext> newContextSupplier, int bufferSize) {
 
         this.messageHandler = messageHandler;
         this.channel = channel;
 
-        buffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
+        buffer = ByteBuffer.allocateDirect(bufferSize);
         readOnlyBuffer = buffer.asReadOnlyBuffer();
         dataStartsAtIndex = buffer.position();
 

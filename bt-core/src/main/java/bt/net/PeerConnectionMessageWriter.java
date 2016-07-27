@@ -1,7 +1,6 @@
 package bt.net;
 
 import bt.BtException;
-import bt.Constants;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 
@@ -11,17 +10,16 @@ import java.nio.channels.SocketChannel;
 
 class PeerConnectionMessageWriter {
 
-    private static final int BUFFER_CAPACITY = Constants.MAX_BLOCK_SIZE * 2;
     private static final int WRITE_ATTEMPTS = 10;
 
     private MessageHandler<Message> messageHandler;
     private SocketChannel channel;
     private ByteBuffer buffer;
 
-    PeerConnectionMessageWriter(MessageHandler<Message> messageHandler, SocketChannel channel) {
+    PeerConnectionMessageWriter(MessageHandler<Message> messageHandler, SocketChannel channel, int bufferSize) {
         this.messageHandler = messageHandler;
         this.channel = channel;
-        buffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
+        buffer = ByteBuffer.allocateDirect(bufferSize);
     }
 
     void writeMessage(Message message) {

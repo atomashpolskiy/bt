@@ -1,6 +1,6 @@
 package bt.net;
 
-import bt.Constants;
+import bt.metainfo.TorrentId;
 import bt.protocol.Bitfield;
 import bt.protocol.Handshake;
 import bt.protocol.InvalidMessageException;
@@ -27,6 +27,8 @@ import static org.mockito.Mockito.mock;
 
 public class PeerConnectionTest extends ProtocolTest {
 
+    private static final int BUFFER_SIZE = 2 << 6;
+
     private ServerSocketChannel serverChannel;
     private Server server;
     private SocketChannel clientChannel;
@@ -46,20 +48,20 @@ public class PeerConnectionTest extends ProtocolTest {
 
     @Test
     public void testConnection() throws InvalidMessageException, IOException {
-        IPeerConnection connection = new PeerConnection(messageHandler, mock(Peer.class), clientChannel);
+        IPeerConnection connection = new PeerConnection(messageHandler, mock(Peer.class), clientChannel, BUFFER_SIZE);
 
         Message message;
 
-        server.writeMessage(new Handshake(new byte[8], new byte[20], new byte[20]));
+        server.writeMessage(new Handshake(new byte[8], TorrentId.fromBytes(new byte[20]), PeerId.fromBytes(new byte[20])));
         message = connection.readMessageNow();
         assertNotNull(message);
         assertEquals(Handshake.class, message.getClass());
 
-        server.writeMessage(new Bitfield(new byte[2 << 9]));
+        server.writeMessage(new Bitfield(new byte[2 << 3]));
         message = connection.readMessageNow();
         assertNotNull(message);
         assertEquals(Bitfield.class, message.getClass());
-        assertEquals(2 << 9, ((Bitfield) message).getBitfield().length);
+        assertEquals(2 << 3, ((Bitfield) message).getBitfield().length);
 
         server.writeMessage(new Request(1, 2, 3));
         message = connection.readMessageNow();
@@ -107,7 +109,7 @@ public class PeerConnectionTest extends ProtocolTest {
         }
 
         public void writeMessage(Message message) throws InvalidMessageException, IOException {
-            ByteBuffer buffer = ByteBuffer.allocate(Constants.MAX_BLOCK_SIZE);
+            ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
             assertTrue("Protocol failed to serialize message", messageHandler.encode(message, buffer));
             buffer.flip();
             synchronized (lock) {

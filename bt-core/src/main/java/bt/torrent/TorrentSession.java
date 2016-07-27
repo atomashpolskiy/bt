@@ -1,6 +1,7 @@
 package bt.torrent;
 
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.net.ConnectionHandler;
 import bt.net.IConnectionHandlerFactory;
 import bt.net.IPeerConnectionPool;
@@ -58,14 +59,14 @@ public class TorrentSession implements PeerActivityListener {
     }
 
     @Override
-    public void onPeerConnected(Object torrentId, Peer peer, Consumer<Consumer<Message>> messageConsumers,
+    public void onPeerConnected(TorrentId torrentId, Peer peer, Consumer<Consumer<Message>> messageConsumers,
                                 Consumer<Supplier<Message>> messageSuppliers) {
 
         if (connectionWorkers.size() >= configurationService.getMaxActiveConnectionsPerTorrent()) {
             return;
         }
 
-        if (torrent.getInfoHash().equals(torrentId)) {
+        if (torrent.getTorrentId().equals(torrentId)) {
 
             ConnectionWorker worker = new ConnectionWorker(peer, pieceManager, dataWorker);
             ConnectionWorker existing = connectionWorkers.putIfAbsent(peer, worker);

@@ -1,7 +1,9 @@
 package bt.service;
 
+import bt.net.PeerId;
+
 public interface IIdService {
 
-    byte[] getPeerId();
+    PeerId getLocalPeerId();
     byte[] getSecretKey();
 }

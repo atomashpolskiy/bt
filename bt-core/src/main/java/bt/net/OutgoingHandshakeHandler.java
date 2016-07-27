@@ -1,13 +1,13 @@
 package bt.net;
 
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.protocol.Handshake;
 import bt.protocol.IHandshakeFactory;
 import bt.protocol.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.Set;
 
 public class OutgoingHandshakeHandler implements ConnectionHandler {
@@ -39,9 +39,9 @@ public class OutgoingHandshakeHandler implements ConnectionHandler {
         if (firstMessage != null) {
             if (Handshake.class.equals(firstMessage.getClass())) {
                 Handshake peerHandshake = (Handshake) firstMessage;
-                byte[] incomingInfoHash = peerHandshake.getInfoHash();
-                if (Arrays.equals(torrent.getInfoHash(), incomingInfoHash)) {
-                    connection.setTag(torrent.getInfoHash());
+                TorrentId incomingTorrentId = peerHandshake.getTorrentId();
+                if (torrent.getTorrentId().equals(incomingTorrentId)) {
+                    connection.setTorrentId(torrent.getTorrentId());
 
                     handshakeHandlers.forEach(handler ->
                             handler.processIncomingHandshake(connection.getRemotePeer(), peerHandshake));

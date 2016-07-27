@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -384,6 +385,48 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
         private boolean mightUnchoke() {
             // unchoke depending on last choked time to avoid fibrillation
             return System.currentTimeMillis() - lastChoked >= CHOKING_THRESHOLD.toMillis();
+        }
+    }
+
+    private static class Mapper {
+
+        private static final Mapper instance = new Mapper();
+
+        static Mapper mapper() {
+            return instance;
+        }
+
+        private Mapper() {}
+
+        Object buildKey(int pieceIndex, int offset, int length) {
+            return new Key(pieceIndex, offset, length);
+        }
+
+        private static class Key {
+
+            private final int[] key;
+
+            Key(int pieceIndex, int offset, int length) {
+                this.key = new int[] {pieceIndex, offset, length};
+            }
+
+            int[] getKey() {
+                return key;
+            }
+
+            @Override
+            public int hashCode() {
+                return Arrays.hashCode(key);
+            }
+
+            @Override
+            public boolean equals(Object obj) {
+
+                if (obj == null || !Key.class.equals(obj.getClass())) {
+                    return false;
+                }
+                return (obj == this) || Arrays.equals(key, ((Key) obj).getKey());
+            }
         }
     }
 }

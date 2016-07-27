@@ -2,6 +2,7 @@ package bt.runtime.service.ext.pex;
 
 import bt.BtException;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
 import bt.net.PeerActivityListener;
@@ -61,7 +62,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
 
     @Override
     public PeerSource getPeerSource(Torrent torrent) {
-        return getOrCreatePeerSource(torrent.getInfoHash());
+        return getOrCreatePeerSource(torrent.getTorrentId());
     }
 
     private PeerExchangePeerSource getOrCreatePeerSource(Object torrentId) {
@@ -115,7 +116,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     private class Listener implements PeerActivityListener {
 
         @Override
-        public void onPeerConnected(Object torrentId, Peer peer, Consumer<Consumer<Message>> messageConsumers,
+        public void onPeerConnected(TorrentId torrentId, Peer peer, Consumer<Consumer<Message>> messageConsumers,
                                     Consumer<Supplier<Message>> messageSuppliers) {
 
             peerEvents.add(PeerEvent.addedPeer(peer));

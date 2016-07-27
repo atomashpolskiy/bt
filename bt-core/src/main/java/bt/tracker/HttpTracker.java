@@ -1,11 +1,11 @@
 package bt.tracker;
 
 import bt.BtException;
+import bt.metainfo.Torrent;
 import bt.service.IIdService;
 import bt.service.INetworkService;
 import bt.service.IdService;
 import bt.service.NetworkService;
-import bt.metainfo.Torrent;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
@@ -62,7 +62,7 @@ public class HttpTracker implements Tracker {
 
     @Override
     public TrackerRequestBuilder request(Torrent torrent) {
-        return new TrackerRequestBuilder(torrent.getInfoHash()) {
+        return new TrackerRequestBuilder(torrent.getTorrentId()) {
             @Override
             public TrackerResponse start() {
                 return sendEvent(TrackerRequestType.START, this);
@@ -118,16 +118,11 @@ public class HttpTracker implements Tracker {
 
         StringBuilder buf = new StringBuilder();
 
-        byte[] infoHash = requestBuilder.getInfoHash();
-        if (infoHash == null) {
-            throw new BtException("Info hash is missing");
-        } else {
-            buf.append("info_hash=");
-            buf.append(urlEncode(requestBuilder.getInfoHash()));
-        }
+        buf.append("info_hash=");
+        buf.append(urlEncode(requestBuilder.getTorrentId().getBytes()));
 
         buf.append("&peer_id=");
-        buf.append(urlEncode(idService.getPeerId()));
+        buf.append(urlEncode(idService.getLocalPeerId().getBytes()));
 
         InetAddress inetAddress = networkService.getInetAddress();
         if (inetAddress != null) {

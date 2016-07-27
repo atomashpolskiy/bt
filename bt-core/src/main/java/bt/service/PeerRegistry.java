@@ -34,7 +34,7 @@ public class PeerRegistry implements IPeerRegistry {
 
         this.peerSourceFactories = peerSourceFactories;
         consumers = new ConcurrentHashMap<>();
-        localPeer = new InetPeer(networkService.getInetAddress(), networkService.getPort(), idService.getPeerId());
+        localPeer = new InetPeer(networkService.getInetAddress(), networkService.getPort(), idService.getLocalPeerId());
 
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "Peer Registry"));
         lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(this::collectAndVisitPeers, 1, 5, TimeUnit.SECONDS));

@@ -62,7 +62,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                               IConfigurationService configurationService) {
 
         SocketChannelFactory socketChannelFactory = new SocketChannelFactory(networkService);
-        this.connectionFactory = new PeerConnectionFactory(messageHandler, peerRegistry, socketChannelFactory);
+        this.connectionFactory = new PeerConnectionFactory(messageHandler, peerRegistry,
+                socketChannelFactory, configurationService);
 
         this.incomingConnectionHandler = connectionHandlerFactory.getIncomingHandler();
         this.configurationService = configurationService;
@@ -319,7 +320,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             listenerLock.readLock().lock();
             try {
                 for (PeerActivityListener listener : connectionListeners) {
-                    listener.onPeerConnected(newConnection.getTag(), newConnection.getRemotePeer(),
+                    listener.onPeerConnected(newConnection.getTorrentId(), newConnection.getRemotePeer(),
                             consumers::add, suppliers::add);
                 }
             } finally {

@@ -28,6 +28,11 @@ public class ConfigurationService implements IConfigurationService {
     }
 
     @Override
+    public long getMaxTransferBlockSize() {
+        return 2 << 16;
+    }
+
+    @Override
     public int getReadRequestQueueMaxLength() {
         return 10000;
     }

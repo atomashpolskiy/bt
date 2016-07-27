@@ -1,17 +1,20 @@
 package bt.tracker;
 
 import bt.BtException;
+import bt.metainfo.TorrentId;
+
+import java.util.Objects;
 
 public abstract class TrackerRequestBuilder {
 
-    private byte[] infoHash;
+    private TorrentId torrentId;
 
     private int uploaded;
     private int downloaded;
     private int left;
 
-    protected TrackerRequestBuilder(byte[] infoHash) {
-        this.infoHash = infoHash;
+    protected TrackerRequestBuilder(TorrentId torrentId) {
+        this.torrentId = Objects.requireNonNull(torrentId);
     }
 
     public abstract TrackerResponse start();
@@ -46,8 +49,8 @@ public abstract class TrackerRequestBuilder {
         return this;
     }
 
-    byte[] getInfoHash() {
-        return infoHash;
+    TorrentId getTorrentId() {
+        return torrentId;
     }
 
     int getUploaded() {

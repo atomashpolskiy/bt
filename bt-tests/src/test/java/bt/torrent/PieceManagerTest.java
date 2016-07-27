@@ -2,6 +2,7 @@ package bt.torrent;
 
 import bt.data.DataStatus;
 import bt.data.IChunkDescriptor;
+import bt.metainfo.TorrentId;
 import bt.net.IPeerConnection;
 import bt.net.Peer;
 import bt.protocol.Message;
@@ -151,7 +152,7 @@ public class PieceManagerTest {
         return chunk;
     }
 
-    private static IPeerConnection mockPeer(int id) {
+    private static IPeerConnection mockPeer(TorrentId torrentId) {
 
         return new IPeerConnection() {
 
@@ -159,8 +160,8 @@ public class PieceManagerTest {
             private Peer peer = mock(Peer.class);
 
             @Override
-            public Object getTag() {
-                return id;
+            public TorrentId getTorrentId() {
+                return torrentId;
             }
 
             @Override

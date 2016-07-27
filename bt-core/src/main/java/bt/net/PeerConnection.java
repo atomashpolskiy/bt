@@ -1,5 +1,6 @@
 package bt.net;
 
+import bt.metainfo.TorrentId;
 import bt.protocol.Message;
 import bt.protocol.MessageContext;
 import bt.protocol.handler.MessageHandler;
@@ -19,7 +20,7 @@ public class PeerConnection implements IPeerConnection {
 
     private static final long WAIT_BETWEEN_READS = 100L;
 
-    private Object tag;
+    private TorrentId torrentId;
     private Peer remotePeer;
 
     private SocketChannel channel;
@@ -32,13 +33,16 @@ public class PeerConnection implements IPeerConnection {
     private final ReentrantLock readLock;
     private final Condition condition;
 
-    PeerConnection(MessageHandler<Message> messageHandler, Peer remotePeer, SocketChannel channel) {
+    PeerConnection(MessageHandler<Message> messageHandler, Peer remotePeer,
+                   SocketChannel channel, long maxTransferBlockSize) {
 
         this.remotePeer = remotePeer;
         this.channel = channel;
 
-        messageReader = new PeerConnectionMessageReader(messageHandler, channel, () -> new MessageContext(remotePeer));
-        messageWriter = new PeerConnectionMessageWriter(messageHandler, channel);
+        int bufferSize = getBufferSize(maxTransferBlockSize);
+        messageReader = new PeerConnectionMessageReader(messageHandler, channel,
+                () -> new MessageContext(remotePeer), bufferSize);
+        messageWriter = new PeerConnectionMessageWriter(messageHandler, channel, bufferSize);
 
         lastActive = new AtomicLong();
 
@@ -46,13 +50,19 @@ public class PeerConnection implements IPeerConnection {
         condition = readLock.newCondition();
     }
 
-    void setTag(Object tag) {
-        this.tag = tag;
+    private static int getBufferSize(long maxTransferBlockSize) {
+        long bufferSize = maxTransferBlockSize * 2;
+        bufferSize = Math.min(Integer.MAX_VALUE - 13, bufferSize);
+        return (int) bufferSize;
+    }
+
+    void setTorrentId(TorrentId torrentId) {
+        this.torrentId = torrentId;
     }
 
     @Override
-    public Object getTag() {
-        return tag;
+    public TorrentId getTorrentId() {
+        return torrentId;
     }
 
     @Override

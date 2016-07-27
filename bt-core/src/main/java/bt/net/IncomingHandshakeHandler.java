@@ -1,6 +1,7 @@
 package bt.net;
 
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.protocol.Handshake;
 import bt.protocol.IHandshakeFactory;
 import bt.protocol.Message;
@@ -38,18 +39,18 @@ public class IncomingHandshakeHandler implements ConnectionHandler {
             if (Handshake.class.equals(firstMessage.getClass())) {
 
                 Handshake peerHandshake = (Handshake) firstMessage;
-                Torrent torrent = torrentRegistry.getTorrent(peerHandshake.getInfoHash());
+                Torrent torrent = torrentRegistry.getTorrent(peerHandshake.getTorrentId());
 
                 Optional<ITorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
                 if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {
-                    byte[] infoHash = torrent.getInfoHash();
+                    TorrentId torrentId = torrent.getTorrentId();
 
                     Handshake handshake = handshakeFactory.createHandshake(torrent);
                     handshakeHandlers.forEach(handler ->
                             handler.amendOutgoingHandshake(handshake));
 
                     connection.postMessage(handshake);
-                    connection.setTag(infoHash);
+                    connection.setTorrentId(torrentId);
 
                     handshakeHandlers.forEach(handler ->
                             handler.processIncomingHandshake(connection.getRemotePeer(), peerHandshake));

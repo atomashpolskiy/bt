@@ -1,10 +1,11 @@
 package bt.net;
 
 import java.net.InetAddress;
+import java.util.Optional;
 
 public interface Peer {
 
     InetAddress getInetAddress();
     int getPort();
-    byte[] getPeerId();
+    Optional<PeerId> getPeerId();
 }

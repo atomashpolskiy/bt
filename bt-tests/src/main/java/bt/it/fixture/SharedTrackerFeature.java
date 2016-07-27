@@ -1,8 +1,8 @@
 package bt.it.fixture;
 
 import bt.BtRuntimeBuilder;
-import bt.Constants;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.tracker.ITrackerService;
@@ -46,7 +46,7 @@ public class SharedTrackerFeature implements BtTestRuntimeFeature {
                 tracker = new Tracker() {
 
                     private TrackerRequestBuilder requestBuilder =
-                            new TrackerRequestBuilder(new byte[Constants.INFO_HASH_LENGTH]) {
+                            new TrackerRequestBuilder(TorrentId.fromBytes(new byte[TorrentId.length()])) {
 
                         @Override
                         public TrackerResponse start() {

@@ -1,7 +1,6 @@
 package bt.metainfo;
 
 import bt.BtException;
-import bt.Constants;
 
 import java.net.URL;
 import java.util.Arrays;
@@ -12,8 +11,10 @@ import java.util.NoSuchElementException;
 
 public class DefaultTorrent implements Torrent {
 
+    private static final int CHUNK_HASH_LENGTH = 20;
+
     private URL trackerUrl;
-    private byte[] infoHash;
+    private TorrentId torrentId;
     private String name;
     private long chunkSize;
     private byte[] chunkHashes;
@@ -26,8 +27,8 @@ public class DefaultTorrent implements Torrent {
     }
 
     @Override
-    public byte[] getInfoHash() {
-        return infoHash;
+    public TorrentId getTorrentId() {
+        return torrentId;
     }
 
     @Override
@@ -58,7 +59,7 @@ public class DefaultTorrent implements Torrent {
                     throw new NoSuchElementException();
                 }
                 int start = read;
-                read += Constants.INFO_HASH_LENGTH;
+                read += CHUNK_HASH_LENGTH;
                 return Arrays.copyOfRange(chunkHashes, start, read);
             }
         };
@@ -89,12 +90,8 @@ public class DefaultTorrent implements Torrent {
         this.trackerUrl = trackerUrl;
     }
 
-    void setInfoHash(byte[] infoHash) {
-        if (infoHash.length != Constants.INFO_HASH_LENGTH) {
-            throw new BtException("Invalid info hash -- length (" + infoHash.length
-                    + ") is not equal to " + Constants.INFO_HASH_LENGTH);
-        }
-        this.infoHash = infoHash;
+    void setTorrentId(TorrentId torrentId) {
+        this.torrentId = torrentId;
     }
 
     void setName(String name) {
@@ -123,9 +120,9 @@ public class DefaultTorrent implements Torrent {
     }
 
     public void setChunkHashes(byte[] chunkHashes) {
-        if (chunkHashes.length % Constants.INFO_HASH_LENGTH != 0) {
+        if (chunkHashes.length % CHUNK_HASH_LENGTH != 0) {
             throw new BtException("Invalid chunk hashes string -- length (" + chunkHashes.length
-                    + ") is not divisible by " + Constants.INFO_HASH_LENGTH);
+                    + ") is not divisible by " + CHUNK_HASH_LENGTH);
         }
         this.chunkHashes = chunkHashes;
     }

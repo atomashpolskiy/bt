@@ -11,9 +11,9 @@ public interface Torrent {
     URL getTrackerUrl();
 
     /**
-     * @return SHA-1 hash of this torrent's info.
+     * @return Torrent ID.
      */
-    byte[] getInfoHash();
+    TorrentId getTorrentId();
 
     /**
      * @return Suggested name for this torrent.

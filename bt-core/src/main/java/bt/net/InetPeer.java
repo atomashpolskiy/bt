@@ -3,13 +3,13 @@ package bt.net;
 import bt.BtException;
 
 import java.net.InetAddress;
-import java.util.Arrays;
+import java.util.Optional;
 
 public class InetPeer implements Peer {
 
     private InetAddress inetAddress;
     private int port;
-    private byte[] peerId;
+    private Optional<PeerId> peerId;
 
     private final int hash;
 
@@ -17,17 +17,21 @@ public class InetPeer implements Peer {
         this(inetAddress, port, null);
     }
 
-    public InetPeer(InetAddress inetAddress, int port, byte[] peerId) {
+    public InetPeer(InetAddress inetAddress, int port, PeerId peerId) {
 
         if (inetAddress == null || port < 0) {
-            throw new BtException("Invalid arguments (" + inetAddress + ":" + port + ")");
+            throw new BtException("Invalid arguments (address: <" + inetAddress + ":" + port + ">)");
         }
 
-        hash = ((inetAddress.hashCode() * 31) + port) * 17 + Arrays.hashCode(peerId);
+        int hash = ((inetAddress.hashCode() * 31) + port) * 17;
+        if (peerId != null) {
+            hash += peerId.hashCode();
+        }
+        this.hash = hash;
 
         this.inetAddress = inetAddress;
         this.port = port;
-        this.peerId = peerId;
+        this.peerId = Optional.ofNullable(peerId);
     }
 
     @Override
@@ -41,8 +45,8 @@ public class InetPeer implements Peer {
     }
 
     @Override
-    public byte[] getPeerId() {
-        return peerId == null? null : Arrays.copyOf(peerId, peerId.length);
+    public Optional<PeerId> getPeerId() {
+        return peerId;
     }
 
     @Override
@@ -64,14 +68,14 @@ public class InetPeer implements Peer {
         Peer that = (Peer) object;
         return (port == that.getPort())
                 && inetAddress.equals(that.getInetAddress())
-                && Arrays.equals(peerId, that.getPeerId());
+                && peerId.equals(that.getPeerId());
     }
 
     @Override
     public String toString() {
         String description = inetAddress.toString() + ":" + port;
         if (peerId != null) {
-            description += " (ID: " + Arrays.toString(peerId) + ")";
+            description += " (ID: " + peerId + ")";
         }
         return description;
     }

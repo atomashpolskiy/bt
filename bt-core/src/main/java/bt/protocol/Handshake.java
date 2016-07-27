@@ -1,25 +1,20 @@
 package bt.protocol;
 
 import bt.BtException;
-import bt.Constants;
+import bt.metainfo.TorrentId;
+import bt.net.PeerId;
 
 public final class Handshake implements Message {
 
     private static final int UPPER_RESERVED_BOUND = 8 * 8 - 1;
 
     private byte[] reserved;
-    private byte[] infoHash;
-    private byte[] peerId;
+    private TorrentId torrentId;
+    private PeerId peerId;
 
-    public Handshake(byte[] reserved, byte[] infoHash, byte[] peerId) throws InvalidMessageException {
-
-        if (infoHash.length != Constants.INFO_HASH_LENGTH || peerId.length != Constants.PEER_ID_LENGTH) {
-            throw new InvalidMessageException("Illegal arguments size: info hash (" +
-                    infoHash.length + "), peer ID (" + peerId.length + ")");
-        }
-
+    public Handshake(byte[] reserved, TorrentId torrentId, PeerId peerId) throws InvalidMessageException {
         this.reserved = reserved;
-        this.infoHash = infoHash;
+        this.torrentId = torrentId;
         this.peerId = peerId;
     }
 
@@ -40,11 +35,11 @@ public final class Handshake implements Message {
         return reserved;
     }
 
-    public byte[] getInfoHash() {
-        return infoHash;
+    public TorrentId getTorrentId() {
+        return torrentId;
     }
 
-    public byte[] getPeerId() {
+    public PeerId getPeerId() {
         return peerId;
     }
 
