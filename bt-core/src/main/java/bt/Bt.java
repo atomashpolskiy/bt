@@ -14,14 +14,13 @@ import bt.torrent.ITorrentDescriptor;
 import bt.torrent.PieceManager;
 import bt.torrent.PieceSelector;
 import bt.torrent.RarestFirstSelector;
-import bt.torrent.TorrentSessionState;
 import bt.torrent.TorrentSession;
+import bt.torrent.TorrentSessionState;
 
 import java.net.URL;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -100,8 +99,7 @@ public class Bt {
         peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);
         connectionPool.addConnectionListener(session);
 
-        ExecutorService executorService = runtime.service(ExecutorService.class);
-        return new RuntimeAwareBtClient(runtime, new DefaultBtClient(executorService, descriptor, session, dataWorker));
+        return new RuntimeAwareBtClient(runtime, new DefaultBtClient(descriptor, session, dataWorker));
     }
 
     private static class LazyBtClient implements BtClient {
@@ -138,7 +136,7 @@ public class Bt {
         @Override
         public void stop() {
             if (delegate == null) {
-                initClient();
+                return;
             }
             delegate.stop();
         }
@@ -180,23 +178,21 @@ public class Bt {
 
     private static class DefaultBtClient implements BtClient {
 
-        private Executor executor;
         private ITorrentDescriptor delegate;
         private TorrentSession session;
         private IDataWorker dataWorker;
 
+        private ExecutorService executor;
         private Optional<CompletableFuture<?>> future;
         private Optional<Consumer<TorrentSessionState>> listener;
         private Optional<ScheduledFuture<?>> listenerFuture;
 
-        DefaultBtClient(Executor executor, ITorrentDescriptor delegate,
-                        TorrentSession session, IDataWorker dataWorker) {
-
-            this.executor = executor;
+        DefaultBtClient(ITorrentDescriptor delegate, TorrentSession session, IDataWorker dataWorker) {
             this.delegate = delegate;
             this.session = session;
             this.dataWorker = dataWorker;
 
+            executor = Executors.newSingleThreadExecutor();
             future = Optional.empty();
             listener = Optional.empty();
             listenerFuture = Optional.empty();
@@ -208,6 +204,7 @@ public class Bt {
                 delegate.stop();
             } finally {
                 future.ifPresent(future -> future.complete(null));
+                executor.shutdownNow();
             }
         }
 
@@ -218,7 +215,7 @@ public class Bt {
 
             this.listener = Optional.of(listener);
             listenerFuture = Optional.of(scheduledExecutor.scheduleAtFixedRate(
-                    () -> listener.accept(getState()),
+                    () -> listener.accept(session.getState()),
                     period, period, TimeUnit.MILLISECONDS));
 
             return startAsync();
@@ -246,14 +243,10 @@ public class Bt {
 
             CompletableFuture<?> future = CompletableFuture.runAsync(dataWorker, executor);
 
-            future.thenRun(() -> listener.ifPresent(listener -> listener.accept(getState())))
+            future.thenRun(() -> listener.ifPresent(listener -> listener.accept(session.getState())))
                     .thenRun(() -> listenerFuture.ifPresent(listener -> listener.cancel(true)));
 
             return future;
-        }
-
-        private TorrentSessionState getState() {
-            return session.getState();
         }
     }
 }

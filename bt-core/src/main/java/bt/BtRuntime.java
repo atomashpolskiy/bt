@@ -14,9 +14,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class BtRuntime {
@@ -33,7 +35,7 @@ public class BtRuntime {
     BtRuntime(Injector injector) {
 
         shutdownTimeout = Duration.ofSeconds(5);
-        Runtime.getRuntime().addShutdownHook(new Thread() {
+        Runtime.getRuntime().addShutdownHook(new Thread("BtShutdownThread") {
             @Override
             public void run() {
                 shutdown();
@@ -92,13 +94,19 @@ public class BtRuntime {
                     }
                 });
 
-                ExecutorService executor = Executors.newSingleThreadExecutor();
+                AtomicInteger threadCount = new AtomicInteger();
+                ExecutorService executor = Executors.newCachedThreadPool(r -> {
+                    Thread t = new Thread(r, "BtShutdownHandler-" + threadCount.incrementAndGet());
+                    t.setDaemon(true);
+                    return t;
+                });
                 service(IRuntimeLifecycleBinder.class).visitBindings(
                     LifecycleEvent.SHUTDOWN,
                     (descriptionOptional, r) -> {
+                        Future<Optional<Throwable>> future = executor.submit(toCallable(r));
                         String description = descriptionOptional.orElse(r.toString());
                         try {
-                            executor.submit(toCallable(r)).get(shutdownTimeout.toMillis(), TimeUnit.MILLISECONDS)
+                            future.get(shutdownTimeout.toMillis(), TimeUnit.MILLISECONDS)
                                     .ifPresent(throwable -> onShutdownHookError(description, throwable));
                         } catch (InterruptedException | ExecutionException | TimeoutException e) {
                             onShutdownHookError(description, e);

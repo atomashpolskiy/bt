@@ -12,7 +12,6 @@ import bt.protocol.HandshakeFactory;
 import bt.protocol.IHandshakeFactory;
 import bt.service.AdhocTorrentRegistry;
 import bt.service.ConfigurationService;
-import bt.service.ExecutorServiceProvider;
 import bt.service.IConfigurationService;
 import bt.service.IIdService;
 import bt.service.INetworkService;
@@ -37,7 +36,6 @@ import com.google.inject.multibindings.Multibinder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
 
 public class ServiceModule implements Module {
 
@@ -74,7 +72,6 @@ public class ServiceModule implements Module {
         binder.bind(IDataWorkerFactory.class).to(DataWorkerFactory.class).in(Singleton.class);
         binder.bind(IHandshakeFactory.class).to(HandshakeFactory.class).in(Singleton.class);
         binder.bind(IConnectionHandlerFactory.class).to(ConnectionHandlerFactory.class).in(Singleton.class);
-        binder.bind(ExecutorService.class).toProvider(ExecutorServiceProvider.class);
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
 
         binder.bind(IPeerRegistry.class).to(PeerRegistry.class).in(Singleton.class);

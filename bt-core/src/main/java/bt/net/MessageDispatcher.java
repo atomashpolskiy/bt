@@ -145,7 +145,7 @@ public class MessageDispatcher {
                 try {
                     timer.await(1, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    // ignore
                 } finally {
                     lock.unlock();
                 }
