@@ -18,10 +18,8 @@ import bt.service.IIdService;
 import bt.service.INetworkService;
 import bt.service.IPeerRegistry;
 import bt.service.IRuntimeLifecycleBinder;
-import bt.service.IShutdownService;
 import bt.service.ITorrentRegistry;
 import bt.service.IdService;
-import bt.service.JVMShutdownService;
 import bt.service.NetworkService;
 import bt.service.PeerRegistry;
 import bt.service.PeerSourceFactory;
@@ -77,7 +75,6 @@ public class ServiceModule implements Module {
         binder.bind(IHandshakeFactory.class).to(HandshakeFactory.class).in(Singleton.class);
         binder.bind(IConnectionHandlerFactory.class).to(ConnectionHandlerFactory.class).in(Singleton.class);
         binder.bind(ExecutorService.class).toProvider(ExecutorServiceProvider.class);
-        binder.bind(IShutdownService.class).to(JVMShutdownService.class).in(Singleton.class);
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
 
         binder.bind(IPeerRegistry.class).to(PeerRegistry.class).in(Singleton.class);

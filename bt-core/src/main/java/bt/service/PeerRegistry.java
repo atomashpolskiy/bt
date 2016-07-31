@@ -38,7 +38,7 @@ public class PeerRegistry implements IPeerRegistry {
 
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "Peer Registry"));
         lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(this::collectAndVisitPeers, 1, 5, TimeUnit.SECONDS));
-        lifecycleBinder.onShutdown(executor::shutdown);
+        lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
     }
 
     private void collectAndVisitPeers() {

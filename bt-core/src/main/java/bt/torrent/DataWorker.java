@@ -2,6 +2,7 @@ package bt.torrent;
 
 import bt.BtException;
 import bt.data.IChunkDescriptor;
+import bt.data.IDataDescriptor;
 import bt.net.Peer;
 import bt.service.IRuntimeLifecycleBinder;
 import org.slf4j.Logger;
@@ -31,15 +32,15 @@ public class DataWorker implements IDataWorker {
     private volatile Thread t;
     private volatile boolean shutdown;
 
-    public DataWorker(IRuntimeLifecycleBinder lifecycleBinder, List<IChunkDescriptor> chunks, int maxQueueLength) {
+    public DataWorker(IRuntimeLifecycleBinder lifecycleBinder, IDataDescriptor dataDescriptor, int maxQueueLength) {
 
-        this.chunks = chunks;
+        this.chunks = dataDescriptor.getChunkDescriptors();
 
         pendingOps = new LinkedBlockingQueue<>(maxQueueLength);
         completedBlockRequests = new HashMap<>();
         verifiedPieceListeners = ConcurrentHashMap.newKeySet();
 
-        lifecycleBinder.onShutdown(this::shutdown);
+        lifecycleBinder.onShutdown(this.getClass().getName() + " - " + dataDescriptor, this::shutdown);
     }
 
     @Override

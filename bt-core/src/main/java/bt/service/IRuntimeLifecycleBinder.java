@@ -1,6 +1,7 @@
 package bt.service;
 
-import java.util.function.Consumer;
+import java.util.Optional;
+import java.util.function.BiConsumer;
 
 public interface IRuntimeLifecycleBinder {
 
@@ -8,7 +9,11 @@ public interface IRuntimeLifecycleBinder {
 
     void onStartup(Runnable r);
 
+    void onStartup(String description, Runnable r);
+
     void onShutdown(Runnable r);
 
-    void visitBindings(LifecycleEvent event, Consumer<Runnable> consumer);
+    void onShutdown(String description, Runnable r);
+
+    void visitBindings(LifecycleEvent event, BiConsumer<Optional<String>, Runnable> consumer);
 }

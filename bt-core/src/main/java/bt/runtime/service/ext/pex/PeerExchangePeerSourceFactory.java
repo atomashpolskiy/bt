@@ -57,7 +57,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "PEX-Cleaner"));
         lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(
                 new Cleaner(), CLEANER_INTERVAL.toMillis(), CLEANER_INTERVAL.toMillis(), TimeUnit.MILLISECONDS));
-        lifecycleBinder.onShutdown(executor::shutdown);
+        lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
     }
 
     @Override

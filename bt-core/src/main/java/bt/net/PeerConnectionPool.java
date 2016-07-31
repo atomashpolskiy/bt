@@ -99,11 +99,11 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         connectionRequestor = Executors.newSingleThreadScheduledExecutor(r ->
                 new Thread(r, "TorrentSession-ConnectionRequestor"));
 
-        lifecycleBinder.onShutdown(connectionRequestor::shutdown);
-        lifecycleBinder.onShutdown(acceptor::shutdown);
-        lifecycleBinder.onShutdown(incomingAcceptor::shutdown);
-        lifecycleBinder.onShutdown(executor::shutdown);
-        lifecycleBinder.onShutdown(this::shutdown);
+        lifecycleBinder.onShutdown(this.getClass().getName(), connectionRequestor::shutdownNow);
+        lifecycleBinder.onShutdown(this.getClass().getName(), acceptor::shutdown);
+        lifecycleBinder.onShutdown(this.getClass().getName(), incomingAcceptor::shutdownNow);
+        lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
+        lifecycleBinder.onShutdown(this.getClass().getName(), this::shutdown);
 
         messageDispatcher = new MessageDispatcher(lifecycleBinder, this);
     }

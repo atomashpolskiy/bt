@@ -38,8 +38,8 @@ public class MessageDispatcher {
         ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "Message Dispatcher"));
         Worker worker = new Worker(pool);
         lifecycleBinder.onStartup(() -> executor.execute(worker));
-        lifecycleBinder.onShutdown(worker::shutdown);
-        lifecycleBinder.onShutdown(executor::shutdown);
+        lifecycleBinder.onShutdown(this.getClass().getName(), worker::shutdown);
+        lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
     }
 
     private class Worker implements Runnable {

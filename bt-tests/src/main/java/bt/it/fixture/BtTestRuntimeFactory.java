@@ -1,7 +1,6 @@
 package bt.it.fixture;
 
 import bt.BtRuntime;
-import bt.service.IShutdownService;
 import org.junit.rules.ExternalResource;
 
 import java.net.InetAddress;
@@ -29,8 +28,6 @@ public class BtTestRuntimeFactory extends ExternalResource {
 
     @Override
     protected void after() {
-        knownRuntimes.forEach(runtime -> {
-            runtime.service(IShutdownService.class).shutdownNow();
-        });
+        knownRuntimes.forEach(BtRuntime::shutdown);
     }
 }

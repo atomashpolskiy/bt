@@ -2,13 +2,20 @@ package bt;
 
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IRuntimeLifecycleBinder.LifecycleEvent;
-import bt.service.IShutdownService;
 import com.google.inject.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -16,12 +23,23 @@ public class BtRuntime {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BtRuntime.class);
 
+    private Duration shutdownTimeout;
+
     private Injector injector;
     private Set<BtClient> knownHandles;
     private AtomicBoolean started;
     private final Object lock;
 
     BtRuntime(Injector injector) {
+
+        shutdownTimeout = Duration.ofSeconds(5);
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                shutdown();
+            }
+        });
+
         this.injector = injector;
         knownHandles = ConcurrentHashMap.newKeySet();
         started = new AtomicBoolean(false);
@@ -30,6 +48,10 @@ public class BtRuntime {
 
     public <T> T service(Class<T> serviceType) {
         return injector.getInstance(serviceType);
+    }
+
+    void registerTorrentHandle(BtClient handle) {
+        knownHandles.add(handle);
     }
 
     public boolean isRunning() {
@@ -44,21 +66,14 @@ public class BtRuntime {
         }
     }
 
-    public void shutdown() {
-        if (started.compareAndSet(true, false)) {
-            synchronized (lock) {
-                knownHandles.forEach(BtClient::stop);
-                runHooks(LifecycleEvent.SHUTDOWN, e -> LOGGER.error("Error on runtime shutdown", e));
-                service(IShutdownService.class).shutdownNow();
-            }
-        }
-    }
-
     private void runHooks(LifecycleEvent event, Consumer<Throwable> errorConsumer) {
         service(IRuntimeLifecycleBinder.class).visitBindings(
                 event,
-                r -> {
+                (description, r) -> {
                     try {
+                        if (description.isPresent()) {
+                            LOGGER.info("Running " + event.name().toLowerCase() + " hook: " + description.get());
+                        }
                         r.run();
                     } catch (Exception e) {
                         errorConsumer.accept(e);
@@ -66,7 +81,48 @@ public class BtRuntime {
                 });
     }
 
-    void registerTorrentHandle(BtClient handle) {
-        knownHandles.add(handle);
+    public void shutdown() {
+        if (started.compareAndSet(true, false)) {
+            synchronized (lock) {
+                knownHandles.forEach(client -> {
+                    try {
+                        client.stop();
+                    } catch (Throwable e) {
+                        LOGGER.error("Error when stopping client", e);
+                    }
+                });
+
+                ExecutorService executor = Executors.newSingleThreadExecutor();
+                service(IRuntimeLifecycleBinder.class).visitBindings(
+                    LifecycleEvent.SHUTDOWN,
+                    (descriptionOptional, r) -> {
+                        String description = descriptionOptional.orElse(r.toString());
+                        try {
+                            executor.submit(toCallable(r)).get(shutdownTimeout.toMillis(), TimeUnit.MILLISECONDS)
+                                    .ifPresent(throwable -> onShutdownHookError(description, throwable));
+                        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                            onShutdownHookError(description, e);
+                        }
+                    });
+                executor.shutdownNow();
+            }
+        }
+    }
+
+    private Callable<Optional<Throwable>> toCallable(Runnable r) {
+        return () -> {
+            try {
+                r.run();
+                return Optional.empty();
+            } catch (Throwable e) {
+                return Optional.of(e);
+            }
+        };
+    }
+
+    protected void onShutdownHookError(String description, Throwable e) {
+        System.err.println("Shutdown hook failed: " + description + ". Reason:");
+        e.printStackTrace(System.err);
+        System.err.flush();
     }
 }

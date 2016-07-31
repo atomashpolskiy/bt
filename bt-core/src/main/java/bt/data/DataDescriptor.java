@@ -136,4 +136,9 @@ public class DataDescriptor implements IDataDescriptor {
             }
         });
     }
+
+    @Override
+    public String toString() {
+        return this.getClass().getName() + " <" + torrent.getName() + ">";
+    }
 }

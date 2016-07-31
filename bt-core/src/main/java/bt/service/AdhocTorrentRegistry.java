@@ -9,6 +9,7 @@ import bt.torrent.TorrentDescriptor;
 import bt.tracker.ITrackerService;
 import com.google.inject.Inject;
 
+import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -17,18 +18,18 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
 
     private ITrackerService trackerService;
     private IDataDescriptorFactory dataDescriptorFactory;
-    private IShutdownService shutdownService;
+    private IRuntimeLifecycleBinder lifecycleBinder;
 
     private ConcurrentMap<TorrentId, Torrent> torrents;
     private ConcurrentMap<Torrent, ITorrentDescriptor> descriptors;
 
     @Inject
     public AdhocTorrentRegistry(ITrackerService trackerService, IDataDescriptorFactory dataDescriptorFactory,
-                                IShutdownService shutdownService) {
+                                IRuntimeLifecycleBinder lifecycleBinder) {
 
         this.trackerService = trackerService;
         this.dataDescriptorFactory = dataDescriptorFactory;
-        this.shutdownService = shutdownService;
+        this.lifecycleBinder = lifecycleBinder;
 
         torrents = new ConcurrentHashMap<>();
         descriptors = new ConcurrentHashMap<>();
@@ -55,7 +56,14 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
             if (existing != null) {
                 descriptor = existing;
             } else {
-                shutdownService.addShutdownHook(descriptor.getDataDescriptor());
+                final ITorrentDescriptor tDescriptor = descriptor;
+                lifecycleBinder.onShutdown(tDescriptor.getDataDescriptor().toString(), () -> {
+                    try {
+                        tDescriptor.getDataDescriptor().close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
             }
             torrents.putIfAbsent(torrent.getTorrentId(), torrent);
             return descriptor;

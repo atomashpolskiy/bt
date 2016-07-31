@@ -4,7 +4,6 @@ import bt.module.Contribution;
 import bt.module.ContributionScanner;
 import bt.module.ProtocolModule;
 import bt.module.ServiceModule;
-import bt.service.IShutdownService;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -15,12 +14,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
 
 public class BtRuntimeBuilder {
 
     public static BtRuntimeBuilder builder() {
         return new BtRuntimeBuilder();
+    }
+
+    public static BtRuntime defaultRuntime() {
+        return builder().build();
     }
 
     private Map<Class<? extends Module>, Module> modules;
@@ -43,8 +45,7 @@ public class BtRuntimeBuilder {
     }
 
     public BtRuntime build() {
-        Injector injector = createInjector();
-        return new BtRuntime(injector);
+        return new BtRuntime(createInjector());
     }
 
     private Injector createInjector() {
@@ -59,11 +60,6 @@ public class BtRuntimeBuilder {
         } else {
             injector = Guice.createInjector(standardModules);
         }
-
-        IShutdownService shutdownService = injector.getInstance(IShutdownService.class);
-        ExecutorService executor = injector.getInstance(ExecutorService.class);
-        shutdownService.addShutdownHook(executor::shutdownNow);
-
         return injector;
     }
 
