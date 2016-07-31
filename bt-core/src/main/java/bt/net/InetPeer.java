@@ -74,7 +74,7 @@ public class InetPeer implements Peer {
     @Override
     public String toString() {
         String description = inetAddress.toString() + ":" + port;
-        if (peerId != null) {
+        if (peerId.isPresent()) {
             description += " (ID: " + peerId + ")";
         }
         return description;
