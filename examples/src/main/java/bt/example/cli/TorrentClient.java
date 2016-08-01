@@ -7,6 +7,7 @@ import bt.BtRuntimeBuilder;
 import bt.data.DataAccessFactory;
 import bt.data.file.FileSystemDataAccessFactory;
 import bt.metainfo.Torrent;
+import bt.module.PeerExchangeModule;
 import com.googlecode.lanterna.input.KeyStroke;
 import com.googlecode.lanterna.input.KeyType;
 import joptsimple.OptionException;
@@ -30,7 +31,10 @@ public class TorrentClient {
 
         DataAccessFactory dataAccess = new FileSystemDataAccessFactory(options.getTargetDirectory());
 
-        BtRuntime runtime = BtRuntimeBuilder.defaultRuntime();
+        BtRuntime runtime = BtRuntimeBuilder.builder()
+                .module(new PeerExchangeModule())
+                .build();
+
         BtClient client = Bt.client(runtime)
                 .url(toUrl(options.getMetainfoFile()))
                 .build(dataAccess);
@@ -42,7 +46,7 @@ public class TorrentClient {
                 if (!options.shouldSeedAfterDownloaded() && state.getPiecesRemaining() == 0) {
                     client.stop();
                 }
-            }, 1000).thenRun(() -> System.exit(0));
+            }, 1000).thenRun(runtime::shutdown);
 
         } catch (Exception e) {
             // in case the start request to the tracker fails

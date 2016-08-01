@@ -94,8 +94,8 @@ public class SessionStatePrinter {
         }
 
         try {
-            graphics.putString(0, 2, getSessionInfo(sessionState));
-            graphics.putString(0, 3, getDurations(sessionState));
+            graphics.putString(0, 2, getDurations(sessionState));
+            graphics.putString(0, 3, getSessionInfo(sessionState));
             graphics.putString(0, 4, getProgressBar(sessionState.getPiecesTotal(), sessionState.getPiecesRemaining()));
 
             if (sessionState.getPiecesRemaining() == 0) {
