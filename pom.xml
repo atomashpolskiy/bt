@@ -12,6 +12,7 @@
     <modules>
         <module>bt-core</module>
         <module>bt-tests</module>
+        <module>examples</module>
     </modules>
 
     <name>BitTorrent v3 Client</name>
