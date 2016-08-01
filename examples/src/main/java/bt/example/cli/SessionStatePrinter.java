@@ -133,9 +133,9 @@ public class SessionStatePrinter {
 
         String remainingStr;
         if (sessionState.getPiecesRemaining() == 0) {
-            remainingStr = "-\\s\\s\\s\\s\\s\\s";
+            remainingStr = "-\u0020\u0020\u0020\u0020\u0020\u0020";
         } else if (downloaded == 0) {
-            remainingStr = "\u221E\\s\\s\\s\\s\\s\\s"; // infinity
+            remainingStr = "\u221E\u0020\u0020\u0020\u0020\u0020\u0020"; // infinity
         } else {
             long size = torrent.getSize();
             double remaining = sessionState.getPiecesRemaining() / ((double) sessionState.getPiecesTotal());
