@@ -47,7 +47,7 @@ public class PieceManagerTest {
         IPieceManager pieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
         assertArrayEquals(new byte[]{0,0}, pieceManager.getBitfield());
         assertFalse(pieceManager.haveAnyData());
-        assertEquals(12, pieceManager.piecesLeft());
+        assertEquals(12, pieceManager.getPiecesRemaining());
     }
 
     @Test
@@ -61,7 +61,7 @@ public class PieceManagerTest {
         IPieceManager pieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
         assertArrayEquals(new byte[]{expectedBitfield}, pieceManager.getBitfield());
         assertTrue(pieceManager.haveAnyData());
-        assertEquals(5, pieceManager.piecesLeft());
+        assertEquals(5, pieceManager.getPiecesRemaining());
     }
 
     @Test

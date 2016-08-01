@@ -225,7 +225,12 @@ public class PieceManager implements IPieceManager {
     }
 
     @Override
-    public int piecesLeft() {
+    public int getPiecesTotal() {
+        return chunks.size();
+    }
+
+    @Override
+    public int getPiecesRemaining() {
 
         int left = chunks.size() - completePieces.get();
         if (left < 0) {

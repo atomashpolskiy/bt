@@ -55,6 +55,9 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
 
     private Deque<Message> outgoingMessages;
 
+    private volatile long downloaded;
+    private volatile long uploaded;
+
     ConnectionWorker(Peer peer, IPieceManager pieceManager, IDataWorker dataWorker) {
 
         this.pieceManager = pieceManager;
@@ -153,8 +156,8 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
                 if (LOGGER.isTraceEnabled()) {
                     LOGGER.trace(requestQueue.size() + " requests left in queue {piece #" + currentPiece.get() + "}");
                 }
-                BlockWrite blockWrite = dataWorker.addBlock(peer, piece.getPieceIndex(),
-                        piece.getOffset(), piece.getBlock());
+                downloaded += block.length;
+                BlockWrite blockWrite = dataWorker.addBlock(peer, pieceIndex, offset, block);
                 if (!blockWrite.isComplete() || blockWrite.isSuccess()) {
                     pendingWrites.put(key, blockWrite);
                 }
@@ -173,6 +176,14 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
         return outgoingMessages.poll();
     }
 
+    public long getDownloaded() {
+        return downloaded;
+    }
+
+    public long getUploaded() {
+        return uploaded;
+    }
+
     private void prepareOutgoingMessages() {
 
         BlockRead block;
@@ -184,6 +195,7 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
             // check that peer hadn't sent cancel while we were preparing the requested block
             if (!cancelledPeerRequests.remove(Mapper.mapper().buildKey(pieceIndex, offset, length))) {
                 try {
+                    uploaded += length;
                     outgoingMessages.add(new Piece(pieceIndex, offset, block.getBlock()));
                 } catch (InvalidMessageException e) {
                     throw new BtException("Failed to send PIECE", e);
@@ -211,7 +223,7 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
                     pendingRequests.clear();
                 }
             } else {
-                if (pieceManager.piecesLeft() > 0 && pieceManager.mightSelectPieceForPeer(peer)) {
+                if (pieceManager.getPiecesRemaining() > 0 && pieceManager.mightSelectPieceForPeer(peer)) {
                     if (!connectionState.isInterested()) {
                         outgoingMessages.add(Interested.instance());
                         connectionState.setInterested(true);

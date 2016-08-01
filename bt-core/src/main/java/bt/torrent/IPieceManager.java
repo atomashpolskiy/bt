@@ -29,5 +29,7 @@ public interface IPieceManager {
 
     List<Request> buildRequestsForPiece(Integer pieceIndex);
 
-    int piecesLeft();
+    int getPiecesTotal();
+
+    int getPiecesRemaining();
 }

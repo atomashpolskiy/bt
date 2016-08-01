@@ -32,6 +32,8 @@ public class BtRuntime {
     private AtomicBoolean started;
     private final Object lock;
 
+    private ExecutorService clientExecutor;
+
     BtRuntime(Injector injector) {
 
         shutdownTimeout = Duration.ofSeconds(5);
@@ -46,6 +48,10 @@ public class BtRuntime {
         knownHandles = ConcurrentHashMap.newKeySet();
         started = new AtomicBoolean(false);
         lock = new Object();
+
+        AtomicInteger threadCount = new AtomicInteger();
+        clientExecutor = Executors.newCachedThreadPool(r ->
+                new Thread(r, "BtRuntimeThreadPool-Client#" + threadCount.incrementAndGet()));
     }
 
     public <T> T service(Class<T> serviceType) {
@@ -54,6 +60,10 @@ public class BtRuntime {
 
     void registerTorrentHandle(BtClient handle) {
         knownHandles.add(handle);
+    }
+
+    ExecutorService getClientExecutor() {
+        return clientExecutor;
     }
 
     public boolean isRunning() {
@@ -95,7 +105,7 @@ public class BtRuntime {
                 });
 
                 AtomicInteger threadCount = new AtomicInteger();
-                ExecutorService executor = Executors.newCachedThreadPool(r -> {
+                ExecutorService shutdownExecutor = Executors.newCachedThreadPool(r -> {
                     Thread t = new Thread(r, "BtShutdownHandler-" + threadCount.incrementAndGet());
                     t.setDaemon(true);
                     return t;
@@ -103,7 +113,7 @@ public class BtRuntime {
                 service(IRuntimeLifecycleBinder.class).visitBindings(
                     LifecycleEvent.SHUTDOWN,
                     (descriptionOptional, r) -> {
-                        Future<Optional<Throwable>> future = executor.submit(toCallable(r));
+                        Future<Optional<Throwable>> future = shutdownExecutor.submit(toCallable(r));
                         String description = descriptionOptional.orElse(r.toString());
                         try {
                             future.get(shutdownTimeout.toMillis(), TimeUnit.MILLISECONDS)
@@ -112,7 +122,14 @@ public class BtRuntime {
                             onShutdownHookError(description, e);
                         }
                     });
-                executor.shutdownNow();
+                shutdownExecutor.shutdown();
+                try {
+                    shutdownExecutor.awaitTermination(shutdownTimeout.toMillis(), TimeUnit.MILLISECONDS);
+                } catch (InterruptedException e) {
+                    // ignore
+                    shutdownExecutor.shutdownNow();
+                }
+                clientExecutor.shutdown();
             }
         }
     }
@@ -128,7 +145,7 @@ public class BtRuntime {
         };
     }
 
-    protected void onShutdownHookError(String description, Throwable e) {
+    private void onShutdownHookError(String description, Throwable e) {
         System.err.println("Shutdown hook failed: " + description + ". Reason:");
         e.printStackTrace(System.err);
         System.err.flush();

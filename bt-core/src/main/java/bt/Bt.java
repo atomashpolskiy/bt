@@ -8,6 +8,7 @@ import bt.net.IPeerConnectionPool;
 import bt.service.IConfigurationService;
 import bt.service.IPeerRegistry;
 import bt.service.ITorrentRegistry;
+import bt.torrent.DefaultTorrentSession;
 import bt.torrent.IDataWorker;
 import bt.torrent.IDataWorkerFactory;
 import bt.torrent.ITorrentDescriptor;
@@ -92,14 +93,15 @@ public class Bt {
         IConnectionHandlerFactory connectionHandlerFactory = runtime.service(IConnectionHandlerFactory.class);
 
         PieceManager pieceManager = new PieceManager(pieceSelector, descriptor.getDataDescriptor().getChunkDescriptors());
-        TorrentSession session = new TorrentSession(connectionPool, configurationService,
+        DefaultTorrentSession session = new DefaultTorrentSession(connectionPool, configurationService,
                 connectionHandlerFactory, pieceManager, dataWorker, torrent);
 
         dataWorker.addVerifiedPieceListener(session::onPieceVerified);
         peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);
         connectionPool.addConnectionListener(session);
 
-        return new RuntimeAwareBtClient(runtime, new DefaultBtClient(descriptor, session, dataWorker));
+        return new RuntimeAwareBtClient(runtime,
+                new DefaultBtClient(runtime.getClientExecutor(), descriptor, session, dataWorker));
     }
 
     private static class LazyBtClient implements BtClient {
@@ -140,6 +142,14 @@ public class Bt {
             }
             delegate.stop();
         }
+
+        @Override
+        public TorrentSession getSession() {
+            if (delegate == null) {
+                initClient();
+            }
+            return delegate.getSession();
+        }
     }
 
     private static class RuntimeAwareBtClient implements BtClient {
@@ -174,6 +184,11 @@ public class Bt {
         public void stop() {
             delegate.stop();
         }
+
+        @Override
+        public TorrentSession getSession() {
+            return delegate.getSession();
+        }
     }
 
     private static class DefaultBtClient implements BtClient {
@@ -187,12 +202,13 @@ public class Bt {
         private Optional<Consumer<TorrentSessionState>> listener;
         private Optional<ScheduledFuture<?>> listenerFuture;
 
-        DefaultBtClient(ITorrentDescriptor delegate, TorrentSession session, IDataWorker dataWorker) {
+        DefaultBtClient(ExecutorService executor, ITorrentDescriptor delegate,
+                        TorrentSession session, IDataWorker dataWorker) {
             this.delegate = delegate;
             this.session = session;
             this.dataWorker = dataWorker;
 
-            executor = Executors.newSingleThreadExecutor();
+            this.executor = executor;
             future = Optional.empty();
             listener = Optional.empty();
             listenerFuture = Optional.empty();
@@ -204,8 +220,12 @@ public class Bt {
                 delegate.stop();
             } finally {
                 future.ifPresent(future -> future.complete(null));
-                executor.shutdownNow();
             }
+        }
+
+        @Override
+        public TorrentSession getSession() {
+            return session;
         }
 
         @Override
