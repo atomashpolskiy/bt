@@ -25,7 +25,6 @@
         <snakeyaml-version>1.17</snakeyaml-version>
         <httpclient-version>4.5.2</httpclient-version>
         <slf4j-version>1.7.21</slf4j-version>
-        <log4j-version>2.4.1</log4j-version>
         <guice-version>4.1.0</guice-version>
         <junit-version>4.12</junit-version>
         <mockito-version>1.10.19</mockito-version>
@@ -63,21 +62,6 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j-version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-simple</artifactId>
-                <version>${slf4j-version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-core</artifactId>
-                <version>${log4j-version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-slf4j-impl</artifactId>
-                <version>${log4j-version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject</groupId>
