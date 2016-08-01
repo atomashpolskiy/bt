@@ -124,7 +124,7 @@ public class CliWrapper extends CommandWithMetadata {
 
     private static CommandMetadata createMetadata() {
         return CommandMetadata.builder(CliWrapper.class)
-				.description("Simple CLI wrapper")
+				.description("Bt Example: Simple CLI wrapper")
 				.build();
     }
 
