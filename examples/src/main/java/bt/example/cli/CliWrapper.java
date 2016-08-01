@@ -10,14 +10,20 @@ import bt.metainfo.Torrent;
 import bt.module.PeerExchangeModule;
 import com.googlecode.lanterna.input.KeyStroke;
 import com.googlecode.lanterna.input.KeyType;
+import com.nhl.bootique.cli.Cli;
+import com.nhl.bootique.command.CommandMetadata;
+import com.nhl.bootique.command.CommandOutcome;
+import com.nhl.bootique.command.CommandWithMetadata;
 import joptsimple.OptionException;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
 
-public class TorrentClient {
+public class CliWrapper extends CommandWithMetadata {
 
     public static void main(String[] args) throws IOException {
 
@@ -28,6 +34,11 @@ public class TorrentClient {
             Options.printHelp(System.out);
             return;
         }
+
+        new CliWrapper().runWithOptions(options);
+    }
+
+    private void runWithOptions(Options options) {
 
         DataAccessFactory dataAccess = new FileSystemDataAccessFactory(options.getTargetDirectory());
 
@@ -46,7 +57,7 @@ public class TorrentClient {
                 if (!options.shouldSeedAfterDownloaded() && state.getPiecesRemaining() == 0) {
                     client.stop();
                 }
-            }, 1000).thenRun(runtime::shutdown);
+            }, 1000).thenRun(runtime::shutdown).join();
 
         } catch (Exception e) {
             // in case the start request to the tracker fails
@@ -105,5 +116,33 @@ public class TorrentClient {
         e.printStackTrace(System.out);
         System.out.flush();
         System.exit(1);
+    }
+
+    public CliWrapper() {
+        super(createMetadata());
+    }
+
+    private static CommandMetadata createMetadata() {
+        return CommandMetadata.builder(CliWrapper.class)
+				.description("Simple CLI wrapper")
+				.build();
+    }
+
+    @Override
+    public CommandOutcome run(Cli cli) {
+
+        List<String> argsList = cli.standaloneArguments();
+        String[] args = argsList.toArray(new String[argsList.size()]);
+
+        Options options;
+        try {
+            options = Options.parse(args);
+        } catch (OptionException e) {
+            Options.printHelp(System.out);
+            return CommandOutcome.failed(2, "Illegal arguments: " + Arrays.toString(args));
+        }
+
+        runWithOptions(options);
+        return CommandOutcome.succeeded();
     }
 }

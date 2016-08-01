@@ -4,30 +4,68 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <artifactId>bt-client</artifactId>
-        <groupId>bt</groupId>
-        <version>1.0-SNAPSHOT</version>
+        <groupId>com.nhl.bootique.parent</groupId>
+        <artifactId>bootique-parent</artifactId>
+        <version>0.11</version>
     </parent>
 
     <artifactId>examples</artifactId>
     <name>Bt Examples</name>
     <description>Examples of Bt library usage</description>
 
+    <properties>
+        <bt-version>1.0-SNAPSHOT</bt-version>
+        <bootique-version>0.18</bootique-version>
+        <main.class>bt.example.Examples</main.class>
+        <jopts-version>5.0.2</jopts-version>
+        <lanterna-version>3.0.0-beta3</lanterna-version>
+        <slf4j-version>1.7.21</slf4j-version>
+    </properties>
+
+    <build>
+        <finalName>examples</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
     <dependencies>
         <dependency>
             <groupId>bt</groupId>
             <artifactId>bt-core</artifactId>
-            <version>${project.version}</version>
+            <version>${bt-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.bootique.bom</groupId>
+            <artifactId>bootique-bom</artifactId>
+            <version>${bootique-version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.nhl.bootique.bom</groupId>
+            <artifactId>bootique-bom</artifactId>
+            <version>${bootique-version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.nhl.bootique</groupId>
+            <artifactId>bootique</artifactId>
+            <version>${bootique-version}</version>
         </dependency>
         <dependency>
             <groupId>net.sf.jopt-simple</groupId>
             <artifactId>jopt-simple</artifactId>
-            <version>5.0.2</version>
+            <version>${jopts-version}</version>
         </dependency>
         <dependency>
             <groupId>com.googlecode.lanterna</groupId>
             <artifactId>lanterna</artifactId>
-            <version>3.0.0-beta3</version>
+            <version>${lanterna-version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
