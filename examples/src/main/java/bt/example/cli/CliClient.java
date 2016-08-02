@@ -6,24 +6,15 @@ import bt.BtRuntime;
 import bt.BtRuntimeBuilder;
 import bt.data.DataAccessFactory;
 import bt.data.file.FileSystemDataAccessFactory;
-import bt.metainfo.Torrent;
 import bt.module.PeerExchangeModule;
-import com.googlecode.lanterna.input.KeyStroke;
-import com.googlecode.lanterna.input.KeyType;
-import com.nhl.bootique.cli.Cli;
-import com.nhl.bootique.command.CommandMetadata;
-import com.nhl.bootique.command.CommandOutcome;
-import com.nhl.bootique.command.CommandWithMetadata;
 import joptsimple.OptionException;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.List;
 
-public class CliClient extends CommandWithMetadata {
+public class CliClient  {
 
     public static void main(String[] args) throws IOException {
 
@@ -38,7 +29,7 @@ public class CliClient extends CommandWithMetadata {
         new CliClient().runWithOptions(options);
     }
 
-    private void runWithOptions(Options options) {
+    void runWithOptions(Options options) {
 
         DataAccessFactory dataAccess = new FileSystemDataAccessFactory(options.getTargetDirectory());
 
@@ -50,7 +41,7 @@ public class CliClient extends CommandWithMetadata {
                 .url(toUrl(options.getMetainfoFile()))
                 .build(dataAccess);
 
-        SessionStatePrinter printer = createPrinter(client.getSession().getTorrent());
+        SessionStatePrinter printer = SessionStatePrinter.createKeyInputAwarePrinter(client.getSession().getTorrent());
         try {
             client.startAsync(state -> {
                 printer.print(state);
@@ -74,75 +65,9 @@ public class CliClient extends CommandWithMetadata {
         }
     }
 
-    private static SessionStatePrinter createPrinter(Torrent torrent) {
-
-        return new SessionStatePrinter(torrent) {
-
-            private Thread t;
-
-            {
-                t = new Thread(() -> {
-                    while (!isShutdown()) {
-                        try {
-                            KeyStroke keyStroke = readKeyInput();
-                            if (keyStroke.isCtrlDown() && keyStroke.getKeyType() == KeyType.Character
-                                    && keyStroke.getCharacter().equals('c')) {
-                                shutdown();
-                                System.exit(0);
-                            }
-                        } catch (Throwable e) {
-                            e.printStackTrace(System.out);
-                            System.out.flush();
-                        }
-                    }
-                });
-                t.setDaemon(true);
-                t.start();
-
-                Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
-            }
-
-            @Override
-            public void shutdown() {
-                if (!isShutdown()) {
-                    super.shutdown();
-                    t.interrupt();
-                }
-            }
-        };
-    }
-
     private static void printAndShutdown(Throwable e) {
         e.printStackTrace(System.out);
         System.out.flush();
         System.exit(1);
-    }
-
-    public CliClient() {
-        super(createMetadata());
-    }
-
-    private static CommandMetadata createMetadata() {
-        return CommandMetadata.builder(CliClient.class)
-				.description("Bt Example: Simple command-line torrent downloader")
-				.build();
-    }
-
-    @Override
-    public CommandOutcome run(Cli cli) {
-
-        List<String> argsList = cli.standaloneArguments();
-        String[] args = argsList.toArray(new String[argsList.size()]);
-
-        Options options;
-        try {
-            options = Options.parse(args);
-        } catch (OptionException e) {
-            Options.printHelp(System.out);
-            return CommandOutcome.failed(2, "Illegal arguments: " + Arrays.toString(args));
-        }
-
-        runWithOptions(options);
-        return CommandOutcome.succeeded();
     }
 }

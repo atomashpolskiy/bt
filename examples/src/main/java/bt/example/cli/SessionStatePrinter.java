@@ -4,6 +4,7 @@ import bt.metainfo.Torrent;
 import bt.torrent.TorrentSessionState;
 import com.googlecode.lanterna.graphics.TextGraphics;
 import com.googlecode.lanterna.input.KeyStroke;
+import com.googlecode.lanterna.input.KeyType;
 import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
@@ -19,6 +20,44 @@ public class SessionStatePrinter {
     private static final String TORRENT_INFO = "Downloading %s (%,d B)";
     private static final String SESSION_INFO = "Peers: %2d\t\tDown: %4.1f %s/s\t\tUp: %4.1f %s/s\t\t";
     private static final String DURATION_INFO ="Elapsed time: %s\t\tRemaining time: %s";
+
+    public static SessionStatePrinter createKeyInputAwarePrinter(Torrent torrent) {
+
+        return new SessionStatePrinter(torrent) {
+
+            private Thread t;
+
+            {
+                t = new Thread(() -> {
+                    while (!isShutdown()) {
+                        try {
+                            KeyStroke keyStroke = readKeyInput();
+                            if (keyStroke.isCtrlDown() && keyStroke.getKeyType() == KeyType.Character
+                                    && keyStroke.getCharacter().equals('c')) {
+                                shutdown();
+                                System.exit(0);
+                            }
+                        } catch (Throwable e) {
+                            e.printStackTrace(System.out);
+                            System.out.flush();
+                        }
+                    }
+                });
+                t.setDaemon(true);
+                t.start();
+
+                Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
+            }
+
+            @Override
+            public void shutdown() {
+                if (!isShutdown()) {
+                    super.shutdown();
+                    t.interrupt();
+                }
+            }
+        };
+    }
 
     private Screen screen;
     private TextGraphics graphics;
