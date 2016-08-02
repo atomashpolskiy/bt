@@ -23,7 +23,7 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 
-public class CliWrapper extends CommandWithMetadata {
+public class CliClient extends CommandWithMetadata {
 
     public static void main(String[] args) throws IOException {
 
@@ -35,7 +35,7 @@ public class CliWrapper extends CommandWithMetadata {
             return;
         }
 
-        new CliWrapper().runWithOptions(options);
+        new CliClient().runWithOptions(options);
     }
 
     private void runWithOptions(Options options) {
@@ -118,13 +118,13 @@ public class CliWrapper extends CommandWithMetadata {
         System.exit(1);
     }
 
-    public CliWrapper() {
+    public CliClient() {
         super(createMetadata());
     }
 
     private static CommandMetadata createMetadata() {
-        return CommandMetadata.builder(CliWrapper.class)
-				.description("Bt Example: Simple CLI wrapper")
+        return CommandMetadata.builder(CliClient.class)
+				.description("Bt Example: Simple command-line torrent downloader")
 				.build();
     }
 

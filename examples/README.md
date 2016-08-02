@@ -19,9 +19,9 @@ $ java -jar target/examples.jar
 
 Option                    Description                                        
 ------                    -----------                                        
---cliwrapper              Bt Example: Simple CLI wrapper                     
+--cliclient              Bt Example: Simple command-line torrent downloader
 --config <yaml_location>  Specifies YAML config location, which can be a file
-                            path or a URL.                                   
+                            path or a URL.
 --help                    Prints this message.
 ```
 
@@ -30,7 +30,7 @@ Option                    Description
 ### Print the flags supported by some specific example
 
 ```
-$ java -jar target/examples.jar --cliwrapper
+$ java -jar target/examples.jar --cliclient
 
 Option (* = required)  Description                               
 ---------------------  -----------                               
@@ -45,5 +45,5 @@ Option (* = required)  Description
 (note how ```--``` delimits the arguments that should be passed to the example code)
 
 ```
-$ java -jar target/examples.jar --cliwrapper -- --file /path/to/torrent --dir /save/to/here --seed
+$ java -jar target/examples.jar --cliclient -- --file /path/to/torrent --dir /save/to/here --seed
 ```

@@ -1,6 +1,6 @@
 package bt.example;
 
-import bt.example.cli.CliWrapper;
+import bt.example.cli.CliClient;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.nhl.bootique.BQCoreModule;
@@ -15,6 +15,6 @@ public class Examples implements Module {
     @Override
     public void configure(Binder binder) {
         BQCoreModule.contributeCommands(binder)
-			.addBinding().to(CliWrapper.class);
+			.addBinding().to(CliClient.class);
     }
 }
