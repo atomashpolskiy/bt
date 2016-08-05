@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="warn">
+    <appenders>
+        <File name="A2" append="false" fileName="out.log">
+            <PatternLayout pattern="[%d{dd/MMM/yyyy:HH:mm:ss,SSS}] %-5p %c{1}: %m%n%ex"/>
+        </File>
+        <Async name="A1" bufferSize="1000">
+            <appender-ref ref="A2"/>
+        </Async>
+    </appenders>
+
+    <loggers>
+        <logger name="STDOUT" level="trace" additivity="false">
+            <appender-ref ref="A1"/>
+        </logger>
+        <logger name="STDERR" level="trace" additivity="false">
+            <appender-ref ref="A1"/>
+        </logger>
+
+        <logger name="bt" level="info" additivity="false">
+            <appender-ref ref="A1"/>
+        </logger>
+
+        <root level="warn">
+            <appender-ref ref="A1"/>
+        </root>
+    </loggers>
+</configuration>

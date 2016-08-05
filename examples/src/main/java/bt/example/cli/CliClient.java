@@ -8,6 +8,8 @@ import bt.data.DataAccessFactory;
 import bt.data.file.FileSystemDataAccessFactory;
 import bt.module.PeerExchangeModule;
 import joptsimple.OptionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +17,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 public class CliClient  {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CliClient.class);
 
     public static void main(String[] args) throws IOException {
 
@@ -66,8 +70,7 @@ public class CliClient  {
     }
 
     private static void printAndShutdown(Throwable e) {
-        e.printStackTrace(System.out);
-        System.out.flush();
+        LOGGER.error("Unexpected error, exiting...", e);
         System.exit(1);
     }
 }

@@ -1,6 +1,7 @@
 package bt.example.cli;
 
 import bt.metainfo.Torrent;
+import bt.net.Peer;
 import bt.torrent.TorrentSessionState;
 import com.googlecode.lanterna.graphics.TextGraphics;
 import com.googlecode.lanterna.input.KeyStroke;
@@ -9,17 +10,24 @@ import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import com.googlecode.lanterna.terminal.Terminal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Set;
 
 public class SessionStatePrinter {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SessionStatePrinter.class);
 
     private static final String TORRENT_INFO = "Downloading %s (%,d B)";
     private static final String SESSION_INFO = "Peers: %2d\t\tDown: %4.1f %s/s\t\tUp: %4.1f %s/s\t\t";
     private static final String DURATION_INFO ="Elapsed time: %s\t\tRemaining time: %s";
+
+    private static final String WHITESPACES = "\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020";
 
     public static SessionStatePrinter createKeyInputAwarePrinter(Torrent torrent) {
 
@@ -38,8 +46,7 @@ public class SessionStatePrinter {
                                 System.exit(0);
                             }
                         } catch (Throwable e) {
-                            e.printStackTrace(System.out);
-                            System.out.flush();
+                            LOGGER.error("Unexpected error when reading user input", e);
                         }
                     }
                 });
@@ -133,8 +140,14 @@ public class SessionStatePrinter {
         }
 
         try {
-            graphics.putString(0, 2, getDurations(sessionState));
-            graphics.putString(0, 3, getSessionInfo(sessionState));
+            long downloaded = sessionState.getDownloaded();
+            long uploaded = sessionState.getUploaded();
+
+            graphics.putString(0, 2, getDurations(downloaded - this.downloaded,
+                    sessionState.getPiecesRemaining(), sessionState.getPiecesTotal()));
+
+            graphics.putString(0, 3, getSessionInfo(sessionState.getConnectedPeers(),
+                    downloaded - this.downloaded, uploaded - this.uploaded));
             graphics.putString(0, 4, getProgressBar(sessionState.getPiecesTotal(), sessionState.getPiecesRemaining()));
 
             if (sessionState.getPiecesRemaining() == 0) {
@@ -143,44 +156,42 @@ public class SessionStatePrinter {
 
             screen.refresh(Screen.RefreshType.DELTA);
 
+            this.downloaded = downloaded;
+            this.uploaded = uploaded;
+
         } catch (Throwable e) {
-            e.printStackTrace(System.out);
-            System.out.flush();
+            LOGGER.error("Unexpected error when printing session state", e);
             shutdown();
-        } finally {
-            downloaded = sessionState.getDownloaded();
-            uploaded = sessionState.getUploaded();
         }
     }
 
-    private String getSessionInfo(TorrentSessionState sessionState) {
+    private String getSessionInfo(Set<Peer> peers, long downloaded, long uploaded) {
 
-        Rate downRate = new Rate(sessionState.getDownloaded() - downloaded);
-        Rate upRate = new Rate(sessionState.getUploaded() - uploaded);
+        Rate downRate = new Rate(downloaded);
+        Rate upRate = new Rate(uploaded);
 
-        return String.format(SESSION_INFO, sessionState.getConnectedPeers().size(),
+        return String.format(SESSION_INFO, peers.size(),
                 downRate.getQuantity(), downRate.getMeasureUnit(),
                 upRate.getQuantity(), upRate.getMeasureUnit());
     }
 
-    private String getDurations(TorrentSessionState sessionState) {
-
-        long downloaded = sessionState.getDownloaded() - this.downloaded;
+    private String getDurations(long downloaded, int piecesRemaining, int piecesTotal) {
 
         Duration elapsed = Duration.ofMillis(System.currentTimeMillis() - started);
         String elapsedStr = formatDuration(elapsed);
 
         String remainingStr;
-        if (sessionState.getPiecesRemaining() == 0) {
-            remainingStr = "-\u0020\u0020\u0020\u0020\u0020\u0020";
+        if (piecesRemaining == 0) {
+            remainingStr = "-" + WHITESPACES;
         } else if (downloaded == 0) {
-            remainingStr = "\u221E\u0020\u0020\u0020\u0020\u0020\u0020"; // infinity
+            remainingStr = "\u221E" + WHITESPACES; // infinity
         } else {
             long size = torrent.getSize();
-            double remaining = sessionState.getPiecesRemaining() / ((double) sessionState.getPiecesTotal());
+            double remaining = piecesRemaining / ((double) piecesTotal);
             long remainingBytes = (long) (size * remaining);
             Duration remainingTime = Duration.ofSeconds(remainingBytes / downloaded);
-            remainingStr = formatDuration(remainingTime);
+            // overwrite trailing chars with whitespaces if there are any
+            remainingStr = formatDuration(remainingTime) + WHITESPACES;
         }
         return String.format(DURATION_INFO, elapsedStr, remainingStr);
     }
