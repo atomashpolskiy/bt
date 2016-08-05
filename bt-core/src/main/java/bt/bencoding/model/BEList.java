@@ -27,7 +27,7 @@ public class BEList implements BEObject<List<? extends BEObject<?>>> {
 
     @Override
     public byte[] getContent() {
-        return Arrays.copyOf(content, content.length);
+        return content;
     }
 
     @Override

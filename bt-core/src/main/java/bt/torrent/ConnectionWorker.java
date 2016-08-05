@@ -138,7 +138,7 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
         if (Cancel.class.equals(type)) {
             Cancel cancel = (Cancel) message;
             cancelledPeerRequests.add(Mapper.mapper().buildKey(
-            cancel.getPieceIndex(), cancel.getOffset(), cancel.getLength()));
+                cancel.getPieceIndex(), cancel.getOffset(), cancel.getLength()));
             return;
         }
         if (Piece.class.equals(type)) {
@@ -184,6 +184,9 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
         return uploaded;
     }
 
+    private Optional<Boolean> mightSelectPieceForPeer = Optional.empty();
+    private long lastCheckedAvailablePiecesForPeer;
+
     private void prepareOutgoingMessages() {
 
         BlockRead block;
@@ -223,12 +226,19 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
                     pendingRequests.clear();
                 }
             } else {
-                if (pieceManager.getPiecesRemaining() > 0 && pieceManager.mightSelectPieceForPeer(peer)) {
+                if (!mightSelectPieceForPeer.isPresent() ||
+                        // periodically refresh available pieces;
+                        // as a bonus this also relieves us from clearing
+                        // this flag manually after the current piece (if there is any) has been downloaded
+                        (System.currentTimeMillis() - lastCheckedAvailablePiecesForPeer) >= 3000) {
+                    mightSelectPieceForPeer = Optional.of(pieceManager.mightSelectPieceForPeer(peer));
+                    lastCheckedAvailablePiecesForPeer = System.currentTimeMillis();
+                }
+                if (mightSelectPieceForPeer.get() && pieceManager.getPiecesRemaining() > 0) {
                     if (!connectionState.isInterested()) {
                         outgoingMessages.add(Interested.instance());
                         connectionState.setInterested(true);
                     }
-
                 } else if (connectionState.isInterested()) {
                     outgoingMessages.add(NotInterested.instance());
                     connectionState.setInterested(false);
@@ -238,19 +248,27 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
 
         if (!connectionState.isPeerChoking()) {
             if (!currentPiece.isPresent()) {
-                Optional<Integer> nextPiece = pieceManager.selectPieceForPeer(peer);
-                if (nextPiece.isPresent()) {
-                    if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Begin downloading piece #" + nextPiece.get() +
-                                "; peer: " + peer);
+                // some time might have passed since the last check, need to refresh
+                mightSelectPieceForPeer = Optional.of(pieceManager.mightSelectPieceForPeer(peer));
+                lastCheckedAvailablePiecesForPeer = System.currentTimeMillis();
+                if (mightSelectPieceForPeer.get()) {
+                    Optional<Integer> nextPiece = pieceManager.selectPieceForPeer(peer);
+                    if (nextPiece.isPresent()) {
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Begin downloading piece #" + nextPiece.get() +
+                                    "; peer: " + peer);
+                        }
+                        currentPiece = nextPiece;
+                        requestQueue.addAll(pieceManager.buildRequestsForPiece(nextPiece.get()));
+                        lastBuiltRequests = System.currentTimeMillis();
+                        if (LOGGER.isTraceEnabled()) {
+                            LOGGER.trace("Initializing request queue {piece #" + nextPiece.get() +
+                                    ", total requests: " + requestQueue.size() + "}");
+                        }
                     }
-                    currentPiece = nextPiece;
-                    requestQueue.addAll(pieceManager.buildRequestsForPiece(nextPiece.get()));
-                    lastBuiltRequests = System.currentTimeMillis();
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Initializing request queue {piece #" + nextPiece.get() +
-                                ", total requests: " + requestQueue.size() + "}");
-                    }
+                } else if (connectionState.isInterested()) {
+                    outgoingMessages.add(NotInterested.instance());
+                    connectionState.setInterested(false);
                 }
             } else if (requestQueue.isEmpty() && (System.currentTimeMillis() - lastBuiltRequests) >= 30000) {
                 // this may happen when some of the received blocks were discarded by the data worker;

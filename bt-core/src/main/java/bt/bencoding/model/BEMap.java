@@ -27,7 +27,7 @@ public class BEMap implements BEObject<Map<String, BEObject<?>>> {
 
     @Override
     public byte[] getContent() {
-        return Arrays.copyOf(content, content.length);
+        return content;
     }
 
     @Override

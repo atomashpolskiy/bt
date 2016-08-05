@@ -26,7 +26,7 @@ public class BEInteger implements BEObject<BigInteger> {
 
     @Override
     public byte[] getContent() {
-        return Arrays.copyOf(content, content.length);
+        return content;
     }
 
     @Override

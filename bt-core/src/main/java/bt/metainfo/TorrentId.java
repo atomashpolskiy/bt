@@ -28,7 +28,7 @@ public class TorrentId {
     }
 
     public byte[] getBytes() {
-        return Arrays.copyOf(torrentId, torrentId.length);
+        return torrentId;
     }
 
     @Override

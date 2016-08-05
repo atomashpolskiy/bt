@@ -24,12 +24,12 @@ public class BEString implements BEObject<byte[]> {
 
     @Override
     public byte[] getContent() {
-        return Arrays.copyOf(content, content.length);
+        return content;
     }
 
     @Override
     public byte[] getValue() {
-        return Arrays.copyOf(content, content.length);
+        return content;
     }
 
     @Override

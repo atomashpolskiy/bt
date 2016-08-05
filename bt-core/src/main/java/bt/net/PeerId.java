@@ -28,7 +28,7 @@ public class PeerId {
     }
 
     public byte[] getBytes() {
-        return Arrays.copyOf(peerId, peerId.length);
+        return peerId;
     }
 
     @Override

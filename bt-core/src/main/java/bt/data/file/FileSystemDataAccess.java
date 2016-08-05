@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.util.List;
 
 class FileSystemDataAccess implements DataAccess {
@@ -78,6 +79,32 @@ class FileSystemDataAccess implements DataAccess {
     }
 
     @Override
+    public void readBlock(ByteBuffer buffer, long offset) {
+
+        if (closed) {
+            if (!init(false)) {
+                return;
+            }
+        }
+
+        if (offset < 0) {
+            throw new BtException("Illegal arguments: offset (" + offset + ")");
+        } else if (offset > size - buffer.remaining()) {
+            throw new BtException("Received a request to read past the end of file (offset: " + offset +
+                    ", requested block length: " + buffer.remaining() + ", file size: " + size);
+        }
+
+        try {
+            raf.seek(offset);
+            raf.getChannel().read(buffer);
+
+        } catch (IOException e) {
+            throw new BtException("Failed to read bytes (offset: " + offset +
+                    ", requested block length: " + buffer.remaining() + ", file size: " + size + ")", e);
+        }
+    }
+
+    @Override
     public byte[] readBlock(long offset, int length) {
 
         if (closed) {
@@ -102,6 +129,30 @@ class FileSystemDataAccess implements DataAccess {
         } catch (IOException e) {
             throw new BtException("Failed to read bytes (offset: " + offset +
                     ", requested block length: " + length + ", file size: " + size + ")", e);
+        }
+    }
+
+    @Override
+    public void writeBlock(ByteBuffer buffer, long offset) {
+
+        if (closed) {
+            init(true);
+        }
+
+        if (offset < 0) {
+            throw new BtException("Negative offset: " + offset);
+        } else if (offset > size - buffer.remaining()) {
+            throw new BtException("Received a request to write past the end of file (offset: " + offset +
+                    ", block length: " + buffer.remaining() + ", file size: " + size);
+        }
+
+        try {
+            raf.seek(offset);
+            raf.getChannel().write(buffer);
+
+        } catch (IOException e) {
+            throw new BtException("Failed to write bytes (offset: " + offset +
+                    ", block length: " + buffer.remaining() + ", file size: " + size + ")", e);
         }
     }
 

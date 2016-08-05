@@ -102,8 +102,7 @@ public class PieceManager implements IPieceManager {
     public void peerHasBitfield(Peer peer, byte[] peerBitfield) {
 
         if (peerBitfield.length == bitfield.length) {
-            byte[] bs = Arrays.copyOf(peerBitfield, peerBitfield.length);
-            pieceSelectorHelper.addPeerBitfield(peer, bs);
+            pieceSelectorHelper.addPeerBitfield(peer, peerBitfield);
         } else {
             throw new BtException("bitfield has wrong size: " + peerBitfield.length);
         }
@@ -307,14 +306,14 @@ public class PieceManager implements IPieceManager {
         Integer[] getNextPieces() {
 
             // update the aggregate bitfield for disconnected peers
-            Iterator<Map.Entry<Peer, byte[]>> iter = peerBitfields.entrySet().iterator();
-            while (iter.hasNext()) {
-                Map.Entry<Peer, byte[]> peerBitfield = iter.next();
+//            Iterator<Map.Entry<Peer, byte[]>> iter = peerBitfields.entrySet().iterator();
+//            while (iter.hasNext()) {
+//                Map.Entry<Peer, byte[]> peerBitfield = iter.next();
 //                if (peerBitfield.getKey().isClosed()) {
 //                    stats.removeBitfield(peerBitfield.getValue());
 //                    iter.remove();
 //                }
-            }
+//            }
 
             return selector.getNextPieces(stats, peerBitfields.size(),
                     pieceIndex -> (pieceIndex < stats.size()) && validator.test(pieceIndex));

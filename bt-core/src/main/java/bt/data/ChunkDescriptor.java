@@ -2,6 +2,7 @@ package bt.data;
 
 import bt.BtException;
 
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -145,7 +146,9 @@ public class ChunkDescriptor implements IChunkDescriptor {
         }
 
         Range range = getRange(offset, length);
+
         byte[] block = new byte[length];
+        ByteBuffer buffer = ByteBuffer.wrap(block);
 
         readWriteLock.readLock().lock();
         try {
@@ -161,14 +164,15 @@ public class ChunkDescriptor implements IChunkDescriptor {
                         throw new BtException("Too much data requested");
                     }
 
-                    byte[] bs = file.readBlock(off, (int) len);
-                    if (((long) offsetInBlock) + bs.length > Integer.MAX_VALUE) {
+                    if (((long) offsetInBlock) + len > Integer.MAX_VALUE) {
                         // overflow -- isn't supposed to happen unless the algorithm in range is incorrect
                         throw new BtException("Integer overflow while constructing block");
                     }
 
-                    System.arraycopy(bs, 0, block, offsetInBlock, bs.length);
-                    offsetInBlock += bs.length;
+                    buffer.position(offsetInBlock);
+                    buffer.limit(offsetInBlock + (int)len);
+                    file.readBlock(buffer, off);
+                    offsetInBlock += len;
                 }
             });
         } finally {
@@ -205,6 +209,7 @@ public class ChunkDescriptor implements IChunkDescriptor {
 
         readWriteLock.writeLock().lock();
         try {
+            ByteBuffer buffer = ByteBuffer.wrap(block).asReadOnlyBuffer();
             range.visitFiles(new RangeFileVisitor() {
 
                 int offsetInBlock = 0;
@@ -219,7 +224,9 @@ public class ChunkDescriptor implements IChunkDescriptor {
                     }
 
                     limitInBlock = offsetInBlock + (int) fileSize;
-                    file.writeBlock(Arrays.copyOfRange(block, offsetInBlock, limitInBlock), off);
+                    buffer.position(offsetInBlock);
+                    buffer.limit(limitInBlock);
+                    file.writeBlock(buffer, off);
                     offsetInBlock = limitInBlock;
                 }
             });
@@ -376,10 +383,10 @@ public class ChunkDescriptor implements IChunkDescriptor {
             }
         }
 
-        if (limitInLastRequestedFile > Integer.MAX_VALUE) {
-            // overflow -- isn't supposed to happen unless the algorithm above is incorrect
-            throw new BtException("Too much data requested");
-        }
+//        if (limitInLastRequestedFile > Integer.MAX_VALUE) {
+//            // overflow -- isn't supposed to happen unless the algorithm above is incorrect
+//            throw new BtException("Too much data requested");
+//        }
 
         return new Range(firstRequestedFileIndex, offsetInFirstRequestedFile,
                 lastRequestedFileIndex, limitInLastRequestedFile);
