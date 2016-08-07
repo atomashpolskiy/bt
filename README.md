@@ -18,10 +18,11 @@ public static void main(String[] args) {
   // create default shared runtime without extensions
   BtRuntime runtime = BtRuntimeBuilder.defaultRuntime();
   
+  // create file system based backend for torrent contents
+  DataAccessFactory daf = new FileSystemDataAccessFactory(targetDirectory);
+  
   // create client
-  BtClient client = Bt.client(runtime)
-                      .url(metainfoUrl)
-                      .build(new FileSystemDataAccessFactory(targetDirectory));
+  BtClient client = Bt.client(runtime).url(metainfoUrl).build(daf);
   
   // launch
   client.startAsync(state -> {
