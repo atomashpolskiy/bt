@@ -24,6 +24,22 @@ One notable customization scenario is extending the standard BitTorrent protocol
 
 To allow you test the changes that you've made to the core, **Bt** ships with a specialized framework for integration tests. Create an arbitrary-sized _swarm_ of peers inside a simple _JUnit_ test, set the number of seeders and leechers and start a real torrent session on your localhost. E.g. create one seeder and many leechers to stress test the network overhead; use a really large file and multiple peers to stress test your newest laptop's expensive SSD storage; or just launch the whole swarm in _no-files_ mode and test your protocol extensions.
 
+### Parallel downloads
+
+**Bt** has out-of-the-box support for multiple simultaneous torrent sessions with minimal system overhead. 1% CPU and 32M of RAM should be enough for everyone!
+
+### Java 8 CompletableFuture
+
+Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` to provide the most natural way for co-ordinating multiple torrent sessions. E.g. use `CompletableFuture.allOf(client1.startAsync(...), client2.startAsync(...), ...).join()`. Or create a more sophisticated processing pipeline.
+
+### And much more...
+
+* Client's Peer ID customization
+* YAML schemas for all bencoded objects: metainfo files, messages, tracker responses, etc. -- with support for automatic validation
+* Torrent session's state with some useful runtime info, accessible via scheduled listener callbacks
+* ...
+* _**check it out yourself!**_
+
 ## A really ascetic code sample
 
 ```java
@@ -50,3 +66,7 @@ public static void main(String[] args) {
   }, 1000).join();
 }
 ```
+
+## Feedback
+
+Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new features and BEPs to be added. Please don't hesitate to post an issue or contact me personally!
