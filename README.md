@@ -41,7 +41,7 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 * ...
 * _**check it out yourself!**_
 
-#### List of supported BEPs
+## List of supported BEPs
 
 * BEP-3: The BitTorrent Protocol Specification
 * BEP-10: Extension Protocol
