@@ -2,9 +2,8 @@ package bt.tracker;
 
 import bt.BtException;
 import bt.metainfo.Torrent;
-import bt.service.IIdService;
-import bt.service.INetworkService;
 import bt.service.IdService;
+import bt.service.INetworkService;
 import bt.service.NetworkService;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -25,6 +24,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -33,7 +33,7 @@ public class HttpTracker implements Tracker {
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpTracker.class);
 
     private URI baseUri;
-    private IIdService idService;
+    private IdService idService;
     private INetworkService networkService;
     private HttpClient httpClient;
     private HttpResponseHandler httpResponseHandler;
@@ -42,7 +42,7 @@ public class HttpTracker implements Tracker {
 
     private ConcurrentMap<URI, byte[]> trackerIds;
 
-    public HttpTracker(URL baseUrl) {
+    public HttpTracker(URL baseUrl, IdService idService) {
 
         try {
             this.baseUri = baseUrl.toURI();
@@ -50,7 +50,7 @@ public class HttpTracker implements Tracker {
             throw new BtException("Invalid URL: " + baseUrl, e);
         }
 
-        this.idService = new IdService();
+        this.idService = idService;
         this.networkService = new NetworkService();
         this.httpClient = HttpClients.createMinimal();
         this.httpResponseHandler = new HttpResponseHandler(new TrackerResponseHandler());
@@ -146,10 +146,12 @@ public class HttpTracker implements Tracker {
         buf.append("&compact=1");
         buf.append("&numwant=50");
 
-        byte[] secretKey = idService.getSecretKey();
-        if (secretKey != null) {
+        Optional<SecretKey> secretKey = idService.getSecretKey();
+        if (secretKey.isPresent()) {
             buf.append("&key=");
-            buf.append(urlEncode(secretKey));
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            secretKey.get().writeTo(bos);
+            buf.append(urlEncode(bos.toByteArray()));
         }
 
         byte[] trackerId = trackerIds.get(baseUri);

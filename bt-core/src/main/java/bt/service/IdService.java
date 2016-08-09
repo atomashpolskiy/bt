@@ -1,29 +1,13 @@
 package bt.service;
 
 import bt.net.PeerId;
+import bt.tracker.SecretKey;
 
-import java.util.Random;
+import java.util.Optional;
 
-public class IdService implements IIdService {
+public interface IdService {
 
-    private static final int ID_SIZE = 20;
+    PeerId getLocalPeerId();
 
-    private final PeerId peerId;
-
-    public IdService() {
-        byte[] peerId = new byte[ID_SIZE];
-        Random random = new Random(System.currentTimeMillis());
-        random.nextBytes(peerId);
-        this.peerId = PeerId.fromBytes(peerId);
-    }
-
-    @Override
-    public PeerId getLocalPeerId() {
-        return peerId;
-    }
-
-    @Override
-    public byte[] getSecretKey() {
-        return null;
-    }
+    Optional<SecretKey> getSecretKey();
 }

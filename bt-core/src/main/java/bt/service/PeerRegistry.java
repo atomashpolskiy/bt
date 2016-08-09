@@ -30,7 +30,7 @@ public class PeerRegistry implements IPeerRegistry {
 
     @Inject
     public PeerRegistry(IRuntimeLifecycleBinder lifecycleBinder, INetworkService networkService,
-                        IIdService idService, Set<PeerSourceFactory> peerSourceFactories) {
+                        IdService idService, Set<PeerSourceFactory> peerSourceFactories) {
 
         this.peerSourceFactories = peerSourceFactories;
         consumers = new ConcurrentHashMap<>();

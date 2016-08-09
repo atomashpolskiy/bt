@@ -11,14 +11,16 @@ import bt.net.PeerConnectionPool;
 import bt.protocol.HandshakeFactory;
 import bt.protocol.IHandshakeFactory;
 import bt.service.AdhocTorrentRegistry;
+import bt.service.ClasspathApplicationService;
 import bt.service.ConfigurationService;
+import bt.service.IApplicationService;
 import bt.service.IConfigurationService;
-import bt.service.IIdService;
+import bt.service.IdService;
 import bt.service.INetworkService;
 import bt.service.IPeerRegistry;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.ITorrentRegistry;
-import bt.service.IdService;
+import bt.service.DefaultIdService;
 import bt.service.NetworkService;
 import bt.service.PeerRegistry;
 import bt.service.PeerSourceFactory;
@@ -63,7 +65,8 @@ public class ServiceModule implements Module {
 
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
         binder.bind(INetworkService.class).to(NetworkService.class).in(Singleton.class);
-        binder.bind(IIdService.class).to(IdService.class).in(Singleton.class);
+        binder.bind(IApplicationService.class).to(ClasspathApplicationService.class).in(Singleton.class);
+        binder.bind(IdService.class).to(DefaultIdService.class).in(Singleton.class);
         binder.bind(ITrackerService.class).to(TrackerService.class).in(Singleton.class);
         binder.bind(IConfigurationService.class).to(ConfigurationService.class).in(Singleton.class);
         binder.bind(ITorrentRegistry.class).to(AdhocTorrentRegistry.class).in(Singleton.class);
