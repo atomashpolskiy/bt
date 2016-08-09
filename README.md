@@ -37,8 +37,17 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 * Client's Peer ID customization
 * YAML schemas for all bencoded objects: metainfo files, messages, tracker responses, etc. -- with support for automatic validation
 * Torrent session's state with some useful runtime info, accessible via scheduled listener callbacks
+* IPv6 support
 * ...
 * _**check it out yourself!**_
+
+#### List of BEPs
+
+BEP-3: The BitTorrent Protocol Specification
+BEP-10: Extension Protocol
+BEP-11: Peer Exchange (PEX)
+BEP-20: Peer ID Conventions
+BEP-23: Tracker Returns Compact Peer Lists
 
 ## A really ascetic code sample
 
