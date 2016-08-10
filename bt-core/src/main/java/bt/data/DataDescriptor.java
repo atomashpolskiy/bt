@@ -103,7 +103,7 @@ public class DataDescriptor implements IDataDescriptor {
                     chunkOffset = 0;
                 }
             }
-            if (currentFileIndex == filesCount - 1) {
+            if (currentFileIndex == filesCount - 1 && totalSizeOfFiles > 0) {
                 // create chunk for the remainder of the last file
                 long remaining = fileSize - chunkOffset;
                 if (transferBlockSize > remaining) {
