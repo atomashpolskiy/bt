@@ -2,6 +2,10 @@
 
 **Bt** aims to be the ultimate BitTorrent software created in Java. It offers good performance, reliability and is highly customizable. With Bt you can create a production-grade BitTorrent client in a matter of minutes. Bt is still in its' early days, but is actively developed and designed with stability and maintainability in mind.
 
+#### Why should I use this instead of Vuze
+
+In short - you shouldn't. Vuze is a full-fledged heavyweight piece of software for commercial usage. Bt does not aim to belong there. It's rather an alternative to the likes of [Turn's TTorrent](https://github.com/mpetazzoni/ttorrent), [BitLet](https://github.com/bitletorg/bitlet), etc. - a lightweight library for P2P-lovers and enthusiastic BitTorrent researchers, perfect choice for light enterprise and home usage and experimentation.
+
 ## Quick Links
 
 [Examples](https://github.com/atomashpolskiy/bt/tree/master/examples)
