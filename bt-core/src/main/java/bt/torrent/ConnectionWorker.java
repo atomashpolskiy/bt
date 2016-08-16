@@ -234,7 +234,8 @@ public class ConnectionWorker implements Consumer<Message>, Supplier<Message> {
                     mightSelectPieceForPeer = Optional.of(pieceManager.mightSelectPieceForPeer(peer));
                     lastCheckedAvailablePiecesForPeer = System.currentTimeMillis();
                 }
-                if (mightSelectPieceForPeer.get() && pieceManager.getPiecesRemaining() > 0) {
+                if (mightSelectPieceForPeer.isPresent() && mightSelectPieceForPeer.get()
+                        && pieceManager.getPiecesRemaining() > 0) {
                     if (!connectionState.isInterested()) {
                         outgoingMessages.add(Interested.instance());
                         connectionState.setInterested(true);
