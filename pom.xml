@@ -46,6 +46,14 @@
         <url>https://github.com/atomashpolskiy/bt</url>
     </scm>
 
+    <licenses>
+		<license>
+			<name>Apache 2.0 License</name>
+			<url>https://github.com/atomashpolskiy/bt/blob/master/LICENSE</url>
+			<distribution>manual</distribution>
+		</license>
+	</licenses>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
