@@ -8,6 +8,13 @@
     type: dictionary
     entries:
       - {key: announce, type: string}
+      - key: announce-list
+        required: false
+        type: list
+        elements:
+          type: list
+          elements:
+            type: string
       - key: info
         type: dictionary
         exclusives:

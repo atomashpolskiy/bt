@@ -2,6 +2,7 @@ package bt.data;
 
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
+import bt.tracker.AnnounceKey;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -36,7 +37,7 @@ public class ChunkDescriptorTestUtil {
         when(torrent.getFiles()).thenReturn(Arrays.asList(files));
 
         try {
-            when(torrent.getTrackerUrl()).thenReturn(URI.create("http://tracker.org/ann").toURL());
+            when(torrent.getAnnounceKey()).thenReturn(new AnnounceKey(URI.create("http://tracker.org/ann").toURL()));
         } catch (MalformedURLException e) {
             // not going to happen
         }

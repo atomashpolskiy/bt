@@ -1,5 +1,6 @@
 package bt.tracker;
 
+import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.net.Peer;
 import bt.service.PeerSource;
@@ -56,8 +57,12 @@ class TrackerPeerSource implements PeerSource {
                         this.peers = peers;
                         return true;
                     } else {
-                        LOGGER.error("Failed to get peers for torrent -- " +
-                                "unexpected error during interaction with the tracker: " + response.getErrorMessage());
+                        if (response.getError().isPresent()) {
+                            throw new BtException("Failed to get peers for torrent", response.getError().get());
+                        } else {
+                            LOGGER.error("Failed to get peers for torrent -- " +
+                                    "unexpected error during interaction with the tracker; message: " + response.getErrorMessage());
+                        }
                     }
                 }
             }

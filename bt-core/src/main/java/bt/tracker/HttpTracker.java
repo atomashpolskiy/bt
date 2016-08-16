@@ -110,7 +110,7 @@ public class HttpTracker implements Tracker {
             }
             return httpClient.execute(request, httpResponseHandler);
         } catch (IOException e) {
-            throw new BtException("Failed to execute tracker request", e);
+            return TrackerResponse.exceptional(e);
         }
     }
 
@@ -230,12 +230,13 @@ public class HttpTracker implements Tracker {
                 } catch (IOException e) {
                     // do nothing...
                 }
-                throw new BtException("Tracker returned error (" + statusLine.getStatusCode() + ": "
-                        + statusLine.getReasonPhrase() + ")");
+                return TrackerResponse.exceptional(new BtException(
+                        "Tracker returned error (" + statusLine.getStatusCode() + ": "
+                                + statusLine.getReasonPhrase() + ")"));
             }
 
             if (entity == null) {
-                throw new BtException("Tracker response is empty");
+                return TrackerResponse.exceptional(new BtException("Tracker response is empty"));
             } else {
                 try {
 
@@ -252,7 +253,7 @@ public class HttpTracker implements Tracker {
                     entity.writeTo(bytes);
                     return trackerResponseHandler.handleResponse(bytes.toByteArray(), charset);
                 } catch (IOException e) {
-                    throw new BtException("Failed to read tracker response", e);
+                    return TrackerResponse.exceptional(new BtException("Failed to read tracker response", e));
                 }
             }
         }

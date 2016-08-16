@@ -47,6 +47,8 @@ public class TrackerResponseHandler {
     public TrackerResponse handleResponse(InputStream in, Charset charset) {
         try (BEParser parser = new BEParser(in)) {
             return handleResponse(parser, charset);
+        } catch (Exception e) {
+            return TrackerResponse.exceptional(e);
         }
     }
 
@@ -56,6 +58,8 @@ public class TrackerResponseHandler {
     public TrackerResponse handleResponse(byte[] bytes, Charset charset) {
         try (BEParser parser = new BEParser(bytes)) {
             return handleResponse(parser, charset);
+        } catch (Exception e) {
+            return TrackerResponse.exceptional(e);
         }
     }
 
@@ -65,14 +69,14 @@ public class TrackerResponseHandler {
 
         ValidationResult validationResult = trackerResponseModel.validate(responseMap);
         if (!validationResult.isSuccess()) {
-            throw new BtException("Validation failed for tracker response: "
-                    + Arrays.toString(validationResult.getMessages().toArray()));
+            return TrackerResponse.exceptional(new BtException("Validation failed for tracker response: "
+                    + Arrays.toString(validationResult.getMessages().toArray())));
         }
 
         try {
             return buildResponse(responseMap, charset);
         } catch (Exception e) {
-            throw new BtException("Invalid tracker response format", e);
+            return TrackerResponse.exceptional(new BtException("Invalid tracker response format", e));
         }
     }
 
@@ -82,17 +86,16 @@ public class TrackerResponseHandler {
 
         Map<String, BEObject<?>> responseMap = root.getValue();
         if (responseMap.get(FAILURE_REASON_KEY) != null) {
-            response = new TrackerResponse(false);
 
             byte[] failureReason = cast(byte[].class, FAILURE_REASON_KEY, responseMap.get(FAILURE_REASON_KEY).getValue());
-            response.setErrorMessage(new String(failureReason, charset));
+            response = TrackerResponse.failure(new String(failureReason, charset));
 
         } else {
-            response = new TrackerResponse(true);
+            response = TrackerResponse.ok();
 
             if (responseMap.get(WARNING_MESSAGE_KEY) != null) {
                 byte[] warningMessage = cast(byte[].class, WARNING_MESSAGE_KEY, responseMap.get(WARNING_MESSAGE_KEY).getValue());
-                response.setErrorMessage(new String(warningMessage, charset));
+                response.setWarningMessage(new String(warningMessage, charset));
             }
 
             // possible truncation of integer values is not a problem

@@ -1,6 +1,7 @@
 package bt.metainfo;
 
 import bt.bencoding.BtParseException;
+import bt.tracker.AnnounceKey;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -8,6 +9,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Collections;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -28,7 +30,7 @@ public class MetadataServiceTest {
         Torrent torrent = metadataService.fromUrl(MetadataServiceTest.class.getResource("single_file.torrent"));
 
         assertHasAttributes(torrent,
-                new URL("http://bt2.t-ru.org/ann"), "3du-Arch-Uni-i686.iso", 524288L, 1766, 925892608L);
+                new AnnounceKey(new URL("http://bt2.t-ru.org/ann")), "3du-Arch-Uni-i686.iso", 524288L, 1766, 925892608L);
 
         assertNotNull(torrent.getFiles());
         assertEquals(1, torrent.getFiles().size());
@@ -41,8 +43,11 @@ public class MetadataServiceTest {
 
         Torrent torrent = metadataService.fromUrl(MetadataServiceTest.class.getResource("multi_file.torrent"));
 
-        assertHasAttributes(torrent,
-                new URL("http://bt3.t-ru.org/ann"), "VMWARE_ARCH", 4194304L, 1329, 0L);
+        AnnounceKey announceKey = new AnnounceKey(Arrays.asList(
+                Collections.singletonList(new URL("http://bt3.t-ru.org/ann")),
+                Collections.singletonList(new URL("http://retracker.local/announce"))
+        ));
+        assertHasAttributes(torrent, announceKey, "VMWARE_ARCH", 4194304L, 1329, 0L);
 
         assertNotNull(torrent.getFiles());
         assertEquals(6, torrent.getFiles().size());
@@ -50,10 +55,10 @@ public class MetadataServiceTest {
         // TODO: add checks for all torrent files
     }
 
-    private void assertHasAttributes(Torrent torrent, URL trackerUrl, String name, long chunkSize,
+    private void assertHasAttributes(Torrent torrent, AnnounceKey announceKey, String name, long chunkSize,
                                      int chunkHashesCount, long size) throws MalformedURLException {
 
-        assertEquals(trackerUrl, torrent.getTrackerUrl());
+        assertEquals(announceKey, torrent.getAnnounceKey());
         assertEquals(name, torrent.getName());
         assertEquals(chunkSize, torrent.getChunkSize());
 

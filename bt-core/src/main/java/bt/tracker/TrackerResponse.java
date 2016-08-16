@@ -3,10 +3,27 @@ package bt.tracker;
 import bt.net.Peer;
 import bt.tracker.CompactPeerInfo.AddressType;
 
+import java.util.Optional;
+
 public class TrackerResponse {
 
-    private boolean success;
+    public static TrackerResponse ok() {
+        return new TrackerResponse();
+    }
+
+    public static TrackerResponse failure(String errorMessage) {
+        return new TrackerResponse(errorMessage);
+    }
+
+    public static TrackerResponse exceptional(Throwable error) {
+        return new TrackerResponse(error);
+    }
+
+    private final boolean success;
+    private final Optional<Throwable> error;
+
     private String errorMessage;
+    private String warningMessage;
     private int interval;
     private int minInterval;
     private byte[] trackerId;
@@ -15,8 +32,20 @@ public class TrackerResponse {
 
     private CompactPeerInfo peerInfo;
 
-    protected TrackerResponse(boolean success) {
-        this.success = success;
+    protected TrackerResponse() {
+        success = true;
+        error = Optional.empty();
+    }
+
+    protected TrackerResponse(String errorMessage) {
+        success = false;
+        this.errorMessage = errorMessage;
+        error = Optional.empty();
+    }
+
+    protected TrackerResponse(Throwable error) {
+        success = false;
+        this.error = Optional.of(error);
     }
 
     public boolean isSuccess() {
@@ -25,6 +54,14 @@ public class TrackerResponse {
 
     public String getErrorMessage() {
         return errorMessage;
+    }
+
+    public String getWarningMessage() {
+        return warningMessage;
+    }
+
+    public Optional<Throwable> getError() {
+        return error;
     }
 
     public int getInterval() {
@@ -51,8 +88,8 @@ public class TrackerResponse {
         return peerInfo;
     }
 
-    void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
+    public void setWarningMessage(String warningMessage) {
+        this.warningMessage = warningMessage;
     }
 
     void setInterval(int interval) {

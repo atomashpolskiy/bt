@@ -23,6 +23,10 @@
             <version>${project.version}</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>net.tomp2p</groupId>
+            <artifactId></artifactId>
+        </dependency>
 
         <!-- Test dependencies -->
         <dependency>

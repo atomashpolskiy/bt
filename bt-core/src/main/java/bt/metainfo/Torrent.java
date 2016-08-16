@@ -1,14 +1,15 @@
 package bt.metainfo;
 
-import java.net.URL;
+import bt.tracker.AnnounceKey;
+
 import java.util.List;
 
 public interface Torrent {
 
     /**
-     * @return URL of the tracker.
+     * @return Announce key.
      */
-    URL getTrackerUrl();
+    AnnounceKey getAnnounceKey();
 
     /**
      * @return Torrent ID.

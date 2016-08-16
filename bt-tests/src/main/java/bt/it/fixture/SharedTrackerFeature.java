@@ -5,6 +5,7 @@ import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
 import bt.net.Peer;
+import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
@@ -61,12 +62,12 @@ public class SharedTrackerFeature implements BtTestRuntimeFeature {
                         @Override
                         public TrackerResponse stop() {
                             knownPeersService.removePeer(baseUrl, peer);
-                            return null;
+                            return TrackerResponse.ok();
                         }
 
                         @Override
                         public TrackerResponse complete() {
-                            return null;
+                            return TrackerResponse.ok();
                         }
 
                         @Override
@@ -90,6 +91,15 @@ public class SharedTrackerFeature implements BtTestRuntimeFeature {
                 }
             }
             return tracker;
+        }
+
+        @Override
+        public Tracker getTracker(AnnounceKey announceKey) {
+
+            if (announceKey.isMultiKey()) {
+                throw new IllegalStateException("Multi keys not supported: " + announceKey);
+            }
+            return getTracker(announceKey.getTrackerUrl());
         }
     }
 
@@ -155,7 +165,6 @@ public class SharedTrackerFeature implements BtTestRuntimeFeature {
         private Collection<Peer> peers;
 
         StartResponse(Collection<Peer> peers) {
-            super(Boolean.TRUE);
             this.peers = peers;
         }
 

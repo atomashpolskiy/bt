@@ -23,7 +23,7 @@ public class TrackerPeerSourceFactory implements PeerSourceFactory {
     public PeerSource getPeerSource(Torrent torrent) {
         TrackerPeerSource peerSource = peerSources.get(torrent);
         if (peerSource == null) {
-            peerSource = new TrackerPeerSource(trackerService.getTracker(torrent.getTrackerUrl()), torrent);
+            peerSource = new TrackerPeerSource(trackerService.getTracker(torrent.getAnnounceKey()), torrent);
             TrackerPeerSource existing = peerSources.putIfAbsent(torrent, peerSource);
             if (existing != null) {
                 peerSource = existing;

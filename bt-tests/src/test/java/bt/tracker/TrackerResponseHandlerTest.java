@@ -90,6 +90,7 @@ public class TrackerResponseHandlerTest {
 
         assertNotNull(trackerResponse);
         assertFalse(trackerResponse.isSuccess());
+        assertFalse(trackerResponse.getError().isPresent());
         assertEquals("Invalid info_hash (0 - )", trackerResponse.getErrorMessage());
     }
 

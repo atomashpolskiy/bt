@@ -22,7 +22,7 @@ public class TorrentDescriptor implements ITorrentDescriptor {
 
     public TorrentDescriptor(ITrackerService trackerService, Torrent torrent, IDataDescriptor dataDescriptor) {
 
-        this.tracker = trackerService.getTracker(torrent.getTrackerUrl());
+        this.tracker = trackerService.getTracker(torrent.getAnnounceKey());
         this.torrent = torrent;
         this.dataDescriptor = dataDescriptor;
     }
@@ -42,9 +42,14 @@ public class TorrentDescriptor implements ITorrentDescriptor {
         dataDescriptor.getChunkDescriptors().forEach(IChunkDescriptor::verify);
 
         TrackerResponse response = tracker.request(torrent).start();
-        if (response != null && !response.isSuccess()) {
-            throw new BtException("Failed to start torrent -- " +
-                    "unexpected error during interaction with the tracker: " + response.getErrorMessage());
+        if (!response.isSuccess()) {
+            if (response.getError().isPresent()) {
+                throw new BtException("Failed to start torrent -- " +
+                        "unexpected error during interaction with the tracker", response.getError().get());
+            } else {
+                throw new BtException("Failed to start torrent -- " +
+                        "unexpected error during interaction with the tracker; message: " + response.getErrorMessage());
+            }
         }
 
         active = true;
@@ -59,18 +64,24 @@ public class TorrentDescriptor implements ITorrentDescriptor {
 
         active = false;
 
-        TrackerResponse response = tracker.request(torrent).stop();
-        if (response != null && !response.isSuccess()) {
-            LOGGER.warn("Unexpected error during interaction with the tracker: " + response.getErrorMessage());
-        }
+        processResponse(tracker.request(torrent).stop());
     }
 
     @Override
     public void complete() {
+        processResponse(tracker.request(torrent).complete());
+    }
 
-        TrackerResponse response = tracker.request(torrent).complete();
-        if (response != null && !response.isSuccess()) {
-            LOGGER.warn("Unexpected error during interaction with the tracker: " + response.getErrorMessage());
+    private void processResponse(TrackerResponse response) {
+
+        if (response.isSuccess()) {
+            return;
+        }
+
+        if (response.getError().isPresent()) {
+            throw new BtException("Unexpected error during interaction with the tracker", response.getError().get());
+        } else {
+            LOGGER.warn("Unexpected error during interaction with the tracker; message: " + response.getErrorMessage());
         }
     }
 

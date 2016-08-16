@@ -1,8 +1,8 @@
 package bt.metainfo;
 
 import bt.BtException;
+import bt.tracker.AnnounceKey;
 
-import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -13,7 +13,7 @@ public class DefaultTorrent implements Torrent {
 
     private static final int CHUNK_HASH_LENGTH = 20;
 
-    private URL trackerUrl;
+    private AnnounceKey announceKey;
     private TorrentId torrentId;
     private String name;
     private long chunkSize;
@@ -22,8 +22,8 @@ public class DefaultTorrent implements Torrent {
     private List<TorrentFile> files;
 
     @Override
-    public URL getTrackerUrl() {
-        return trackerUrl;
+    public AnnounceKey getAnnounceKey() {
+        return announceKey;
     }
 
     @Override
@@ -86,8 +86,8 @@ public class DefaultTorrent implements Torrent {
         }
     }
 
-    void setTrackerUrl(URL trackerUrl) {
-        this.trackerUrl = trackerUrl;
+    void setAnnounceKey(AnnounceKey announceKey) {
+        this.announceKey = announceKey;
     }
 
     void setTorrentId(TorrentId torrentId) {

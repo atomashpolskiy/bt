@@ -20,6 +20,19 @@ public class TrackerService implements ITrackerService {
 
     @Override
     public Tracker getTracker(URL baseUrl) {
+        return getOrCreateTracker(baseUrl);
+    }
+
+    @Override
+    public Tracker getTracker(AnnounceKey announceKey) {
+        if (announceKey.isMultiKey()) {
+            return new MultiTracker(this, announceKey);
+        } else {
+            return getOrCreateTracker(announceKey.getTrackerUrl());
+        }
+    }
+
+    private Tracker getOrCreateTracker(URL baseUrl) {
 
         Tracker tracker = knownTrackers.get(baseUrl);
         if (tracker == null) {

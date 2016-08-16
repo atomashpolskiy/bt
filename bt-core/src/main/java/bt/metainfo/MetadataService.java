@@ -3,6 +3,7 @@ package bt.metainfo;
 import bt.BtException;
 import bt.bencoding.BEParser;
 import bt.bencoding.BEType;
+import bt.bencoding.model.BEList;
 import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEObjectModel;
@@ -10,6 +11,7 @@ import bt.bencoding.model.BEString;
 import bt.bencoding.model.ValidationResult;
 import bt.bencoding.model.YamlBEObjectModelLoader;
 import bt.service.CryptoUtil;
+import bt.tracker.AnnounceKey;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,7 +26,8 @@ import java.util.stream.Collectors;
 
 public class MetadataService implements IMetadataService {
 
-    private static final String TRACKER_URL_KEY = "announce";
+    private static final String ANNOUNCE_KEY = "announce";
+    private static final String ANNOUNCE_LIST_KEY = "announce-list";
     private static final String INFOMAP_KEY = "info";
     private static final String TORRENT_NAME_KEY = "name";
     private static final String CHUNK_SIZE_KEY = "piece length";
@@ -84,8 +87,35 @@ public class MetadataService implements IMetadataService {
         Map<String, BEObject<?>> root = beMap.getValue();
 
         try {
-            byte[] trackerUrl = (byte[]) root.get(TRACKER_URL_KEY).getValue();
-            torrent.setTrackerUrl(new URL(new String(trackerUrl, defaultCharset)));
+
+            AnnounceKey announceKey;
+            if (root.containsKey(ANNOUNCE_LIST_KEY)) {
+
+                List<List<URL>> trackerUrls;
+
+                BEList announceList = (BEList) root.get(ANNOUNCE_LIST_KEY);
+                List<BEList> tierList = (List<BEList>) announceList.getValue();
+                trackerUrls = new ArrayList<>(tierList.size() + 1);
+                for (BEList tierElement : tierList) {
+
+                    List<URL> tierTackerUrls;
+
+                    List<BEString> trackerUrlList = (List<BEString>) tierElement.getValue();
+                    tierTackerUrls = new ArrayList<>(trackerUrlList.size() + 1);
+                    for (BEString trackerUrlElement : trackerUrlList) {
+                        tierTackerUrls.add(new URL(trackerUrlElement.getValue(defaultCharset)));
+                    }
+                    trackerUrls.add(tierTackerUrls);
+                }
+
+                announceKey = new AnnounceKey(trackerUrls);
+
+            } else {
+                byte[] trackerUrl = (byte[]) root.get(ANNOUNCE_KEY).getValue();
+                announceKey = new AnnounceKey(new URL(new String(trackerUrl, defaultCharset)));
+            }
+
+            torrent.setAnnounceKey(announceKey);
 
             BEMap info = (BEMap) root.get(INFOMAP_KEY);
             torrent.setTorrentId(TorrentId.fromBytes(CryptoUtil.getSha1Digest(info.getContent())));
