@@ -52,16 +52,17 @@ public class ClasspathApplicationService implements IApplicationService {
                 }
             } catch (Throwable e) {
                 if (LOGGER.isDebugEnabled()) {
-                    LOGGER.warn("Failed to read manifest: " + url.toExternalForm(), e);
+                    LOGGER.debug("Failed to read manifest: " + url.toExternalForm(), e);
                 }
             }
         }
 
         if (manifest == null) {
-            throw new BtException("Failed to find manifest file");
+            LOGGER.warn("Failed to find manifest file -- application may be configured incorrectly");
+            version = new Version(0, 0, false);
+        } else {
+            version = parseVersion(manifest.getMainAttributes().getValue(Name.IMPLEMENTATION_VERSION));
         }
-
-        version = parseVersion(manifest.getMainAttributes().getValue(Name.IMPLEMENTATION_VERSION));
     }
 
     private Version parseVersion(String versionStr) {
