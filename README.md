@@ -50,6 +50,7 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 * BEP-3: The BitTorrent Protocol Specification
 * BEP-10: Extension Protocol
 * BEP-11: Peer Exchange (PEX)
+* BEP-12: Multitracker metadata extension
 * BEP-20: Peer ID Conventions
 * BEP-23: Tracker Returns Compact Peer Lists
 
