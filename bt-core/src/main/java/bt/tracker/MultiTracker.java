@@ -21,7 +21,7 @@ public class MultiTracker implements Tracker {
     private List<List<Tracker>> trackerTiers;
 
     MultiTracker(ITrackerService trackerService, AnnounceKey announceKey) {
-        if (announceKey.isMultiKey()) {
+        if (!announceKey.isMultiKey()) {
             throw new IllegalArgumentException("Not a multi key: " + announceKey);
         }
         this.trackerService = trackerService;
@@ -72,8 +72,24 @@ public class MultiTracker implements Tracker {
             }
 
             private TrackerRequestBuilder getDelegate(Tracker tracker, Torrent torrent) {
-                return tracker.request(torrent)
-                        .downloaded(getDownloaded()).uploaded(getUploaded()).left(getLeft());
+                TrackerRequestBuilder delegate = tracker.request(torrent);
+
+                int downloaded = getDownloaded();
+                if (downloaded > 0) {
+                    delegate.downloaded(downloaded);
+                }
+
+                int uploaded = getUploaded();
+                if (uploaded > 0) {
+                    delegate.uploaded(uploaded);
+                }
+
+                int left = getLeft();
+                if (left > 0) {
+                    delegate.left(left);
+                }
+
+                return delegate;
             }
 
             private TrackerResponse tryForAllTrackers(Function<Tracker, TrackerResponse> func) {
