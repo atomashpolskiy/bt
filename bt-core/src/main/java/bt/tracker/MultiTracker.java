@@ -21,14 +21,18 @@ public class MultiTracker implements Tracker {
     private List<List<Tracker>> trackerTiers;
 
     MultiTracker(ITrackerService trackerService, AnnounceKey announceKey) {
+        this(trackerService, announceKey, true);
+    }
+
+    MultiTracker(ITrackerService trackerService, AnnounceKey announceKey, boolean shouldShuffleTiers) {
         if (!announceKey.isMultiKey()) {
             throw new IllegalArgumentException("Not a multi key: " + announceKey);
         }
         this.trackerService = trackerService;
-        this.trackerTiers = initTrackers(announceKey);
+        this.trackerTiers = initTrackers(announceKey, shouldShuffleTiers);
     }
 
-    private List<List<Tracker>> initTrackers(AnnounceKey announceKey) {
+    private List<List<Tracker>> initTrackers(AnnounceKey announceKey, boolean shouldShuffleTiers) {
 
         List<List<URL>> trackerUrls = announceKey.getTrackerUrls();
         List<List<Tracker>> trackers = new ArrayList<>(trackerUrls.size() + 1);
@@ -39,7 +43,9 @@ public class MultiTracker implements Tracker {
                 tierTrackers.add(new LazyTracker(() -> trackerService.getTracker(trackerUrl)));
             }
             // per BEP-12 spec each tier must be shuffled
-            Collections.shuffle(tierTrackers);
+            if (shouldShuffleTiers) {
+                Collections.shuffle(tierTrackers);
+            }
             trackers.add(tierTrackers);
         }
 
@@ -107,7 +113,10 @@ public class MultiTracker implements Tracker {
                         responses.add(response);
 
                         if (response.isSuccess()) {
-                            trackerTier.add(0, currentTracker);
+                            if (trackerTier.size() > 1) {
+                                trackerTier.remove(i);
+                                trackerTier.add(0, currentTracker);
+                            }
                             return response;
                         } else if (response.getError().isPresent()) {
 
