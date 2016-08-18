@@ -4,6 +4,8 @@ import bt.Bt;
 import bt.BtRuntime;
 import bt.data.file.FileSystemDataAccessFactory;
 import bt.BtClient;
+import bt.net.Peer;
+import bt.service.IPeerRegistry;
 
 import java.io.Closeable;
 import java.io.File;
@@ -31,6 +33,10 @@ public class SwarmPeer implements Closeable {
 
     public BtClient getHandle() {
         return handle;
+    }
+
+    public Peer getPeer() {
+        return runtime.service(IPeerRegistry.class).getLocalPeer();
     }
 
     public boolean hasFiles() {

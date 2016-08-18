@@ -3,13 +3,15 @@ package bt.it.fixture;
 import bt.BtRuntimeBuilder;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.net.InetPeer;
 import bt.net.Peer;
+import bt.service.IPeerRegistry;
 import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
 import bt.tracker.TrackerResponse;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 
 import java.net.URL;
 import java.util.Collection;
@@ -22,19 +24,50 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class SharedTrackerFeature implements BtTestRuntimeFeature {
 
+    private PeerFilter peerFilter;
+
+    public SharedTrackerFeature() {
+        this(new DefaultPeerFilter());
+    }
+
+    public SharedTrackerFeature(PeerFilter peerFilter) {
+        this.peerFilter = peerFilter;
+    }
+
     @Override
     public void contributeToRuntime(BtTestRuntimeConfiguration configuration, BtRuntimeBuilder runtimeBuilder) {
-        Peer peer = new InetPeer(configuration.getAddress(), configuration.getPort());
-        runtimeBuilder.module(binder -> binder.bind(ITrackerService.class).toInstance(new PeerTrackerService(peer)));
+
+        runtimeBuilder.module(binder -> {
+            binder.bind(PeerFilter.class).toInstance(peerFilter);
+        });
+
+        runtimeBuilder.module(binder ->
+                binder.bind(ITrackerService.class).to(PeerTrackerService.class).in(Singleton.class));
+    }
+
+    public interface PeerFilter {
+        Collection<Peer> filterPeers(Peer self, Set<Peer> peers);
+    }
+
+    private static class DefaultPeerFilter implements PeerFilter {
+
+        @Override
+        public Collection<Peer> filterPeers(Peer self, Set<Peer> peers) {
+            peers.remove(self);
+            return peers;
+        }
     }
 
     private static class PeerTrackerService implements ITrackerService {
 
         private Peer peer;
+        private PeerFilter peerFilter;
         private ConcurrentMap<URL, Tracker> trackers;
 
-        PeerTrackerService(Peer peer) {
-            this.peer = peer;
+        @Inject
+        PeerTrackerService(IPeerRegistry peerRegistry, PeerFilter peerFilter) {
+            peer = peerRegistry.getLocalPeer();
+            this.peerFilter = peerFilter;
             trackers = new ConcurrentHashMap<>();
         }
 
@@ -49,33 +82,32 @@ public class SharedTrackerFeature implements BtTestRuntimeFeature {
                     private TrackerRequestBuilder requestBuilder =
                             new TrackerRequestBuilder(TorrentId.fromBytes(new byte[TorrentId.length()])) {
 
-                        @Override
-                        public TrackerResponse start() {
+                                @Override
+                                public TrackerResponse start() {
+                                    knownPeersService.addPeer(baseUrl, peer);
+                                    return queryPeers();
+                                }
 
-                            knownPeersService.addPeer(baseUrl, peer);
+                                @Override
+                                public TrackerResponse stop() {
+                                    knownPeersService.removePeer(baseUrl, peer);
+                                    return TrackerResponse.ok();
+                                }
 
-                            Set<Peer> peers = knownPeersService.getPeersSnapshot(baseUrl);
-                            peers.remove(peer);
-                            return new StartResponse(peers);
-                        }
+                                @Override
+                                public TrackerResponse complete() {
+                                    return TrackerResponse.ok();
+                                }
 
-                        @Override
-                        public TrackerResponse stop() {
-                            knownPeersService.removePeer(baseUrl, peer);
-                            return TrackerResponse.ok();
-                        }
+                                @Override
+                                public TrackerResponse query() {
+                                    return queryPeers();
+                                }
 
-                        @Override
-                        public TrackerResponse complete() {
-                            return TrackerResponse.ok();
-                        }
-
-                        @Override
-                        public TrackerResponse query() {
-                            Set<Peer> peers = knownPeersService.getPeersSnapshot(baseUrl);
-                            peers.remove(peer);
-                            return new StartResponse(peers);
-                        }
+                                private TrackerResponse queryPeers() {
+                                    return new StartResponse(peerFilter.filterPeers(
+                                            peer, knownPeersService.getPeersSnapshot(baseUrl)));
+                                }
                     };
 
                     @Override
@@ -115,7 +147,7 @@ public class SharedTrackerFeature implements BtTestRuntimeFeature {
             lock = new ReentrantReadWriteLock(true);
         }
 
-        private Set<Peer> getPeersSnapshot(URL trackerUrl) {
+        public Set<Peer> getPeersSnapshot(URL trackerUrl) {
             lock.readLock().lock();
             try {
                 Set<Peer> peers = knownPeers.get(trackerUrl);
