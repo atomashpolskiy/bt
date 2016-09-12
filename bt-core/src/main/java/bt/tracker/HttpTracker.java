@@ -53,7 +53,7 @@ public class HttpTracker implements Tracker {
         this.idService = idService;
         this.networkService = new NetworkService();
         this.httpClient = HttpClients.createMinimal();
-        this.httpResponseHandler = new HttpResponseHandler(new TrackerResponseHandler());
+        this.httpResponseHandler = new HttpResponseHandler(new TrackerResponseHandler(baseUrl));
 
         defaultHttpCharset = Charset.forName("ISO-8859-1");
 

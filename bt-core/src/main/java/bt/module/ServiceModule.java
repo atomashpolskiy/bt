@@ -79,7 +79,6 @@ public class ServiceModule implements Module {
 
         binder.bind(IPeerRegistry.class).to(PeerRegistry.class).in(Singleton.class);
         Multibinder<PeerSourceFactory> peerSources = Multibinder.newSetBinder(binder, PeerSourceFactory.class);
-        peerSources.addBinding().to(TrackerPeerSourceFactory.class);
         if (extraPeerSourceFactories != null) {
             extraPeerSourceFactories.forEach(peerSources.addBinding()::toInstance);
         }

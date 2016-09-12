@@ -1,11 +1,14 @@
 package bt.tracker;
 
 import bt.net.InetPeer;
+import bt.net.Origin;
 import bt.net.Peer;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.util.Iterator;
@@ -14,6 +17,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 public class TrackerResponseHandlerTest {
 
@@ -21,8 +25,8 @@ public class TrackerResponseHandlerTest {
     private Charset defaultCharset = Charset.forName("ISO-8859-1");
 
     @Before
-    public void setUp() {
-        responseHandler = new TrackerResponseHandler();
+    public void setUp() throws MalformedURLException {
+        responseHandler = new TrackerResponseHandler(new URL("http://localhost/ann"));
     }
 
     @Test
@@ -79,7 +83,7 @@ public class TrackerResponseHandlerTest {
             throw new RuntimeException("Unexpected error", e);
         }
 
-        return new InetPeer(inetAddress, port);
+        return new InetPeer(inetAddress, port, mock(Origin.class));
     }
 
     @Test

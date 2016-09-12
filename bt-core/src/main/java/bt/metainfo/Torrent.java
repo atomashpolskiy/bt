@@ -40,4 +40,9 @@ public interface Torrent {
      * @return Information on the files contained in this torrent.
      */
     List<TorrentFile> getFiles();
+
+    /**
+     * @return True if this torrent is private (see BEP-27)
+     */
+    boolean isPrivate();
 }

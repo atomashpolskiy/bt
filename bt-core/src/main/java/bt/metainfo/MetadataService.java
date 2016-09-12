@@ -36,6 +36,7 @@ public class MetadataService implements IMetadataService {
     private static final String FILES_KEY = "files";
     private static final String FILE_SIZE_KEY = "length";
     private static final String FILE_PATH_ELEMENTS_KEY = "path";
+    private static final String PRIVATE_KEY = "private";
 
     private BEObjectModel torrentModel;
     private Charset defaultCharset;
@@ -159,6 +160,14 @@ public class MetadataService implements IMetadataService {
 
                 torrent.setFiles(torrentFiles);
             }
+
+            if (infoMap.get(PRIVATE_KEY) != null) {
+                BigInteger isPrivate = (BigInteger) infoMap.get(PRIVATE_KEY).getValue();
+                if (BigInteger.ONE.equals(isPrivate)) {
+                    torrent.setPrivate(true);
+                }
+            }
+
         } catch (Exception e) {
             throw new BtException("Invalid metainfo format", e);
         }

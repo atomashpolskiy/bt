@@ -9,9 +9,9 @@ import bt.it.fixture.SwarmPeer;
 import bt.it.fixture.TestConfigurationFeature;
 import bt.module.PeerExchangeModule;
 import bt.net.InetPeer;
+import bt.net.Origin;
 import bt.net.Peer;
 import org.junit.Rule;
-import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 public class PeerExchange_IT extends BaseBtTest {
 
@@ -74,7 +75,7 @@ public class PeerExchange_IT extends BaseBtTest {
 
     private static void assertContainsPeerWithOrWithoutId(Collection<Peer> peers, Peer peer) {
         if (peer.getPeerId().isPresent()) {
-            Peer peerWithoutId = new InetPeer(peer.getInetAddress(), peer.getPort());
+            Peer peerWithoutId = new InetPeer(peer.getInetAddress(), peer.getPort(), mock(Origin.class));
             assertTrue(peers.contains(peer) || peers.contains(peerWithoutId));
         } else {
             assertTrue(peers.contains(peer));

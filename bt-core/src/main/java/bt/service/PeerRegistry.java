@@ -2,7 +2,10 @@ package bt.service;
 
 import bt.metainfo.Torrent;
 import bt.net.InetPeer;
+import bt.net.Origin;
 import bt.net.Peer;
+import bt.tracker.ITrackerService;
+import bt.tracker.TrackerPeerSourceFactory;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,17 +27,25 @@ public class PeerRegistry implements IPeerRegistry {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerRegistry.class);
 
-    private Set<PeerSourceFactory> peerSourceFactories;
+    private static final Origin LOCAL_ORIGIN = new Origin(){};
+    private static final Origin ADHOC_ORIGIN = new Origin(){};
+
+    private TrackerPeerSourceFactory trackerPeerSourceFactory;
+    private Set<PeerSourceFactory> extraPeerSourceFactories;
     private Map<Torrent, List<Consumer<Peer>>> consumers;
     private final Peer localPeer;
 
     @Inject
     public PeerRegistry(IRuntimeLifecycleBinder lifecycleBinder, INetworkService networkService,
-                        IdService idService, Set<PeerSourceFactory> peerSourceFactories) {
+                        IdService idService, ITrackerService trackerService,
+                        Set<PeerSourceFactory> extraPeerSourceFactories) {
 
-        this.peerSourceFactories = peerSourceFactories;
         consumers = new ConcurrentHashMap<>();
-        localPeer = new InetPeer(networkService.getInetAddress(), networkService.getPort(), idService.getLocalPeerId());
+        localPeer = new InetPeer(networkService.getInetAddress(), networkService.getPort(), LOCAL_ORIGIN,
+                idService.getLocalPeerId());
+
+        trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService);
+        this.extraPeerSourceFactories = extraPeerSourceFactories;
 
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "Peer Registry"));
         lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(this::collectAndVisitPeers, 1, 5, TimeUnit.SECONDS));
@@ -46,30 +57,37 @@ public class PeerRegistry implements IPeerRegistry {
         for (Torrent torrent : consumers.keySet()) {
 
             List<Consumer<Peer>> peerConsumers = consumers.get(torrent);
-            for (PeerSourceFactory peerSourceFactory : peerSourceFactories) {
 
-                PeerSource peerSource = peerSourceFactory.getPeerSource(torrent);
-                try {
-                    if (peerSource.isRefreshable() && peerSource.refresh()) {
+            queryPeerSource(trackerPeerSourceFactory.getPeerSource(torrent), peerConsumers);
 
-                        Collection<Peer> discoveredPeers = peerSource.query();
-                        for (Peer peer : discoveredPeers) {
-                            Iterator<Consumer<Peer>> iter = peerConsumers.iterator();
-                            while (iter.hasNext()) {
-                                Consumer<Peer> consumer = iter.next();
-                                try {
-                                    consumer.accept(peer);
-                                } catch (Exception e) {
-                                    LOGGER.warn("Error in peer consumer", e);
-                                    iter.remove();
-                                }
-                            }
+            // disallow querying peer sources other than tracker for private torrents
+            if (!torrent.isPrivate() && !extraPeerSourceFactories.isEmpty()) {
+                extraPeerSourceFactories.forEach(factory ->
+                        queryPeerSource(factory.getPeerSource(torrent), peerConsumers));
+            }
+        }
+    }
+
+    private void queryPeerSource(PeerSource peerSource, List<Consumer<Peer>> peerConsumers) {
+        try {
+            if (peerSource.isRefreshable() && peerSource.refresh()) {
+
+                Collection<Peer> discoveredPeers = peerSource.query();
+                for (Peer peer : discoveredPeers) {
+                    Iterator<Consumer<Peer>> iter = peerConsumers.iterator();
+                    while (iter.hasNext()) {
+                        Consumer<Peer> consumer = iter.next();
+                        try {
+                            consumer.accept(peer);
+                        } catch (Exception e) {
+                            LOGGER.warn("Error in peer consumer", e);
+                            iter.remove();
                         }
                     }
-                } catch (Exception e) {
-                    LOGGER.warn("Error when querying peer source: " + peerSource, e);
                 }
             }
+        } catch (Exception e) {
+            LOGGER.warn("Error when querying peer source: " + peerSource, e);
         }
     }
 
@@ -80,9 +98,10 @@ public class PeerRegistry implements IPeerRegistry {
 
     @Override
     public Peer getOrCreatePeer(InetAddress inetAddress, int port) {
-        return new InetPeer(inetAddress, port);
+        return new InetPeer(inetAddress, port, ADHOC_ORIGIN);
     }
 
+    // TODO: remove consumers (e.g. after download is complete)
     @Override
     public void addPeerConsumer(Torrent torrent, Consumer<Peer> consumer) {
 

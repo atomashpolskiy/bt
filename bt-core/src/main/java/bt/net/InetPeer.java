@@ -3,6 +3,7 @@ package bt.net;
 import bt.BtException;
 
 import java.net.InetAddress;
+import java.util.Objects;
 import java.util.Optional;
 
 public class InetPeer implements Peer {
@@ -10,14 +11,15 @@ public class InetPeer implements Peer {
     private InetAddress inetAddress;
     private int port;
     private Optional<PeerId> peerId;
+    private Origin origin;
 
     private final int hash;
 
-    public InetPeer(InetAddress inetAddress, int port) {
-        this(inetAddress, port, null);
+    public InetPeer(InetAddress inetAddress, int port, Origin origin) {
+        this(inetAddress, port, origin, null);
     }
 
-    public InetPeer(InetAddress inetAddress, int port, PeerId peerId) {
+    public InetPeer(InetAddress inetAddress, int port, Origin origin, PeerId peerId) {
 
         if (inetAddress == null || port < 0) {
             throw new BtException("Invalid arguments (address: <" + inetAddress + ":" + port + ">)");
@@ -31,6 +33,7 @@ public class InetPeer implements Peer {
 
         this.inetAddress = inetAddress;
         this.port = port;
+        this.origin = Objects.requireNonNull(origin, "Missing peer origin");
         this.peerId = Optional.ofNullable(peerId);
     }
 
@@ -47,6 +50,11 @@ public class InetPeer implements Peer {
     @Override
     public Optional<PeerId> getPeerId() {
         return peerId;
+    }
+
+    @Override
+    public Origin getOrigin() {
+        return origin;
     }
 
     @Override

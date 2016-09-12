@@ -2,6 +2,7 @@ package bt.tracker;
 
 import bt.BtException;
 import bt.net.InetPeer;
+import bt.net.Origin;
 import bt.net.Peer;
 
 import java.net.InetAddress;
@@ -35,10 +36,13 @@ public class CompactPeerInfo implements Iterable<Peer> {
     private final byte[] peers;
     private final List<Peer> peerList;
 
-    public CompactPeerInfo(byte[] peers, AddressType addressType) {
+    private Origin origin;
+
+    public CompactPeerInfo(byte[] peers, AddressType addressType, Origin origin) {
 
         Objects.requireNonNull(peers);
         Objects.requireNonNull(addressType);
+        Objects.requireNonNull(origin, "Missing peers origin");
 
         int peerLength = addressType.length() + PORT_LENGTH;
         if (peers.length % peerLength != 0) {
@@ -49,6 +53,7 @@ public class CompactPeerInfo implements Iterable<Peer> {
         this.peers = peers;
 
         peerList = new ArrayList<>();
+        this.origin = origin;
     }
 
     @Override
@@ -90,7 +95,7 @@ public class CompactPeerInfo implements Iterable<Peer> {
                 to = i = i + PORT_LENGTH;
                 port = (((peers[from] << 8) & 0xFF00) + (peers[to - 1] & 0x00FF));
 
-                Peer peer = new InetPeer(inetAddress, port);
+                Peer peer = new InetPeer(inetAddress, port, origin);
                 peerList.add(peer);
                 return peer;
             }

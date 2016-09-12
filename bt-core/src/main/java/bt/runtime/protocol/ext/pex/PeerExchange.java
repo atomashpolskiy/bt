@@ -4,6 +4,7 @@ import bt.BtException;
 import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEString;
+import bt.net.Origin;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
 import bt.runtime.protocol.ext.ExtendedMessage;
@@ -26,6 +27,8 @@ public class PeerExchange extends ExtendedMessage {
     private static final String DROPPED_IPV4_KEY = "dropped";
     private static final String DROPPED_IPV6_KEY = "dropped6";
 
+    private static final Origin PEX_ORIGIN = new PeerExchangeOrigin();
+
     public static Builder builder() {
         return new Builder();
     }
@@ -47,7 +50,7 @@ public class PeerExchange extends ExtendedMessage {
         if (source == null) {
             return;
         }
-        new CompactPeerInfo(source.getValue(), addressType).iterator()
+        new CompactPeerInfo(source.getValue(), addressType, PEX_ORIGIN).iterator()
                 .forEachRemaining(destination::add);
     }
 

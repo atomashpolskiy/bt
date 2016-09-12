@@ -1,5 +1,6 @@
 package bt.tracker;
 
+import bt.net.Origin;
 import bt.net.Peer;
 import bt.tracker.CompactPeerInfo.AddressType;
 
@@ -112,7 +113,7 @@ public class TrackerResponse {
         this.leecherCount = leecherCount;
     }
 
-    public void setPeers(byte[] peers) {
-        peerInfo = new CompactPeerInfo(peers, AddressType.IPV4);
+    public void setPeers(byte[] peers, TrackerOrigin origin) {
+        peerInfo = new CompactPeerInfo(peers, AddressType.IPV4, origin);
     }
 }

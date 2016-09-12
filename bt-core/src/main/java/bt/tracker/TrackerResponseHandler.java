@@ -7,10 +7,12 @@ import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEObjectModel;
 import bt.bencoding.model.ValidationResult;
 import bt.bencoding.model.YamlBEObjectModelLoader;
+import bt.net.Origin;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Map;
@@ -28,10 +30,12 @@ public class TrackerResponseHandler {
     private static final String INCOMPLETE_KEY = "incomplete";
     private static final String PEERS_KEY = "peers";
 
+    private TrackerOrigin trackerOrigin;
     private BEObjectModel trackerResponseModel;
 
-    public TrackerResponseHandler() {
+    public TrackerResponseHandler(URL trackerUrl) {
 
+        this.trackerOrigin = new TrackerOrigin(trackerUrl);
         try {
             try (InputStream in = TrackerResponseHandler.class.getResourceAsStream("/tracker_response.yml")) {
                 trackerResponseModel = new YamlBEObjectModelLoader().load(in);
@@ -123,7 +127,7 @@ public class TrackerResponseHandler {
             }
 
             byte[] peers = cast(byte[].class, PEERS_KEY, responseMap.get(PEERS_KEY).getValue());
-            response.setPeers(peers);
+            response.setPeers(peers, trackerOrigin);
         }
 
         return response;
