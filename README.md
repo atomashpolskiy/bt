@@ -53,6 +53,7 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 * BEP-12: Multitracker metadata extension
 * BEP-20: Peer ID Conventions
 * BEP-23: Tracker Returns Compact Peer Lists
+* BEP-27: Private Torrents
 
 ## A really ascetic code sample
 
