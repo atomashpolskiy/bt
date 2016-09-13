@@ -26,3 +26,4 @@
           - {key: pieces, type: binary}
           - {key: length, type: integer}
           - {key: files, type: list, elements: *file}
+          - {key: private, type: integer, required: false}

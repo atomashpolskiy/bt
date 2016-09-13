@@ -36,6 +36,7 @@ public class MetadataService implements IMetadataService {
     private static final String FILES_KEY = "files";
     private static final String FILE_SIZE_KEY = "length";
     private static final String FILE_PATH_ELEMENTS_KEY = "path";
+    private static final String PRIVATE_KEY = "private";
 
     private BEObjectModel torrentModel;
     private Charset defaultCharset;
@@ -88,35 +89,6 @@ public class MetadataService implements IMetadataService {
 
         try {
 
-            AnnounceKey announceKey;
-            if (root.containsKey(ANNOUNCE_LIST_KEY)) {
-
-                List<List<URL>> trackerUrls;
-
-                BEList announceList = (BEList) root.get(ANNOUNCE_LIST_KEY);
-                List<BEList> tierList = (List<BEList>) announceList.getValue();
-                trackerUrls = new ArrayList<>(tierList.size() + 1);
-                for (BEList tierElement : tierList) {
-
-                    List<URL> tierTackerUrls;
-
-                    List<BEString> trackerUrlList = (List<BEString>) tierElement.getValue();
-                    tierTackerUrls = new ArrayList<>(trackerUrlList.size() + 1);
-                    for (BEString trackerUrlElement : trackerUrlList) {
-                        tierTackerUrls.add(new URL(trackerUrlElement.getValue(defaultCharset)));
-                    }
-                    trackerUrls.add(tierTackerUrls);
-                }
-
-                announceKey = new AnnounceKey(trackerUrls);
-
-            } else {
-                byte[] trackerUrl = (byte[]) root.get(ANNOUNCE_KEY).getValue();
-                announceKey = new AnnounceKey(new URL(new String(trackerUrl, defaultCharset)));
-            }
-
-            torrent.setAnnounceKey(announceKey);
-
             BEMap info = (BEMap) root.get(INFOMAP_KEY);
             torrent.setTorrentId(TorrentId.fromBytes(CryptoUtil.getSha1Digest(info.getContent())));
 
@@ -159,6 +131,45 @@ public class MetadataService implements IMetadataService {
 
                 torrent.setFiles(torrentFiles);
             }
+
+            boolean isPrivate = false;
+            if (infoMap.get(PRIVATE_KEY) != null) {
+                if (BigInteger.ONE.equals(infoMap.get(PRIVATE_KEY).getValue())) {
+                    torrent.setPrivate(true);
+                    isPrivate = true;
+                }
+            }
+
+            AnnounceKey announceKey;
+            // TODO: support for private torrents with multiple trackers
+            if (!isPrivate && root.containsKey(ANNOUNCE_LIST_KEY)) {
+
+                List<List<URL>> trackerUrls;
+
+                BEList announceList = (BEList) root.get(ANNOUNCE_LIST_KEY);
+                List<BEList> tierList = (List<BEList>) announceList.getValue();
+                trackerUrls = new ArrayList<>(tierList.size() + 1);
+                for (BEList tierElement : tierList) {
+
+                    List<URL> tierTackerUrls;
+
+                    List<BEString> trackerUrlList = (List<BEString>) tierElement.getValue();
+                    tierTackerUrls = new ArrayList<>(trackerUrlList.size() + 1);
+                    for (BEString trackerUrlElement : trackerUrlList) {
+                        tierTackerUrls.add(new URL(trackerUrlElement.getValue(defaultCharset)));
+                    }
+                    trackerUrls.add(tierTackerUrls);
+                }
+
+                announceKey = new AnnounceKey(trackerUrls);
+
+            } else {
+                byte[] trackerUrl = (byte[]) root.get(ANNOUNCE_KEY).getValue();
+                announceKey = new AnnounceKey(new URL(new String(trackerUrl, defaultCharset)));
+            }
+
+            torrent.setAnnounceKey(announceKey);
+
         } catch (Exception e) {
             throw new BtException("Invalid metainfo format", e);
         }

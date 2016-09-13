@@ -20,6 +20,7 @@ public class DefaultTorrent implements Torrent {
     private byte[] chunkHashes;
     private long size;
     private List<TorrentFile> files;
+    private boolean isPrivate;
 
     @Override
     public AnnounceKey getAnnounceKey() {
@@ -86,6 +87,11 @@ public class DefaultTorrent implements Torrent {
         }
     }
 
+    @Override
+    public boolean isPrivate() {
+        return isPrivate;
+    }
+
     void setAnnounceKey(AnnounceKey announceKey) {
         this.announceKey = announceKey;
     }
@@ -125,6 +131,10 @@ public class DefaultTorrent implements Torrent {
                     + ") is not divisible by " + CHUNK_HASH_LENGTH);
         }
         this.chunkHashes = chunkHashes;
+    }
+
+    public void setPrivate(boolean isPrivate) {
+        this.isPrivate = isPrivate;
     }
 
     @Override
