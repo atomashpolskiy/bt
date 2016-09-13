@@ -27,7 +27,7 @@ public class PeerExchange extends ExtendedMessage {
     private static final String DROPPED_IPV4_KEY = "dropped";
     private static final String DROPPED_IPV6_KEY = "dropped6";
 
-    private static final Origin PEX_ORIGIN = new PeerExchangeOrigin();
+    private static final Origin PEX_ORIGIN = new Origin(){};
 
     public static Builder builder() {
         return new Builder();
