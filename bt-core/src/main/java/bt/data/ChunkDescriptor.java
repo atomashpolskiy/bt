@@ -343,6 +343,7 @@ public class ChunkDescriptor implements IChunkDescriptor {
 
             if (offset < fileOffsets[i]) {
                 firstRequestedFileIndex = i - 1;
+                break;
             } else if (i == files.length - 1) {
                 // reached the last file
                 firstRequestedFileIndex = i;
