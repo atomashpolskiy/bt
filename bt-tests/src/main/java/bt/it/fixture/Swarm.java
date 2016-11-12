@@ -8,6 +8,7 @@ import bt.data.IChunkDescriptor;
 import bt.data.IDataDescriptor;
 import bt.data.IDataDescriptorFactory;
 import bt.metainfo.Torrent;
+import bt.torrent.Bitfield;
 import org.junit.rules.ExternalResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -247,46 +248,58 @@ public class Swarm extends ExternalResource {
         public IDataDescriptor createDescriptor(Torrent torrent, DataAccessFactory dataAccessFactory) {
             return new IDataDescriptor() {
 
-                private List<IChunkDescriptor> descriptors = Collections.singletonList(new IChunkDescriptor() {
-                    @Override
-                    public DataStatus getStatus() {
-                        return DataStatus.VERIFIED;
-                    }
+                private List<IChunkDescriptor> descriptors;
+                private Bitfield bitfield;
 
-                    @Override
-                    public long getSize() {
-                        return 8;
-                    }
+                {
+                    descriptors = Collections.singletonList(new IChunkDescriptor() {
+                        @Override
+                        public DataStatus getStatus() {
+                            return DataStatus.VERIFIED;
+                        }
 
-                    @Override
-                    public long getBlockSize() {
-                        return 1;
-                    }
+                        @Override
+                        public long getSize() {
+                            return 8;
+                        }
 
-                    @Override
-                    public byte[] getBitfield() {
-                        return new byte[]{-1};
-                    }
+                        @Override
+                        public long getBlockSize() {
+                            return 1;
+                        }
 
-                    @Override
-                    public byte[] readBlock(long offset, int length) {
-                        throw new BtException("Unexpected read request");
-                    }
+                        @Override
+                        public byte[] getBitfield() {
+                            return new byte[]{-1};
+                        }
 
-                    @Override
-                    public void writeBlock(byte[] block, long offset) {
-                        throw new BtException("Unexpected write request");
-                    }
+                        @Override
+                        public byte[] readBlock(long offset, int length) {
+                            throw new BtException("Unexpected read request");
+                        }
 
-                    @Override
-                    public boolean verify() {
-                        return true;
-                    }
-                });
+                        @Override
+                        public void writeBlock(byte[] block, long offset) {
+                            throw new BtException("Unexpected write request");
+                        }
+
+                        @Override
+                        public boolean verify() {
+                            return true;
+                        }
+                    });
+
+                    bitfield = new Bitfield(descriptors);
+                }
 
                 @Override
                 public List<IChunkDescriptor> getChunkDescriptors() {
                     return descriptors;
+                }
+
+                @Override
+                public Bitfield getBitfield() {
+                    return bitfield;
                 }
 
                 @Override

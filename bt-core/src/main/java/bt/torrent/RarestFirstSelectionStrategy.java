@@ -8,32 +8,32 @@ import java.util.Random;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public class RarestFirstSelector implements PieceSelector {
+public class RarestFirstSelectionStrategy implements PieceSelectionStrategy {
 
     private static final Comparator<Long> comparator = new PackedIntComparator();
-    private static final RarestFirstSelector selector = new RarestFirstSelector(false);
-    private static final RarestFirstSelector randomizedSelector = new RarestFirstSelector(true);
+    private static final RarestFirstSelectionStrategy selector = new RarestFirstSelectionStrategy(false);
+    private static final RarestFirstSelectionStrategy randomizedSelector = new RarestFirstSelectionStrategy(true);
 
-    public static RarestFirstSelector selector() {
+    public static RarestFirstSelectionStrategy regular() {
         return selector;
     }
 
-    public static RarestFirstSelector randomized() {
+    public static RarestFirstSelectionStrategy randomized() {
         return randomizedSelector;
     }
 
     private boolean randomized;
 
-    private RarestFirstSelector(boolean randomized) {
+    private RarestFirstSelectionStrategy(boolean randomized) {
         this.randomized = randomized;
     }
 
     @Override
-    public Integer[] getNextPieces(IPieceStats pieceStats, int limit, Predicate<Integer> pieceIndexValidator) {
+    public Integer[] getNextPieces(PieceStatistics pieceStats, int limit, Predicate<Integer> pieceIndexValidator) {
 
         PriorityQueue<Long> rarestPieces = new PriorityQueue<>(comparator);
-        int n = pieceStats.size();
-        for (int pieceIndex = 0; pieceIndex < n; pieceIndex++) {
+        int piecesTotal = pieceStats.getPiecesTotal();
+        for (int pieceIndex = 0; pieceIndex < piecesTotal; pieceIndex++) {
             int count = pieceStats.getCount(pieceIndex);
             if (count > 0 && pieceIndexValidator.test(pieceIndex)) {
                 long packed = (((long)pieceIndex) << 32) + count;

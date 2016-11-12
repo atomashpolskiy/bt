@@ -1,4 +1,4 @@
-package bt.torrent;
+package bt.torrent.data;
 
 import bt.BtException;
 import bt.data.IChunkDescriptor;
@@ -56,7 +56,11 @@ public class DataWorker implements IDataWorker {
 
         while (!shutdown) {
             try {
-                pendingOps.take().execute();
+                BlockOp op = pendingOps.take();
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Executing block op: " + op);
+                }
+                op.execute();
             } catch (InterruptedException e) {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Interrupted while waiting for next block op", e);
@@ -141,13 +145,13 @@ public class DataWorker implements IDataWorker {
                 }
                 peerCompletedRequests.add(new BlockRead(peer, pieceIndex, offset, length, block));
             } catch (Exception e) {
-                LOGGER.error("Failed to process read block request (" + toString() + ") for peer: " + peer, e);
+                LOGGER.error("Failed to process " + toString() + " for peer: " + peer, e);
             }
         }
 
         @Override
         public String toString() {
-            return "piece index {" + pieceIndex + "}, offset {" + offset +
+            return "read block request -- piece index {" + pieceIndex + "}, offset {" + offset +
                 "}, length {" + length + "}";
         }
     }
@@ -180,7 +184,7 @@ public class DataWorker implements IDataWorker {
                     verifiedPieceListeners.forEach(listener -> listener.accept(pieceIndex));
                 }
             } catch (Exception e) {
-                LOGGER.error("Failed to process block (" + toString() + ") from peer: " + peer, e);
+                LOGGER.error("Failed to process " + toString() + " from peer: " + peer, e);
                 blockWrite.setSuccess(false);
             }
             blockWrite.setComplete();
@@ -188,7 +192,7 @@ public class DataWorker implements IDataWorker {
 
         @Override
         public String toString() {
-            return "piece index {" + blockWrite.getPieceIndex() + "}, offset {" + blockWrite.getOffset() +
+            return "write block -- piece index {" + blockWrite.getPieceIndex() + "}, offset {" + blockWrite.getOffset() +
                     "}, block {" + blockWrite.getBlock().length + " bytes}";
         }
     }

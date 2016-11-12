@@ -1,18 +1,67 @@
 package bt.torrent;
 
+import bt.net.Peer;
+import bt.torrent.Bitfield.PieceStatus;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 
-public interface PieceSelector {
+class PieceSelector {
 
-    /**
-     * Returns an array of piece indices, selected from the overall piece statistics
-     *
-     * @param pieceStats Per-torrent piece statistics
-     * @param limit Upper bound for the number of indices to collect
-     * @param pieceIndexValidator Tells whether piece index might be selected.
-     *                            Only pieces for which this function returns true have a chance to be selected.
-     *
-     * @return Array of length lesser than or equal to {@code limit}
-     */
-    Integer[] getNextPieces(IPieceStats pieceStats, int limit, Predicate<Integer> pieceIndexValidator);
+    private BitfieldBasedStatistics stats;
+    private PieceSelectionStrategy selector;
+    private Predicate<Integer> validator;
+
+    private Bitfield localBitfield;
+    private Map<Peer, Bitfield> peerBitfields;
+
+    PieceSelector(Bitfield localBitfield, PieceSelectionStrategy selector, Predicate<Integer> validator) {
+
+        this.stats = new BitfieldBasedStatistics(localBitfield.getPiecesTotal());
+        this.selector = selector;
+        this.validator = validator;
+        this.localBitfield = localBitfield;
+        this.peerBitfields = new HashMap<>();
+    }
+
+    void addPeerBitfield(Peer peer, Bitfield peerBitfield) {
+        peerBitfields.put(peer, peerBitfield);
+        stats.addBitfield(peerBitfield);
+    }
+
+    void removePeerBitfield(Peer peer) {
+        stats.removeBitfield(peerBitfields.get(peer));
+    }
+
+    void addPeerPiece(Peer peer, Integer pieceIndex) {
+        Bitfield peerBitfield = peerBitfields.get(peer);
+        if (peerBitfield == null) {
+            peerBitfield = new Bitfield(localBitfield.getPiecesTotal());
+            peerBitfields.put(peer, peerBitfield);
+        }
+
+        peerBitfield.markComplete(pieceIndex);
+        stats.addPiece(pieceIndex);
+    }
+
+    Optional<Integer> selectPieceForPeer(Peer peer, Predicate<Integer> validator) {
+
+        Bitfield peerBitfield = peerBitfields.get(peer);
+        if (peerBitfield != null) {
+            Integer[] pieces = getNextPieces();
+            for (Integer piece : pieces) {
+                if (peerBitfield.getPieceStatus(piece) == PieceStatus.COMPLETE_VERIFIED && validator.test(piece)) {
+                    return Optional.of(piece);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    Integer[] getNextPieces() {
+        return selector.getNextPieces(stats, peerBitfields.size(),
+                pieceIndex -> (pieceIndex < stats.getPiecesTotal()) && validator.test(pieceIndex));
+    }
 }

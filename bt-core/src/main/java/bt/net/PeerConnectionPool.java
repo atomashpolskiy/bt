@@ -15,8 +15,6 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -32,8 +30,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public class PeerConnectionPool implements IPeerConnectionPool {
 
@@ -41,8 +37,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     private PeerConnectionFactory connectionFactory;
     private IConfigurationService configurationService;
-
-    private MessageDispatcher messageDispatcher;
 
     private ScheduledExecutorService cleaner;
     private ConnectionHandler incomingConnectionHandler;
@@ -104,8 +98,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         lifecycleBinder.onShutdown(this.getClass().getName(), incomingAcceptor::shutdownNow);
         lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
         lifecycleBinder.onShutdown(this.getClass().getName(), this::shutdown);
-
-        messageDispatcher = new MessageDispatcher(lifecycleBinder, this);
     }
 
     @Override
@@ -313,22 +305,15 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         }
 
         if (added && shouldNotifyListeners) {
-
-            Collection<Consumer<Message>> consumers = new ArrayList<>();
-            Collection<Supplier<Message>> suppliers = new ArrayList<>();
-
+            // TODO: is locking still needed here?
             listenerLock.readLock().lock();
             try {
                 for (PeerActivityListener listener : connectionListeners) {
-                    listener.onPeerConnected(newConnection.getTorrentId(), newConnection.getRemotePeer(),
-                            consumers::add, suppliers::add);
+                    listener.onPeerConnected(newConnection.getTorrentId(), newConnection.getRemotePeer());
                 }
             } finally {
                 listenerLock.readLock().unlock();
             }
-
-            messageDispatcher.addMessageConsumers(newConnection.getRemotePeer(), consumers);
-            messageDispatcher.addMessageSuppliers(newConnection.getRemotePeer(), suppliers);
         }
         return added;
     }

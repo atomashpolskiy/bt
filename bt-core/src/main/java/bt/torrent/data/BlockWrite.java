@@ -1,8 +1,8 @@
-package bt.torrent;
+package bt.torrent.data;
 
 import bt.net.Peer;
 
-class BlockWrite {
+public class BlockWrite {
 
     private Peer peer;
     private int pieceIndex;
@@ -12,42 +12,42 @@ class BlockWrite {
     private volatile boolean complete;
     private volatile boolean success;
 
-    BlockWrite(Peer peer, int pieceIndex, int offset, byte[] block) {
+    public BlockWrite(Peer peer, int pieceIndex, int offset, byte[] block) {
         this.peer = peer;
         this.pieceIndex = pieceIndex;
         this.offset = offset;
         this.block = block;
     }
 
-    void setComplete() {
+    public void setComplete() {
         complete = true;
     }
 
-    void setSuccess(boolean success) {
+    public void setSuccess(boolean success) {
         this.success = success;
     }
 
-    Peer getPeer() {
+    public Peer getPeer() {
         return peer;
     }
 
-    boolean isComplete() {
+    public boolean isComplete() {
         return complete;
     }
 
-    boolean isSuccess() {
+    public boolean isSuccess() {
         return success;
     }
 
-    int getPieceIndex() {
+    public int getPieceIndex() {
         return pieceIndex;
     }
 
-    int getOffset() {
+    public int getOffset() {
         return offset;
     }
 
-    byte[] getBlock() {
+    public byte[] getBlock() {
         return block;
     }
 }

@@ -4,23 +4,31 @@ import bt.data.DataAccessFactory;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
 import bt.net.IConnectionHandlerFactory;
+import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.service.IConfigurationService;
 import bt.service.IPeerRegistry;
 import bt.service.ITorrentRegistry;
 import bt.torrent.DefaultTorrentSession;
-import bt.torrent.IDataWorker;
-import bt.torrent.IDataWorkerFactory;
+import bt.torrent.data.IDataWorker;
+import bt.torrent.data.IDataWorkerFactory;
 import bt.torrent.ITorrentDescriptor;
 import bt.torrent.PieceManager;
-import bt.torrent.PieceSelector;
-import bt.torrent.RarestFirstSelector;
+import bt.torrent.PieceSelectionStrategy;
+import bt.torrent.RarestFirstSelectionStrategy;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
+import bt.torrent.messaging.GenericConsumer;
+import bt.torrent.messaging.MessageConsumer;
+import bt.torrent.messaging.MessageProducer;
+import bt.torrent.messaging.RequestProducer;
+import bt.torrent.messaging.PieceProducer;
 
 import java.net.URL;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,12 +47,12 @@ public class Bt {
     private BtRuntime runtime;
 
     private URL metainfoUrl;
-    private PieceSelector pieceSelector;
+    private PieceSelectionStrategy pieceSelectionStrategy;
     private boolean eagerInit;
 
     private Bt(BtRuntime runtime) {
         this.runtime = Objects.requireNonNull(runtime);
-        pieceSelector = RarestFirstSelector.randomized();
+        pieceSelectionStrategy = RarestFirstSelectionStrategy.randomized();
     }
 
     public Bt url(URL metainfoUrl) {
@@ -52,8 +60,8 @@ public class Bt {
         return this;
     }
 
-    public Bt selector(PieceSelector pieceSelector) {
-        this.pieceSelector = Objects.requireNonNull(pieceSelector);
+    public Bt selector(PieceSelectionStrategy pieceSelectionStrategy) {
+        this.pieceSelectionStrategy = Objects.requireNonNull(pieceSelectionStrategy);
         return this;
     }
 
@@ -91,10 +99,19 @@ public class Bt {
         IPeerConnectionPool connectionPool = runtime.service(IPeerConnectionPool.class);
         IConfigurationService configurationService = runtime.service(IConfigurationService.class);
         IConnectionHandlerFactory connectionHandlerFactory = runtime.service(IConnectionHandlerFactory.class);
+        IMessageDispatcher messageDispatcher = runtime.service(IMessageDispatcher.class);
 
-        PieceManager pieceManager = new PieceManager(pieceSelector, descriptor.getDataDescriptor().getChunkDescriptors());
+        PieceManager pieceManager = new PieceManager(descriptor.getDataDescriptor().getBitfield(), pieceSelectionStrategy);
+
+        Set<MessageConsumer> messageConsumers = new HashSet<>();
+        messageConsumers.add(new GenericConsumer(pieceManager, dataWorker));
+
+        Set<MessageProducer> messageProducers = new HashSet<>();
+        messageProducers.add(new PieceProducer(dataWorker));
+        messageProducers.add(new RequestProducer(descriptor.getDataDescriptor().getChunkDescriptors(), pieceManager));
+
         DefaultTorrentSession session = new DefaultTorrentSession(connectionPool, configurationService,
-                connectionHandlerFactory, pieceManager, dataWorker, torrent);
+                connectionHandlerFactory, pieceManager, messageDispatcher, messageConsumers, messageProducers, torrent);
 
         dataWorker.addVerifiedPieceListener(session::onPieceVerified);
         peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);

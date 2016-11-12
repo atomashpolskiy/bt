@@ -4,6 +4,7 @@ import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.IPeerConnectionPool;
+import bt.net.IMessageDispatcher;
 import bt.net.Peer;
 import bt.net.PeerActivityListener;
 import bt.protocol.Message;
@@ -39,6 +40,8 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     private static final int MIN_EVENTS_PER_MESSAGE = 10; // TODO: move this to configuration?
     private static final int MAX_EVENTS_PER_MESSAGE = 50;
 
+    private IMessageDispatcher dispatcher;
+
     private Map<Peer, MessageWorker> workers;
     private Map<Object, PeerExchangePeerSource> peerSources;
     private BlockingQueue<PeerEvent> peerEvents;
@@ -46,8 +49,11 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     private ReentrantReadWriteLock peerEventsLock;
 
     @Inject
-    public PeerExchangePeerSourceFactory(IRuntimeLifecycleBinder lifecycleBinder, IPeerConnectionPool connectionPool) {
+    public PeerExchangePeerSourceFactory(IRuntimeLifecycleBinder lifecycleBinder, IPeerConnectionPool connectionPool,
+                                         IMessageDispatcher dispatcher) {
         connectionPool.addConnectionListener(new Listener());
+
+        this.dispatcher = dispatcher;
 
         workers = new ConcurrentHashMap<>();
         peerSources = new ConcurrentHashMap<>();
@@ -116,9 +122,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     private class Listener implements PeerActivityListener {
 
         @Override
-        public void onPeerConnected(TorrentId torrentId, Peer peer, Consumer<Consumer<Message>> messageConsumers,
-                                    Consumer<Supplier<Message>> messageSuppliers) {
-
+        public void onPeerConnected(TorrentId torrentId, Peer peer) {
             peerEvents.add(PeerEvent.addedPeer(peer));
 
             MessageWorker worker = workers.get(peer);
@@ -126,15 +130,19 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
                 worker = new MessageWorker(getOrCreatePeerSource(torrentId));
                 MessageWorker existing = workers.putIfAbsent(peer, worker);
                 if (existing == null) {
-                    messageConsumers.accept(worker);
-                    messageSuppliers.accept(worker);
+                    dispatcher.addMessageConsumer(peer, worker);
+                    dispatcher.addMessageSupplier(peer, worker);
                 }
             }
         }
 
         @Override
-        public void onPeerDisconnected(Peer peer) {
+        public void onPeerDiscovered(Peer peer) {
+            // ignore
+        }
 
+        @Override
+        public void onPeerDisconnected(Peer peer) {
             peerEvents.add(PeerEvent.droppedPeer(peer));
             workers.remove(peer);
         }

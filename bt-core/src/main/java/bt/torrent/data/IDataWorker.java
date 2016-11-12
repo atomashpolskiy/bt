@@ -1,4 +1,4 @@
-package bt.torrent;
+package bt.torrent.data;
 
 import bt.net.Peer;
 

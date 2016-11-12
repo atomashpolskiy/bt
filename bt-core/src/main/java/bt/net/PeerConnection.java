@@ -70,6 +70,9 @@ public class PeerConnection implements IPeerConnection {
         Message message = messageReader.readMessage();
         if (message != null) {
             updateLastActive();
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Received message from peer: " + remotePeer + " -- " + message);
+            }
         }
         return message;
     }

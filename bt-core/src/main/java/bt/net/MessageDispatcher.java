@@ -2,9 +2,11 @@ package bt.net;
 
 import bt.protocol.Message;
 import bt.service.IRuntimeLifecycleBinder;
+import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -19,7 +21,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class MessageDispatcher {
+public class MessageDispatcher implements IMessageDispatcher {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageDispatcher.class);
 
@@ -28,6 +30,7 @@ public class MessageDispatcher {
 
     private Queue<Peer> disconnectedPeers;
 
+    @Inject
     public MessageDispatcher(IRuntimeLifecycleBinder lifecycleBinder, IPeerConnectionPool pool) {
 
         consumers = new ConcurrentHashMap<>();
@@ -157,16 +160,28 @@ public class MessageDispatcher {
         }
     }
 
-    void removePeer(Peer peer) {
+    private void removePeer(Peer peer) {
         consumers.remove(peer);
         suppliers.remove(peer);
     }
 
-    void addMessageConsumers(Peer sender, Collection<Consumer<Message>> messageConsumers) {
-        consumers.put(sender, messageConsumers);
+    @Override
+    public synchronized void addMessageConsumer(Peer sender, Consumer<Message> messageConsumer) {
+        Collection<Consumer<Message>> peerConsumers = consumers.get(sender);
+        if (peerConsumers == null) {
+            peerConsumers = ConcurrentHashMap.newKeySet();
+            consumers.put(sender, peerConsumers);
+        }
+        peerConsumers.add(messageConsumer);
     }
 
-    void addMessageSuppliers(Peer recipient, Collection<Supplier<Message>> messageSuppliers) {
-        suppliers.put(recipient, messageSuppliers);
+    @Override
+    public synchronized void addMessageSupplier(Peer recipient, Supplier<Message> messageSupplier) {
+        Collection<Supplier<Message>> peerSuppliers = suppliers.get(recipient);
+        if (peerSuppliers == null) {
+            peerSuppliers = ConcurrentHashMap.newKeySet();
+            suppliers.put(recipient, peerSuppliers);
+        }
+        peerSuppliers.add(messageSupplier);
     }
 }

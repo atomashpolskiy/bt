@@ -13,6 +13,7 @@ import bt.runtime.protocol.ext.ExtendedHandshakeProvider;
 import bt.runtime.protocol.ext.ExtendedMessage;
 import bt.runtime.protocol.ext.ExtendedMessageTypeMapping;
 import bt.runtime.protocol.ext.ExtendedProtocol;
+import bt.net.BitfieldConnectionHandler;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Singleton;
@@ -54,6 +55,8 @@ public class ProtocolModule implements Module {
                             new TypeLiteral<MessageHandler<? extends ExtendedMessage>>(){});
 
         Multibinder<ConnectionHandler> extraConnectionHandlers = Multibinder.newSetBinder(binder, ConnectionHandler.class);
+        extraConnectionHandlers.addBinding().to(BitfieldConnectionHandler.class);
+
         Multibinder<HandshakeHandler> extraHandshakeHandlers = Multibinder.newSetBinder(binder, HandshakeHandler.class);
 
         if (extendedMessageHandlers != null && extendedMessageHandlers.size() > 0) {

@@ -1,12 +1,10 @@
 package bt.torrent;
 
-import bt.data.DataStatus;
 import bt.data.IChunkDescriptor;
 import bt.metainfo.TorrentId;
 import bt.net.IPeerConnection;
 import bt.net.Peer;
 import bt.protocol.Message;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -16,72 +14,17 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import static bt.TestUtil.assertExceptionWithMessage;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-public class PieceManagerTest {
-
-    static long blockSize = 4;
-    static long chunkSize = blockSize * 4;
-
-    static IChunkDescriptor emptyChunk, completeChunk;
-
-    @BeforeClass
-    public static void setUp() {
-        emptyChunk = mockChunk(blockSize, chunkSize, new byte[]{0,0,0,0}, null);
-        completeChunk = mockChunk(blockSize, chunkSize, new byte[]{1,1,1,1}, null);
-    }
-
-    @Test
-    public void testPieceManager_Bitfield_AllEmpty() {
-
-        IChunkDescriptor[] chunkArray = new IChunkDescriptor[12];
-        Arrays.fill(chunkArray, emptyChunk);
-
-        List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
-
-        IPieceManager pieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
-        assertArrayEquals(new byte[]{0,0}, pieceManager.getBitfield());
-        assertFalse(pieceManager.haveAnyData());
-        assertEquals(12, pieceManager.getPiecesRemaining());
-    }
-
-    @Test
-    public void testPieceManager_Bitfield() {
-
-        List<IChunkDescriptor> chunks = Arrays.asList(completeChunk, emptyChunk, emptyChunk, completeChunk,
-                                                      emptyChunk, emptyChunk, emptyChunk, completeChunk);
-
-        byte expectedBitfield = (byte) (1 + (0b1 << 4) + (0b1 << 7));
-
-        IPieceManager pieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
-        assertArrayEquals(new byte[]{expectedBitfield}, pieceManager.getBitfield());
-        assertTrue(pieceManager.haveAnyData());
-        assertEquals(5, pieceManager.getPiecesRemaining());
-    }
-
-    @Test
-    public void testPieceManager_PeerBitfield_WrongSize() throws Exception {
-
-        IChunkDescriptor[] chunkArray = new IChunkDescriptor[4];
-        Arrays.fill(chunkArray, emptyChunk);
-
-        List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
-
-        IPieceManager pieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
-        Peer peer = mock(Peer.class);
-        assertExceptionWithMessage(
-                it -> {
-                    pieceManager.peerHasBitfield(peer, new byte[]{0,0}); return null;},
-                "bitfield has wrong size: 2");
-    }
+public class PieceManagerTest extends BaseBitfieldTest {
 
     @Test
     public void testPieceManager_SelectPieces() {
+
+        final int PIECES_TOTAL = 12;
 
         Verifier verifier3 = new Verifier(),
                  verifier5 = new Verifier();
@@ -95,18 +38,19 @@ public class PieceManagerTest {
         chunkArray[5] = chunk5;
 
         List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
-        IPieceManager pieceManager = new PieceManager(RarestFirstSelector.selector(), chunks);
+        Bitfield bitfield = new Bitfield(chunks);
+        IPieceManager pieceManager = new PieceManager(bitfield, RarestFirstSelectionStrategy.regular());
 
         // peer has piece #3
         Peer peer1 = mock(Peer.class);
         assertFalse(pieceManager.mightSelectPieceForPeer(peer1));
-        pieceManager.peerHasBitfield(peer1, new byte[]{0b1 << (7 - 3), 0});
+        pieceManager.peerHasBitfield(peer1, new Bitfield(new byte[]{0b1 << (7 - 3), 0}, PIECES_TOTAL));
         assertTrue(pieceManager.mightSelectPieceForPeer(peer1));
         assertHasPiece(3, pieceManager.selectPieceForPeer(peer1));
 
         // another peer has pieces #3 and #5
         Peer peer2 = mock(Peer.class);
-        pieceManager.peerHasBitfield(peer2, new byte[]{(0b1 << (7 - 3)) + (0b1 << (7 - 5)), 0});
+        pieceManager.peerHasBitfield(peer2, new Bitfield(new byte[]{(0b1 << (7 - 3)) + (0b1 << (7 - 5)), 0}, PIECES_TOTAL));
         assertHasPiece(5, pieceManager.selectPieceForPeer(peer2));
 
         verifier5.setVerified();
@@ -116,7 +60,7 @@ public class PieceManagerTest {
 
         // yet another peer has pieces #7 and #11
         Peer peer3 = mock(Peer.class);
-        pieceManager.peerHasBitfield(peer3, new byte[]{0, 0b1 << (7 - 3)});
+        pieceManager.peerHasBitfield(peer3, new Bitfield(new byte[]{0, 0b1 << (7 - 3)}, PIECES_TOTAL));
         pieceManager.peerHasPiece(peer3, 7);
         assertHasPiece(3, pieceManager.selectPieceForPeer(peer1));
         assertFalse(pieceManager.mightSelectPieceForPeer(peer2));
@@ -134,22 +78,21 @@ public class PieceManagerTest {
         assertFalse(pieceManager.mightSelectPieceForPeer(peer2));
     }
 
-    private static IChunkDescriptor mockChunk(long blockSize, long chunkSize, byte[] bitfield,
-                                              Supplier<Boolean> verifier) {
+    @Test
+    public void testPieceManager_PeerBitfield_WrongSize() throws Exception {
 
-        byte[] _bitfield = Arrays.copyOf(bitfield, bitfield.length);
+        IChunkDescriptor[] chunkArray = new IChunkDescriptor[4];
+        Arrays.fill(chunkArray, emptyChunk);
 
-        IChunkDescriptor chunk = mock(IChunkDescriptor.class);
-        when(chunk.getSize()).thenReturn(chunkSize);
-        when(chunk.getBlockSize()).thenReturn(blockSize);
-        when(chunk.getBitfield()).thenReturn(_bitfield);
-        when(chunk.getStatus()).then(it ->
-                verifier == null? statusForBitfield(_bitfield)
-                        : (verifier.get()? DataStatus.VERIFIED : statusForBitfield(_bitfield)));
+        List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
+        Bitfield bitfield = new Bitfield(chunks);
 
-        when(chunk.verify()).then(it -> verifier == null? false : verifier.get());
-
-        return chunk;
+        IPieceManager pieceManager = new PieceManager(bitfield, RarestFirstSelectionStrategy.regular());
+        Peer peer = mock(Peer.class);
+        assertExceptionWithMessage(
+                it -> {
+                    pieceManager.peerHasBitfield(peer, new Bitfield(16)); return null;},
+                "bitfield has wrong size: 16. Expected: 4");
     }
 
     private static IPeerConnection mockPeer(TorrentId torrentId) {
@@ -209,21 +152,6 @@ public class PieceManagerTest {
     private static void assertHasPiece(Integer expectedIndex, Optional<Integer> actualIndex) {
         assertTrue("missing index", actualIndex.isPresent());
         assertEquals(expectedIndex, actualIndex.get());
-    }
-
-    private static DataStatus statusForBitfield(byte[] bitfield) {
-
-        if (bitfield.length == 0) {
-            throw new RuntimeException("Empty bitfield");
-        }
-
-        byte first = bitfield[0];
-        for (byte b : bitfield) {
-            if (b != first) {
-                return DataStatus.INCOMPLETE;
-            }
-        }
-        return first == 0? DataStatus.EMPTY : DataStatus.VERIFIED;
     }
 
     private static class Verifier implements Supplier<Boolean> {

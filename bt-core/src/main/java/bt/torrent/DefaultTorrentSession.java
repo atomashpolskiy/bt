@@ -4,22 +4,21 @@ import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionHandler;
 import bt.net.IConnectionHandlerFactory;
+import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
 import bt.net.PeerActivityListener;
 import bt.protocol.Have;
 import bt.protocol.InvalidMessageException;
-import bt.protocol.Message;
 import bt.service.IConfigurationService;
+import bt.torrent.messaging.MessageConsumer;
+import bt.torrent.messaging.MessageProducer;
+import bt.torrent.messaging.TorrentWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public class DefaultTorrentSession implements PeerActivityListener, TorrentSession {
 
@@ -27,116 +26,63 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
 
     private IConfigurationService configurationService;
     private IPieceManager pieceManager;
-    private IDataWorker dataWorker;
 
     private Torrent torrent;
 
     private IPeerConnectionPool connectionPool;
     private ConnectionHandler outgoingHandler;
 
-    private ConcurrentMap<Peer, ConnectionWorker> connectionWorkers;
-
     private TorrentSessionState sessionState;
+    private TorrentWorker worker;
 
     public DefaultTorrentSession(IPeerConnectionPool connectionPool, IConfigurationService configurationService,
                                  IConnectionHandlerFactory connectionHandlerFactory,
-                                 IPieceManager pieceManager, IDataWorker dataWorker, Torrent torrent) {
+                                 IPieceManager pieceManager, IMessageDispatcher dispatcher,
+                                 Set<MessageConsumer> messageConsumers, Set<MessageProducer> messageProducers,
+                                 Torrent torrent) {
 
         this.connectionPool = connectionPool;
         this.configurationService = configurationService;
         this.pieceManager = pieceManager;
-        this.dataWorker = dataWorker;
 
         this.torrent = torrent;
 
-        outgoingHandler = connectionHandlerFactory.getOutgoingHandler(torrent);
-        connectionWorkers = new ConcurrentHashMap<>();
-
-        sessionState = new TorrentSessionState() {
-
-            @Override
-            public int getPiecesTotal() {
-                return pieceManager.getPiecesTotal();
-            }
-
-            @Override
-            public int getPiecesRemaining() {
-                return pieceManager.getPiecesRemaining();
-            }
-
-            @Override
-            public long getDownloaded() {
-
-                long downloaded = 0;
-                for (ConnectionWorker worker : connectionWorkers.values()) {
-                    downloaded += worker.getDownloaded();
-                }
-                return downloaded;
-            }
-
-            @Override
-            public long getUploaded() {
-
-                long uploaded = 0;
-                for (ConnectionWorker worker : connectionWorkers.values()) {
-                    uploaded += worker.getUploaded();
-                }
-                return uploaded;
-            }
-
-            @Override
-            public Set<Peer> getConnectedPeers() {
-                return Collections.unmodifiableSet(connectionWorkers.keySet());
-            }
-        };
+        this.outgoingHandler = connectionHandlerFactory.getOutgoingHandler(torrent);
+        this.sessionState = new DefaultTorrentSessionState(pieceManager.getBitfield());
+        this.worker = new TorrentWorker(pieceManager, dispatcher, messageConsumers, messageProducers);
     }
 
+    @Override
     public void onPeerDiscovered(Peer peer) {
-
-        if (connectionWorkers.size() >= configurationService.getMaxActiveConnectionsPerTorrent()
-                || connectionWorkers.containsKey(peer)) {
+        // TODO: Store discovered peers to use them later,
+        // when some of the currently connected peers disconnects
+        if (worker.getPeers().size() >= configurationService.getMaxActiveConnectionsPerTorrent()
+                || worker.getPeers().contains(peer)) {
             return;
         }
         connectionPool.requestConnection(peer, outgoingHandler);
     }
 
     @Override
-    public void onPeerConnected(TorrentId torrentId, Peer peer, Consumer<Consumer<Message>> messageConsumers,
-                                Consumer<Supplier<Message>> messageSuppliers) {
-
-        if (connectionWorkers.size() >= configurationService.getMaxActiveConnectionsPerTorrent()) {
+    public void onPeerConnected(TorrentId torrentId, Peer peer) {
+        if (worker.getPeers().size() >= configurationService.getMaxActiveConnectionsPerTorrent()) {
             return;
         }
-
         if (torrent.getTorrentId().equals(torrentId)) {
-
-            ConnectionWorker worker = new ConnectionWorker(peer, pieceManager, dataWorker);
-            ConnectionWorker existing = connectionWorkers.putIfAbsent(peer, worker);
-            if (existing == null) {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Added connection for peer: " + peer);
-                }
-                messageConsumers.accept(worker);
-                messageSuppliers.accept(worker);
-            }
+            worker.addPeer(peer);
         }
     }
 
     @Override
     public void onPeerDisconnected(Peer peer) {
-        ConnectionWorker removed = connectionWorkers.remove(peer);
-        if (removed != null) {
-            removed.shutdown();
-        }
+        worker.removePeer(peer);
     }
 
     public void onPieceVerified(Integer pieceIndex) {
         if (pieceManager.checkPieceVerified(pieceIndex)) {
             try {
                 Have have = new Have(pieceIndex);
-                for (ConnectionWorker worker : connectionWorkers.values()) {
-                    worker.addMessage(have);
-                }
+                worker.broadcast(have);
             } catch (InvalidMessageException e) {
                 LOGGER.error("Unexpected error while announcing new completed piece", e);
             }
@@ -151,5 +97,49 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
     @Override
     public TorrentSessionState getState() {
         return sessionState;
+    }
+
+    private class DefaultTorrentSessionState implements TorrentSessionState {
+
+        private Bitfield localBitfield;
+
+        DefaultTorrentSessionState(Bitfield localBitfield) {
+            this.localBitfield = localBitfield;
+        }
+
+        @Override
+        public int getPiecesTotal() {
+            return localBitfield.getPiecesTotal();
+        }
+
+        @Override
+        public int getPiecesRemaining() {
+            return localBitfield.getPiecesRemaining();
+        }
+
+        @Override
+        public long getDownloaded() {
+
+            long downloaded = 0;
+            for (Peer peer : worker.getPeers()) {
+                downloaded += worker.getConnectionState(peer).getDownloaded();
+            }
+            return downloaded;
+        }
+
+        @Override
+        public long getUploaded() {
+
+            long uploaded = 0;
+            for (Peer peer : worker.getPeers()) {
+                uploaded += worker.getConnectionState(peer).getUploaded();
+            }
+            return uploaded;
+        }
+
+        @Override
+        public Set<Peer> getConnectedPeers() {
+            return Collections.unmodifiableSet(worker.getPeers());
+        }
     }
 }

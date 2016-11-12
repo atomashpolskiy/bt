@@ -4,6 +4,7 @@ import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 import bt.service.IConfigurationService;
+import bt.torrent.Bitfield;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +24,7 @@ public class DataDescriptor implements IDataDescriptor {
 
     private Torrent torrent;
     private List<IChunkDescriptor> chunkDescriptors;
+    private Bitfield bitfield;
 
     private Set<DataAccess> dataAccesses;
 
@@ -120,11 +122,17 @@ public class DataDescriptor implements IDataDescriptor {
         }
 
         this.chunkDescriptors = chunkDescriptors;
+        this.bitfield = new Bitfield(chunkDescriptors);
     }
 
     @Override
     public List<IChunkDescriptor> getChunkDescriptors() {
         return chunkDescriptors;
+    }
+
+    @Override
+    public Bitfield getBitfield() {
+        return bitfield;
     }
 
     @Override

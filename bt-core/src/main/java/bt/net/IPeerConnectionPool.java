@@ -8,5 +8,6 @@ public interface IPeerConnectionPool {
 
     IPeerConnection getConnection(Peer peer);
 
+    // TODO: remove ConnectionHandler param (?)
     CompletableFuture<IPeerConnection> requestConnection(Peer peer, ConnectionHandler connectionHandler);
 }

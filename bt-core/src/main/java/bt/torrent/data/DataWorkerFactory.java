@@ -1,4 +1,4 @@
-package bt.torrent;
+package bt.torrent.data;
 
 import bt.data.IDataDescriptor;
 import bt.service.IConfigurationService;
