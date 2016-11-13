@@ -54,6 +54,10 @@ public class BtRuntime {
                 new Thread(r, "BtRuntimeThreadPool-Client#" + threadCount.incrementAndGet()));
     }
 
+    public Injector getInjector() {
+        return injector;
+    }
+
     public <T> T service(Class<T> serviceType) {
         return injector.getInstance(serviceType);
     }

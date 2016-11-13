@@ -11,8 +11,7 @@ import bt.net.PeerActivityListener;
 import bt.protocol.Have;
 import bt.protocol.InvalidMessageException;
 import bt.service.IConfigurationService;
-import bt.torrent.messaging.MessageConsumer;
-import bt.torrent.messaging.MessageProducer;
+import bt.torrent.messaging.IPeerWorkerFactory;
 import bt.torrent.messaging.TorrentWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,8 +37,7 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
     public DefaultTorrentSession(IPeerConnectionPool connectionPool, IConfigurationService configurationService,
                                  IConnectionHandlerFactory connectionHandlerFactory,
                                  IPieceManager pieceManager, IMessageDispatcher dispatcher,
-                                 Set<MessageConsumer> messageConsumers, Set<MessageProducer> messageProducers,
-                                 Torrent torrent) {
+                                 IPeerWorkerFactory peerWorkerFactory, Torrent torrent) {
 
         this.connectionPool = connectionPool;
         this.configurationService = configurationService;
@@ -49,7 +47,7 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
 
         this.outgoingHandler = connectionHandlerFactory.getOutgoingHandler(torrent);
         this.sessionState = new DefaultTorrentSessionState(pieceManager.getBitfield());
-        this.worker = new TorrentWorker(pieceManager, dispatcher, messageConsumers, messageProducers);
+        this.worker = new TorrentWorker(pieceManager, dispatcher, peerWorkerFactory);
     }
 
     @Override

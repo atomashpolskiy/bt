@@ -9,39 +9,87 @@ import bt.protocol.NotInterested;
 import bt.protocol.Piece;
 import bt.protocol.Unchoke;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
-public class MessageWorker implements Consumer<Message>, Supplier<Message> {
+public class PeerWorker implements IPeerWorker {
 
-    private Peer peer;
     private ConnectionState connectionState;
 
-    private Set<MessageConsumer> messageConsumers;
+    private MessageContext context;
+
+    private Set<MessageConsumer<Message>> genericConsumers;
+    private Map<Class<?>, Collection<MessageConsumer<?>>> typedMessageConsumers;
     private Set<MessageProducer> messageProducers;
     private Deque<Message> outgoingMessages;
 
     private Choker choker;
 
-    public MessageWorker(Peer peer, Set<MessageConsumer> messageConsumers, Set<MessageProducer> messageProducers) {
-        this.peer = peer;
+    public PeerWorker(Peer peer, Set<MessageConsumer<?>> messageConsumers, Set<MessageProducer> messageProducers) {
         this.connectionState = new ConnectionState();
-        this.messageConsumers = messageConsumers;
+        this.context = new MessageContext(peer, connectionState);
         this.messageProducers = messageProducers;
         this.outgoingMessages = new LinkedBlockingDeque<>();
-        this.choker = new Choker();
+        this.choker = Choker.choker();
+
+        initConsumers(messageConsumers);
     }
 
+    @SuppressWarnings("unchecked")
+    private void initConsumers(Set<MessageConsumer<?>> messageConsumers) {
+
+        Set<MessageConsumer<Message>> genericConsumers = new HashSet<>();
+        Map<Class<?>, Collection<MessageConsumer<?>>> typedMessageConsumers = new HashMap<>();
+
+        messageConsumers.forEach(consumer -> {
+            Class<?> consumedType = consumer.getConsumedType();
+            if (Message.class.equals(consumedType)) {
+                genericConsumers.add((MessageConsumer<Message>) consumer);
+            } else {
+                Collection<MessageConsumer<?>> consumers = typedMessageConsumers.get(consumedType);
+                if (consumers == null) {
+                    consumers = new ArrayList<>();
+                    typedMessageConsumers.put(consumedType, consumers);
+                }
+                consumers.add(consumer);
+            }
+        });
+
+        this.genericConsumers = genericConsumers;
+        this.typedMessageConsumers = typedMessageConsumers;
+    }
+
+    @Override
     public ConnectionState getConnectionState() {
         return connectionState;
     }
 
     @Override
     public void accept(Message message) {
-        messageConsumers.forEach(consumer -> consumer.consume(peer, connectionState, message));
+        doAccept(message);
+    }
+
+    private <T extends Message> void doAccept(T message) {
+        genericConsumers.forEach(consumer -> {
+            consumer.consume(message, context);
+            updateConnection();
+        });
+
+        Collection<MessageConsumer<?>> consumers = typedMessageConsumers.get(message.getClass());
+        if (consumers != null) {
+            consumers.forEach(consumer -> {
+                @SuppressWarnings("unchecked")
+                MessageConsumer<T> typedConsumer = (MessageConsumer<T>) consumer;
+                typedConsumer.consume(message, context);
+                updateConnection();
+            });
+        }
     }
 
     private void postMessage(Message message) {
@@ -70,8 +118,8 @@ public class MessageWorker implements Consumer<Message>, Supplier<Message> {
     public Message get() {
         if (outgoingMessages.isEmpty()) {
             messageProducers.forEach(producer -> {
-                producer.produce(peer, connectionState, this::postMessage);
-                choker.handleConnection(connectionState, this::postMessage);
+                producer.produce(this::postMessage, context);
+                updateConnection();
             });
         }
         return postProcessOutgoingMessage(outgoingMessages.poll());
@@ -118,5 +166,9 @@ public class MessageWorker implements Consumer<Message>, Supplier<Message> {
                 length = piece.getBlock().length;
 
         return connectionState.getCancelledPeerRequests().remove(Mapper.mapper().buildKey(pieceIndex, offset, length));
+    }
+
+    private void updateConnection() {
+        choker.handleConnection(connectionState, this::postMessage);
     }
 }

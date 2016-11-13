@@ -3,6 +3,7 @@ package bt;
 import bt.data.DataAccessFactory;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
+import bt.module.MessagingAgent;
 import bt.net.IConnectionHandlerFactory;
 import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
@@ -10,6 +11,7 @@ import bt.service.IConfigurationService;
 import bt.service.IPeerRegistry;
 import bt.service.ITorrentRegistry;
 import bt.torrent.DefaultTorrentSession;
+import bt.torrent.IPieceManager;
 import bt.torrent.data.IDataWorker;
 import bt.torrent.data.IDataWorkerFactory;
 import bt.torrent.ITorrentDescriptor;
@@ -18,11 +20,19 @@ import bt.torrent.PieceSelectionStrategy;
 import bt.torrent.RarestFirstSelectionStrategy;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
+import bt.torrent.messaging.BitfieldConsumer;
 import bt.torrent.messaging.GenericConsumer;
+import bt.torrent.messaging.IPeerWorkerFactory;
 import bt.torrent.messaging.MessageConsumer;
 import bt.torrent.messaging.MessageProducer;
+import bt.torrent.messaging.PeerWorkerFactory;
+import bt.torrent.messaging.PieceConsumer;
+import bt.torrent.messaging.RequestConsumer;
 import bt.torrent.messaging.RequestProducer;
 import bt.torrent.messaging.PieceProducer;
+import com.google.inject.Binding;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 
 import java.net.URL;
 import java.util.HashSet;
@@ -102,16 +112,10 @@ public class Bt {
         IMessageDispatcher messageDispatcher = runtime.service(IMessageDispatcher.class);
 
         PieceManager pieceManager = new PieceManager(descriptor.getDataDescriptor().getBitfield(), pieceSelectionStrategy);
-
-        Set<MessageConsumer> messageConsumers = new HashSet<>();
-        messageConsumers.add(new GenericConsumer(pieceManager, dataWorker));
-
-        Set<MessageProducer> messageProducers = new HashSet<>();
-        messageProducers.add(new PieceProducer(dataWorker));
-        messageProducers.add(new RequestProducer(descriptor.getDataDescriptor().getChunkDescriptors(), pieceManager));
+        IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceManager, dataWorker);
 
         DefaultTorrentSession session = new DefaultTorrentSession(connectionPool, configurationService,
-                connectionHandlerFactory, pieceManager, messageDispatcher, messageConsumers, messageProducers, torrent);
+                connectionHandlerFactory, pieceManager, messageDispatcher, peerWorkerFactory, torrent);
 
         dataWorker.addVerifiedPieceListener(session::onPieceVerified);
         peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);
@@ -119,6 +123,26 @@ public class Bt {
 
         return new RuntimeAwareBtClient(runtime,
                 new DefaultBtClient(runtime.getClientExecutor(), descriptor, session, dataWorker));
+    }
+
+    private IPeerWorkerFactory createPeerWorkerFactory(ITorrentDescriptor descriptor, IPieceManager pieceManager,
+                                                       IDataWorker dataWorker) {
+
+        Set<Object> messagingAgents = new HashSet<>();
+        messagingAgents.add(GenericConsumer.consumer());
+        messagingAgents.add(new BitfieldConsumer(pieceManager));
+        messagingAgents.add(new RequestConsumer(dataWorker));
+        messagingAgents.add(new PieceProducer(dataWorker));
+        messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor().getChunkDescriptors(), pieceManager));
+        messagingAgents.add(new PieceConsumer(dataWorker));
+
+        Binding<Set<Object>> extraMessagingAgents = runtime.getInjector()
+                .getExistingBinding(Key.get(new TypeLiteral<Set<Object>>(){}, MessagingAgent.class));
+        if (extraMessagingAgents != null) {
+            messagingAgents.addAll(extraMessagingAgents.getProvider().get());
+        }
+
+        return new PeerWorkerFactory(messagingAgents);
     }
 
     private static class LazyBtClient implements BtClient {

@@ -1,9 +1,10 @@
 package bt.torrent.messaging;
 
-import bt.net.Peer;
 import bt.protocol.Message;
 
-public interface MessageConsumer {
+public interface MessageConsumer<T extends Message> {
 
-    void consume(Peer peer, ConnectionState connectionState, Message message);
+    Class<T> getConsumedType();
+
+    void consume(T message, MessageContext context);
 }

@@ -19,23 +19,20 @@ public class TorrentWorker {
     private IPieceManager pieceManager;
     private IMessageDispatcher dispatcher;
 
-    private Set<MessageConsumer> messageConsumers;
-    private Set<MessageProducer> messageProducers;
-
-    private ConcurrentMap<Peer, MessageWorker> peerMap;
+    private IPeerWorkerFactory peerWorkerFactory;
+    private ConcurrentMap<Peer, IPeerWorker> peerMap;
 
     public TorrentWorker(IPieceManager pieceManager, IMessageDispatcher dispatcher,
-                         Set<MessageConsumer> messageConsumers, Set<MessageProducer> messageProducers) {
+                         IPeerWorkerFactory peerWorkerFactory) {
         this.pieceManager = pieceManager;
         this.dispatcher = dispatcher;
-        this.messageConsumers = messageConsumers;
-        this.messageProducers = messageProducers;
+        this.peerWorkerFactory = peerWorkerFactory;
         this.peerMap = new ConcurrentHashMap<>();
     }
 
     public void addPeer(Peer peer) {
-        MessageWorker worker = new MessageWorker(peer, messageConsumers, messageProducers);
-        MessageWorker existing = peerMap.putIfAbsent(peer, worker);
+        IPeerWorker worker = peerWorkerFactory.createPeerWorker(peer);
+        IPeerWorker existing = peerMap.putIfAbsent(peer, worker);
         if (existing == null) {
             dispatcher.addMessageConsumer(peer, worker::accept);
             dispatcher.addMessageSupplier(peer, worker::get);
@@ -46,7 +43,7 @@ public class TorrentWorker {
     }
 
     public void removePeer(Peer peer) {
-        MessageWorker removed = peerMap.remove(peer);
+        IPeerWorker removed = peerMap.remove(peer);
         if (removed != null) {
             Optional<Integer> assignedPiece = pieceManager.getAssignedPiece(peer);
             if (assignedPiece.isPresent()) {
@@ -63,7 +60,7 @@ public class TorrentWorker {
     }
 
     public ConnectionState getConnectionState(Peer peer) {
-        MessageWorker worker = peerMap.get(peer);
+        IPeerWorker worker = peerMap.get(peer);
         return (worker == null) ? null : worker.getConnectionState();
     }
 

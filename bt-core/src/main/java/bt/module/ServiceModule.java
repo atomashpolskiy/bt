@@ -36,19 +36,21 @@ import com.google.inject.Module;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 public class ServiceModule implements Module {
 
-    private List<PeerSourceFactory> extraPeerSourceFactories;
-    private List<Class<? extends PeerSourceFactory>> extraPeerSourceFactoryTypes;
+    private Set<PeerSourceFactory> extraPeerSourceFactories;
+    private Set<Class<? extends PeerSourceFactory>> extraPeerSourceFactoryTypes;
+    private Set<Object> messagingAgents;
+    private Set<Class<?>> messagingAgentTypes;
 
     public void addPeerSourceFactory(PeerSourceFactory peerSourceFactory) {
         Objects.requireNonNull(peerSourceFactory);
         if (extraPeerSourceFactories == null) {
-            extraPeerSourceFactories = new ArrayList<>();
+            extraPeerSourceFactories = new HashSet<>();
         }
         extraPeerSourceFactories.add(peerSourceFactory);
     }
@@ -56,9 +58,25 @@ public class ServiceModule implements Module {
     public void addPeerSourceFactoryType(Class<? extends PeerSourceFactory> peerSourceFactoryType) {
         Objects.requireNonNull(peerSourceFactoryType);
         if (extraPeerSourceFactoryTypes == null) {
-            extraPeerSourceFactoryTypes = new ArrayList<>();
+            extraPeerSourceFactoryTypes = new HashSet<>();
         }
         extraPeerSourceFactoryTypes.add(peerSourceFactoryType);
+    }
+
+    public void addMessagingAgent(Object messagingAgent) {
+        Objects.requireNonNull(messagingAgent);
+        if (messagingAgents == null) {
+            messagingAgents = new HashSet<>();
+        }
+        messagingAgents.add(messagingAgent);
+    }
+
+    public void addMessagingAgentType(Class<?> messagingAgentType) {
+        Objects.requireNonNull(messagingAgentType);
+        if (messagingAgentTypes == null) {
+            messagingAgentTypes = new HashSet<>();
+        }
+        messagingAgentTypes.add(messagingAgentType);
     }
 
     @Override
@@ -78,14 +96,22 @@ public class ServiceModule implements Module {
         binder.bind(IHandshakeFactory.class).to(HandshakeFactory.class).in(Singleton.class);
         binder.bind(IConnectionHandlerFactory.class).to(ConnectionHandlerFactory.class).in(Singleton.class);
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
-
         binder.bind(IPeerRegistry.class).to(PeerRegistry.class).in(Singleton.class);
+
         Multibinder<PeerSourceFactory> peerSources = Multibinder.newSetBinder(binder, PeerSourceFactory.class);
         if (extraPeerSourceFactories != null) {
             extraPeerSourceFactories.forEach(peerSources.addBinding()::toInstance);
         }
         if (extraPeerSourceFactoryTypes != null) {
             extraPeerSourceFactoryTypes.forEach(peerSources.addBinding()::to);
+        }
+
+        Multibinder<Object> messagingAgentsBinder = Multibinder.newSetBinder(binder, Object.class, MessagingAgent.class);
+        if (messagingAgents != null) {
+            messagingAgents.forEach(agent -> messagingAgentsBinder.addBinding().toInstance(agent));
+        }
+        if (messagingAgentTypes != null) {
+            messagingAgentTypes.forEach(agentType -> messagingAgentsBinder.addBinding().to(agentType));
         }
     }
 }

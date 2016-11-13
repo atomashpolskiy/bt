@@ -5,12 +5,13 @@ import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.Piece;
+import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockRead;
 import bt.torrent.data.IDataWorker;
 
 import java.util.function.Consumer;
 
-public class PieceProducer implements MessageProducer {
+public class PieceProducer {
 
     private IDataWorker dataWorker;
 
@@ -18,8 +19,11 @@ public class PieceProducer implements MessageProducer {
         this.dataWorker = dataWorker;
     }
 
-    @Override
-    public void produce(Peer peer, ConnectionState connectionState, Consumer<Message> messageConsumer) {
+    @Produces
+    public void produce(Consumer<Message> messageConsumer, MessageContext context) {
+
+        Peer peer = context.getPeer();
+
         BlockRead block;
         while ((block = dataWorker.getCompletedBlockRequest(peer)) != null) {
             try {

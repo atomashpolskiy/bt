@@ -8,6 +8,7 @@ import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.NotInterested;
 import bt.protocol.Request;
+import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
 import bt.torrent.IPieceManager;
 import org.slf4j.Logger;
@@ -20,7 +21,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class RequestProducer implements MessageProducer {
+public class RequestProducer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RequestProducer.class);
 
@@ -34,8 +35,11 @@ public class RequestProducer implements MessageProducer {
         this.pieceManager = pieceManager;
     }
 
-    @Override
-    public void produce(Peer peer, ConnectionState connectionState, Consumer<Message> messageConsumer) {
+    @Produces
+    public void produce(Consumer<Message> messageConsumer, MessageContext context) {
+
+        Peer peer = context.getPeer();
+        ConnectionState connectionState = context.getConnectionState();
 
         Optional<Integer> currentPiece = pieceManager.getAssignedPiece(peer);
         if (connectionState.getRequestQueue().isEmpty()) {

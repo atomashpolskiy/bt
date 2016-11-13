@@ -10,7 +10,13 @@ import java.util.function.Consumer;
 
 public class Choker {
 
-    private final Duration CHOKING_THRESHOLD = Duration.ofMillis(10000);
+    private static final Duration CHOKING_THRESHOLD = Duration.ofMillis(10000);
+
+    private static final Choker instance = new Choker();
+
+    public static Choker choker() {
+        return instance;
+    }
 
     public void handleConnection(ConnectionState connectionState, Consumer<Message> messageConsumer) {
 
