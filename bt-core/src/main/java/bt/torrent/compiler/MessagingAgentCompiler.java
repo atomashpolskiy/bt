@@ -13,7 +13,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -56,7 +55,9 @@ public class MessagingAgentCompiler {
 
     private Map<String, Collection<?>> compileType(Class<?> type) {
 
-        LOGGER.info("Compiling messaging agent type: " + type.getName());
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Compiling messaging agent type: " + type.getName());
+        }
 
         Collection<ConsumerInfo> compiledConsumers = new ArrayList<>();
         Collection<ProducerInfo> compiledProducers = new ArrayList<>();
@@ -67,7 +68,9 @@ public class MessagingAgentCompiler {
         }};
 
         int methodCount = compileType(type, compiledConsumers, compiledProducers);
-        LOGGER.info("Compiled " + methodCount + " consumer/producer methods");
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Compiled " + methodCount + " consumer/producer methods");
+        }
         return compiledType;
     }
 
