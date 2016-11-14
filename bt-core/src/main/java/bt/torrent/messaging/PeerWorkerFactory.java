@@ -24,6 +24,8 @@ public class PeerWorkerFactory implements IPeerWorkerFactory {
         messagingAgents.forEach(agent -> compiler.compileAndVisit(agent, new CompilerVisitor() {
             @Override
             public <T extends Message> void visitConsumer(Class<T> consumedType, MethodHandle handle) {
+                // full handle sig is (obj, message, context):void
+                boolean reduced = handle.type().parameterCount() == 2;
                 consumers.add(new MessageConsumer<T>() {
                     @Override
                     public Class<T> getConsumedType() {
@@ -33,7 +35,11 @@ public class PeerWorkerFactory implements IPeerWorkerFactory {
                     @Override
                     public void consume(T message, MessageContext context) {
                         try {
-                            handle.invoke(agent, message, context);
+                            if (reduced) {
+                                handle.invoke(agent, message);
+                            } else {
+                                handle.invoke(agent, message, context);
+                            }
                         } catch (Throwable t) {
                             throw new RuntimeException("Failed to invoke message consumer", t);
                         }
@@ -43,9 +49,15 @@ public class PeerWorkerFactory implements IPeerWorkerFactory {
 
             @Override
             public void visitProducer(MethodHandle handle) {
+                // full handle sig is (obj, consumer, context):void
+                boolean reduced = handle.type().parameterCount() == 2;
                 producers.add((messageConsumer, context) -> {
                     try {
-                        handle.invoke(agent, messageConsumer, context);
+                        if (reduced) {
+                                handle.invoke(agent, messageConsumer);
+                            } else {
+                                handle.invoke(agent, messageConsumer, context);
+                            }
                     } catch (Throwable t) {
                         throw new RuntimeException("Failed to invoke message producer", t);
                     }
