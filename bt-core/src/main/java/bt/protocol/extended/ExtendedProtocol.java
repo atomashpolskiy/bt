@@ -1,4 +1,4 @@
-package bt.runtime.protocol.ext;
+package bt.protocol.extended;
 
 import bt.BtException;
 import bt.protocol.handler.BaseMessageHandler;

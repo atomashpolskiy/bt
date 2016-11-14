@@ -7,11 +7,10 @@ import bt.it.fixture.SharedTrackerFeature.PeerFilter;
 import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
 import bt.it.fixture.TestConfigurationFeature;
-import bt.module.PeerExchangeModule;
+import bt.peerexchange.PeerExchangeModule;
 import bt.net.InetPeer;
 import bt.net.Peer;
 import org.junit.Rule;
-import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;

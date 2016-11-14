@@ -1,4 +1,4 @@
-package bt.runtime.net.ext;
+package bt.net.extended;
 
 import bt.net.HandshakeHandler;
 import bt.net.Peer;

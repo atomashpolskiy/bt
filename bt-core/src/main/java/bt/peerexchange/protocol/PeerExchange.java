@@ -1,4 +1,4 @@
-package bt.runtime.protocol.ext.pex;
+package bt.peerexchange.protocol;
 
 import bt.BtException;
 import bt.bencoding.model.BEMap;
@@ -6,7 +6,7 @@ import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEString;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
-import bt.runtime.protocol.ext.ExtendedMessage;
+import bt.protocol.extended.ExtendedMessage;
 import bt.tracker.CompactPeerInfo;
 import bt.tracker.CompactPeerInfo.AddressType;
 

@@ -1,4 +1,4 @@
-package bt.runtime.protocol.ext.pex;
+package bt.peerexchange.protocol;
 
 import bt.bencoding.BEParser;
 import bt.bencoding.model.BEMap;

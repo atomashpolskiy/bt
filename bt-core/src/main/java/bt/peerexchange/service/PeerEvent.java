@@ -1,4 +1,4 @@
-package bt.runtime.service.ext.pex;
+package bt.peerexchange.service;
 
 import bt.net.Peer;
 

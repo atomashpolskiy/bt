@@ -1,4 +1,4 @@
-package bt.runtime.service.ext.pex;
+package bt.peerexchange.service;
 
 import bt.BtException;
 import bt.metainfo.Torrent;
@@ -8,8 +8,8 @@ import bt.net.IMessageDispatcher;
 import bt.net.Peer;
 import bt.net.PeerActivityListener;
 import bt.protocol.Message;
-import bt.runtime.protocol.ext.ExtendedHandshake;
-import bt.runtime.protocol.ext.pex.PeerExchange;
+import bt.protocol.extended.ExtendedHandshake;
+import bt.peerexchange.protocol.PeerExchange;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.PeerSource;
 import bt.service.PeerSourceFactory;

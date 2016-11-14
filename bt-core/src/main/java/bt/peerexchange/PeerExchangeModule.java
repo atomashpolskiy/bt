@@ -1,11 +1,12 @@
-package bt.module;
+package bt.peerexchange;
 
-import bt.runtime.protocol.ext.pex.PeerExchangeMessageHandler;
-import bt.runtime.service.ext.pex.PeerExchangePeerSourceFactory;
-import bt.service.PeerSourceFactory;
+import bt.module.Contribute;
+import bt.module.ProtocolModule;
+import bt.module.ServiceModule;
+import bt.peerexchange.protocol.PeerExchangeMessageHandler;
+import bt.peerexchange.service.PeerExchangePeerSourceFactory;
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.google.inject.multibindings.Multibinder;
 
 public class PeerExchangeModule implements Module {
 

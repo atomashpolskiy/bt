@@ -1,8 +1,8 @@
-package bt.runtime.net.ext;
+package bt.net.extended;
 
 import bt.net.ConnectionHandler;
 import bt.net.PeerConnection;
-import bt.runtime.protocol.ext.ExtendedHandshake;
+import bt.protocol.extended.ExtendedHandshake;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 

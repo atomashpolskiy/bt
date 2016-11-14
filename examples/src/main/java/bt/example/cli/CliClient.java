@@ -6,7 +6,7 @@ import bt.BtRuntime;
 import bt.BtRuntimeBuilder;
 import bt.data.DataAccessFactory;
 import bt.data.file.FileSystemDataAccessFactory;
-import bt.module.PeerExchangeModule;
+import bt.peerexchange.PeerExchangeModule;
 import joptsimple.OptionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

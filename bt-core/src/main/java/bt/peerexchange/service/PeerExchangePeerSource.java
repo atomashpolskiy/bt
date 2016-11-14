@@ -1,7 +1,7 @@
-package bt.runtime.service.ext.pex;
+package bt.peerexchange.service;
 
 import bt.net.Peer;
-import bt.runtime.protocol.ext.pex.PeerExchange;
+import bt.peerexchange.protocol.PeerExchange;
 import bt.service.PeerSource;
 
 import java.util.Collection;

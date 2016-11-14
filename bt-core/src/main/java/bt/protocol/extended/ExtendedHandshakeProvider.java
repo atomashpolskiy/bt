@@ -1,4 +1,4 @@
-package bt.runtime.protocol.ext;
+package bt.protocol.extended;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
