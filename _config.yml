@@ -1,0 +1,48 @@
+# Site settings
+#
+# All variables in this file are accessible in the templates via {{ site.myvariable }}.
+#
+title: "Bt"
+tagline: "&nbsp;&nbsp;java bittorrent done right"
+description: >
+ <a href="http://github.com/atomashpolskiy/bt" target="_blank">Bt</a> is a BitTorrent framework for Java 8 and higher.
+ It offers good performance, reliability and is highly customizable.
+baseurl: "/bt"
+url: "http://atomashpolskiy.github.io"
+repository: atomashpolskiy/bt
+github:
+  url: "http://127.0.0.1:4000/bt"
+author:
+  name: Andrei Tomashpolskiy
+  email: nordmann89@gmail.com
+timezone: Europe/Moscow
+encoding: utf-8
+
+# Other settings
+#
+permalink: pretty
+paginate: 5
+
+# Build settings
+#
+markdown: kramdown
+#theme:
+gems:
+  - jekyll-feed
+  - jekyll-coffeescript
+  - jekyll-paginate
+exclude:
+  - Gemfile
+  - Gemfile.lock
+
+# Github defaults
+kramdown:
+  input: GFM
+  hard_wrap: false
+  math_engine: mathjax
+lsi: false
+safe: true
+incremental: false
+highlighter: rouge
+gist:
+  noscript: false
