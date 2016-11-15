@@ -11,7 +11,7 @@ baseurl: "/bt"
 url: "http://atomashpolskiy.github.io"
 repository: atomashpolskiy/bt
 github:
-  url: "http://127.0.0.1:4000/bt"
+  url: "http://atomashpolskiy.github.io/bt"
   repo: "https://github.com/atomashpolskiy/bt"
 author:
   name: Andrei Tomashpolskiy
