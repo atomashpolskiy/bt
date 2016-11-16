@@ -1,4 +1,4 @@
-package bt;
+package bt.runtime;
 
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;

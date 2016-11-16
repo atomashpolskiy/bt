@@ -26,12 +26,7 @@ class PeerExchangePeerSource implements PeerSource {
     }
 
     @Override
-    public boolean isRefreshable() {
-        return true;
-    }
-
-    @Override
-    public boolean refresh() {
+    public boolean update() {
 
         if (!hasNewPeers) {
             return false;
@@ -56,12 +51,14 @@ class PeerExchangePeerSource implements PeerSource {
     void addMessage(PeerExchange message) {
         synchronized (lock) {
             messages.add(message);
+            // according to BEP-11 the same peers can't be dropped in the same message,
+            // so it's sufficient to check if list of added peers is not empty
             hasNewPeers = hasNewPeers || !message.getAdded().isEmpty();
         }
     }
 
     @Override
-    public Collection<Peer> query() {
+    public Collection<Peer> getPeers() {
         return peers;
     }
 }

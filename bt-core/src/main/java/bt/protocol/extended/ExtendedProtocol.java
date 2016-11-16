@@ -1,6 +1,7 @@
 package bt.protocol.extended;
 
 import bt.BtException;
+import bt.module.ExtendedMessageHandlers;
 import bt.protocol.handler.BaseMessageHandler;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
@@ -29,7 +30,7 @@ public class ExtendedProtocol extends BaseMessageHandler<ExtendedMessage> {
 
     @Inject
     public ExtendedProtocol(ExtendedMessageTypeMapping messageTypeMapping,
-                            Map<String, MessageHandler<? extends ExtendedMessage>> handlersByTypeName) {
+                            @ExtendedMessageHandlers Map<String, MessageHandler<? extends ExtendedMessage>> handlersByTypeName) {
 
         this.messageTypeMapping = messageTypeMapping;
 

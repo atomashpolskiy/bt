@@ -1,9 +1,9 @@
 package bt.example.cli;
 
 import bt.Bt;
-import bt.BtClient;
-import bt.BtRuntime;
-import bt.BtRuntimeBuilder;
+import bt.runtime.BtClient;
+import bt.runtime.BtRuntime;
+import bt.runtime.BtRuntimeBuilder;
 import bt.data.DataAccessFactory;
 import bt.data.file.FileSystemDataAccessFactory;
 import bt.peerexchange.PeerExchangeModule;

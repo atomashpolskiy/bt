@@ -1,7 +1,7 @@
 package bt.it.fixture;
 
-import bt.BtRuntime;
-import bt.BtRuntimeBuilder;
+import bt.runtime.BtRuntime;
+import bt.runtime.BtRuntimeBuilder;
 import bt.service.INetworkService;
 
 import java.net.InetAddress;

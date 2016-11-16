@@ -1,6 +1,6 @@
 package bt.it.fixture;
 
-import bt.BtRuntimeBuilder;
+import bt.runtime.BtRuntimeBuilder;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;

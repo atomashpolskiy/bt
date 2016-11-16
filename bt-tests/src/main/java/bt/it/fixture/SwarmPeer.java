@@ -1,9 +1,9 @@
 package bt.it.fixture;
 
 import bt.Bt;
-import bt.BtRuntime;
+import bt.runtime.BtRuntime;
 import bt.data.file.FileSystemDataAccessFactory;
-import bt.BtClient;
+import bt.runtime.BtClient;
 import bt.net.Peer;
 import bt.service.IPeerRegistry;
 

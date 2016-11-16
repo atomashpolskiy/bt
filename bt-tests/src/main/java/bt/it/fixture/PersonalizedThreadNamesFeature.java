@@ -1,6 +1,6 @@
 package bt.it.fixture;
 
-import bt.BtRuntimeBuilder;
+import bt.runtime.BtRuntimeBuilder;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;

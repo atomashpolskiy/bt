@@ -9,14 +9,13 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -26,48 +25,49 @@ public class PeerRegistry implements IPeerRegistry {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerRegistry.class);
 
+    private final Peer localPeer;
+
     private TrackerPeerSourceFactory trackerPeerSourceFactory;
     private Set<PeerSourceFactory> extraPeerSourceFactories;
-    private Map<Torrent, List<Consumer<Peer>>> consumers;
-    private final Peer localPeer;
+
+    private ConcurrentMap<Torrent, List<Consumer<Peer>>> peerConsumers;
 
     @Inject
     public PeerRegistry(IRuntimeLifecycleBinder lifecycleBinder, INetworkService networkService,
                         IdService idService, ITrackerService trackerService,
                         Set<PeerSourceFactory> extraPeerSourceFactories) {
 
-        consumers = new ConcurrentHashMap<>();
-        localPeer = new InetPeer(networkService.getInetAddress(), networkService.getPort(), idService.getLocalPeerId());
+        this.peerConsumers = new ConcurrentHashMap<>();
+        this.localPeer = new InetPeer(networkService.getInetAddress(), networkService.getPort(), idService.getLocalPeerId());
 
-        trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService);
+        this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService);
         this.extraPeerSourceFactories = extraPeerSourceFactories;
 
+        createExecutor(lifecycleBinder);
+    }
+
+    private void createExecutor(IRuntimeLifecycleBinder lifecycleBinder) {
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "Peer Registry"));
         lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(this::collectAndVisitPeers, 1, 5, TimeUnit.SECONDS));
         lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
     }
 
     private void collectAndVisitPeers() {
-
-        for (Torrent torrent : consumers.keySet()) {
-
-            List<Consumer<Peer>> peerConsumers = consumers.get(torrent);
-
-            queryPeerSource(trackerPeerSourceFactory.getPeerSource(torrent), peerConsumers);
+        peerConsumers.forEach((torrent, consumers) -> {
+            queryPeerSource(trackerPeerSourceFactory.getPeerSource(torrent), consumers);
 
             // disallow querying peer sources other than tracker for private torrents
             if (!torrent.isPrivate() && !extraPeerSourceFactories.isEmpty()) {
                 extraPeerSourceFactories.forEach(factory ->
-                        queryPeerSource(factory.getPeerSource(torrent), peerConsumers));
+                        queryPeerSource(factory.getPeerSource(torrent), consumers));
             }
-        }
+        });
     }
 
     private void queryPeerSource(PeerSource peerSource, List<Consumer<Peer>> peerConsumers) {
         try {
-            if (peerSource.isRefreshable() && peerSource.refresh()) {
-
-                Collection<Peer> discoveredPeers = peerSource.query();
+            if (peerSource.update()) {
+                Collection<Peer> discoveredPeers = peerSource.getPeers();
                 for (Peer peer : discoveredPeers) {
                     Iterator<Consumer<Peer>> iter = peerConsumers.iterator();
                     while (iter.hasNext()) {
@@ -75,14 +75,14 @@ public class PeerRegistry implements IPeerRegistry {
                         try {
                             consumer.accept(peer);
                         } catch (Exception e) {
-                            LOGGER.warn("Error in peer consumer", e);
+                            LOGGER.error("Error in peer consumer", e);
                             iter.remove();
                         }
                     }
                 }
             }
         } catch (Exception e) {
-            LOGGER.warn("Error when querying peer source: " + peerSource, e);
+            LOGGER.error("Error when querying peer source: " + peerSource, e);
         }
     }
 
@@ -92,22 +92,20 @@ public class PeerRegistry implements IPeerRegistry {
     }
 
     @Override
-    public Peer getOrCreatePeer(InetAddress inetAddress, int port) {
-        return new InetPeer(inetAddress, port);
-    }
-
-    // TODO: remove consumers (e.g. after download is complete)
-    @Override
     public void addPeerConsumer(Torrent torrent, Consumer<Peer> consumer) {
-
-        List<Consumer<Peer>> peerConsumers = consumers.get(torrent);
-        if (peerConsumers == null) {
-            peerConsumers = new ArrayList<>();
-            List<Consumer<Peer>> existing = consumers.putIfAbsent(torrent, peerConsumers);
+        List<Consumer<Peer>> consumers = peerConsumers.get(torrent);
+        if (consumers == null) {
+            consumers = new ArrayList<>();
+            List<Consumer<Peer>> existing = peerConsumers.putIfAbsent(torrent, consumers);
             if (existing != null) {
-                peerConsumers = existing;
+                consumers = existing;
             }
         }
-        peerConsumers.add(consumer);
+        consumers.add(consumer);
+    }
+
+    @Override
+    public void removePeerConsumers(Torrent torrent) {
+        peerConsumers.remove(torrent);
     }
 }

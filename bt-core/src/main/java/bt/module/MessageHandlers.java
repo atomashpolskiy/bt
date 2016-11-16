@@ -8,13 +8,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotates agents (consumers and producers)
- * that participate in torrent messaging.
+ * Annotates individual message handlers,
+ * that work with core BitTorrent message types.
+ * Each message type is assigned a unique numeric ID,
+ * thus annotated value should be a java.util.Map<Integer,bt.protocol.handler.MessageHandler>.
  *
- * @see bt.torrent.compiler.MessagingAgentCompiler
  * @since 1.0
  */
 @Target({ ElementType.PARAMETER, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 @BindingAnnotation
-public @interface MessagingAgent {}
+public @interface MessageHandlers {}

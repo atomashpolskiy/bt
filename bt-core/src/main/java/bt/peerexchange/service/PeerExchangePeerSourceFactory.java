@@ -43,7 +43,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     private IMessageDispatcher dispatcher;
 
     private Map<Peer, MessageWorker> workers;
-    private Map<Object, PeerExchangePeerSource> peerSources;
+    private Map<TorrentId, PeerExchangePeerSource> peerSources;
     private BlockingQueue<PeerEvent> peerEvents;
 
     private ReentrantReadWriteLock peerEventsLock;
@@ -71,7 +71,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         return getOrCreatePeerSource(torrent.getTorrentId());
     }
 
-    private PeerExchangePeerSource getOrCreatePeerSource(Object torrentId) {
+    private PeerExchangePeerSource getOrCreatePeerSource(TorrentId torrentId) {
         PeerExchangePeerSource peerSource = peerSources.get(torrentId);
         if (peerSource == null) {
             peerSource = new PeerExchangePeerSource();

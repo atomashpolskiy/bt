@@ -1,6 +1,6 @@
 package bt.it.fixture;
 
-import bt.BtRuntimeBuilder;
+import bt.runtime.BtRuntimeBuilder;
 
 public interface BtTestRuntimeFeature {
 

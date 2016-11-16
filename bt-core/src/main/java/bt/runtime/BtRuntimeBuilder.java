@@ -1,5 +1,6 @@
-package bt;
+package bt.runtime;
 
+import bt.BtException;
 import bt.module.Contribution;
 import bt.module.ContributionScanner;
 import bt.module.ProtocolModule;

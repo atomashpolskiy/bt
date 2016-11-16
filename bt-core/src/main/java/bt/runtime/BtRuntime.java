@@ -1,4 +1,4 @@
-package bt;
+package bt.runtime;
 
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IRuntimeLifecycleBinder.LifecycleEvent;
@@ -28,14 +28,13 @@ public class BtRuntime {
     private Duration shutdownTimeout;
 
     private Injector injector;
-    private Set<BtClient> knownHandles;
+    private Set<BtClient> knownClients;
     private AtomicBoolean started;
     private final Object lock;
 
     private ExecutorService clientExecutor;
 
     BtRuntime(Injector injector) {
-
         shutdownTimeout = Duration.ofSeconds(5);
         Runtime.getRuntime().addShutdownHook(new Thread("BtShutdownThread") {
             @Override
@@ -45,12 +44,16 @@ public class BtRuntime {
         });
 
         this.injector = injector;
-        knownHandles = ConcurrentHashMap.newKeySet();
-        started = new AtomicBoolean(false);
-        lock = new Object();
+        this.knownClients = ConcurrentHashMap.newKeySet();
+        this.started = new AtomicBoolean(false);
+        this.lock = new Object();
 
+        this.clientExecutor = createExecutor();
+    }
+
+    private ExecutorService createExecutor() {
         AtomicInteger threadCount = new AtomicInteger();
-        clientExecutor = Executors.newCachedThreadPool(r ->
+        return Executors.newCachedThreadPool(r ->
                 new Thread(r, "BtRuntimeThreadPool-Client#" + threadCount.incrementAndGet()));
     }
 
@@ -62,8 +65,8 @@ public class BtRuntime {
         return injector.getInstance(serviceType);
     }
 
-    void registerTorrentHandle(BtClient handle) {
-        knownHandles.add(handle);
+    public void registerClient(BtClient client) {
+        knownClients.add(client);
     }
 
     ExecutorService getClientExecutor() {
@@ -100,7 +103,7 @@ public class BtRuntime {
     public void shutdown() {
         if (started.compareAndSet(true, false)) {
             synchronized (lock) {
-                knownHandles.forEach(client -> {
+                knownClients.forEach(client -> {
                     try {
                         client.stop();
                     } catch (Throwable e) {

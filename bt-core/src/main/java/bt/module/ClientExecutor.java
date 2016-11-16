@@ -8,13 +8,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotates agents (consumers and producers)
- * that participate in torrent messaging.
+ * Annotates {@link java.util.concurrent.ExecutorService},
+ * that should be used for creating client executors.
  *
- * @see bt.torrent.compiler.MessagingAgentCompiler
  * @since 1.0
  */
 @Target({ ElementType.PARAMETER, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 @BindingAnnotation
-public @interface MessagingAgent {}
+public @interface ClientExecutor {}

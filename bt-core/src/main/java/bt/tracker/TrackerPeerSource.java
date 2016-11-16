@@ -35,12 +35,7 @@ class TrackerPeerSource implements PeerSource {
     }
 
     @Override
-    public boolean isRefreshable() {
-        return true;
-    }
-
-    @Override
-    public boolean refresh() {
+    public boolean update() {
 
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastRefreshed >= REFRESH_THRESHOLD.toMillis()) {
@@ -71,7 +66,7 @@ class TrackerPeerSource implements PeerSource {
     }
 
     @Override
-    public Collection<Peer> query() {
+    public Collection<Peer> getPeers() {
         return peers;
     }
 }

@@ -6,7 +6,7 @@ import bt.it.fixture.SharedTrackerFeature;
 import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
 import bt.it.fixture.TestConfigurationFeature;
-import bt.BtClient;
+import bt.runtime.BtClient;
 import org.junit.Rule;
 import org.junit.Test;
 

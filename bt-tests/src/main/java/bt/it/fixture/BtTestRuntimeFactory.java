@@ -1,6 +1,6 @@
 package bt.it.fixture;
 
-import bt.BtRuntime;
+import bt.runtime.BtRuntime;
 import org.junit.rules.ExternalResource;
 
 import java.net.InetAddress;

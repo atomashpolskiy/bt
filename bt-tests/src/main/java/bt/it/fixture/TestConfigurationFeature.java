@@ -1,6 +1,6 @@
 package bt.it.fixture;
 
-import bt.BtRuntimeBuilder;
+import bt.runtime.BtRuntimeBuilder;
 import bt.service.ConfigurationService;
 import bt.service.IConfigurationService;
 

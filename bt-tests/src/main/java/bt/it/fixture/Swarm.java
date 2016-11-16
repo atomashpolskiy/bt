@@ -1,7 +1,7 @@
 package bt.it.fixture;
 
 import bt.BtException;
-import bt.BtRuntime;
+import bt.runtime.BtRuntime;
 import bt.data.DataAccessFactory;
 import bt.data.DataStatus;
 import bt.data.IChunkDescriptor;

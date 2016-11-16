@@ -2,6 +2,7 @@ package bt.protocol;
 
 import bt.BtException;
 import bt.metainfo.TorrentId;
+import bt.module.MessageHandlers;
 import bt.net.PeerId;
 import bt.protocol.handler.BitfieldHandler;
 import bt.protocol.handler.CancelHandler;
@@ -25,7 +26,7 @@ import java.util.Objects;
 
 import static bt.protocol.Protocols.readInt;
 
-public class StandardBittorrentProtocol implements Protocol<Message>, MessageHandler<Message> {
+public class StandardBittorrentProtocol implements MessageHandler<Message> {
 
     private static final String PROTOCOL_NAME = "BitTorrent protocol";
 
@@ -64,7 +65,7 @@ public class StandardBittorrentProtocol implements Protocol<Message>, MessageHan
     private Map<Class<? extends Message>, Integer> idMap;
 
     @Inject
-    public StandardBittorrentProtocol(Map<Integer, MessageHandler<?>> extraHandlers) {
+    public StandardBittorrentProtocol(@MessageHandlers Map<Integer, MessageHandler<?>> extraHandlers) {
 
         Map<Integer, MessageHandler<?>> handlers = new HashMap<>();
         handlers.put(CHOKE_ID, new ChokeHandler());

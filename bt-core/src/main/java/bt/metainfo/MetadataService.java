@@ -62,6 +62,13 @@ public class MetadataService implements IMetadataService {
     }
 
     @Override
+    public Torrent fromInputStream(InputStream in) {
+        try (BEParser parser = new BEParser(in)) {
+            return buildTorrent(parser);
+        }
+    }
+
+    @Override
     public Torrent fromByteArray(byte[] bs) {
         try (BEParser parser = new BEParser(bs)) {
             return buildTorrent(parser);
