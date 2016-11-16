@@ -45,13 +45,13 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 
 ## List of supported BEPs
 
-* BEP-3: The BitTorrent Protocol Specification
-* BEP-10: Extension Protocol
-* BEP-11: Peer Exchange (PEX)
-* BEP-12: Multitracker metadata extension
-* BEP-20: Peer ID Conventions
-* BEP-23: Tracker Returns Compact Peer Lists
-* BEP-27: Private Torrents
+* [BEP-3: The BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html)
+* [BEP-10: Extension Protocol](http://bittorrent.org/beps/bep_0010.html)
+* [BEP-11: Peer Exchange (PEX)](http://bittorrent.org/beps/bep_0011.html)
+* [BEP-12: Multitracker metadata extension](http://bittorrent.org/beps/bep_0012.html)
+* [BEP-20: Peer ID Conventions](http://bittorrent.org/beps/bep_0020.html)
+* [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
+* [BEP-27: Private Torrents](http://bittorrent.org/beps/bep_0027.html)
 
 ## A really ascetic code sample
 
