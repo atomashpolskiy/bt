@@ -1,0 +1,36 @@
+Bt Release Notes
+============================
+For the latest information visit project web site:
+http://atomashpolskiy.github.io/bt/
+
+----------------------------------
+Release: 1.0
+Date:
+----------------------------------
+Features:
+
+* Bencoding parser/encoder
+* Validation of arbitrary bencoded documents according to user-provided object models and YAML schemas
+* Filesystem-based data back-end, support for providing custom data back-ends
+* URL metainfo fetcher, support for providing custom metainfo fetchers
+* HTTP tracker integration
+* Multi-trackers support
+* Private tracker support
+* Standard bittorrent protocol and messaging
+* Full support for protocol extensions, including customization of handshake procedure
+* Support for providing custom peer sources
+* Peer exchange (protocol for p2p exchange of known peers in the swarm)
+* Support for custom messaging agents (consumers and producers), both for standard and extended protocols
+* Sequential, rarest-first and randomized rarest-first piece selection strategies
+* Shared runtime with multiple simultaneous torrent sessions
+* Test infrastructure with support for launching peer swarm on localhost to test new features in a real environment
+
+Official BEPs:
+
+* BEP-3: The BitTorrent Protocol Specification
+* BEP-10: Extension Protocol
+* BEP-11: Peer Exchange (PEX)
+* BEP-12: Multitracker metadata extension
+* BEP-20: Peer ID Conventions
+* BEP-23: Tracker Returns Compact Peer Lists
+* BEP-27: Private Torrents
