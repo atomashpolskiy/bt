@@ -2,7 +2,7 @@ package bt.net;
 
 import bt.metainfo.TorrentId;
 import bt.protocol.Message;
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 import bt.protocol.handler.MessageHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +41,7 @@ public class PeerConnection implements IPeerConnection {
 
         int bufferSize = getBufferSize(maxTransferBlockSize);
         messageReader = new PeerConnectionMessageReader(messageHandler, channel,
-                () -> new MessageContext(remotePeer), bufferSize);
+                () -> new DecodingContext(remotePeer), bufferSize);
         messageWriter = new PeerConnectionMessageWriter(messageHandler, channel, bufferSize);
 
         lastActive = new AtomicLong();

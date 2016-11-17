@@ -160,7 +160,7 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
     }
 
     @Override
-    public final int decode(MessageContext context, ByteBuffer buffer) {
+    public final int decode(DecodingContext context, ByteBuffer buffer) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(buffer);
@@ -241,7 +241,7 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
         return true;
     }
 
-    private static int decodeHandshake(MessageContext context, ByteBuffer buffer) {
+    private static int decodeHandshake(DecodingContext context, ByteBuffer buffer) {
 
         int consumed = 0;
         int offset = HANDSHAKE_RESERVED_OFFSET;

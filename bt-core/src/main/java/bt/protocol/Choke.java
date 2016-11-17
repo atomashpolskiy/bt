@@ -1,5 +1,8 @@
 package bt.protocol;
 
+/**
+ * @since 1.0
+ */
 public final class Choke implements Message {
 
     private Choke() {
@@ -7,6 +10,9 @@ public final class Choke implements Message {
 
     private static final Choke instance = new Choke();
 
+    /**
+     * @since 1.0
+     */
     public static Choke instance() {
         return instance;
     }

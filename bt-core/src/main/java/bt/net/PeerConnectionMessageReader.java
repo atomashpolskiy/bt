@@ -2,7 +2,7 @@ package bt.net;
 
 import bt.BtException;
 import bt.protocol.Message;
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 import bt.protocol.handler.MessageHandler;
 
 import java.io.IOException;
@@ -18,11 +18,11 @@ class PeerConnectionMessageReader {
     private ByteBuffer buffer, readOnlyBuffer;
     private int dataStartsAtIndex;
 
-    private Supplier<MessageContext> newContextSupplier;
-    private MessageContext context;
+    private Supplier<DecodingContext> newContextSupplier;
+    private DecodingContext context;
 
     PeerConnectionMessageReader(MessageHandler<Message> messageHandler, ReadableByteChannel channel,
-                                Supplier<MessageContext> newContextSupplier, int bufferSize) {
+                                Supplier<DecodingContext> newContextSupplier, int bufferSize) {
 
         this.messageHandler = messageHandler;
         this.channel = channel;

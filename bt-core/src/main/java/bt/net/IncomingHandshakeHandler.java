@@ -39,23 +39,25 @@ public class IncomingHandshakeHandler implements ConnectionHandler {
             if (Handshake.class.equals(firstMessage.getClass())) {
 
                 Handshake peerHandshake = (Handshake) firstMessage;
-                Torrent torrent = torrentRegistry.getTorrent(peerHandshake.getTorrentId());
+                Optional<Torrent> torrentOptional = torrentRegistry.getTorrent(peerHandshake.getTorrentId());
+                if (torrentOptional.isPresent()) {
+                    Torrent torrent = torrentOptional.get();
+                    Optional<ITorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
+                    if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {
+                        TorrentId torrentId = torrent.getTorrentId();
 
-                Optional<ITorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
-                if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {
-                    TorrentId torrentId = torrent.getTorrentId();
+                        Handshake handshake = handshakeFactory.createHandshake(torrent);
+                        handshakeHandlers.forEach(handler ->
+                                handler.amendOutgoingHandshake(handshake));
 
-                    Handshake handshake = handshakeFactory.createHandshake(torrent);
-                    handshakeHandlers.forEach(handler ->
-                            handler.amendOutgoingHandshake(handshake));
+                        connection.postMessage(handshake);
+                        connection.setTorrentId(torrentId);
 
-                    connection.postMessage(handshake);
-                    connection.setTorrentId(torrentId);
+                        handshakeHandlers.forEach(handler ->
+                                handler.processIncomingHandshake(connection.getRemotePeer(), peerHandshake));
 
-                    handshakeHandlers.forEach(handler ->
-                            handler.processIncomingHandshake(connection.getRemotePeer(), peerHandshake));
-
-                    return true;
+                        return true;
+                    }
                 }
             } else {
                 if (LOGGER.isTraceEnabled()) {

@@ -1,7 +1,7 @@
 package bt.data.file;
 
 import bt.BtException;
-import bt.data.DataAccess;
+import bt.data.StorageUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,20 +12,20 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-class FileSystemDataAccess implements DataAccess {
+class FileSystemStorageUnit implements StorageUnit {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FileSystemDataAccess.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FileSystemStorageUnit.class);
 
     private File parent, file;
     private RandomAccessFile raf;
-    private long size;
+    private long capacity;
 
     private volatile boolean closed;
 
-    FileSystemDataAccess(File root, List<String> pathElements, long size) {
+    FileSystemStorageUnit(File root, List<String> pathElements, long capacity) {
 
         if (pathElements.isEmpty()) {
-            throw new BtException("Can't create file access -- no path elements");
+            throw new BtException("Can't create file storage -- no path elements");
         }
 
         File parent = root;
@@ -36,19 +36,19 @@ class FileSystemDataAccess implements DataAccess {
         this.parent = parent;
         this.file = new File(parent, pathElements.get(len - 1));
 
-        this.size = size;
+        this.capacity = capacity;
 
         closed = true;
     }
 
     // TODO: this is temporary fix for verification upon app start
-    // should be re-done (probably need additional API to know if data access is "empty")
+    // should be re-done (probably need additional API to know if storage unit is "empty")
     private boolean init(boolean create) {
 
         if (closed) {
             if (!parent.exists()) {
                 if (create && !parent.mkdirs()) {
-                    throw new BtException("Failed to create file access -- can't create (some of the) directories");
+                    throw new BtException("Failed to create file storage -- can't create (some of the) directories");
                 }
             }
 
@@ -56,11 +56,11 @@ class FileSystemDataAccess implements DataAccess {
                 if (create) {
                     try {
                         if (!file.createNewFile()) {
-                            throw new BtException("Failed to create file access -- " +
+                            throw new BtException("Failed to create file storage -- " +
                                     "can't create new file: " + file.getAbsolutePath());
                         }
                     } catch (IOException e) {
-                        throw new BtException("Failed to create file access -- unexpected I/O error", e);
+                        throw new BtException("Failed to create file storage -- unexpected I/O error", e);
                     }
                 } else {
                     return false;
@@ -89,9 +89,9 @@ class FileSystemDataAccess implements DataAccess {
 
         if (offset < 0) {
             throw new BtException("Illegal arguments: offset (" + offset + ")");
-        } else if (offset > size - buffer.remaining()) {
+        } else if (offset > capacity - buffer.remaining()) {
             throw new BtException("Received a request to read past the end of file (offset: " + offset +
-                    ", requested block length: " + buffer.remaining() + ", file size: " + size);
+                    ", requested block length: " + buffer.remaining() + ", file size: " + capacity);
         }
 
         try {
@@ -100,7 +100,7 @@ class FileSystemDataAccess implements DataAccess {
 
         } catch (IOException e) {
             throw new BtException("Failed to read bytes (offset: " + offset +
-                    ", requested block length: " + buffer.remaining() + ", file size: " + size + ")", e);
+                    ", requested block length: " + buffer.remaining() + ", file size: " + capacity + ")", e);
         }
     }
 
@@ -109,15 +109,16 @@ class FileSystemDataAccess implements DataAccess {
 
         if (closed) {
             if (!init(false)) {
+                // TODO: should we return null here? or init this "stub" in constructor?
                 return new byte[length];
             }
         }
 
         if (offset < 0 || length < 0) {
             throw new BtException("Illegal arguments: offset (" + offset + "), length (" + length + ")");
-        } else if (offset > size - length) {
+        } else if (offset > capacity - length) {
             throw new BtException("Received a request to read past the end of file (offset: " + offset +
-                    ", requested block length: " + length + ", file size: " + size);
+                    ", requested block length: " + length + ", file size: " + capacity);
         }
 
         try {
@@ -128,7 +129,7 @@ class FileSystemDataAccess implements DataAccess {
 
         } catch (IOException e) {
             throw new BtException("Failed to read bytes (offset: " + offset +
-                    ", requested block length: " + length + ", file size: " + size + ")", e);
+                    ", requested block length: " + length + ", file size: " + capacity + ")", e);
         }
     }
 
@@ -141,9 +142,9 @@ class FileSystemDataAccess implements DataAccess {
 
         if (offset < 0) {
             throw new BtException("Negative offset: " + offset);
-        } else if (offset > size - buffer.remaining()) {
+        } else if (offset > capacity - buffer.remaining()) {
             throw new BtException("Received a request to write past the end of file (offset: " + offset +
-                    ", block length: " + buffer.remaining() + ", file size: " + size);
+                    ", block length: " + buffer.remaining() + ", file size: " + capacity);
         }
 
         try {
@@ -152,7 +153,7 @@ class FileSystemDataAccess implements DataAccess {
 
         } catch (IOException e) {
             throw new BtException("Failed to write bytes (offset: " + offset +
-                    ", block length: " + buffer.remaining() + ", file size: " + size + ")", e);
+                    ", block length: " + buffer.remaining() + ", file size: " + capacity + ")", e);
         }
     }
 
@@ -165,9 +166,9 @@ class FileSystemDataAccess implements DataAccess {
 
         if (offset < 0) {
             throw new BtException("Negative offset: " + offset);
-        } else if (offset > size - block.length) {
+        } else if (offset > capacity - block.length) {
             throw new BtException("Received a request to write past the end of file (offset: " + offset +
-                    ", block length: " + block.length + ", file size: " + size);
+                    ", block length: " + block.length + ", file size: " + capacity);
         }
 
         try {
@@ -176,18 +177,18 @@ class FileSystemDataAccess implements DataAccess {
 
         } catch (IOException e) {
             throw new BtException("Failed to write bytes (offset: " + offset +
-                    ", block length: " + block.length + ", file size: " + size + ")", e);
+                    ", block length: " + block.length + ", file size: " + capacity + ")", e);
         }
     }
 
     @Override
-    public long size() {
-        return size;
+    public long capacity() {
+        return capacity;
     }
 
     @Override
     public String toString() {
-        return "(" + size + " B) " + file.getPath();
+        return "(" + capacity + " B) " + file.getPath();
     }
 
     @Override

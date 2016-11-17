@@ -8,7 +8,7 @@ import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 import bt.protocol.handler.MessageHandler;
 
 import java.io.ByteArrayOutputStream;
@@ -55,6 +55,10 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
         @SuppressWarnings("unchecked")
         Map<String, BEObject> mapping = (Map<String, BEObject>) mappingObj.getValue();
         if (mapping.size() > 0) {
+            // according to BEP-10, peers are only required to send a delta of changes
+            // on subsequent handshakes, so we need to store all mappings received from the peer
+            // and merge the changes..
+            //
             // subsequent handshake messages can be used to enable/disable extensions
             // without restarting the connection
             peerTypeMappings.put(peer, mergeMappings(peerTypeMappings.getOrDefault(peer, new HashMap<>()), mapping));
@@ -72,7 +76,7 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
     }
 
     @Override
-    public int decode(MessageContext context, ByteBuffer buffer) {
+    public int decode(DecodingContext context, ByteBuffer buffer) {
 
         byte[] payload = new byte[buffer.remaining()];
         buffer.get(payload);

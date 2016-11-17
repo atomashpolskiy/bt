@@ -2,11 +2,18 @@ package bt.protocol.handler;
 
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 import bt.protocol.Protocol;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Message encoder/decoder.
+ *
+ * @param <T> Message type or a common supertype of several message types,
+ *            that this handler is able to encode and decode.
+ * @since 1.0
+ */
 public interface MessageHandler<T extends Message> extends Protocol<T> {
 
     /**
@@ -18,6 +25,7 @@ public interface MessageHandler<T extends Message> extends Protocol<T> {
      *               if it's not the case.
      * @return true if message has been successfully encoded and fully written into the provided buffer
      * @throws InvalidMessageException if message type is not supported or the message is invalid
+     * @since 1.0
      */
     boolean encode(T message, ByteBuffer buffer);
 
@@ -30,6 +38,7 @@ public interface MessageHandler<T extends Message> extends Protocol<T> {
      *               Decoding should be performed starting with the current position of the buffer.
      * @return Number of bytes consumed (0 if the provided data is insufficient)
      * @throws InvalidMessageException if data is invalid
+     * @since 1.0
      */
-    int decode(MessageContext context, ByteBuffer buffer);
+    int decode(DecodingContext context, ByteBuffer buffer);
 }

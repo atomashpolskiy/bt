@@ -1,7 +1,7 @@
 package bt.protocol.handler;
 
 import bt.protocol.Bitfield;
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 
 import java.nio.ByteBuffer;
 
@@ -12,7 +12,7 @@ public class BitfieldHandler extends UniqueMessageHandler<Bitfield> {
     }
 
     @Override
-    public int doDecode(MessageContext context, ByteBuffer buffer) {
+    public int doDecode(DecodingContext context, ByteBuffer buffer) {
         return decodeBitfield(context, buffer, buffer.remaining());
     }
 
@@ -26,7 +26,7 @@ public class BitfieldHandler extends UniqueMessageHandler<Bitfield> {
     }
 
     // bitfield: <len=0001+X><id=5><bitfield>
-    private static int decodeBitfield(MessageContext context, ByteBuffer buffer, int length) {
+    private static int decodeBitfield(DecodingContext context, ByteBuffer buffer, int length) {
 
         int consumed = 0;
 

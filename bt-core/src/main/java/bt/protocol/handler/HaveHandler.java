@@ -2,13 +2,13 @@ package bt.protocol.handler;
 
 import bt.protocol.Have;
 import bt.protocol.InvalidMessageException;
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
 import static bt.protocol.Protocols.readInt;
-import static bt.protocol.Protocols.verifyPayloadLength;
+import static bt.protocol.Protocols.verifyPayloadHasLength;
 
 public class HaveHandler extends UniqueMessageHandler<Have> {
 
@@ -17,8 +17,8 @@ public class HaveHandler extends UniqueMessageHandler<Have> {
     }
 
     @Override
-    public int doDecode(MessageContext context, ByteBuffer buffer) {
-        verifyPayloadLength(Have.class, 4, buffer.remaining());
+    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+        verifyPayloadHasLength(Have.class, 4, buffer.remaining());
         return decodeHave(context, buffer);
     }
 
@@ -40,7 +40,7 @@ public class HaveHandler extends UniqueMessageHandler<Have> {
         return true;
     }
 
-    private static int decodeHave(MessageContext context, ByteBuffer buffer) {
+    private static int decodeHave(DecodingContext context, ByteBuffer buffer) {
 
         int consumed = 0;
         int length = Integer.BYTES;

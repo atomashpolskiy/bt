@@ -7,11 +7,19 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+/**
+ * Client decorator with lazy (on-demand) initialization.
+ *
+ * @since 1.0
+ */
 public class LazyBtClient implements BtClient {
 
     private Supplier<BtClient> clientSupplier;
     private volatile BtClient delegate;
 
+    /**
+     * @since 1.0
+     */
     public LazyBtClient(Supplier<BtClient> clientSupplier) {
         this.clientSupplier = clientSupplier;
     }

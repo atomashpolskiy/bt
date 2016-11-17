@@ -33,13 +33,8 @@ public class ConfigurationService implements IConfigurationService {
     }
 
     @Override
-    public int getReadRequestQueueMaxLength() {
+    public int getIOQueueMaxLength() {
         return 10000;
-    }
-
-    @Override
-    public long getPeerBanTime() {
-        return 300000;
     }
 
     @Override

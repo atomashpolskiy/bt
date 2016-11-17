@@ -1,12 +1,11 @@
 package bt.example.cli;
 
 import bt.Bt;
+import bt.data.Storage;
+import bt.data.file.FileSystemStorage;
+import bt.peerexchange.PeerExchangeModule;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
-import bt.runtime.BtRuntimeBuilder;
-import bt.data.DataAccessFactory;
-import bt.data.file.FileSystemDataAccessFactory;
-import bt.peerexchange.PeerExchangeModule;
 import joptsimple.OptionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,15 +34,15 @@ public class CliClient  {
 
     void runWithOptions(Options options) {
 
-        DataAccessFactory dataAccess = new FileSystemDataAccessFactory(options.getTargetDirectory());
+        Storage storage = new FileSystemStorage(options.getTargetDirectory());
 
-        BtRuntime runtime = BtRuntimeBuilder.builder()
+        BtRuntime runtime = BtRuntime.builder()
                 .module(new PeerExchangeModule())
                 .build();
 
-        BtClient client = Bt.client(runtime)
+        BtClient client = Bt.client(storage)
                 .url(toUrl(options.getMetainfoFile()))
-                .build(dataAccess);
+                .attachToRuntime(runtime);
 
         SessionStatePrinter printer = SessionStatePrinter.createKeyInputAwarePrinter(client.getSession().getTorrent());
         try {

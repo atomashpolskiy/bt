@@ -17,6 +17,7 @@ public class ContributionScanner {
         return instance;
     }
 
+    // TODO: check for mutual dependencies
     public List<Contribution<?>> scan(Object object) {
 
         List<Contribution<?>> contributions = null;

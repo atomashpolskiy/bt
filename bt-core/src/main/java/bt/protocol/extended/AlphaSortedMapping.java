@@ -10,14 +10,21 @@ import java.util.Objects;
 import java.util.TreeSet;
 import java.util.function.BiConsumer;
 
-public class AlphaSortedMessageTypeMapping implements ExtendedMessageTypeMapping {
+/**
+ * Represents a set of mappings,
+ * in which numeric IDs are assigned to message type names
+ * sequentially starting with 1, in the alphanumeric order of type names.
+ *
+ * @since 1.0
+ */
+public class AlphaSortedMapping implements ExtendedMessageTypeMapping {
 
     private Map<Integer, String> nameMap;
     private Map<String, Integer> idMap;
     private Map<Class<?>, String> typeMap;
 
     @Inject
-    public AlphaSortedMessageTypeMapping(
+    public AlphaSortedMapping(
             @ExtendedMessageHandlers Map<String, MessageHandler<? extends ExtendedMessage>> handlersByTypeName) {
 
         typeMap = new HashMap<>();

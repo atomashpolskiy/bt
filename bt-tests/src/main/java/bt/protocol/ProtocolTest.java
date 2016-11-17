@@ -48,7 +48,7 @@ public abstract class ProtocolTest {
             assertEquals(expectedType, actualType);
         }
 
-        MessageContext context = createContext();
+        DecodingContext context = createContext();
         int consumed = messageHandler.decode(context, buffer);
         buffer.reset();
 
@@ -70,7 +70,7 @@ public abstract class ProtocolTest {
         assertEquals(expectedType, messageHandler.readMessageType(in));
         in.reset();
 
-        MessageContext context = createContext();
+        DecodingContext context = createContext();
         int consumed = messageHandler.decode(context, in);
         in.reset();
 
@@ -156,8 +156,8 @@ public abstract class ProtocolTest {
         throw new AssertionError("Unexpected message type: " + expectedType.getSimpleName().toLowerCase());
     }
 
-    protected static MessageContext createContext() {
-        return new MessageContext(mock(Peer.class));
+    protected static DecodingContext createContext() {
+        return new DecodingContext(mock(Peer.class));
     }
 
     protected void testProtocol_InvalidLength(Class<? extends Message> type, int declaredLength, int expectedLength,

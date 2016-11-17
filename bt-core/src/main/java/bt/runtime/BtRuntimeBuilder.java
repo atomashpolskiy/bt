@@ -16,26 +16,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Runtime builder.
+ *
+ * @since 1.0
+ */
 public class BtRuntimeBuilder {
-
-    public static BtRuntimeBuilder builder() {
-        return new BtRuntimeBuilder();
-    }
-
-    public static BtRuntime defaultRuntime() {
-        return builder().build();
-    }
 
     private Map<Class<? extends Module>, Module> modules;
     private List<Module> adapters;
 
-    private BtRuntimeBuilder() {
+    BtRuntimeBuilder() {
         modules = new HashMap<>();
         // default modules
         modules.put(ServiceModule.class, new ServiceModule());
         modules.put(ProtocolModule.class, new ProtocolModule());
     }
 
+    /**
+     * Contribute an extra module into the runtime.
+     *
+     * @since 1.0
+     */
     public BtRuntimeBuilder module(Module adapter) {
         Objects.requireNonNull(adapter);
         if (adapters == null) {
@@ -45,6 +47,9 @@ public class BtRuntimeBuilder {
         return this;
     }
 
+    /**
+     * @since 1.0
+     */
     public BtRuntime build() {
         return new BtRuntime(createInjector());
     }

@@ -13,6 +13,15 @@ import java.util.jar.Manifest;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Reads application version info from a manifest file,
+ * located on the application's classpath.
+ * It determines which manifest to read version from
+ * by testing if 'Bundle-SymbolicName' attribute is present in the manifest
+ * and if its' value is equal to 'bt.core'.
+ *
+ * @since 1.0
+ */
 public class ClasspathApplicationService implements IApplicationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ClasspathApplicationService.class);

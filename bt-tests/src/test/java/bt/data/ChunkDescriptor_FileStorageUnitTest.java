@@ -1,6 +1,6 @@
 package bt.data;
 
-import bt.data.file.FileSystemDataAccessFactory;
+import bt.data.file.FileSystemStorage;
 import bt.metainfo.Torrent;
 import bt.service.CryptoUtil;
 import bt.service.IConfigurationService;
@@ -23,18 +23,18 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class ChunkDescriptor_FileDataAccessTest {
+public class ChunkDescriptor_FileStorageUnitTest {
 
     private static File rootDirectory;
 
-    private static DataAccessFactory dataAccessFactory;
+    private static Storage storage;
     private static IConfigurationService configurationService;
 
     @BeforeClass
     public static void setUp() {
         rootDirectory = new File("target/rt");
 
-        dataAccessFactory = new FileSystemDataAccessFactory(rootDirectory);
+        storage = new FileSystemStorage(rootDirectory);
 
         configurationService = mock(IConfigurationService.class);
         when(configurationService.getTransferBlockSize()).thenReturn(4L);
@@ -62,7 +62,7 @@ public class ChunkDescriptor_FileDataAccessTest {
                 },
                 mockTorrentFile(fileSize, fileName));
 
-        IDataDescriptor descriptor = new DataDescriptor(dataAccessFactory, configurationService, torrent);
+        IDataDescriptor descriptor = new DataDescriptor(storage, configurationService, torrent);
         assertEquals(4, descriptor.getChunkDescriptors().size());
 
         return descriptor;
@@ -202,7 +202,7 @@ public class ChunkDescriptor_FileDataAccessTest {
                 mockTorrentFile(fileSize3, fileName3), mockTorrentFile(fileSize4, fileName4),
                 mockTorrentFile(fileSize5, fileName5), mockTorrentFile(fileSize6, fileName6));
 
-        IDataDescriptor descriptor = new DataDescriptor(dataAccessFactory, configurationService, torrent);
+        IDataDescriptor descriptor = new DataDescriptor(storage, configurationService, torrent);
         assertEquals(6, descriptor.getChunkDescriptors().size());
 
         return descriptor;

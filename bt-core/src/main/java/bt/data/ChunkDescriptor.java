@@ -11,11 +11,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * Contains up to {@code Integer.MAX_VALUE} blocks of data of arbitrary size,
  * that can span over up to {@code Integer.MAX_VALUE} files.
+ *
+ * @since 1.0
  */
 public class ChunkDescriptor implements IChunkDescriptor {
 
     private volatile DataStatus status;
-    private DataAccess[] files;
+    private StorageUnit[] units;
 
     private long offsetInFirstChunkFile;
     private long limitInLastChunkFile;
@@ -53,21 +55,23 @@ public class ChunkDescriptor implements IChunkDescriptor {
      * possibly overlapping several files (in case of multi-file torrent)
      * or being just a piece of one single-file torrent.
      *
-     * @param files Collection of the torrent files that this chunk overlaps with
+     * @param units Collection of the torrent files (presented as storage units), that this chunk overlaps with
      * @param offset Offset from the beginning of the first file in {@code files}; inclusive
      * @param limit Offset from the beginning of the last file in {@code files}; exclusive
      * @param checksum Chunk's hash
      * @param blockSize Size of the read-write transfer block
      * @param shouldVerify If chunk should verify itself upon initialization
+     *
+     * @since 1.0
      */
-    public ChunkDescriptor(DataAccess[] files, long offset, long limit,
+    public ChunkDescriptor(StorageUnit[] units, long offset, long limit,
                            byte[] checksum, long blockSize, boolean shouldVerify) {
 
-        if (files.length == 0) {
+        if (units.length == 0) {
             throw new BtException("Failed to create chunk descriptor: no files");
         }
 
-        this.files = files;
+        this.units = units;
         this.offsetInFirstChunkFile = offset;
         this.limitInLastChunkFile = limit;
         this.blockSize = blockSize;
@@ -76,12 +80,12 @@ public class ChunkDescriptor implements IChunkDescriptor {
         // using fair lock for now
         readWriteLock = new ReentrantReadWriteLock(true);
 
-        if (files.length == 1) {
+        if (units.length == 1) {
             size = limit - offset;
         } else {
-            size = files[0].size() - offset;
-            for (int i = 1; i < files.length - 1; i++) {
-                size += files[i].size();
+            size = units[0].capacity() - offset;
+            for (int i = 1; i < units.length - 1; i++) {
+                size += units[i].capacity();
             }
             size += limit;
         }
@@ -97,15 +101,15 @@ public class ChunkDescriptor implements IChunkDescriptor {
         }
         bitfield = new byte[(int) blockCount];
 
-        fileOffsets = new long[files.length];
+        fileOffsets = new long[units.length];
         // first "virtual" address (first file begins with offset 0)
         fileOffsets[0] = 0;
-        if (files.length > 1) {
+        if (units.length > 1) {
             // it's possible that chunk does not have access to the entire first file
-            fileOffsets[1] = files[0].size() - offset;
+            fileOffsets[1] = units[0].capacity() - offset;
         }
-        for (int i = 2; i < files.length; i++) {
-            fileOffsets[i] = fileOffsets[i - 1] + files[i - 1].size();
+        for (int i = 2; i < units.length; i++) {
+            fileOffsets[i] = fileOffsets[i - 1] + units[i - 1].capacity();
         }
 
         status = DataStatus.EMPTY;
@@ -157,7 +161,7 @@ public class ChunkDescriptor implements IChunkDescriptor {
                 int offsetInBlock = 0;
 
                 @Override
-                public void visitFile(DataAccess file, long off, long lim) {
+                public void visitFile(StorageUnit unit, long off, long lim) {
 
                     long len = lim - off;
                     if (len > Integer.MAX_VALUE) {
@@ -171,7 +175,7 @@ public class ChunkDescriptor implements IChunkDescriptor {
 
                     buffer.position(offsetInBlock);
                     buffer.limit(offsetInBlock + (int)len);
-                    file.readBlock(buffer, off);
+                    unit.readBlock(buffer, off);
                     offsetInBlock += len;
                 }
             });
@@ -216,7 +220,7 @@ public class ChunkDescriptor implements IChunkDescriptor {
                 int limitInBlock;
 
                 @Override
-                public void visitFile(DataAccess file, long off, long lim) {
+                public void visitFile(StorageUnit unit, long off, long lim) {
 
                     long fileSize = lim - off;
                     if (fileSize > Integer.MAX_VALUE) {
@@ -226,7 +230,7 @@ public class ChunkDescriptor implements IChunkDescriptor {
                     limitInBlock = offsetInBlock + (int) fileSize;
                     buffer.position(offsetInBlock);
                     buffer.limit(limitInBlock);
-                    file.writeBlock(buffer, off);
+                    unit.writeBlock(buffer, off);
                     offsetInBlock = limitInBlock;
                 }
             });
@@ -288,7 +292,7 @@ public class ChunkDescriptor implements IChunkDescriptor {
                 return true;
             }
 
-            allData.visitFiles((file, off, lim) -> {
+            allData.visitFiles((unit, off, lim) -> {
 
                 int step = 2 << 12;
                 long remaining = lim - off;
@@ -296,7 +300,7 @@ public class ChunkDescriptor implements IChunkDescriptor {
                     throw new BtException("Too much data -- can't read to buffer");
                 }
                 do {
-                    digest.update(file.readBlock(off, Math.min(step, (int) remaining)));
+                    digest.update(unit.readBlock(off, Math.min(step, (int) remaining)));
                     remaining -= step;
                     off += step;
                 } while (remaining > 0);
@@ -339,12 +343,12 @@ public class ChunkDescriptor implements IChunkDescriptor {
 
         // determine the file that the requested block begins in
         firstRequestedFileIndex = -1;
-        for (int i = 0; i < files.length; i++) {
+        for (int i = 0; i < units.length; i++) {
 
             if (offset < fileOffsets[i]) {
                 firstRequestedFileIndex = i - 1;
                 break;
-            } else if (i == files.length - 1) {
+            } else if (i == units.length - 1) {
                 // reached the last file
                 firstRequestedFileIndex = i;
             }
@@ -363,27 +367,28 @@ public class ChunkDescriptor implements IChunkDescriptor {
         do {
             // determine which files overlap with the requested block
             if (firstRequestedFileIndex == lastRequestedFileIndex) {
-                remaining -= (files[lastRequestedFileIndex].size() - offsetInFirstRequestedFile);
+                remaining -= (units[lastRequestedFileIndex].capacity() - offsetInFirstRequestedFile);
             } else {
-                remaining -= files[lastRequestedFileIndex].size();
+                remaining -= units[lastRequestedFileIndex].capacity();
             }
-        } while (remaining > 0 && ++lastRequestedFileIndex < files.length);
+        } while (remaining > 0 && ++lastRequestedFileIndex < units.length);
 
-        if (lastRequestedFileIndex >= files.length) {
+        if (lastRequestedFileIndex >= units.length) {
             // data in this chunk is insufficient to fulfill the block request
             throw new BtException("Insufficient data (offset: " + offset + ", requested block length: " + length + ")");
         }
         // if remaining is negative now, then we need to
         // strip off some data from the last file
-        limitInLastRequestedFile = files[lastRequestedFileIndex].size() + remaining;
+        limitInLastRequestedFile = units[lastRequestedFileIndex].capacity() + remaining;
 
-        if (lastRequestedFileIndex == files.length - 1) {
+        if (lastRequestedFileIndex == units.length - 1) {
             if (limitInLastRequestedFile > limitInLastChunkFile) {
                 // data in this chunk is insufficient to fulfill the block request
                 throw new BtException("Insufficient data (offset: " + offset + ", requested block length: " + length + ")");
             }
         }
 
+        // TODO: check if this is still needed and remove if not
 //        if (limitInLastRequestedFile > Integer.MAX_VALUE) {
 //            // overflow -- isn't supposed to happen unless the algorithm above is incorrect
 //            throw new BtException("Too much data requested");
@@ -416,9 +421,9 @@ public class ChunkDescriptor implements IChunkDescriptor {
 
             for (int i = firstRequestedFileIndex; i <= lastRequestedFileIndex; i++) {
 
-                DataAccess file = files[i];
+                StorageUnit file = units[i];
                 off = (i == firstRequestedFileIndex) ? offsetInFirstRequestedFile : 0;
-                lim = (i == lastRequestedFileIndex) ? limitInLastRequestedFile : file.size();
+                lim = (i == lastRequestedFileIndex) ? limitInLastRequestedFile : file.capacity();
 
                 visitor.visitFile(file, off, lim);
             }
@@ -428,13 +433,13 @@ public class ChunkDescriptor implements IChunkDescriptor {
     private interface RangeFileVisitor {
         /**
          * Visit (a part of) a file in a range of files
-         * @param file A file
+         * @param unit A storage unit
          * @param off Offset that designates the beginning of this chunk's part in the file, inclusive;
          *            visitor must not access the file before this index
          * @param lim Limit that designates the end of this chunk's part in the file, exclusive;
          *            visitor must not access the file at or past this index
          *            (i.e. the limit does not belong to this chunk)
          */
-        void visitFile(DataAccess file, long off, long lim);
+        void visitFile(StorageUnit unit, long off, long lim);
     }
 }

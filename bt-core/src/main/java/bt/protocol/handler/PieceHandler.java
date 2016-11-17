@@ -1,7 +1,7 @@
 package bt.protocol.handler;
 
 import bt.protocol.InvalidMessageException;
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 import bt.protocol.Piece;
 
 import java.nio.ByteBuffer;
@@ -16,7 +16,7 @@ public class PieceHandler extends UniqueMessageHandler<Piece> {
     }
 
     @Override
-    public int doDecode(MessageContext context, ByteBuffer buffer) {
+    public int doDecode(DecodingContext context, ByteBuffer buffer) {
         return decodePiece(context, buffer, buffer.remaining());
     }
 
@@ -46,7 +46,7 @@ public class PieceHandler extends UniqueMessageHandler<Piece> {
         return true;
     }
 
-    private static int decodePiece(MessageContext context, ByteBuffer buffer, int length) {
+    private static int decodePiece(DecodingContext context, ByteBuffer buffer, int length) {
 
         int consumed = 0;
 

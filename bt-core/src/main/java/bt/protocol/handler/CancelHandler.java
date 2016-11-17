@@ -2,13 +2,13 @@ package bt.protocol.handler;
 
 import bt.protocol.Cancel;
 import bt.protocol.InvalidMessageException;
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
 import static bt.protocol.Protocols.readInt;
-import static bt.protocol.Protocols.verifyPayloadLength;
+import static bt.protocol.Protocols.verifyPayloadHasLength;
 
 public class CancelHandler extends UniqueMessageHandler<Cancel> {
 
@@ -17,8 +17,8 @@ public class CancelHandler extends UniqueMessageHandler<Cancel> {
     }
 
     @Override
-    public int doDecode(MessageContext context, ByteBuffer buffer) {
-        verifyPayloadLength(Cancel.class, 12, buffer.remaining());
+    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+        verifyPayloadHasLength(Cancel.class, 12, buffer.remaining());
         return decodeCancel(context, buffer);
     }
 
@@ -45,7 +45,7 @@ public class CancelHandler extends UniqueMessageHandler<Cancel> {
         return true;
     }
 
-    private static int decodeCancel(MessageContext context, ByteBuffer buffer) {
+    private static int decodeCancel(DecodingContext context, ByteBuffer buffer) {
 
         int consumed = 0;
         int length = Integer.BYTES * 3;

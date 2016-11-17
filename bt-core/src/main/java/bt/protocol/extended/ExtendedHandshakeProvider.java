@@ -3,6 +3,9 @@ package bt.protocol.extended;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
+/**
+ * @since 1.0
+ */
 public class ExtendedHandshakeProvider implements Provider<ExtendedHandshake> {
 
     private ExtendedHandshake extendedHandshake;

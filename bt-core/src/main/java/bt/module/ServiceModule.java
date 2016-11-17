@@ -42,6 +42,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
+/**
+ * This module contributes all core services,
+ * shared among all clients attached to a runtime.
+ *
+ * @since 1.0
+ */
 public class ServiceModule implements Module {
 
     private Set<PeerSourceFactory> extraPeerSourceFactories;
@@ -49,6 +55,11 @@ public class ServiceModule implements Module {
     private Set<Object> messagingAgents;
     private Set<Class<?>> messagingAgentTypes;
 
+    /**
+     * Add a peer source factory instance.
+     *
+     * @since 1.0
+     */
     public void addPeerSourceFactory(PeerSourceFactory peerSourceFactory) {
         Objects.requireNonNull(peerSourceFactory);
         if (extraPeerSourceFactories == null) {
@@ -57,6 +68,12 @@ public class ServiceModule implements Module {
         extraPeerSourceFactories.add(peerSourceFactory);
     }
 
+    /**
+     * Add a peer source factory type.
+     * It will be instantiated by DI container.
+     *
+     * @since 1.0
+     */
     public void addPeerSourceFactoryType(Class<? extends PeerSourceFactory> peerSourceFactoryType) {
         Objects.requireNonNull(peerSourceFactoryType);
         if (extraPeerSourceFactoryTypes == null) {
@@ -65,6 +82,11 @@ public class ServiceModule implements Module {
         extraPeerSourceFactoryTypes.add(peerSourceFactoryType);
     }
 
+    /**
+     * Add a messaging agent instance.
+     *
+     * @since 1.0
+     */
     public void addMessagingAgent(Object messagingAgent) {
         Objects.requireNonNull(messagingAgent);
         if (messagingAgents == null) {
@@ -73,6 +95,12 @@ public class ServiceModule implements Module {
         messagingAgents.add(messagingAgent);
     }
 
+    /**
+     * Add a messaging agent type.
+     * It will be instantiated by DI container.
+     *
+     * @since 1.0
+     */
     public void addMessagingAgentType(Class<?> messagingAgentType) {
         Objects.requireNonNull(messagingAgentType);
         if (messagingAgentTypes == null) {
@@ -100,6 +128,7 @@ public class ServiceModule implements Module {
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
         binder.bind(IPeerRegistry.class).to(PeerRegistry.class).in(Singleton.class);
 
+        // TODO: register a shutdown hook in the runtime
         binder.bind(ExecutorService.class).annotatedWith(ClientExecutor.class)
                 .toProvider(ExecutorServiceProvider.class).in(Singleton.class);
 

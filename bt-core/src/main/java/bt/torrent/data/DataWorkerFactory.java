@@ -18,6 +18,6 @@ public class DataWorkerFactory implements IDataWorkerFactory {
 
     @Override
     public IDataWorker createWorker(IDataDescriptor dataDescriptor) {
-        return new DataWorker(lifecycleBinder, dataDescriptor, configurationService.getReadRequestQueueMaxLength());
+        return new DataWorker(lifecycleBinder, dataDescriptor, configurationService.getIOQueueMaxLength());
     }
 }

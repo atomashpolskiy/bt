@@ -1,5 +1,8 @@
 package bt.protocol;
 
+/**
+ * @since 1.0
+ */
 public final class KeepAlive implements Message {
 
     private KeepAlive() {
@@ -7,6 +10,9 @@ public final class KeepAlive implements Message {
 
     private static final KeepAlive instance = new KeepAlive();
 
+    /**
+     * @since 1.0
+     */
     public static KeepAlive instance() {
         return instance;
     }

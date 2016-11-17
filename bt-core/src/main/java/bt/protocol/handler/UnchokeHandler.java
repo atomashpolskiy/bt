@@ -1,11 +1,11 @@
 package bt.protocol.handler;
 
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 import bt.protocol.Unchoke;
 
 import java.nio.ByteBuffer;
 
-import static bt.protocol.Protocols.verifyPayloadLength;
+import static bt.protocol.Protocols.verifyPayloadHasLength;
 
 public class UnchokeHandler extends UniqueMessageHandler<Unchoke> {
 
@@ -14,8 +14,8 @@ public class UnchokeHandler extends UniqueMessageHandler<Unchoke> {
     }
 
     @Override
-    public int doDecode(MessageContext context, ByteBuffer buffer) {
-        verifyPayloadLength(Unchoke.class, 0, buffer.remaining());
+    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+        verifyPayloadHasLength(Unchoke.class, 0, buffer.remaining());
         context.setMessage(Unchoke.instance());
         return 0;
     }

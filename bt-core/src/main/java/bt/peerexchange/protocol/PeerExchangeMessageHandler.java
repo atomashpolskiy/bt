@@ -2,7 +2,7 @@ package bt.peerexchange.protocol;
 
 import bt.bencoding.BEParser;
 import bt.bencoding.model.BEMap;
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 import bt.protocol.handler.MessageHandler;
 
 import java.io.ByteArrayOutputStream;
@@ -29,7 +29,7 @@ public class PeerExchangeMessageHandler implements MessageHandler<PeerExchange> 
     }
 
     @Override
-    public int decode(MessageContext context, ByteBuffer buffer) {
+    public int decode(DecodingContext context, ByteBuffer buffer) {
 
         byte[] payload = new byte[buffer.remaining()];
         buffer.get(payload);

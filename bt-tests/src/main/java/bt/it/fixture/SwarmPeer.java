@@ -2,7 +2,7 @@ package bt.it.fixture;
 
 import bt.Bt;
 import bt.runtime.BtRuntime;
-import bt.data.file.FileSystemDataAccessFactory;
+import bt.data.file.FileSystemStorage;
 import bt.runtime.BtClient;
 import bt.net.Peer;
 import bt.service.IPeerRegistry;
@@ -26,9 +26,9 @@ public class SwarmPeer implements Closeable {
         this.files = Objects.requireNonNull(files);
         this.runtime = runtime;
 
-        handle = Bt.client(runtime)
+        handle = Bt.client(new FileSystemStorage(localRoot))
                 .url(files.getMetainfoUrl())
-                .build(new FileSystemDataAccessFactory(localRoot));
+                .attachToRuntime(runtime);
     }
 
     public BtClient getHandle() {

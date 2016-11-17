@@ -1,11 +1,17 @@
 package bt.protocol;
 
+/**
+ * @since 1.0
+ */
 public final class Cancel implements Message {
 
     private int pieceIndex;
     private int offset;
     private int length;
 
+    /**
+     * @since 1.0
+     */
     public Cancel(int pieceIndex, int offset, int length) throws InvalidMessageException {
 
         if (pieceIndex < 0 || offset < 0 || length <= 0) {
@@ -18,14 +24,23 @@ public final class Cancel implements Message {
         this.length = length;
     }
 
+    /**
+     * @since 1.0
+     */
     public int getPieceIndex() {
         return pieceIndex;
     }
 
+    /**
+     * @since 1.0
+     */
     public int getOffset() {
         return offset;
     }
 
+    /**
+     * @since 1.0
+     */
     public int getLength() {
         return length;
     }

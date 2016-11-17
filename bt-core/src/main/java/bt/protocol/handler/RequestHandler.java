@@ -1,14 +1,14 @@
 package bt.protocol.handler;
 
 import bt.protocol.InvalidMessageException;
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 import bt.protocol.Request;
 
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
 import static bt.protocol.Protocols.readInt;
-import static bt.protocol.Protocols.verifyPayloadLength;
+import static bt.protocol.Protocols.verifyPayloadHasLength;
 
 public class RequestHandler extends UniqueMessageHandler<Request> {
 
@@ -17,8 +17,8 @@ public class RequestHandler extends UniqueMessageHandler<Request> {
     }
 
     @Override
-    public int doDecode(MessageContext context, ByteBuffer buffer) {
-        verifyPayloadLength(Request.class, 12, buffer.remaining());
+    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+        verifyPayloadHasLength(Request.class, 12, buffer.remaining());
         return decodeRequest(context, buffer);
     }
 
@@ -45,7 +45,7 @@ public class RequestHandler extends UniqueMessageHandler<Request> {
         return true;
     }
 
-    private static int decodeRequest(MessageContext context, ByteBuffer buffer) {
+    private static int decodeRequest(DecodingContext context, ByteBuffer buffer) {
 
         int consumed = 0;
         int length = Integer.BYTES * 3;

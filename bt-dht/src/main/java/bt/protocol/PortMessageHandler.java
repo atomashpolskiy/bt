@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.Objects;
 
 import static bt.protocol.Protocols.getShortBytes;
-import static bt.protocol.Protocols.verifyPayloadLength;
+import static bt.protocol.Protocols.verifyPayloadHasLength;
 
 public class PortMessageHandler extends BaseMessageHandler<Port> {
 
@@ -34,8 +34,8 @@ public class PortMessageHandler extends BaseMessageHandler<Port> {
     }
 
     @Override
-    public int doDecode(MessageContext context, ByteBuffer buffer) {
-        verifyPayloadLength(Port.class, EXPECTED_PAYLOAD_LENGTH, buffer.remaining());
+    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+        verifyPayloadHasLength(Port.class, EXPECTED_PAYLOAD_LENGTH, buffer.remaining());
         return decodePort(context, buffer);
     }
 
@@ -57,7 +57,7 @@ public class PortMessageHandler extends BaseMessageHandler<Port> {
         return true;
     }
 
-    private static int decodePort(MessageContext context, ByteBuffer buffer) throws InvalidMessageException {
+    private static int decodePort(DecodingContext context, ByteBuffer buffer) throws InvalidMessageException {
 
         int consumed = 0;
         int length = Short.BYTES;

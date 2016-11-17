@@ -19,23 +19,21 @@ public class DataDescriptor implements IDataDescriptor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DataDescriptor.class);
 
-    private DataAccessFactory dataAccessFactory;
+    private Storage storage;
     private IConfigurationService configurationService;
 
     private Torrent torrent;
     private List<IChunkDescriptor> chunkDescriptors;
     private Bitfield bitfield;
 
-    private Set<DataAccess> dataAccesses;
+    private Set<StorageUnit> storageUnits;
 
-    public DataDescriptor(DataAccessFactory dataAccessFactory, IConfigurationService configurationService,
-                          Torrent torrent) {
-
-        this.dataAccessFactory = dataAccessFactory;
+    public DataDescriptor(Storage storage, IConfigurationService configurationService, Torrent torrent) {
+        this.storage = storage;
         this.configurationService = configurationService;
         this.torrent = torrent;
 
-        dataAccesses = new HashSet<>();
+        storageUnits = new HashSet<>();
 
         init();
     }
@@ -57,7 +55,7 @@ public class DataDescriptor implements IDataDescriptor {
 
         List<IChunkDescriptor> chunkDescriptors = new ArrayList<>((int) Math.ceil(totalSize / chunkSize) + 1);
         Iterator<byte[]> chunkHashes = torrent.getChunkHashes().iterator();
-        DataAccess[] files = new DataAccess[filesCount];
+        StorageUnit[] files = new StorageUnit[filesCount];
 
         long chunkOffset = 0,
              totalSizeOfFiles = 0;
@@ -69,9 +67,9 @@ public class DataDescriptor implements IDataDescriptor {
             TorrentFile torrentFile = torrentFiles.get(currentFileIndex);
 
             long fileSize = torrentFile.getSize();
-            DataAccess dataAccess = dataAccessFactory.getOrCreateDataAccess(torrent, torrentFile);
-            dataAccesses.add(dataAccess);
-            files[currentFileIndex] = dataAccess;
+            StorageUnit storageUnit = storage.getUnit(torrent, torrentFile);
+            storageUnits.add(storageUnit);
+            files[currentFileIndex] = storageUnit;
 
             totalSizeOfFiles += fileSize;
 
@@ -137,11 +135,11 @@ public class DataDescriptor implements IDataDescriptor {
 
     @Override
     public void close() {
-        dataAccesses.forEach(dataAccess -> {
+        storageUnits.forEach(unit -> {
             try {
-                dataAccess.close();
+                unit.close();
             } catch (Exception e) {
-                LOGGER.error("Failed to close data access: " + dataAccess);
+                LOGGER.error("Failed to close storage unit: " + unit);
             }
         });
     }

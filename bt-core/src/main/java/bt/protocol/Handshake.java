@@ -4,6 +4,19 @@ import bt.BtException;
 import bt.metainfo.TorrentId;
 import bt.net.PeerId;
 
+/**
+ * Standard handshake message.
+ * This is the very first message that peers must send,
+ * when initializing a new peer connection.
+ *
+ * Handshake message includes:
+ * - a constant header, specified in standard BitTorrent protocol
+ * - torrent ID
+ * - peer ID
+ * - 8 reserved bytes, that are used by extensions, e.g. BEP-10: Extension Protocol
+ *
+ * @since 1.0
+ */
 public final class Handshake implements Message {
 
     private static final int UPPER_RESERVED_BOUND = 8 * 8 - 1;
@@ -12,16 +25,32 @@ public final class Handshake implements Message {
     private TorrentId torrentId;
     private PeerId peerId;
 
+    /**
+     * @since 1.0
+     */
     public Handshake(byte[] reserved, TorrentId torrentId, PeerId peerId) throws InvalidMessageException {
         this.reserved = reserved;
         this.torrentId = torrentId;
         this.peerId = peerId;
     }
 
+    /**
+     * Check if a reserved bit is set.
+     *
+     * @param bitIndex Index of a bit to check (0..63 inclusive)
+     * @return true if this bit is set to 1
+     * @since 1.0
+     */
     public boolean isReservedBitSet(int bitIndex) {
         return Protocols.getBit(reserved, bitIndex) == 1;
     }
 
+    /**
+     * Set a reserved bit.
+     *
+     * @param bitIndex Index of a bit to set (0..63 inclusive)
+     * @since 1.0
+     */
     public void setReservedBit(int bitIndex) {
         if (bitIndex < 0 || bitIndex > UPPER_RESERVED_BOUND) {
             throw new BtException("Illegal bit index: " + bitIndex +
@@ -31,14 +60,23 @@ public final class Handshake implements Message {
         // check range
     }
 
+    /**
+     * @since 1.0
+     */
     public byte[] getReserved() {
         return reserved;
     }
 
+    /**
+     * @since 1.0
+     */
     public TorrentId getTorrentId() {
         return torrentId;
     }
 
+    /**
+     * @since 1.0
+     */
     public PeerId getPeerId() {
         return peerId;
     }

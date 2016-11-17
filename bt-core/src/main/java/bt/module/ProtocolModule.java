@@ -7,7 +7,7 @@ import bt.protocol.StandardBittorrentProtocol;
 import bt.protocol.handler.MessageHandler;
 import bt.net.extended.ExtendedConnectionHandler;
 import bt.net.extended.ExtendedHandshakeHandler;
-import bt.protocol.extended.AlphaSortedMessageTypeMapping;
+import bt.protocol.extended.AlphaSortedMapping;
 import bt.protocol.extended.ExtendedHandshake;
 import bt.protocol.extended.ExtendedHandshakeProvider;
 import bt.protocol.extended.ExtendedMessage;
@@ -87,7 +87,7 @@ public class ProtocolModule implements Module {
 
         if (extendedMessageHandlers != null && extendedMessageHandlers.size() > 0) {
 
-            binder.bind(ExtendedMessageTypeMapping.class).to(AlphaSortedMessageTypeMapping.class).in(Singleton.class);
+            binder.bind(ExtendedMessageTypeMapping.class).to(AlphaSortedMapping.class).in(Singleton.class);
             extraMessageHandlerMapBinder.addBinding(ExtendedProtocol.EXTENDED_MESSAGE_ID).to(ExtendedProtocol.class);
 
             binder.bind(ExtendedHandshake.class).toProvider(ExtendedHandshakeProvider.class).in(Singleton.class);

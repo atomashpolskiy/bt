@@ -1,23 +1,23 @@
 package bt.data.file;
 
-import bt.data.DataAccess;
-import bt.data.DataAccessFactory;
+import bt.data.StorageUnit;
+import bt.data.Storage;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 
 import java.io.File;
 
-public class FileSystemDataAccessFactory implements DataAccessFactory {
+public class FileSystemStorage implements Storage {
 
     private final File rootDirectory;
 
-    public FileSystemDataAccessFactory(File rootDirectory) {
+    public FileSystemStorage(File rootDirectory) {
         // TODO: there should be a service to track directories for each torrent
         this.rootDirectory = rootDirectory;
     }
 
     @Override
-    public DataAccess getOrCreateDataAccess(Torrent torrent, TorrentFile torrentFile) {
+    public StorageUnit getUnit(Torrent torrent, TorrentFile torrentFile) {
 
         File torrentDirectory;
         if (torrent.getFiles().size() == 1) {
@@ -26,6 +26,6 @@ public class FileSystemDataAccessFactory implements DataAccessFactory {
             torrentDirectory = new File(rootDirectory, torrent.getName());
         }
 
-        return new FileSystemDataAccess(torrentDirectory, torrentFile.getPathElements(), torrentFile.getSize());
+        return new FileSystemStorageUnit(torrentDirectory, torrentFile.getPathElements(), torrentFile.getSize());
     }
 }

@@ -12,10 +12,28 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Extended handshake is sent during connection initialization procedure
+ * by peers that support BEP-10: Extension Protocol.
+ * It contains a dictionary of supported extended message types with
+ * their corresponding numeric IDs, as well as any additional information,
+ * that is specific to concrete BitTorrent clients and BEPs,
+ * that utilize extended messaging.
+ *
+ * @since 1.0
+ */
 public class ExtendedHandshake extends ExtendedMessage {
 
+    /**
+     * Message type mapping key in the extended handshake.
+     *
+     * @since 1.0
+     */
     public static final String MESSAGE_TYPE_MAPPING_KEY = "m";
 
+    /**
+     * @since 1.0
+     */
     public static Builder builder() {
         return new Builder();
     }
@@ -34,10 +52,19 @@ public class ExtendedHandshake extends ExtendedMessage {
         }
     }
 
+    /**
+     * @return Payload of this extended handshake.
+     * @since 1.0
+     */
     public Map<String, BEObject<?>> getData() {
         return data;
     }
 
+    /**
+     * @return Set of message type names, that are specified
+     *         in this handshake's message type mapping.
+     * @since 1.0
+     */
     public Set<String> getSupportedMessageTypes() {
         return supportedMessageTypes;
     }
@@ -47,6 +74,13 @@ public class ExtendedHandshake extends ExtendedMessage {
         return "[" + this.getClass().getSimpleName() + "] supported messages {" + supportedMessageTypes + "}";
     }
 
+    /**
+     * Convenient builder that provides the means
+     * to build an extended handshake by specifying
+     * one message type mapping at a time.
+     *
+     * @since 1.0
+     */
     public static class Builder {
 
         private Map<String, BEObject<?>> messageTypeMap;
@@ -56,6 +90,13 @@ public class ExtendedHandshake extends ExtendedMessage {
             data = new HashMap<>();
         }
 
+        /**
+         * Adds a mapping between message type name and its' numeric ID.
+         *
+         * @param typeName Message type name
+         * @param typeId Numeric message type ID
+         * @since 1.0
+         */
         public Builder addMessageType(String typeName, Integer typeId) {
 
             if (messageTypeMap == null) {
@@ -70,6 +111,9 @@ public class ExtendedHandshake extends ExtendedMessage {
             return this;
         }
 
+        /**
+         * @since 1.0
+         */
         public ExtendedHandshake build() {
 
             if (messageTypeMap != null) {

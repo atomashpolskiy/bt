@@ -1,5 +1,8 @@
 package bt.protocol;
 
+/**
+ * @since 1.0
+ */
 public final class Unchoke implements Message {
 
     private Unchoke() {
@@ -7,6 +10,9 @@ public final class Unchoke implements Message {
 
     private static final Unchoke instance = new Unchoke();
 
+    /**
+     * @since 1.0
+     */
     public static Unchoke instance() {
         return instance;
     }

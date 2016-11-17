@@ -1,13 +1,22 @@
 package bt.protocol;
 
+/**
+ * @since 1.0
+ */
 public final class Bitfield implements Message {
 
     private byte[] bitfield;
 
+    /**
+     * @since 1.0
+     */
     public Bitfield(byte[] bitfield) {
         this.bitfield = bitfield;
     }
 
+    /**
+     * @since 1.0
+     */
     public byte[] getBitfield() {
         return bitfield;
     }

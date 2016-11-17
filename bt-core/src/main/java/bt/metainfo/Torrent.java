@@ -28,7 +28,7 @@ public interface Torrent {
     String getName();
 
     /**
-     * @return Size of a transfer chunk, in bytes.
+     * @return Size of a chunk, in bytes.
      * @since 1.0
      */
     long getChunkSize();

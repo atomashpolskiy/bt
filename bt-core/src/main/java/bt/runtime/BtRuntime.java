@@ -21,9 +21,33 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+/**
+ * A runtime is an orchestrator of multiple simultaneous torrent sessions.
+ * It provides a DI container with shared services and manages the application's lifecycle.
+ *
+ * @since 1.0
+ */
 public class BtRuntime {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BtRuntime.class);
+
+    /**
+     * @return Runtime builder
+     * @since 1.0
+     */
+    public static BtRuntimeBuilder builder() {
+        return new BtRuntimeBuilder();
+    }
+
+    /**
+     * Creates a runtime with basic configuration.
+     *
+     * @return Basic runtime without any extensions
+     * @since 1.0
+     */
+    public static BtRuntime defaultRuntime() {
+        return builder().build();
+    }
 
     private Duration shutdownTimeout;
 
@@ -31,8 +55,6 @@ public class BtRuntime {
     private Set<BtClient> knownClients;
     private AtomicBoolean started;
     private final Object lock;
-
-    private ExecutorService clientExecutor;
 
     BtRuntime(Injector injector) {
         shutdownTimeout = Duration.ofSeconds(5);
@@ -47,42 +69,49 @@ public class BtRuntime {
         this.knownClients = ConcurrentHashMap.newKeySet();
         this.started = new AtomicBoolean(false);
         this.lock = new Object();
-
-        this.clientExecutor = createExecutor();
     }
 
-    private ExecutorService createExecutor() {
-        AtomicInteger threadCount = new AtomicInteger();
-        return Executors.newCachedThreadPool(r ->
-                new Thread(r, "BtRuntimeThreadPool-Client#" + threadCount.incrementAndGet()));
-    }
-
+    /**
+     * @return Injector instance
+     * @since 1.0
+     */
     public Injector getInjector() {
         return injector;
     }
 
+    /**
+     * Convenience method to get an instance of a shared DI service.
+     *
+     * @return Instance of a shared DI service
+     * @since 1.0
+     */
     public <T> T service(Class<T> serviceType) {
         return injector.getInstance(serviceType);
     }
 
-    public void registerClient(BtClient client) {
-        knownClients.add(client);
-    }
-
-    ExecutorService getClientExecutor() {
-        return clientExecutor;
-    }
-
+    /**
+     * @return true if this runtime is up and running
+     * @since 1.0
+     */
     public boolean isRunning() {
         return started.get();
     }
 
+    /**
+     * Manually start the runtime (possibly with no clients attached).
+     *
+     * @since 1.0
+     */
     public void startup() {
         if (started.compareAndSet(false, true)) {
             synchronized (lock) {
                 runHooks(LifecycleEvent.STARTUP, e -> LOGGER.error("Error on runtime startup", e));
             }
         }
+    }
+
+    void registerClient(BtClient client) {
+        knownClients.add(client);
     }
 
     private void runHooks(LifecycleEvent event, Consumer<Throwable> errorConsumer) {
@@ -100,6 +129,14 @@ public class BtRuntime {
                 });
     }
 
+    /**
+     * Manually initiate the runtime shutdown procedure, which includes:
+     * - stopping all attached clients
+     * - stopping all workers and executors, that were created inside this runtime
+     *   and registered via {@link IRuntimeLifecycleBinder}
+     *
+     * @since 1.0
+     */
     public void shutdown() {
         if (started.compareAndSet(true, false)) {
             synchronized (lock) {
@@ -136,7 +173,8 @@ public class BtRuntime {
                     // ignore
                     shutdownExecutor.shutdownNow();
                 }
-                clientExecutor.shutdown();
+                // TODO: replace this with @ClientExecutor shutdown call
+                // clientExecutor.shutdown();
             }
         }
     }

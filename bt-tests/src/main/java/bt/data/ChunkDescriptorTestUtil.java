@@ -20,10 +20,10 @@ import static org.mockito.Mockito.when;
 
 public class ChunkDescriptorTestUtil {
 
-    public static DataAccess mockDataAccess(long size) {
-        DataAccess dataAccess = mock(DataAccess.class);
-        when(dataAccess.size()).thenReturn(size);
-        return dataAccess;
+    public static StorageUnit mockStorageUnit(long size) {
+        StorageUnit storageUnit = mock(StorageUnit.class);
+        when(storageUnit.capacity()).thenReturn(size);
+        return storageUnit;
     }
 
     public static Torrent mockTorrent(String name, long size, long chunkSize, byte[][] chunkHashes, TorrentFile... files) {

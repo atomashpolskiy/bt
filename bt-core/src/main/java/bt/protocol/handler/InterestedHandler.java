@@ -1,11 +1,11 @@
 package bt.protocol.handler;
 
 import bt.protocol.Interested;
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 
 import java.nio.ByteBuffer;
 
-import static bt.protocol.Protocols.verifyPayloadLength;
+import static bt.protocol.Protocols.verifyPayloadHasLength;
 
 public class InterestedHandler extends UniqueMessageHandler<Interested> {
 
@@ -14,8 +14,8 @@ public class InterestedHandler extends UniqueMessageHandler<Interested> {
     }
 
     @Override
-    public int doDecode(MessageContext context, ByteBuffer buffer) {
-        verifyPayloadLength(Interested.class, 0, buffer.remaining());
+    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+        verifyPayloadHasLength(Interested.class, 0, buffer.remaining());
         context.setMessage(Interested.instance());
         return 0;
     }

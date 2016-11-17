@@ -5,7 +5,7 @@ import bt.module.ExtendedMessageHandlers;
 import bt.protocol.handler.BaseMessageHandler;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
-import bt.protocol.MessageContext;
+import bt.protocol.DecodingContext;
 import bt.protocol.handler.MessageHandler;
 import com.google.inject.Inject;
 
@@ -15,9 +15,23 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Built-in support for extensions protocols.
+ *
+ * @since 1.0
+ */
 public class ExtendedProtocol extends BaseMessageHandler<ExtendedMessage> {
 
+    /**
+     * Unique message type ID for all extended message types.
+     * It must be present in the encoded representation of the message
+     * in order for it to be passed to the {@link ExtendedProtocol}
+     * for further processing.
+     *
+     * @since 1.0
+     */
     public static final int EXTENDED_MESSAGE_ID = 20;
+
     private static final int HANDSHAKE_TYPE_ID = 0;
 
     private MessageHandler<ExtendedHandshake> extendedHandshakeHandler;
@@ -88,7 +102,7 @@ public class ExtendedProtocol extends BaseMessageHandler<ExtendedMessage> {
     }
 
     @Override
-    public int doDecode(MessageContext context, ByteBuffer buffer) {
+    public int doDecode(DecodingContext context, ByteBuffer buffer) {
 
         int typeId = buffer.get();
         MessageHandler<?> handler;

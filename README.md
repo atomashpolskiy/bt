@@ -16,7 +16,7 @@ Being built around the [Guice](https://github.com/google/guice) DI, **Bt** provi
 
 ### Custom backends
 
-**Bt** is shipped with a standard file-system based backend (i.e. you can download the torrent file to a storage device). However, the backend details are abstracted from the message-level code. This means that you can use your own backend by providing a _data access_ implementation.
+**Bt** is shipped with a standard file-system based backend (i.e. you can download the torrent file to a storage device). However, the backend details are abstracted from the message-level code. This means that you can use your own backend by providing a _storage unit_ implementation.
 
 ### Protocol extensions
 
@@ -53,23 +53,19 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 * [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
 * [BEP-27: Private Torrents](http://bittorrent.org/beps/bep_0027.html)
 
-## A really ascetic code sample
+## Code sample
 
 ```java
 public static void main(String[] args) {
 
-  // get metainfo file url and download location from the program arguments
-  URL metainfoUrl = ...;
-  File targetDirectory = ...;
-
-  // create default shared runtime without extensions
-  BtRuntime runtime = BtRuntimeBuilder.defaultRuntime();
+  URL metainfoUrl = getMetainfoUrl();
+  File targetDirectory = getTargetDirectory();
   
   // create file system based backend for torrent contents
-  DataAccessFactory daf = new FileSystemDataAccessFactory(targetDirectory);
+  Storage storage = new FileSystemStorage(targetDirectory);
   
-  // create client
-  BtClient client = Bt.client(runtime).url(metainfoUrl).build(daf);
+  // create client with a private runtime
+  BtClient client = Bt.client(storage).url(metainfoUrl).standalone();
   
   // launch
   client.startAsync(state -> {

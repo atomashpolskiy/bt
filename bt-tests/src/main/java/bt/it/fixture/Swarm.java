@@ -2,7 +2,7 @@ package bt.it.fixture;
 
 import bt.BtException;
 import bt.runtime.BtRuntime;
-import bt.data.DataAccessFactory;
+import bt.data.Storage;
 import bt.data.DataStatus;
 import bt.data.IChunkDescriptor;
 import bt.data.IDataDescriptor;
@@ -245,7 +245,7 @@ public class Swarm extends ExternalResource {
     private static class MockDataDescriptorFactory implements IDataDescriptorFactory {
 
         @Override
-        public IDataDescriptor createDescriptor(Torrent torrent, DataAccessFactory dataAccessFactory) {
+        public IDataDescriptor createDescriptor(Torrent torrent, Storage storage) {
             return new IDataDescriptor() {
 
                 private List<IChunkDescriptor> descriptors;

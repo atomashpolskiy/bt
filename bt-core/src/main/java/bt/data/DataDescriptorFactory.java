@@ -14,7 +14,7 @@ public class DataDescriptorFactory implements IDataDescriptorFactory {
     }
 
     @Override
-    public IDataDescriptor createDescriptor(Torrent torrent, DataAccessFactory dataAccessFactory) {
-        return new DataDescriptor(dataAccessFactory, configurationService, torrent);
+    public IDataDescriptor createDescriptor(Torrent torrent, Storage storage) {
+        return new DataDescriptor(storage, configurationService, torrent);
     }
 }

@@ -1,9 +1,15 @@
 package bt.protocol;
 
+/**
+ * @since 1.0
+ */
 public final class Have implements Message {
 
     private int pieceIndex;
 
+    /**
+     * @since 1.0
+     */
     public Have(int pieceIndex) throws InvalidMessageException {
 
         if (pieceIndex < 0) {
@@ -13,6 +19,9 @@ public final class Have implements Message {
         this.pieceIndex = pieceIndex;
     }
 
+    /**
+     * @since 1.0
+     */
     public int getPieceIndex() {
         return pieceIndex;
     }

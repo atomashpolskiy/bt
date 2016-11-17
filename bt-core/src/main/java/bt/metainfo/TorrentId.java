@@ -5,14 +5,29 @@ import bt.BtException;
 import java.util.Arrays;
 import java.util.Objects;
 
+/**
+ * Object wrapper for binary torrent identifiers.
+ *
+ * @since 1.0
+ */
 public class TorrentId {
 
     private static final int TORRENT_ID_LENGTH = 20;
 
+    /**
+     * @return Length in bytes
+     * @since 1.0
+     */
     public static int length() {
         return TORRENT_ID_LENGTH;
     }
 
+    /**
+     * Create a TorrentId instance from a binary representation.
+     *
+     * @param bytes Binary representation of torrent's ID
+     * @since 1.0
+     */
     public static TorrentId fromBytes(byte[] bytes) {
         return new TorrentId(bytes);
     }
@@ -27,6 +42,10 @@ public class TorrentId {
         this.torrentId = torrentId;
     }
 
+    /**
+     * @return Binary representation of torrent's ID
+     * @since 1.0
+     */
     public byte[] getBytes() {
         return torrentId;
     }

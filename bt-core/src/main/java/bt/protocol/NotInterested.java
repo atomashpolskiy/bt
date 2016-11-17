@@ -1,5 +1,8 @@
 package bt.protocol;
 
+/**
+ * @since 1.0
+ */
 public final class NotInterested implements Message {
 
     private NotInterested() {
@@ -7,6 +10,9 @@ public final class NotInterested implements Message {
 
     private static final NotInterested instance = new NotInterested();
 
+    /**
+     * @since 1.0
+     */
     public static NotInterested instance() {
         return instance;
     }

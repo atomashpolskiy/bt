@@ -1,6 +1,6 @@
 package bt.service;
 
-import bt.data.DataAccessFactory;
+import bt.data.Storage;
 import bt.data.IDataDescriptorFactory;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
@@ -36,8 +36,8 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
     }
 
     @Override
-    public Torrent getTorrent(TorrentId torrentId) {
-        return torrents.get(torrentId);
+    public Optional<Torrent> getTorrent(TorrentId torrentId) {
+        return Optional.ofNullable(torrents.get(torrentId));
     }
 
     @Override
@@ -46,12 +46,12 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
     }
 
     @Override
-    public ITorrentDescriptor getOrCreateDescriptor(Torrent torrent, DataAccessFactory dataAccessFactory) {
+    public ITorrentDescriptor getOrCreateDescriptor(Torrent torrent, Storage storage) {
 
         return getDescriptor(torrent).orElseGet(() -> {
 
             ITorrentDescriptor descriptor = new TorrentDescriptor(trackerService, torrent,
-                    dataDescriptorFactory.createDescriptor(torrent, dataAccessFactory));
+                    dataDescriptorFactory.createDescriptor(torrent, storage));
             ITorrentDescriptor existing = descriptors.putIfAbsent(torrent, descriptor);
             if (existing != null) {
                 descriptor = existing;

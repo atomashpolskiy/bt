@@ -15,6 +15,11 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+/**
+ * Basic interface for interaction with torrent processing.
+ *
+ * @since 1.0
+ */
 public class DefaultBtClient implements BtClient {
 
     private ITorrentDescriptor delegate;
@@ -26,6 +31,9 @@ public class DefaultBtClient implements BtClient {
     private Optional<Consumer<TorrentSessionState>> listener;
     private Optional<ScheduledFuture<?>> listenerFuture;
 
+    /**
+     * @since 1.0
+     */
     public DefaultBtClient(ExecutorService executor, ITorrentDescriptor delegate,
                     TorrentSession session, IDataWorker dataWorker) {
 
@@ -36,20 +44,6 @@ public class DefaultBtClient implements BtClient {
         this.future = Optional.empty();
         this.listener = Optional.empty();
         this.listenerFuture = Optional.empty();
-    }
-
-    @Override
-    public void stop() {
-        try {
-            delegate.stop();
-        } finally {
-            future.ifPresent(future -> future.complete(null));
-        }
-    }
-
-    @Override
-    public TorrentSession getSession() {
-        return session;
     }
 
     @Override
@@ -91,5 +85,19 @@ public class DefaultBtClient implements BtClient {
                 .thenRun(() -> listenerFuture.ifPresent(listener -> listener.cancel(true)));
 
         return future;
+    }
+
+    @Override
+    public void stop() {
+        try {
+            delegate.stop();
+        } finally {
+            future.ifPresent(future -> future.complete(null));
+        }
+    }
+
+    @Override
+    public TorrentSession getSession() {
+        return session;
     }
 }

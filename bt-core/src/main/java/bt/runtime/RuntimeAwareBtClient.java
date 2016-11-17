@@ -6,6 +6,11 @@ import bt.torrent.TorrentSessionState;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+/**
+ * Client decorator that is able to attach itself to a runtime.
+ *
+ * @since 1.0
+ */
 public class RuntimeAwareBtClient implements BtClient {
 
     private BtRuntime runtime;
@@ -19,12 +24,14 @@ public class RuntimeAwareBtClient implements BtClient {
     @Override
     public CompletableFuture<?> startAsync() {
         ensureRuntimeStarted();
+        attachToRuntime();
         return delegate.startAsync();
     }
 
     @Override
     public CompletableFuture<?> startAsync(Consumer<TorrentSessionState> listener, long period) {
         ensureRuntimeStarted();
+        attachToRuntime();
         return delegate.startAsync(listener, period);
     }
 
@@ -32,6 +39,10 @@ public class RuntimeAwareBtClient implements BtClient {
         if (!runtime.isRunning()) {
             runtime.startup();
         }
+    }
+
+    private void attachToRuntime() {
+        runtime.registerClient(this);
     }
 
     @Override

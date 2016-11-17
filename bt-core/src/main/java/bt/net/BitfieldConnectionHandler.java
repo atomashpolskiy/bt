@@ -1,5 +1,6 @@
 package bt.net;
 
+import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.service.ITorrentRegistry;
 import bt.torrent.Bitfield;
@@ -23,7 +24,10 @@ public class BitfieldConnectionHandler implements ConnectionHandler {
 
     @Override
     public boolean handleConnection(PeerConnection connection) {
-        Torrent torrent = torrentRegistry.getTorrent(connection.getTorrentId());
+        Torrent torrent = torrentRegistry.getTorrent(connection.getTorrentId())
+                // this should not happen, because presence of requested torrent
+                // should have already been tested by other connection handlers
+                .orElseThrow(() -> new BtException("Unknown torrent ID"));
 
         Optional<ITorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
         if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {

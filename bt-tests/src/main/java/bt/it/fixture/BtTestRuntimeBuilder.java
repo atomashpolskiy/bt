@@ -21,7 +21,7 @@ public class BtTestRuntimeBuilder {
         this.address = address;
         this.port = port;
 
-        builder = BtRuntimeBuilder.builder();
+        builder = BtRuntime.builder();
         builder.module(binder -> {
             binder.bind(INetworkService.class).toInstance(new INetworkService() {
                 @Override
