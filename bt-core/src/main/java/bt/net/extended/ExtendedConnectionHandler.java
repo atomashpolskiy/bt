@@ -6,6 +6,11 @@ import bt.protocol.extended.ExtendedHandshake;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
+/**
+ * Sends extended handshake to a remote peer.
+ *
+ * @since 1.0
+ */
 public class ExtendedConnectionHandler implements ConnectionHandler {
 
     private Provider<ExtendedHandshake> extendedHandshakeProvider;
