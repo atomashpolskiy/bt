@@ -14,7 +14,7 @@ public class ExtendedHandshakeHandler implements HandshakeHandler {
     }
 
     @Override
-    public void amendOutgoingHandshake(Handshake handshake) {
+    public void processOutgoingHandshake(Handshake handshake) {
         handshake.setReservedBit(EXTENDED_FLAG_BIT_INDEX);
     }
 }

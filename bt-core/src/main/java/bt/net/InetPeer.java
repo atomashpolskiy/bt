@@ -5,6 +5,11 @@ import bt.BtException;
 import java.net.InetAddress;
 import java.util.Optional;
 
+/**
+ * Default peer implementation, represents a peer, accessible on the Internet.
+ *
+ * @since 1.0
+ */
 public class InetPeer implements Peer {
 
     private InetAddress inetAddress;

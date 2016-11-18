@@ -11,6 +11,11 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
+/**
+ * Sends local bitfield to a newly connected remote peer.
+ *
+ * @since 1.0
+ */
 public class BitfieldConnectionHandler implements ConnectionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BitfieldConnectionHandler.class);

@@ -1,6 +1,6 @@
 package bt.net;
 
-import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.protocol.IHandshakeFactory;
 import bt.service.IConfigurationService;
 import bt.service.ITorrentRegistry;
@@ -21,7 +21,7 @@ public class ConnectionHandlerFactory implements IConnectionHandlerFactory {
     private List<ConnectionHandler> connectionHandlers;
     private Set<HandshakeHandler> handshakeHandlers;
 
-    private Map<Torrent, ConnectionHandler> outgoingHandlers;
+    private Map<TorrentId, ConnectionHandler> outgoingHandlers;
 
     @Inject
     public ConnectionHandlerFactory(IHandshakeFactory handshakeFactory, ITorrentRegistry torrentRegistry,
@@ -47,16 +47,16 @@ public class ConnectionHandlerFactory implements IConnectionHandlerFactory {
     }
 
     @Override
-    public ConnectionHandler getOutgoingHandler(Torrent torrent) {
+    public ConnectionHandler getOutgoingHandler(TorrentId torrentId) {
 
-        ConnectionHandler outgoing = outgoingHandlers.get(torrent);
+        ConnectionHandler outgoing = outgoingHandlers.get(torrentId);
         if (outgoing == null) {
             outgoing = new ConnectionSequence(
-                    new OutgoingHandshakeHandler(handshakeFactory, torrent, handshakeHandlers,
+                    new OutgoingHandshakeHandler(handshakeFactory, torrentId, handshakeHandlers,
                             configurationService.getHandshakeTimeOut()),
                     connectionHandlers);
 
-            ConnectionHandler existing = outgoingHandlers.putIfAbsent(torrent, outgoing);
+            ConnectionHandler existing = outgoingHandlers.putIfAbsent(torrentId, outgoing);
             if (existing != null) {
                 outgoing = existing;
             }

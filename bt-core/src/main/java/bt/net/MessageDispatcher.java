@@ -6,7 +6,6 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -21,6 +20,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+/**
+ * Default single-threaded message dispatcher implementation.
+ *
+ * @since 1.0
+ */
 public class MessageDispatcher implements IMessageDispatcher {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageDispatcher.class);

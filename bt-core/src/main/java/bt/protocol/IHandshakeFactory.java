@@ -1,6 +1,6 @@
 package bt.protocol;
 
-import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 
 /**
  * Factory of standard BitTorrent handshakes.
@@ -15,5 +15,5 @@ public interface IHandshakeFactory {
      *
      * @since 1.0
      */
-    Handshake createHandshake(Torrent torrent);
+    Handshake createHandshake(TorrentId torrentId);
 }

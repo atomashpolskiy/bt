@@ -14,6 +14,11 @@ import org.slf4j.LoggerFactory;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Handles handshake exchange for incoming peer connections.
+ *
+ * @since 1.0
+ */
 public class IncomingHandshakeHandler implements ConnectionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IncomingHandshakeHandler.class);
@@ -46,9 +51,9 @@ public class IncomingHandshakeHandler implements ConnectionHandler {
                     if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {
                         TorrentId torrentId = torrent.getTorrentId();
 
-                        Handshake handshake = handshakeFactory.createHandshake(torrent);
+                        Handshake handshake = handshakeFactory.createHandshake(torrent.getTorrentId());
                         handshakeHandlers.forEach(handler ->
-                                handler.amendOutgoingHandshake(handshake));
+                                handler.processOutgoingHandshake(handshake));
 
                         connection.postMessage(handshake);
                         connection.setTorrentId(torrentId);

@@ -2,7 +2,6 @@ package bt.torrent;
 
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.net.ConnectionHandler;
 import bt.net.IConnectionHandlerFactory;
 import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
@@ -29,7 +28,6 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
     private Torrent torrent;
 
     private IPeerConnectionPool connectionPool;
-    private ConnectionHandler outgoingHandler;
 
     private TorrentSessionState sessionState;
     private TorrentWorker worker;
@@ -45,7 +43,6 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
 
         this.torrent = torrent;
 
-        this.outgoingHandler = connectionHandlerFactory.getOutgoingHandler(torrent);
         this.sessionState = new DefaultTorrentSessionState(pieceManager.getBitfield());
         this.worker = new TorrentWorker(pieceManager, dispatcher, peerWorkerFactory);
     }
@@ -58,7 +55,7 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
                 || worker.getPeers().contains(peer)) {
             return;
         }
-        connectionPool.requestConnection(peer, outgoingHandler);
+        connectionPool.requestConnection(torrent.getTorrentId(), peer);
     }
 
     @Override

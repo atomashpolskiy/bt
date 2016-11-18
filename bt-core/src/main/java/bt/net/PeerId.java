@@ -5,14 +5,28 @@ import bt.BtException;
 import java.util.Arrays;
 import java.util.Objects;
 
+/**
+ * Convenient wrapper, that encapsulates a binary peer ID.
+ *
+ * @since 1.0
+ */
 public class PeerId {
 
     private static final int PEER_ID_LENGTH = 20;
 
+    /**
+     * @return Standrad peer ID length in BitTorrent.
+     * @since 1.0
+     */
     public static int length() {
         return PEER_ID_LENGTH;
     }
 
+    /**
+     * Deserialize a binary peer ID representation.
+     *
+     * @since 1.0
+     */
     public static PeerId fromBytes(byte[] bytes) {
         return new PeerId(bytes);
     }
@@ -27,6 +41,9 @@ public class PeerId {
         this.peerId = peerId;
     }
 
+    /**
+     * @return Binary peer ID representation.
+     */
     public byte[] getBytes() {
         return peerId;
     }

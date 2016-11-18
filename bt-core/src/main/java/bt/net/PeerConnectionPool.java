@@ -1,6 +1,7 @@
 package bt.net;
 
 import bt.BtException;
+import bt.metainfo.TorrentId;
 import bt.module.BitTorrentProtocol;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
@@ -39,7 +40,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private IConfigurationService configurationService;
 
     private ScheduledExecutorService cleaner;
-    private ConnectionHandler incomingConnectionHandler;
+    private IConnectionHandlerFactory connectionHandlerFactory;
 
     private ExecutorService executor;
     private ScheduledExecutorService connectionRequestor;
@@ -58,7 +59,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         SocketChannelFactory socketChannelFactory = new SocketChannelFactory(networkService);
         this.connectionFactory = new PeerConnectionFactory(messageHandler, socketChannelFactory, configurationService);
 
-        this.incomingConnectionHandler = connectionHandlerFactory.getIncomingHandler();
+        this.connectionHandlerFactory = connectionHandlerFactory;
         this.configurationService = configurationService;
 
         pendingConnections = new ConcurrentHashMap<>();
@@ -115,7 +116,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     }
 
     @Override
-    public CompletableFuture<IPeerConnection> requestConnection(Peer peer, ConnectionHandler connectionHandler) {
+    public CompletableFuture<IPeerConnection> requestConnection(TorrentId torrentId, Peer peer) {
 
         CompletableFuture<IPeerConnection> connection = getExistingOrPendingConnection(peer);
         if (connection != null) {
@@ -128,9 +129,11 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 return connection;
             }
 
+            ConnectionHandler connectionHandler = connectionHandlerFactory.getOutgoingHandler(torrentId);
             connection = CompletableFuture.supplyAsync(() -> {
                 try {
                     PeerConnection newConnection = connectionFactory.createConnection(peer);
+
                     if (!initConnection(newConnection, connectionHandler, true)) {
                         throw new BtException("Failed to initialize new connection for peer: " + peer);
                     }
@@ -145,7 +148,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             }, executor).whenComplete((acquiredConnection, throwable) -> {
                 if (throwable != null) {
                     LOGGER.error("Failed to connect to peer: " + peer + "; will retry in 5 minutes", throwable);
-                    connectionRequestor.schedule(() -> requestConnection(peer, connectionHandler), 5, TimeUnit.MINUTES);
+                    connectionRequestor.schedule(() -> requestConnection(torrentId, peer), 5, TimeUnit.MINUTES);
                 }
             });
 
@@ -258,7 +261,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             try {
                 incomingChannel.configureBlocking(false);
                 PeerConnection incomingConnection = connectionFactory.createConnection(incomingChannel);
-                initConnection(incomingConnection, incomingConnectionHandler, true);
+                initConnection(incomingConnection, connectionHandlerFactory.getIncomingHandler(), true);
             } catch (IOException e) {
                 LOGGER.error("Failed to process incoming connection", e);
             }

@@ -14,6 +14,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * @since 1.0
+ */
 public class PeerConnection implements IPeerConnection {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnection.class);
@@ -56,6 +59,9 @@ public class PeerConnection implements IPeerConnection {
         return (int) bufferSize;
     }
 
+    /**
+     * @since 1.0
+     */
     void setTorrentId(TorrentId torrentId) {
         this.torrentId = torrentId;
     }
