@@ -19,7 +19,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
-public class PeerWorker_WithCompilerTest {
+public class RoutingPeerWorker_WithCompilerTest {
 
     private C1 c1;
     private P1 p1;

@@ -5,6 +5,15 @@ import bt.protocol.Have;
 import bt.torrent.IPieceManager;
 import bt.torrent.annotation.Consumes;
 
+/**
+ * Consumes peer bitfield.
+ *
+ * Note that the local bitfield is sent to a remote peer
+ * during the connection initialization sequence.
+ *
+ * @see bt.net.BitfieldConnectionHandler
+ * @since 1.0
+ */
 public class BitfieldConsumer {
 
     private IPieceManager pieceManager;

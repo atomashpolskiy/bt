@@ -8,16 +8,47 @@ import java.util.Random;
 import java.util.Set;
 import java.util.function.Predicate;
 
+/**
+ * Implements the "rarest-first" piece selection algorithm.
+ * As the name implies, pieces that appear less frequently
+ * and are generally less available are selected in the first place.
+ *
+ * There are two "flavours" of the "rarest-first" strategy: regular and randomized.
+
+ * Regular rarest-first selects whichever pieces that are the least available
+ * (strictly following the order of increasing availability).
+ *
+ * Randomized rarest-first selects one of the least available pieces randomly
+ * (which means that it does not always select THE least available piece, but rather looks at
+ * some number N of the least available pieces and then randomly picks one of them).
+ *
+ * @since 1.0
+ */
 public class RarestFirstSelectionStrategy implements PieceSelectionStrategy {
 
     private static final Comparator<Long> comparator = new PackedIntComparator();
     private static final RarestFirstSelectionStrategy selector = new RarestFirstSelectionStrategy(false);
     private static final RarestFirstSelectionStrategy randomizedSelector = new RarestFirstSelectionStrategy(true);
 
+    /**
+     * Regular rarest-first strategy.
+     * Selects whichever pieces that are the least available
+     * (strictly following the order of increasing availability).
+     *
+     * @since 1.0
+     */
     public static RarestFirstSelectionStrategy regular() {
         return selector;
     }
 
+    /**
+     * Randomized rarest-first strategy.
+     * Selects one of the least available pieces randomly
+     * (which means that it does not always select THE least available piece, but rather looks at
+     * some number N of the least available pieces and then randomly picks one of them).
+     *
+     * @since 1.0
+     */
     public static RarestFirstSelectionStrategy randomized() {
         return randomizedSelector;
     }

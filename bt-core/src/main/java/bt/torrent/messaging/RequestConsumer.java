@@ -4,6 +4,11 @@ import bt.protocol.Request;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.data.IDataWorker;
 
+/**
+ * Consumes block requests, received from the remote peer.
+ *
+ * @since 1.0
+ */
 public class RequestConsumer {
 
     private IDataWorker dataWorker;

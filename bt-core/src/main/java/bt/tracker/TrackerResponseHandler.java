@@ -17,6 +17,12 @@ import java.util.Map;
 
 import static bt.bencoding.model.ClassUtil.cast;
 
+/**
+ * Basic tracker response handler,
+ * that is expecting a response in the format specified in BEP-3.
+ *
+ * @since 1.0
+ */
 public class TrackerResponseHandler {
 
     private static final String FAILURE_REASON_KEY = "failure reason";
@@ -30,6 +36,9 @@ public class TrackerResponseHandler {
 
     private BEObjectModel trackerResponseModel;
 
+    /**
+     * @since 1.0
+     */
     public TrackerResponseHandler() {
 
         try {
@@ -42,7 +51,10 @@ public class TrackerResponseHandler {
     }
 
     /**
-     * @param charset Encoding to use for building strings from binary source
+     * Read response from an input stream.
+     *
+     * @param charset Encoding to use for reading a response from the input stream
+     * @since 1.0
      */
     public TrackerResponse handleResponse(InputStream in, Charset charset) {
         try (BEParser parser = new BEParser(in)) {
@@ -53,7 +65,10 @@ public class TrackerResponseHandler {
     }
 
     /**
-     * @param charset Encoding to use for building strings from binary source
+     * Read response from a byte array.
+     *
+     * @param charset Encoding to use for reading a response from the byte array
+     * @since 1.0
      */
     public TrackerResponse handleResponse(byte[] bytes, Charset charset) {
         try (BEParser parser = new BEParser(bytes)) {

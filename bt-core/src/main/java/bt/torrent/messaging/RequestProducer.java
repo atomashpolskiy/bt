@@ -21,6 +21,11 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+/**
+ * Produces block requests to the remote peer.
+ *
+ * @since 1.0
+ */
 public class RequestProducer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RequestProducer.class);

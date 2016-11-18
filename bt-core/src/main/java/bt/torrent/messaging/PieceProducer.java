@@ -11,6 +11,11 @@ import bt.torrent.data.IDataWorker;
 
 import java.util.function.Consumer;
 
+/**
+ * Produces blocks, requested by the remote peer.
+ *
+ * @since 1.0
+ */
 public class PieceProducer {
 
     private IDataWorker dataWorker;

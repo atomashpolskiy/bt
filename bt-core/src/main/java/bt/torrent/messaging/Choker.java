@@ -8,16 +8,34 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+/**
+ * Implements basic choking/unchoking strategy, that avoids "fibrillation"
+ * (quick subsequent chokes and unchokes for the same connection).
+ *
+ * @since 1.0
+ */
 public class Choker {
 
     private static final Duration CHOKING_THRESHOLD = Duration.ofMillis(10000);
 
     private static final Choker instance = new Choker();
 
+    /**
+     * @return Choker instance
+     * @since 1.0
+     */
     public static Choker choker() {
         return instance;
     }
 
+    /**
+     * Inspects connection state and yields choke/unchoke messages when appropriate.
+     *
+     * @param connectionState Connection state for the choker
+     *                        to inspect and update choked/unchoked status.
+     * @param messageConsumer Message worker
+     * @since 1.0
+     */
     public void handleConnection(ConnectionState connectionState, Consumer<Message> messageConsumer) {
 
         Optional<Boolean> shouldChokeOptional = connectionState.getShouldChoke();

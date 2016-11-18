@@ -71,6 +71,6 @@ public class PeerWorkerFactory implements IPeerWorkerFactory {
 
     @Override
     public IPeerWorker createPeerWorker(Peer peer) {
-        return new PeerWorker(peer, consumers, producers);
+        return new RoutingPeerWorker(peer, consumers, producers);
     }
 }

@@ -20,6 +20,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+/**
+ * Messaging agent compiler.
+ *
+ * @since 1.0
+ */
 public class MessagingAgentCompiler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessagingAgentCompiler.class);
@@ -29,10 +34,21 @@ public class MessagingAgentCompiler {
 
     private Map<Class<?>, Map<String, Collection<?>>> compiledTypes;
 
+    /**
+     * @since 1.0
+     */
     public MessagingAgentCompiler() {
         this.compiledTypes = new HashMap<>();
     }
 
+    /**
+     * Parse an arbitrary object.
+     *
+     * @param object Some object, that has methods, annotated with {@link Consumes} or {@link Produces}
+     * @param visitor Provides callbacks for the compiler to invoke
+     *                upon finding a consumer or producer method.
+     * @since 1.0
+     */
     public void compileAndVisit(Object object, CompilerVisitor visitor) {
 
         Class<?> objectType = object.getClass();

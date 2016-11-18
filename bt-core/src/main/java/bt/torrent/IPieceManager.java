@@ -3,6 +3,7 @@ package bt.torrent;
 import bt.net.Peer;
 import java.util.Optional;
 
+// TODO: this should be refactored
 public interface IPieceManager {
 
     Bitfield getBitfield();

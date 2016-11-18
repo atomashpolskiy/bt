@@ -8,6 +8,12 @@ import bt.protocol.NotInterested;
 import bt.protocol.Unchoke;
 import bt.torrent.annotation.Consumes;
 
+/**
+ * Consumer that is responsible for processing
+ * some of the very basic messages.
+ *
+ * @since 1.0
+ */
 public class GenericConsumer {
 
     private static final GenericConsumer instance = new GenericConsumer();

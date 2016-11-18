@@ -18,7 +18,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingDeque;
 
-public class PeerWorker implements IPeerWorker {
+/**
+ * Messaging interface, that encapsulates all messaging agents (consumers and producers)
+ * for a particular torrent processing session.
+ * Routes incoming messages directly to interested consumers, based on message types.
+ *
+ * @since 1.0
+ */
+public class RoutingPeerWorker implements IPeerWorker {
 
     private ConnectionState connectionState;
 
@@ -31,7 +38,7 @@ public class PeerWorker implements IPeerWorker {
 
     private Choker choker;
 
-    public PeerWorker(Peer peer, Set<MessageConsumer<?>> messageConsumers, Set<MessageProducer> messageProducers) {
+    public RoutingPeerWorker(Peer peer, Set<MessageConsumer<?>> messageConsumers, Set<MessageProducer> messageProducers) {
         this.connectionState = new ConnectionState();
         this.context = new MessageContext(peer, connectionState);
         this.messageProducers = messageProducers;

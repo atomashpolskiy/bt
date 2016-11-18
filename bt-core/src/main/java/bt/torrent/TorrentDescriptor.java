@@ -69,6 +69,7 @@ public class TorrentDescriptor implements ITorrentDescriptor {
 
     @Override
     public void complete() {
+        // TODO: this should be called by torrent processing session? someone MUST call this
         processResponse(tracker.request(torrent).complete());
     }
 

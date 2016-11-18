@@ -2,6 +2,11 @@ package bt.torrent.messaging;
 
 import java.util.Arrays;
 
+/**
+ * Creates unique keys, that can be tested for equality with each other.
+ *
+ * @since 1.0
+ */
 class Mapper {
 
     private static final Mapper instance = new Mapper();
@@ -12,6 +17,11 @@ class Mapper {
 
     private Mapper() {}
 
+    /**
+     * Create a unique key for a block request, cancel request or received piece.
+     *
+     * @since 1.0
+     */
     Object buildKey(int pieceIndex, int offset, int length) {
         return new Key(pieceIndex, offset, length);
     }

@@ -28,9 +28,18 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * Simple implementation of an HTTP tracker client.
+ *
+ * @since 1.0
+ */
 public class HttpTracker implements Tracker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpTracker.class);
+
+    enum TrackerRequestType {
+        START, STOP, COMPLETE, QUERY
+    }
 
     private URI baseUri;
     private IdService idService;
@@ -42,6 +51,11 @@ public class HttpTracker implements Tracker {
 
     private ConcurrentMap<URI, byte[]> trackerIds;
 
+    /**
+     * @param baseUrl Tracker URL
+     * @param idService Identity service
+     * @since 1.0
+     */
     public HttpTracker(URL baseUrl, IdService idService) {
 
         try {

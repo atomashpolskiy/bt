@@ -2,6 +2,11 @@ package bt.torrent;
 
 import bt.torrent.Bitfield.PieceStatus;
 
+/**
+ * Provides piece statistics based on peer bitfields
+ *
+ * @since 1.0
+ */
 class BitfieldBasedStatistics implements PieceStatistics {
 
     private int[] pieceTotals;

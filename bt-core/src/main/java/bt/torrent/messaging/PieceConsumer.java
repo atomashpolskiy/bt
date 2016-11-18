@@ -7,6 +7,11 @@ import bt.torrent.annotation.Consumes;
 import bt.torrent.data.BlockWrite;
 import bt.torrent.data.IDataWorker;
 
+/**
+ * Consumes blocks, received from the remote peer.
+ *
+ * @since 1.0
+ */
 public class PieceConsumer {
 
     private IDataWorker dataWorker;

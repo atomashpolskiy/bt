@@ -2,6 +2,11 @@ package bt.torrent.data;
 
 import bt.net.Peer;
 
+/**
+ * Read block command.
+ *
+ * @since 1.0
+ */
 public class BlockRead {
 
     private Peer peer;
