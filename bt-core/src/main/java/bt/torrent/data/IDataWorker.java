@@ -3,7 +3,6 @@ package bt.torrent.data;
 import bt.net.Peer;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 /**
  * Data worker is responsible for processing blocks and block requests, received from peers.
@@ -35,11 +34,4 @@ public interface IDataWorker {
      * @since 1.0
      */
     CompletableFuture<BlockWrite> addBlock(Peer peer, int pieceIndex, int offset, byte[] block);
-
-    // TODO: Get rid of this, return CompletableFuture from addBlock instead
-    /**
-     * @param listener Callback to be invoked when some piece is completed and verified.
-     * @since 1.0
-     */
-    void addVerifiedPieceListener(Consumer<Integer> listener);
 }

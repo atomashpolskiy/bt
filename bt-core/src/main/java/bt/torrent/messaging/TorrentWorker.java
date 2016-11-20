@@ -2,13 +2,17 @@ package bt.torrent.messaging;
 
 import bt.net.IMessageDispatcher;
 import bt.net.Peer;
+import bt.protocol.Have;
+import bt.protocol.Message;
 import bt.torrent.IPieceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -24,7 +28,7 @@ public class TorrentWorker {
     private IMessageDispatcher dispatcher;
 
     private IPeerWorkerFactory peerWorkerFactory;
-    private ConcurrentMap<Peer, IPeerWorker> peerMap;
+    private ConcurrentMap<Peer, PeerAwareWorker> peerMap;
 
     public TorrentWorker(IPieceManager pieceManager, IMessageDispatcher dispatcher,
                          IPeerWorkerFactory peerWorkerFactory) {
@@ -40,8 +44,8 @@ public class TorrentWorker {
      * @since 1.0
      */
     public void addPeer(Peer peer) {
-        IPeerWorker worker = peerWorkerFactory.createPeerWorker(peer);
-        IPeerWorker existing = peerMap.putIfAbsent(peer, worker);
+        PeerAwareWorker worker = createPeerWorker(peer);
+        PeerAwareWorker existing = peerMap.putIfAbsent(peer, worker);
         if (existing == null) {
             dispatcher.addMessageConsumer(peer, worker::accept);
             dispatcher.addMessageSupplier(peer, worker::get);
@@ -49,6 +53,10 @@ public class TorrentWorker {
                 LOGGER.debug("Added connection for peer: " + peer);
             }
         }
+    }
+
+    private PeerAwareWorker createPeerWorker(Peer peer) {
+        return new PeerAwareWorker(peerWorkerFactory.createPeerWorker(peer));
     }
 
     /**
@@ -87,5 +95,49 @@ public class TorrentWorker {
     public ConnectionState getConnectionState(Peer peer) {
         IPeerWorker worker = peerMap.get(peer);
         return (worker == null) ? null : worker.getConnectionState();
+    }
+
+    private class PeerAwareWorker implements IPeerWorker {
+
+        private final IPeerWorker delegate;
+        private final Queue<Message> broadcastQueue;
+
+        PeerAwareWorker(IPeerWorker delegate) {
+            this.delegate = delegate;
+            this.broadcastQueue = new ConcurrentLinkedQueue<>();
+        }
+
+        @Override
+        public ConnectionState getConnectionState() {
+            return delegate.getConnectionState();
+        }
+
+        @Override
+        public void accept(Message message) {
+            delegate.accept(message);
+        }
+
+        @Override
+        public Message get() {
+            Message message = broadcastQueue.poll();;
+            if (message != null) {
+                return message;
+            }
+
+            message = delegate.get();
+            if (message != null && Have.class.equals(message.getClass())) {
+                Have have = (Have) message;
+                peerMap.values().forEach(worker -> {
+                    if (this != worker) {
+                        worker.getBroadcastQueue().add(have);
+                    }
+                });
+            }
+            return message;
+        }
+
+        Queue<Message> getBroadcastQueue() {
+            return broadcastQueue;
+        }
     }
 }
