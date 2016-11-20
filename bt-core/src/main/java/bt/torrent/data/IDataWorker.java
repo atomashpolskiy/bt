@@ -2,6 +2,7 @@ package bt.torrent.data;
 
 import bt.net.Peer;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
@@ -27,7 +28,7 @@ public interface IDataWorker extends Runnable {
      * @return true if data worker accepted the request
      * @since 1.0
      */
-    boolean addBlockRequest(Peer peer, int pieceIndex, int offset, int length);
+    CompletableFuture<BlockRead> addBlockRequest(Peer peer, int pieceIndex, int offset, int length);
 
     /**
      * Add a write block request.
@@ -39,17 +40,7 @@ public interface IDataWorker extends Runnable {
      * @return Write block request
      * @since 1.0
      */
-    BlockWrite addBlock(Peer peer, int pieceIndex, int offset, byte[] block);
-
-    // TODO: Get rid of this, return CompletableFuture from addBlockRequest instead
-    /**
-     * Returns a read block request that has been completed for a given peer
-     * since the last time this method was called.
-     *
-     * @return Completed read block request, or null if there isn't any
-     * @since 1.0
-     */
-    BlockRead getCompletedBlockRequest(Peer peer);
+    CompletableFuture<BlockWrite> addBlock(Peer peer, int pieceIndex, int offset, byte[] block);
 
     // TODO: Get rid of this, return CompletableFuture from addBlock instead
     /**

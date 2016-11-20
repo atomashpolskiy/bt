@@ -30,8 +30,7 @@ import bt.torrent.messaging.GenericConsumer;
 import bt.torrent.messaging.IPeerWorkerFactory;
 import bt.torrent.messaging.PeerWorkerFactory;
 import bt.torrent.messaging.PieceConsumer;
-import bt.torrent.messaging.PieceProducer;
-import bt.torrent.messaging.RequestConsumer;
+import bt.torrent.messaging.PeerRequestProcessor;
 import bt.torrent.messaging.RequestProducer;
 import com.google.inject.Binding;
 import com.google.inject.Key;
@@ -211,8 +210,7 @@ public class Bt {
         Set<Object> messagingAgents = new HashSet<>();
         messagingAgents.add(GenericConsumer.consumer());
         messagingAgents.add(new BitfieldConsumer(pieceManager));
-        messagingAgents.add(new RequestConsumer(dataWorker));
-        messagingAgents.add(new PieceProducer(dataWorker));
+        messagingAgents.add(new PeerRequestProcessor(dataWorker));
         messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor().getChunkDescriptors(), pieceManager));
         messagingAgents.add(new PieceConsumer(dataWorker));
 
