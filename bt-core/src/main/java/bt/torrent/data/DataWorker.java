@@ -1,6 +1,5 @@
 package bt.torrent.data;
 
-import bt.BtException;
 import bt.data.IChunkDescriptor;
 import bt.data.IDataDescriptor;
 import bt.net.Peer;
@@ -8,15 +7,12 @@ import bt.service.IRuntimeLifecycleBinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Consumer;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class DataWorker implements IDataWorker {
 
@@ -24,176 +20,78 @@ public class DataWorker implements IDataWorker {
 
     private List<IChunkDescriptor> chunks;
 
-    private BlockingQueue<BlockOp> pendingOps;
-    private Map<Peer, BlockingQueue<BlockRead>> completedBlockRequests;
-
-    private Set<Consumer<Integer>> verifiedPieceListeners;
-
-    private volatile Thread t;
-    private volatile boolean shutdown;
+    private final ExecutorService executor;
+    private final int maxPendingTasks;
+    private final AtomicInteger pendingTasksCount;
 
     public DataWorker(IRuntimeLifecycleBinder lifecycleBinder, IDataDescriptor dataDescriptor, int maxQueueLength) {
-
         this.chunks = dataDescriptor.getChunkDescriptors();
+        this.executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
 
-        pendingOps = new LinkedBlockingQueue<>(maxQueueLength);
-        completedBlockRequests = new HashMap<>();
-        verifiedPieceListeners = ConcurrentHashMap.newKeySet();
+            private AtomicInteger i = new AtomicInteger();
 
-        lifecycleBinder.onShutdown(this.getClass().getName() + " - " + dataDescriptor, this::shutdown);
-    }
-
-    @Override
-    public void addVerifiedPieceListener(Consumer<Integer> listener) {
-        verifiedPieceListeners.add(listener);
-    }
-
-    @Override
-    public void run() {
-
-        t = Thread.currentThread();
-        t.setPriority(Thread.MIN_PRIORITY);
-
-        while (!shutdown) {
-            try {
-                BlockOp op = pendingOps.take();
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Executing block op: " + op);
-                }
-                op.execute();
-            } catch (InterruptedException e) {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Interrupted while waiting for next block op", e);
-                }
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, "dataworker-pool-thread-" + i.incrementAndGet());
             }
-        }
-    }
+        });
+        this.maxPendingTasks = maxQueueLength;
+        this.pendingTasksCount = new AtomicInteger();
 
-    private void shutdown() {
-        shutdown = true;
-        if (t != null) {
-            t.interrupt();
-        }
+        lifecycleBinder.onShutdown(this.getClass().getName() + " - " + dataDescriptor, this.executor::shutdownNow);
     }
 
     @Override
-    public boolean addBlockRequest(Peer peer, int pieceIndex, int offset, int length) {
-
-        if (pieceIndex < 0 || pieceIndex >= chunks.size()) {
-            throw new BtException("invalid piece index: " + pieceIndex);
-        }
-        ReadOp readOp = new ReadOp(peer, pieceIndex, offset, length);
-        boolean accepted = pendingOps.offer(readOp);
-        if (!accepted) {
-            LOGGER.warn("Can't accept read block request (" + readOp + ") -- queue is full");
-        }
-        return accepted;
-    }
-
-    @Override
-    public BlockWrite addBlock(Peer peer, int pieceIndex, int offset, byte[] block) {
-
-        if (pieceIndex < 0 || pieceIndex >= chunks.size()) {
-            throw new BtException("invalid piece index: " + pieceIndex);
-        }
-
-        BlockWrite blockWrite = new BlockWrite(peer, pieceIndex, offset, block);
-        WriteOp writeOp = new WriteOp(peer, blockWrite);
-        boolean accepted = pendingOps.offer(writeOp);
-        if (!accepted) {
-            LOGGER.warn("Can't accept write block request (" + writeOp + ") -- queue is full");
-            blockWrite.setSuccess(false);
-            blockWrite.setComplete();
-        }
-        return blockWrite;
-    }
-
-    @Override
-    public BlockRead getCompletedBlockRequest(Peer peer) {
-        BlockingQueue<BlockRead> peerCompletedRequests = completedBlockRequests.get(peer);
-        return (peerCompletedRequests == null) ? null : peerCompletedRequests.poll();
-    }
-
-    private interface BlockOp {
-        void execute();
-    }
-
-    private class ReadOp implements BlockOp {
-
-        private Peer peer;
-        private int pieceIndex;
-        private int offset;
-        private int length;
-
-        ReadOp(Peer peer, int pieceIndex, int offset, int length) {
-            this.peer = Objects.requireNonNull(peer);
-            this.pieceIndex = pieceIndex;
-            this.offset = offset;
-            this.length = length;
-        }
-
-        @Override
-        public void execute() {
-            try {
-                IChunkDescriptor chunk = chunks.get(pieceIndex);
-                byte[] block = chunk.readBlock(offset, length);
-
-                BlockingQueue<BlockRead> peerCompletedRequests = completedBlockRequests.get(peer);
-                if (peerCompletedRequests == null) {
-                    peerCompletedRequests = new LinkedBlockingQueue<>();
-                    completedBlockRequests.put(peer, peerCompletedRequests);
+    public CompletableFuture<BlockRead> addBlockRequest(Peer peer, int pieceIndex, int offset, int length) {
+        if (pendingTasksCount.get() >= maxPendingTasks) {
+            LOGGER.warn("Can't accept read block request from peer (" + peer + ") -- queue is full");
+            return CompletableFuture.completedFuture(BlockRead.rejected(peer, pieceIndex, offset));
+        } else {
+            pendingTasksCount.incrementAndGet();
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    IChunkDescriptor chunk = chunks.get(pieceIndex);
+                    byte[] block = chunk.readBlock(offset, length);
+                    return BlockRead.complete(peer, pieceIndex, offset, block);
+                } catch (Throwable e) {
+                    return BlockRead.exceptional(peer, e, pieceIndex, offset);
+                } finally {
+                    pendingTasksCount.decrementAndGet();
                 }
-                peerCompletedRequests.add(new BlockRead(peer, pieceIndex, offset, length, block));
-            } catch (Exception e) {
-                LOGGER.error("Failed to process " + toString() + " for peer: " + peer, e);
-            }
-        }
-
-        @Override
-        public String toString() {
-            return "read block request -- piece index {" + pieceIndex + "}, offset {" + offset +
-                "}, length {" + length + "}";
+            }, executor);
         }
     }
 
-    private class WriteOp implements BlockOp {
-
-        private Peer peer;
-        private BlockWrite blockWrite;
-
-        WriteOp(Peer peer, BlockWrite blockWrite) {
-            this.peer = Objects.requireNonNull(peer);
-            this.blockWrite = blockWrite;
-        }
-
-        @Override
-        public void execute() {
-            IChunkDescriptor chunk = chunks.get(blockWrite.getPieceIndex());
-            try {
-                chunk.writeBlock(blockWrite.getBlock(), blockWrite.getOffset());
-                blockWrite.setSuccess(true);
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Successfully processed block (" + toString() + ") from peer: " + peer);
-                }
-                // TODO: perform verification asynchronously in a separate dedicated thread
-                if (chunk.verify()) {
+    @Override
+    public CompletableFuture<BlockWrite> addBlock(Peer peer, int pieceIndex, int offset, byte[] block) {
+        if (pendingTasksCount.get() >= maxPendingTasks) {
+            LOGGER.warn("Can't accept write block request -- queue is full");
+            return CompletableFuture.completedFuture(BlockWrite.rejected(peer, pieceIndex, offset, block));
+        } else {
+            pendingTasksCount.incrementAndGet();
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    IChunkDescriptor chunk = chunks.get(pieceIndex);
+                    chunk.writeBlock(block, offset);
                     if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Successfully verified block (" + toString() + ")");
+                        LOGGER.trace("Successfully processed block (" + toString() + ") from peer: " + peer);
                     }
-                    Integer pieceIndex = blockWrite.getPieceIndex();
-                    verifiedPieceListeners.forEach(listener -> listener.accept(pieceIndex));
-                }
-            } catch (Exception e) {
-                LOGGER.error("Failed to process " + toString() + " from peer: " + peer, e);
-                blockWrite.setSuccess(false);
-            }
-            blockWrite.setComplete();
-        }
 
-        @Override
-        public String toString() {
-            return "write block -- piece index {" + blockWrite.getPieceIndex() + "}, offset {" + blockWrite.getOffset() +
-                    "}, block {" + blockWrite.getBlock().length + " bytes}";
+                    CompletableFuture<Boolean> verificationFuture = CompletableFuture.supplyAsync(() -> {
+                        boolean verified = chunk.verify();
+                        if (LOGGER.isTraceEnabled()) {
+                            LOGGER.trace("Successfully verified block (" + toString() + ")");
+                        }
+                        return verified;
+                    }, executor);
+
+                    return BlockWrite.complete(peer, pieceIndex, offset, block, verificationFuture);
+                } catch (Throwable e) {
+                    return BlockWrite.exceptional(peer, e, pieceIndex, offset, block);
+                } finally {
+                    pendingTasksCount.decrementAndGet();
+                }
+            }, executor);
         }
     }
 }

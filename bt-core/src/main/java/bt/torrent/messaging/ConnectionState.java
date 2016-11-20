@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -36,7 +37,7 @@ public class ConnectionState {
     private Optional<Boolean> mightSelectPieceForPeer;
     private Queue<Request> requestQueue;
     private Set<Object> pendingRequests;
-    private Map<Object, BlockWrite> pendingWrites;
+    private Map<Object, CompletableFuture<BlockWrite>> pendingWrites;
     private long lastCheckedAvailablePiecesForPeer;
     private long lastBuiltRequests;
 
@@ -224,10 +225,10 @@ public class ConnectionState {
     public void setPendingRequests(Set<Object> pendingRequests) {
         this.pendingRequests = pendingRequests;
     }
-    public Map<Object, BlockWrite> getPendingWrites() {
+    public Map<Object, CompletableFuture<BlockWrite>> getPendingWrites() {
         return pendingWrites;
     }
-    public void setPendingWrites(Map<Object, BlockWrite> pendingWrites) {
+    public void setPendingWrites(Map<Object, CompletableFuture<BlockWrite>> pendingWrites) {
         this.pendingWrites = pendingWrites;
     }
     public long getLastCheckedAvailablePiecesForPeer() {

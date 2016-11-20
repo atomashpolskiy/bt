@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -122,12 +123,14 @@ public class RequestProducer {
                                     return false;
                                 }
 
-                                BlockWrite blockWrite = connectionState.getPendingWrites().get(key);
-                                if (blockWrite == null) {
+                                CompletableFuture<BlockWrite> future = connectionState.getPendingWrites().get(key);
+                                if (future == null) {
                                     return true;
+                                } else if (!future.isDone()) {
+                                    return false;
                                 }
 
-                                boolean failed = blockWrite.isComplete() && !blockWrite.isSuccess();
+                                boolean failed = future.isDone() && future.getNow(null).getError().isPresent();
                                 if (failed) {
                                     connectionState.getPendingWrites().remove(key);
                                 }

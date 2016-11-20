@@ -5,7 +5,6 @@ import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
 import bt.module.ClientExecutor;
 import bt.module.MessagingAgent;
-import bt.net.IConnectionHandlerFactory;
 import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.runtime.BtClient;
@@ -30,8 +29,7 @@ import bt.torrent.messaging.GenericConsumer;
 import bt.torrent.messaging.IPeerWorkerFactory;
 import bt.torrent.messaging.PeerWorkerFactory;
 import bt.torrent.messaging.PieceConsumer;
-import bt.torrent.messaging.PieceProducer;
-import bt.torrent.messaging.RequestConsumer;
+import bt.torrent.messaging.PeerRequestProcessor;
 import bt.torrent.messaging.RequestProducer;
 import com.google.inject.Binding;
 import com.google.inject.Key;
@@ -164,7 +162,7 @@ public class Bt {
         TorrentSession session = createSession(torrent, descriptor, dataWorker);
 
         return new RuntimeAwareBtClient(runtime,
-                new DefaultBtClient(getExecutor(), descriptor, session, dataWorker));
+                new DefaultBtClient(getExecutor(), descriptor, session));
     }
 
     private Torrent fetchTorrentFromUrl(URL metainfoUrl) {
@@ -186,16 +184,13 @@ public class Bt {
 
         IPeerConnectionPool connectionPool = runtime.service(IPeerConnectionPool.class);
         IConfigurationService configurationService = runtime.service(IConfigurationService.class);
-        IConnectionHandlerFactory connectionHandlerFactory = runtime.service(IConnectionHandlerFactory.class);
         IMessageDispatcher messageDispatcher = runtime.service(IMessageDispatcher.class);
 
         PieceManager pieceManager = new PieceManager(descriptor.getDataDescriptor().getBitfield(), pieceSelectionStrategy);
         IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceManager, dataWorker);
 
         DefaultTorrentSession session = new DefaultTorrentSession(connectionPool, configurationService,
-                connectionHandlerFactory, pieceManager, messageDispatcher, peerWorkerFactory, torrent);
-
-        dataWorker.addVerifiedPieceListener(session::onPieceVerified);
+                pieceManager, messageDispatcher, peerWorkerFactory, torrent);
 
         IPeerRegistry peerRegistry = runtime.service(IPeerRegistry.class);
         peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);
@@ -211,10 +206,9 @@ public class Bt {
         Set<Object> messagingAgents = new HashSet<>();
         messagingAgents.add(GenericConsumer.consumer());
         messagingAgents.add(new BitfieldConsumer(pieceManager));
-        messagingAgents.add(new RequestConsumer(dataWorker));
-        messagingAgents.add(new PieceProducer(dataWorker));
+        messagingAgents.add(new PeerRequestProcessor(dataWorker));
         messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor().getChunkDescriptors(), pieceManager));
-        messagingAgents.add(new PieceConsumer(dataWorker));
+        messagingAgents.add(new PieceConsumer(pieceManager, dataWorker));
 
         Binding<Set<Object>> extraMessagingAgents = runtime.getInjector()
                 .getExistingBinding(Key.get(new TypeLiteral<Set<Object>>(){}, MessagingAgent.class));
