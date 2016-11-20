@@ -33,9 +33,7 @@ public class DataWorker implements IDataWorker {
     private volatile boolean shutdown;
 
     public DataWorker(IRuntimeLifecycleBinder lifecycleBinder, IDataDescriptor dataDescriptor, int maxQueueLength) {
-
         this.chunks = dataDescriptor.getChunkDescriptors();
-
         this.executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
 
             private AtomicInteger i = new AtomicInteger();
@@ -50,37 +48,7 @@ public class DataWorker implements IDataWorker {
 
         verifiedPieceListeners = ConcurrentHashMap.newKeySet();
 
-        lifecycleBinder.onShutdown(this.getClass().getName() + " - " + dataDescriptor, () -> {
-            this.shutdown();
-            this.executor.shutdownNow();
-        });
-    }
-
-    @Override
-    public void run() {
-
-        t = Thread.currentThread();
-        t.setPriority(Thread.MIN_PRIORITY);
-
-        while (!shutdown) {
-            try {
-                Object o = new Object();
-                synchronized (o) {
-                    o.wait();
-                }
-            } catch (InterruptedException e) {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Interrupted while waiting for next block op", e);
-                }
-            }
-        }
-    }
-
-    private void shutdown() {
-        shutdown = true;
-        if (t != null) {
-            t.interrupt();
-        }
+        lifecycleBinder.onShutdown(this.getClass().getName() + " - " + dataDescriptor, this.executor::shutdownNow);
     }
 
     @Override

@@ -163,7 +163,7 @@ public class Bt {
         TorrentSession session = createSession(torrent, descriptor, dataWorker);
 
         return new RuntimeAwareBtClient(runtime,
-                new DefaultBtClient(getExecutor(), descriptor, session, dataWorker));
+                new DefaultBtClient(getExecutor(), descriptor, session));
     }
 
     private Torrent fetchTorrentFromUrl(URL metainfoUrl) {
