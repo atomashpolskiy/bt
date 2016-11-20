@@ -192,9 +192,7 @@ public class Bt {
         IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceManager, dataWorker);
 
         DefaultTorrentSession session = new DefaultTorrentSession(connectionPool, configurationService,
-                connectionHandlerFactory, pieceManager, messageDispatcher, peerWorkerFactory, torrent);
-
-        dataWorker.addVerifiedPieceListener(session::onPieceVerified);
+                pieceManager, messageDispatcher, peerWorkerFactory, torrent);
 
         IPeerRegistry peerRegistry = runtime.service(IPeerRegistry.class);
         peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);
@@ -212,7 +210,7 @@ public class Bt {
         messagingAgents.add(new BitfieldConsumer(pieceManager));
         messagingAgents.add(new PeerRequestProcessor(dataWorker));
         messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor().getChunkDescriptors(), pieceManager));
-        messagingAgents.add(new PieceConsumer(dataWorker));
+        messagingAgents.add(new PieceConsumer(pieceManager, dataWorker));
 
         Binding<Set<Object>> extraMessagingAgents = runtime.getInjector()
                 .getExistingBinding(Key.get(new TypeLiteral<Set<Object>>(){}, MessagingAgent.class));

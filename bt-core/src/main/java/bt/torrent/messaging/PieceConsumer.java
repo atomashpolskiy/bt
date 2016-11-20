@@ -2,14 +2,20 @@ package bt.torrent.messaging;
 
 import bt.BtException;
 import bt.net.Peer;
+import bt.protocol.Have;
+import bt.protocol.Message;
 import bt.protocol.Piece;
+import bt.torrent.IPieceManager;
 import bt.torrent.annotation.Consumes;
+import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
 import bt.torrent.data.IDataWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
 
 /**
  * Consumes blocks, received from the remote peer.
@@ -20,10 +26,14 @@ public class PieceConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceConsumer.class);
 
+    private IPieceManager pieceManager;
     private IDataWorker dataWorker;
+    private ConcurrentLinkedQueue<BlockWrite> completedBlocks;
 
-    public PieceConsumer(IDataWorker dataWorker) {
+    public PieceConsumer(IPieceManager pieceManager, IDataWorker dataWorker) {
+        this.pieceManager = pieceManager;
         this.dataWorker = dataWorker;
+        this.completedBlocks = new ConcurrentLinkedQueue<>();
     }
 
     @Consumes
@@ -45,7 +55,12 @@ public class PieceConsumer {
                     LOGGER.trace("Request to write block could not be completed: " + piece);
                 }
             } else {
-                // TODO: send HAVEs
+                block.getVerificationFuture().get().whenComplete((verified, error1) -> {
+                    if (error1 != null) {
+                        throw new RuntimeException("Failed to verify block", error1);
+                    }
+                    completedBlocks.add(block);
+                });
             }
         });
     }
@@ -69,5 +84,16 @@ public class PieceConsumer {
         connectionState.getPendingWrites().put(
                 Mapper.mapper().buildKey(pieceIndex, offset, block.length), future);
         return future;
+    }
+
+    @Produces
+    public void produce(Consumer<Message> messageConsumer) {
+        BlockWrite block;
+        while ((block = completedBlocks.poll()) != null) {
+            int pieceIndex = block.getPieceIndex();
+            if (pieceManager.checkPieceVerified(pieceIndex)) {
+                messageConsumer.accept(new Have(pieceIndex));
+            }
+        }
     }
 }

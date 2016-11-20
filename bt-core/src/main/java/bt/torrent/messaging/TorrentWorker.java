@@ -2,7 +2,6 @@ package bt.torrent.messaging;
 
 import bt.net.IMessageDispatcher;
 import bt.net.Peer;
-import bt.protocol.Message;
 import bt.torrent.IPieceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,15 +87,5 @@ public class TorrentWorker {
     public ConnectionState getConnectionState(Peer peer) {
         IPeerWorker worker = peerMap.get(peer);
         return (worker == null) ? null : worker.getConnectionState();
-    }
-
-    // TODO: this is a hack, remove
-    /**
-     * Send a message to all connected peers.
-     *
-     * @since 1.0
-     */
-    public void broadcast(Message message) {
-        peerMap.values().forEach(worker -> worker.accept(message));
     }
 }

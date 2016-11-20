@@ -2,28 +2,20 @@ package bt.torrent;
 
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.net.IConnectionHandlerFactory;
 import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
 import bt.net.PeerActivityListener;
-import bt.protocol.Have;
-import bt.protocol.InvalidMessageException;
 import bt.service.IConfigurationService;
 import bt.torrent.messaging.IPeerWorkerFactory;
 import bt.torrent.messaging.TorrentWorker;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Set;
 
 public class DefaultTorrentSession implements PeerActivityListener, TorrentSession {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultTorrentSession.class);
-
     private IConfigurationService configurationService;
-    private IPieceManager pieceManager;
 
     private Torrent torrent;
 
@@ -33,13 +25,11 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
     private TorrentWorker worker;
 
     public DefaultTorrentSession(IPeerConnectionPool connectionPool, IConfigurationService configurationService,
-                                 IConnectionHandlerFactory connectionHandlerFactory,
                                  IPieceManager pieceManager, IMessageDispatcher dispatcher,
                                  IPeerWorkerFactory peerWorkerFactory, Torrent torrent) {
 
         this.connectionPool = connectionPool;
         this.configurationService = configurationService;
-        this.pieceManager = pieceManager;
 
         this.torrent = torrent;
 
@@ -71,17 +61,6 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
     @Override
     public void onPeerDisconnected(Peer peer) {
         worker.removePeer(peer);
-    }
-
-    public void onPieceVerified(Integer pieceIndex) {
-        if (pieceManager.checkPieceVerified(pieceIndex)) {
-            try {
-                Have have = new Have(pieceIndex);
-                worker.broadcast(have);
-            } catch (InvalidMessageException e) {
-                LOGGER.error("Unexpected error while announcing new completed piece", e);
-            }
-        }
     }
 
     @Override

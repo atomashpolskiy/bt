@@ -3,6 +3,7 @@ package bt.torrent.data;
 import bt.net.Peer;
 
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Write block command.
@@ -11,6 +12,7 @@ import java.util.Optional;
  * this means that the request was not accepted by the data worker.
  * If {@link #getError()} is not empty,
  * this means that an exception happened during the request processing.
+ * Subsequently, {@link #getVerificationFuture()} will return {@link Optional#empty()} in both cases.
  *
  * @since 1.0
  */
@@ -19,22 +21,26 @@ public class BlockWrite {
     /**
      * @since 1.0
      */
-    static BlockWrite complete(Peer peer, int pieceIndex, int offset, byte[] block) {
-        return new BlockWrite(peer, null, false, pieceIndex, offset, block);
+    static BlockWrite complete(Peer peer,
+                               int pieceIndex,
+                               int offset,
+                               byte[] block,
+                               CompletableFuture<Boolean> verificationFuture) {
+        return new BlockWrite(peer, null, false, pieceIndex, offset, block, verificationFuture);
     }
 
     /**
      * @since 1.0
      */
     static BlockWrite rejected(Peer peer, int pieceIndex, int offset, byte[] block) {
-        return new BlockWrite(peer, null, true, pieceIndex, offset, block);
+        return new BlockWrite(peer, null, true, pieceIndex, offset, block, null);
     }
 
     /**
      * @since 1.0
      */
     static BlockWrite exceptional(Peer peer, Throwable error, int pieceIndex, int offset, byte[] block) {
-        return new BlockWrite(peer, error, false, pieceIndex, offset, block);
+        return new BlockWrite(peer, error, false, pieceIndex, offset, block, null);
     }
 
     private Peer peer;
@@ -45,13 +51,22 @@ public class BlockWrite {
     private boolean rejected;
     private Optional<Throwable> error;
 
-    private BlockWrite(Peer peer, Throwable error, boolean rejected, int pieceIndex, int offset, byte[] block) {
+    private Optional<CompletableFuture<Boolean>> verificationFuture;
+
+    private BlockWrite(Peer peer,
+                       Throwable error,
+                       boolean rejected,
+                       int pieceIndex,
+                       int offset,
+                       byte[] block,
+                       CompletableFuture<Boolean> verificationFuture) {
         this.peer = peer;
         this.error = Optional.ofNullable(error);
         this.rejected = rejected;
         this.pieceIndex = pieceIndex;
         this.offset = offset;
         this.block = block;
+        this.verificationFuture = Optional.ofNullable(verificationFuture);
     }
 
     /**
@@ -101,5 +116,17 @@ public class BlockWrite {
      */
     public Optional<Throwable> getError() {
         return error;
+    }
+
+    /**
+     * Get future, that will complete when the block is verified.
+     * If future's boolean value is true, then verification was successful.
+     *
+     * @return Future or {@link Optional#empty()},
+     *         if {@link #isRejected()} returns true or {@link #getError()} is not empty.
+     * @since 1.0
+     */
+    public Optional<CompletableFuture<Boolean>> getVerificationFuture() {
+        return verificationFuture;
     }
 }
