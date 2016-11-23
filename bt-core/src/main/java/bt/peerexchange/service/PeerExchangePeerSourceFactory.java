@@ -14,6 +14,7 @@ import bt.service.IRuntimeLifecycleBinder;
 import bt.service.PeerSource;
 import bt.service.PeerSourceFactory;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,10 +50,9 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     private ReentrantReadWriteLock peerEventsLock;
 
     @Inject
-    public PeerExchangePeerSourceFactory(IRuntimeLifecycleBinder lifecycleBinder, IPeerConnectionPool connectionPool,
+    public PeerExchangePeerSourceFactory(IRuntimeLifecycleBinder lifecycleBinder,
+                                         Provider<IPeerConnectionPool> connectionPoolProvider,
                                          IMessageDispatcher dispatcher) {
-        connectionPool.addConnectionListener(new Listener());
-
         this.dispatcher = dispatcher;
 
         workers = new ConcurrentHashMap<>();
@@ -61,6 +61,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         peerEventsLock = new ReentrantReadWriteLock();
 
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "PEX-Cleaner"));
+        lifecycleBinder.onStartup(() -> connectionPoolProvider.get().addConnectionListener(new Listener()));
         lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(
                 new Cleaner(), CLEANER_INTERVAL.toMillis(), CLEANER_INTERVAL.toMillis(), TimeUnit.MILLISECONDS));
         lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
