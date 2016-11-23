@@ -16,6 +16,7 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -70,7 +71,19 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
         for (Map.Entry<String, BEObject> entry : changes.entrySet()) {
             String typeName = entry.getKey();
             Integer typeId = ((BEInteger) entry.getValue()).getValue().intValue();
-            existing.put(typeId, typeName);
+            if (typeId == 0) {
+                // by setting type ID to 0 peer signals that he has disabled this extension
+                Iterator<Integer> iter = existing.keySet().iterator();
+                while (iter.hasNext()) {
+                    Integer key = iter.next();
+                    if (typeName.equals(existing.get(key))) {
+                        iter.remove();
+                        break;
+                    }
+                }
+            } else {
+                existing.put(typeId, typeName);
+            }
         }
         return existing;
     }
