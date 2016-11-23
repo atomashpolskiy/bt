@@ -22,7 +22,12 @@ public class ExtendedConnectionHandler implements ConnectionHandler {
 
     @Override
     public boolean handleConnection(PeerConnection connection) {
-        connection.postMessage(extendedHandshakeProvider.get());
+        ExtendedHandshake extendedHandshake = extendedHandshakeProvider.get();
+        // do not send the extended handshake
+        // if local client does not have any extensions turned on
+        if (!extendedHandshake.getData().isEmpty()) {
+            connection.postMessage(extendedHandshake);
+        }
         return true;
     }
 }

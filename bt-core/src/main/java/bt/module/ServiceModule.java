@@ -15,15 +15,15 @@ import bt.protocol.IHandshakeFactory;
 import bt.service.AdhocTorrentRegistry;
 import bt.service.ClasspathApplicationService;
 import bt.service.ConfigurationService;
+import bt.service.DefaultIdService;
 import bt.service.ExecutorServiceProvider;
 import bt.service.IApplicationService;
 import bt.service.IConfigurationService;
-import bt.service.IdService;
 import bt.service.INetworkService;
 import bt.service.IPeerRegistry;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.ITorrentRegistry;
-import bt.service.DefaultIdService;
+import bt.service.IdService;
 import bt.service.NetworkService;
 import bt.service.PeerRegistry;
 import bt.service.PeerSourceFactory;
@@ -37,9 +37,6 @@ import com.google.inject.Module;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -50,67 +47,29 @@ import java.util.concurrent.ExecutorService;
  */
 public class ServiceModule implements Module {
 
-    private Set<PeerSourceFactory> extraPeerSourceFactories;
-    private Set<Class<? extends PeerSourceFactory>> extraPeerSourceFactoryTypes;
-    private Set<Object> messagingAgents;
-    private Set<Class<?>> messagingAgentTypes;
-
     /**
-     * Add a peer source factory instance.
+     * Contribute a peer source factory.
      *
      * @since 1.0
      */
-    public void addPeerSourceFactory(PeerSourceFactory peerSourceFactory) {
-        Objects.requireNonNull(peerSourceFactory);
-        if (extraPeerSourceFactories == null) {
-            extraPeerSourceFactories = new HashSet<>();
-        }
-        extraPeerSourceFactories.add(peerSourceFactory);
+    public static Multibinder<PeerSourceFactory> contributePeerSourceFactory(Binder binder) {
+        return Multibinder.newSetBinder(binder, PeerSourceFactory.class);
     }
 
     /**
-     * Add a peer source factory type.
-     * It will be instantiated by DI container.
+     * Contribute a messaging agent.
      *
      * @since 1.0
      */
-    public void addPeerSourceFactoryType(Class<? extends PeerSourceFactory> peerSourceFactoryType) {
-        Objects.requireNonNull(peerSourceFactoryType);
-        if (extraPeerSourceFactoryTypes == null) {
-            extraPeerSourceFactoryTypes = new HashSet<>();
-        }
-        extraPeerSourceFactoryTypes.add(peerSourceFactoryType);
-    }
-
-    /**
-     * Add a messaging agent instance.
-     *
-     * @since 1.0
-     */
-    public void addMessagingAgent(Object messagingAgent) {
-        Objects.requireNonNull(messagingAgent);
-        if (messagingAgents == null) {
-            messagingAgents = new HashSet<>();
-        }
-        messagingAgents.add(messagingAgent);
-    }
-
-    /**
-     * Add a messaging agent type.
-     * It will be instantiated by DI container.
-     *
-     * @since 1.0
-     */
-    public void addMessagingAgentType(Class<?> messagingAgentType) {
-        Objects.requireNonNull(messagingAgentType);
-        if (messagingAgentTypes == null) {
-            messagingAgentTypes = new HashSet<>();
-        }
-        messagingAgentTypes.add(messagingAgentType);
+    public static Multibinder<Object> contributeMessagingAgent(Binder binder) {
+        return Multibinder.newSetBinder(binder, Object.class, MessagingAgent.class);
     }
 
     @Override
     public void configure(Binder binder) {
+
+        ServiceModule.contributeMessagingAgent(binder);
+        ServiceModule.contributePeerSourceFactory(binder);
 
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
         binder.bind(INetworkService.class).to(NetworkService.class).in(Singleton.class);
@@ -131,21 +90,5 @@ public class ServiceModule implements Module {
         // TODO: register a shutdown hook in the runtime
         binder.bind(ExecutorService.class).annotatedWith(ClientExecutor.class)
                 .toProvider(ExecutorServiceProvider.class).in(Singleton.class);
-
-        Multibinder<PeerSourceFactory> peerSources = Multibinder.newSetBinder(binder, PeerSourceFactory.class);
-        if (extraPeerSourceFactories != null) {
-            extraPeerSourceFactories.forEach(peerSources.addBinding()::toInstance);
-        }
-        if (extraPeerSourceFactoryTypes != null) {
-            extraPeerSourceFactoryTypes.forEach(peerSources.addBinding()::to);
-        }
-
-        Multibinder<Object> messagingAgentsBinder = Multibinder.newSetBinder(binder, Object.class, MessagingAgent.class);
-        if (messagingAgents != null) {
-            messagingAgents.forEach(agent -> messagingAgentsBinder.addBinding().toInstance(agent));
-        }
-        if (messagingAgentTypes != null) {
-            messagingAgentTypes.forEach(agentType -> messagingAgentsBinder.addBinding().to(agentType));
-        }
     }
 }

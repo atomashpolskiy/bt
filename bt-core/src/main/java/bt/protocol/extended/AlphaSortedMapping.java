@@ -1,8 +1,6 @@
 package bt.protocol.extended;
 
-import bt.module.ExtendedMessageHandlers;
 import bt.protocol.handler.MessageHandler;
-import com.google.inject.Inject;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,9 +21,7 @@ public class AlphaSortedMapping implements ExtendedMessageTypeMapping {
     private Map<String, Integer> idMap;
     private Map<Class<?>, String> typeMap;
 
-    @Inject
-    public AlphaSortedMapping(
-            @ExtendedMessageHandlers Map<String, MessageHandler<? extends ExtendedMessage>> handlersByTypeName) {
+    public AlphaSortedMapping(Map<String, MessageHandler<? extends ExtendedMessage>> handlersByTypeName) {
 
         typeMap = new HashMap<>();
 
