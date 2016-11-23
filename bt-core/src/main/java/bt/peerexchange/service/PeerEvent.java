@@ -6,11 +6,11 @@ class PeerEvent implements Comparable<PeerEvent> {
 
     enum Type { ADDED, DROPPED }
 
-    static PeerEvent addedPeer(Peer peer) {
+    static PeerEvent added(Peer peer) {
         return new PeerEvent(Type.ADDED, peer);
     }
 
-    static PeerEvent droppedPeer(Peer peer) {
+    static PeerEvent dropped(Peer peer) {
         return new PeerEvent(Type.DROPPED, peer);
     }
 

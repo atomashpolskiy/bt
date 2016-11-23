@@ -16,6 +16,9 @@ public class PeerExchangeModule implements Module {
         ServiceModule.contributePeerSourceFactory(binder).addBinding()
                 .to(PeerExchangePeerSourceFactory.class).in(Singleton.class);
 
+        ServiceModule.contributeMessagingAgent(binder).addBinding()
+                .to(PeerExchangePeerSourceFactory.class).in(Singleton.class);
+
         ProtocolModule.contributeExtendedMessageHandler(binder)
                 .addBinding("ut_pex").to(PeerExchangeMessageHandler.class);
     }

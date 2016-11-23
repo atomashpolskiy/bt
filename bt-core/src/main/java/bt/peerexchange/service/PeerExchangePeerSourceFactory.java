@@ -4,15 +4,17 @@ import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.IPeerConnectionPool;
-import bt.net.IMessageDispatcher;
 import bt.net.Peer;
 import bt.net.PeerActivityListener;
+import bt.peerexchange.protocol.PeerExchange;
 import bt.protocol.Message;
 import bt.protocol.extended.ExtendedHandshake;
-import bt.peerexchange.protocol.PeerExchange;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.PeerSource;
 import bt.service.PeerSourceFactory;
+import bt.torrent.annotation.Consumes;
+import bt.torrent.annotation.Produces;
+import bt.torrent.messaging.MessageContext;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.slf4j.Logger;
@@ -22,6 +24,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -30,41 +33,60 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerExchangePeerSourceFactory.class);
 
-    private static final Duration PEX_INTERVAL = Duration.ofMinutes(1);
     private static final Duration CLEANER_INTERVAL = Duration.ofSeconds(37);
+    private static final Duration PEX_INTERVAL = Duration.ofMinutes(1);
     private static final int MIN_EVENTS_PER_MESSAGE = 10; // TODO: move this to configuration?
     private static final int MAX_EVENTS_PER_MESSAGE = 50;
 
-    private IMessageDispatcher dispatcher;
-
-    private Map<Peer, MessageWorker> workers;
     private Map<TorrentId, PeerExchangePeerSource> peerSources;
-    private BlockingQueue<PeerEvent> peerEvents;
 
-    private ReentrantReadWriteLock peerEventsLock;
+    private BlockingQueue<PeerEvent> peerEvents;
+    private ReentrantReadWriteLock rwLock;
+
+    private Set<Peer> peers;
+    private Map<Peer, Long> lastSentPEXMessage;
 
     @Inject
-    public PeerExchangePeerSourceFactory(IRuntimeLifecycleBinder lifecycleBinder,
-                                         Provider<IPeerConnectionPool> connectionPoolProvider,
-                                         IMessageDispatcher dispatcher) {
-        this.dispatcher = dispatcher;
-
-        workers = new ConcurrentHashMap<>();
-        peerSources = new ConcurrentHashMap<>();
-        peerEvents = new PriorityBlockingQueue<>();
-        peerEventsLock = new ReentrantReadWriteLock();
+    public PeerExchangePeerSourceFactory(Provider<IPeerConnectionPool> connectionPoolProvider,
+                                  IRuntimeLifecycleBinder lifecycleBinder) {
+        this.peerSources = new ConcurrentHashMap<>();
+        this.peerEvents = new PriorityBlockingQueue<>();
+        this.rwLock = new ReentrantReadWriteLock();
+        this.peers = ConcurrentHashMap.newKeySet();
+        this.lastSentPEXMessage = new ConcurrentHashMap<>();
 
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "PEX-Cleaner"));
-        lifecycleBinder.onStartup(() -> connectionPoolProvider.get().addConnectionListener(new Listener()));
+        lifecycleBinder.onStartup(() -> connectionPoolProvider.get()
+                .addConnectionListener(createPeerActivityListener()));
         lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(
                 new Cleaner(), CLEANER_INTERVAL.toMillis(), CLEANER_INTERVAL.toMillis(), TimeUnit.MILLISECONDS));
         lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
+    }
+
+    private PeerActivityListener createPeerActivityListener() {
+        return new PeerActivityListener() {
+            @Override
+            public void onPeerDiscovered(Peer peer) {
+                // ignore
+            }
+
+            @Override
+            public void onPeerConnected(TorrentId torrentId, Peer peer) {
+                peerEvents.add(PeerEvent.added(peer));
+            }
+
+            @Override
+            public void onPeerDisconnected(Peer peer) {
+                peerEvents.add(PeerEvent.dropped(peer));
+                peers.remove(peer);
+                lastSentPEXMessage.remove(peer);
+            }
+        };
     }
 
     @Override
@@ -84,22 +106,76 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         return peerSource;
     }
 
+    @Consumes
+    public void consume(ExtendedHandshake handshake, MessageContext messageContext) {
+        if (handshake.getSupportedMessageTypes().contains("ut_pex")) {
+            // TODO: peer may eventually turn off the PEX extension
+            // moreover the extended handshake message type map is additive,
+            // so we can't learn about the peer turning off extensions solely from the message
+            peers.add(messageContext.getPeer());
+        }
+    }
+
+    @Consumes
+    public void consume(PeerExchange message, MessageContext messageContext) {
+        messageContext.getTorrentId().ifPresent(torrentId ->
+                getOrCreatePeerSource(torrentId).addMessage(message));
+    }
+
+    @Produces
+    public void produce(Consumer<Message> messageConsumer, MessageContext messageContext) {
+        Peer peer = messageContext.getPeer();
+        long currentTime = System.currentTimeMillis();
+        long lastSentPEXMessageToPeer = lastSentPEXMessage.getOrDefault(peer, 0L);
+
+        if (peers.contains(peer) && (currentTime - lastSentPEXMessageToPeer) - PEX_INTERVAL.toMillis() >= 0) {
+            List<PeerEvent> events = new ArrayList<>();
+
+            rwLock.readLock().lock();
+            try {
+                for (PeerEvent event : peerEvents) {
+                    if (event.getInstant() - lastSentPEXMessageToPeer >= 0) {
+                        events.add(event);
+                    }
+                    if (events.size() >= MAX_EVENTS_PER_MESSAGE) {
+                        break;
+                    }
+                }
+            } finally {
+                rwLock.readLock().unlock();
+            }
+
+            if (events.size() >= MIN_EVENTS_PER_MESSAGE) {
+                lastSentPEXMessage.put(peer, currentTime);
+                PeerExchange.Builder messageBuilder = PeerExchange.builder();
+                events.forEach(event -> {
+                    switch (event.getType()) {
+                        case ADDED: {
+                            messageBuilder.added(event.getPeer());
+                            break;
+                        }
+                        case DROPPED: {
+                            messageBuilder.dropped(event.getPeer());
+                            break;
+                        }
+                        default: {
+                            throw new BtException("Unknown event type: " + event.getType().name());
+                        }
+                    }
+                });
+                messageConsumer.accept(messageBuilder.build());
+            }
+        }
+    }
+
     private class Cleaner implements Runnable {
 
         @Override
         public void run() {
-            peerEventsLock.writeLock().lock();
+            rwLock.writeLock().lock();
             try {
-
-                long lruEventTime = Long.MAX_VALUE;
-                for (MessageWorker worker : workers.values()) {
-                    if (worker.isPEXSupported()) {
-                        long workerLruEventTime = worker.getLastSentPEXMessageToPeer();
-                        if (workerLruEventTime < lruEventTime) {
-                            lruEventTime = workerLruEventTime;
-                        }
-                    }
-                }
+                long lruEventTime = lastSentPEXMessage.values().stream()
+                        .reduce(Long.MAX_VALUE, (a, b) -> (a < b) ? a : b);;
 
                 if (LOGGER.isTraceEnabled()) {
                     LOGGER.trace("Prior to cleaning events. LRU event time: {}, peer events: {}", lruEventTime, peerEvents);
@@ -115,125 +191,8 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
                 }
 
             } finally {
-                peerEventsLock.writeLock().unlock();
+                rwLock.writeLock().unlock();
             }
-        }
-    }
-
-    private class Listener implements PeerActivityListener {
-
-        @Override
-        public void onPeerConnected(TorrentId torrentId, Peer peer) {
-            peerEvents.add(PeerEvent.addedPeer(peer));
-
-            MessageWorker worker = workers.get(peer);
-            if (worker == null) {
-                worker = new MessageWorker(getOrCreatePeerSource(torrentId));
-                MessageWorker existing = workers.putIfAbsent(peer, worker);
-                if (existing == null) {
-                    dispatcher.addMessageConsumer(peer, worker);
-                    dispatcher.addMessageSupplier(peer, worker);
-                }
-            }
-        }
-
-        @Override
-        public void onPeerDiscovered(Peer peer) {
-            // ignore
-        }
-
-        @Override
-        public void onPeerDisconnected(Peer peer) {
-            peerEvents.add(PeerEvent.droppedPeer(peer));
-            workers.remove(peer);
-        }
-    }
-
-    private class MessageWorker implements Consumer<Message>, Supplier<Message> {
-
-        private PeerExchangePeerSource peerSource;
-
-        private volatile boolean peerSupportsPEX;
-        private volatile long lastSentPEXMessageToPeer;
-
-        MessageWorker(PeerExchangePeerSource peerSource) {
-            this.peerSource = peerSource;
-            lastSentPEXMessageToPeer = 0;
-        }
-
-        boolean isPEXSupported() {
-            return peerSupportsPEX;
-        }
-
-        long getLastSentPEXMessageToPeer() {
-            return lastSentPEXMessageToPeer;
-        }
-
-        @Override
-        public void accept(Message message) {
-
-            if (ExtendedHandshake.class.equals(message.getClass())) {
-                ExtendedHandshake handshake = (ExtendedHandshake) message;
-                if (handshake.getSupportedMessageTypes().contains("ut_pex")) {
-                    // TODO: peer may eventually turn off the PEX extension
-                    // moreover the extended handshake message type map is additive,
-                    // so we can't learn about the peer turning off extensions solely from the message
-                    peerSupportsPEX = true;
-                }
-
-            } else if (PeerExchange.class.equals(message.getClass())) {
-                PeerExchange peerExchange = (PeerExchange) message;
-                peerSource.addMessage(peerExchange);
-            }
-        }
-
-        @Override
-        public Message get() {
-
-            long currentTime = System.currentTimeMillis();
-
-            if (peerSupportsPEX && (currentTime - lastSentPEXMessageToPeer) - PEX_INTERVAL.toMillis() >= 0) {
-
-                List<PeerEvent> events = new ArrayList<>();
-
-                peerEventsLock.readLock().lock();
-                try {
-                    for (PeerEvent event : peerEvents) {
-                        if (event.getInstant() - lastSentPEXMessageToPeer >= 0) {
-                            events.add(event);
-                        }
-                        if (events.size() >= MAX_EVENTS_PER_MESSAGE) {
-                            break;
-                        }
-                    }
-                } finally {
-                    peerEventsLock.readLock().unlock();
-                }
-
-                if (events.size() >= MIN_EVENTS_PER_MESSAGE) {
-
-                    lastSentPEXMessageToPeer = currentTime;
-
-                    PeerExchange.Builder messageBuilder = PeerExchange.builder();
-                    events.forEach(event -> {
-                        switch (event.getType()) {
-                            case ADDED: {
-                                messageBuilder.added(event.getPeer());
-                                break;
-                            }
-                            case DROPPED: {
-                                messageBuilder.dropped(event.getPeer());
-                                break;
-                            }
-                            default: {
-                                throw new BtException("Unknown event type: " + event.getType().name());
-                            }
-                        }
-                    });
-                    return messageBuilder.build();
-                }
-            }
-            return null;
         }
     }
 }

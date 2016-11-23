@@ -34,7 +34,7 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
         this.torrent = torrent;
 
         this.sessionState = new DefaultTorrentSessionState(pieceManager.getBitfield());
-        this.worker = new TorrentWorker(pieceManager, dispatcher, peerWorkerFactory);
+        this.worker = new TorrentWorker(torrent.getTorrentId(), pieceManager, dispatcher, peerWorkerFactory);
     }
 
     @Override

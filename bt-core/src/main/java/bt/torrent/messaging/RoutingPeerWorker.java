@@ -1,5 +1,6 @@
 package bt.torrent.messaging;
 
+import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.protocol.Choke;
 import bt.protocol.Have;
@@ -15,6 +16,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -38,9 +40,12 @@ public class RoutingPeerWorker implements IPeerWorker {
 
     private Choker choker;
 
-    public RoutingPeerWorker(Peer peer, Set<MessageConsumer<?>> messageConsumers, Set<MessageProducer> messageProducers) {
+    public RoutingPeerWorker(Peer peer,
+                             Optional<TorrentId> torrentId,
+                             Set<MessageConsumer<?>> messageConsumers,
+                             Set<MessageProducer> messageProducers) {
         this.connectionState = new ConnectionState();
-        this.context = new MessageContext(peer, connectionState);
+        this.context = new MessageContext(torrentId, peer, connectionState);
         this.messageProducers = messageProducers;
         this.outgoingMessages = new LinkedBlockingDeque<>();
         this.choker = Choker.choker();

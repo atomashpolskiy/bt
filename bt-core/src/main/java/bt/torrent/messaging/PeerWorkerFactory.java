@@ -1,5 +1,6 @@
 package bt.torrent.messaging;
 
+import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.protocol.Message;
 import bt.torrent.compiler.CompilerVisitor;
@@ -7,6 +8,7 @@ import bt.torrent.compiler.MessagingAgentCompiler;
 
 import java.lang.invoke.MethodHandle;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 public class PeerWorkerFactory implements IPeerWorkerFactory {
@@ -71,6 +73,11 @@ public class PeerWorkerFactory implements IPeerWorkerFactory {
 
     @Override
     public IPeerWorker createPeerWorker(Peer peer) {
-        return new RoutingPeerWorker(peer, consumers, producers);
+        return new RoutingPeerWorker(peer, Optional.empty(), consumers, producers);
+    }
+
+    @Override
+    public IPeerWorker createPeerWorker(TorrentId torrentId, Peer peer) {
+        return new RoutingPeerWorker(peer, Optional.of(torrentId), consumers, producers);
     }
 }

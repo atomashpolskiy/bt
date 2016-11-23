@@ -1,5 +1,6 @@
 package bt.torrent.messaging;
 
+import bt.metainfo.TorrentId;
 import bt.net.IMessageDispatcher;
 import bt.net.Peer;
 import bt.protocol.Have;
@@ -24,14 +25,16 @@ public class TorrentWorker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TorrentWorker.class);
 
+    private TorrentId torrentId;
     private IPieceManager pieceManager;
     private IMessageDispatcher dispatcher;
 
     private IPeerWorkerFactory peerWorkerFactory;
-    private ConcurrentMap<Peer, PeerAwareWorker> peerMap;
+    private ConcurrentMap<Peer, PieceAnnouncingPeerWorker> peerMap;
 
-    public TorrentWorker(IPieceManager pieceManager, IMessageDispatcher dispatcher,
+    public TorrentWorker(TorrentId torrentId, IPieceManager pieceManager, IMessageDispatcher dispatcher,
                          IPeerWorkerFactory peerWorkerFactory) {
+        this.torrentId = torrentId;
         this.pieceManager = pieceManager;
         this.dispatcher = dispatcher;
         this.peerWorkerFactory = peerWorkerFactory;
@@ -44,8 +47,8 @@ public class TorrentWorker {
      * @since 1.0
      */
     public void addPeer(Peer peer) {
-        PeerAwareWorker worker = createPeerWorker(peer);
-        PeerAwareWorker existing = peerMap.putIfAbsent(peer, worker);
+        PieceAnnouncingPeerWorker worker = createPeerWorker(peer);
+        PieceAnnouncingPeerWorker existing = peerMap.putIfAbsent(peer, worker);
         if (existing == null) {
             dispatcher.addMessageConsumer(peer, worker::accept);
             dispatcher.addMessageSupplier(peer, worker::get);
@@ -55,8 +58,8 @@ public class TorrentWorker {
         }
     }
 
-    private PeerAwareWorker createPeerWorker(Peer peer) {
-        return new PeerAwareWorker(peerWorkerFactory.createPeerWorker(peer));
+    private PieceAnnouncingPeerWorker createPeerWorker(Peer peer) {
+        return new PieceAnnouncingPeerWorker(peerWorkerFactory.createPeerWorker(torrentId, peer));
     }
 
     /**
@@ -97,14 +100,14 @@ public class TorrentWorker {
         return (worker == null) ? null : worker.getConnectionState();
     }
 
-    private class PeerAwareWorker implements IPeerWorker {
+    private class PieceAnnouncingPeerWorker implements IPeerWorker {
 
         private final IPeerWorker delegate;
-        private final Queue<Message> broadcastQueue;
+        private final Queue<Have> pieceAnnouncements;
 
-        PeerAwareWorker(IPeerWorker delegate) {
+        PieceAnnouncingPeerWorker(IPeerWorker delegate) {
             this.delegate = delegate;
-            this.broadcastQueue = new ConcurrentLinkedQueue<>();
+            this.pieceAnnouncements = new ConcurrentLinkedQueue<>();
         }
 
         @Override
@@ -119,7 +122,7 @@ public class TorrentWorker {
 
         @Override
         public Message get() {
-            Message message = broadcastQueue.poll();;
+            Message message = pieceAnnouncements.poll();;
             if (message != null) {
                 return message;
             }
@@ -129,15 +132,15 @@ public class TorrentWorker {
                 Have have = (Have) message;
                 peerMap.values().forEach(worker -> {
                     if (this != worker) {
-                        worker.getBroadcastQueue().add(have);
+                        worker.getPieceAnnouncements().add(have);
                     }
                 });
             }
             return message;
         }
 
-        Queue<Message> getBroadcastQueue() {
-            return broadcastQueue;
+        Queue<Have> getPieceAnnouncements() {
+            return pieceAnnouncements;
         }
     }
 }
