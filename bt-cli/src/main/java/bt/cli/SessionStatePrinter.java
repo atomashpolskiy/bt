@@ -1,4 +1,4 @@
-package bt.example.cli;
+package bt.cli;
 
 import bt.metainfo.Torrent;
 import bt.net.Peer;

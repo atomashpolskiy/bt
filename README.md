@@ -6,7 +6,7 @@
 
 [Website](http://atomashpolskiy.github.io/bt/)
 
-[Examples](https://github.com/atomashpolskiy/bt/tree/master/examples)
+[CLI Launcher](https://github.com/atomashpolskiy/bt/tree/master/bt-cli)
 
 ## What makes Bt stand out from the crowd
 

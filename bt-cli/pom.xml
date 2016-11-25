@@ -5,20 +5,18 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>bt-client</artifactId>
+        <artifactId>bt-parent</artifactId>
         <groupId>bt</groupId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>examples</artifactId>
-    <name>Bt Examples</name>
-    <description>Examples of Bt library usage</description>
+    <artifactId>bt-cli</artifactId>
+    <name>Bt CLI Launcher</name>
+    <description>Bt Command Line Launcher</description>
 
     <properties>
-        <bt-version>1.0-SNAPSHOT</bt-version>
-        <bootique-version>0.18</bootique-version>
-        <main.class>bt.example.Examples</main.class>
+        <main.class>bt.cli.CliClient</main.class>
         <jopts-version>5.0.2</jopts-version>
         <lanterna-version>3.0.0-beta3</lanterna-version>
         <slf4j-version>1.7.21</slf4j-version>
@@ -26,7 +24,7 @@
     </properties>
 
     <build>
-        <finalName>examples</finalName>
+        <finalName>bt-launcher</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -56,26 +54,7 @@
         <dependency>
             <groupId>bt</groupId>
             <artifactId>bt-core</artifactId>
-            <version>${bt-version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.bootique.bom</groupId>
-            <artifactId>bootique-bom</artifactId>
-            <version>${bootique-version}</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.nhl.bootique.bom</groupId>
-            <artifactId>bootique-bom</artifactId>
-            <version>${bootique-version}</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.nhl.bootique</groupId>
-            <artifactId>bootique</artifactId>
-            <version>${bootique-version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>net.sf.jopt-simple</groupId>

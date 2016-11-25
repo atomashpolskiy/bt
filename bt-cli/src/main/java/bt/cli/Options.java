@@ -1,4 +1,4 @@
-package bt.example.cli;
+package bt.cli;
 
 import joptsimple.OptionException;
 import joptsimple.OptionParser;

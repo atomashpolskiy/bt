@@ -1,4 +1,4 @@
-package bt.example.cli;
+package bt.cli;
 
 import bt.Bt;
 import bt.data.Storage;

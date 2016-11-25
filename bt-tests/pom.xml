@@ -5,15 +5,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>bt-client</artifactId>
+        <artifactId>bt-parent</artifactId>
         <groupId>bt</groupId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     
     <artifactId>bt-tests</artifactId>
-    <name>BitTorrent v3 Client: Tests</name>
-    <description>BitTorrent v3 Client Tests</description>
+    <name>Bt Tests</name>
 
     <dependencies>
         <dependency>
