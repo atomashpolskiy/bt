@@ -2,13 +2,7 @@ package bt.net;
 
 import bt.BtException;
 import bt.metainfo.TorrentId;
-import bt.module.BitTorrentProtocol;
-import bt.protocol.Message;
-import bt.protocol.handler.MessageHandler;
-import bt.service.IConfigurationService;
-import bt.service.INetworkService;
 import bt.service.IRuntimeLifecycleBinder;
-import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,6 +10,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -37,12 +32,10 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionPool.class);
 
     private PeerConnectionFactory connectionFactory;
-    private IConfigurationService configurationService;
-
-    private ScheduledExecutorService cleaner;
     private IConnectionHandlerFactory connectionHandlerFactory;
 
     private ExecutorService executor;
+    private ScheduledExecutorService cleaner;
     private ScheduledExecutorService connectionRequestor;
 
     private final Map<Peer, CompletableFuture<IPeerConnection>> pendingConnections;
@@ -51,16 +44,17 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private ReentrantReadWriteLock listenerLock;
     private ReentrantLock connectionLock;
 
-    @Inject
-    public PeerConnectionPool(INetworkService networkService, @BitTorrentProtocol MessageHandler<Message> messageHandler,
-                              IRuntimeLifecycleBinder lifecycleBinder, IConnectionHandlerFactory connectionHandlerFactory,
-                              IConfigurationService configurationService) {
+    private Duration peerConnectionInactivityThreshold;
 
-        SocketChannelFactory socketChannelFactory = new SocketChannelFactory(networkService);
-        this.connectionFactory = new PeerConnectionFactory(messageHandler, socketChannelFactory, configurationService);
+    public PeerConnectionPool(SocketChannelFactory socketChannelFactory,
+                              PeerConnectionFactory connectionFactory,
+                              IConnectionHandlerFactory connectionHandlerFactory,
+                              IRuntimeLifecycleBinder lifecycleBinder,
+                              Duration peerConnectionInactivityThreshold) {
 
+        this.connectionFactory = connectionFactory;
         this.connectionHandlerFactory = connectionHandlerFactory;
-        this.configurationService = configurationService;
+        this.peerConnectionInactivityThreshold = peerConnectionInactivityThreshold;
 
         pendingConnections = new ConcurrentHashMap<>();
         connections = new ConcurrentHashMap<>();
@@ -239,7 +233,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                         iter.remove();
 
                     } else if (System.currentTimeMillis() - connection.getLastActive()
-                            >= configurationService.getMaxPeerInactivityInterval()) {
+                            >= peerConnectionInactivityThreshold.toMillis()) {
 
                         if (LOGGER.isDebugEnabled()) {
                             LOGGER.debug("Removing inactive peer connection: " + connection.getRemotePeer());

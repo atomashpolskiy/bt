@@ -16,7 +16,7 @@ import java.nio.channels.spi.SelectorProvider;
  *
  * @since 1.0
  */
-class SocketChannelFactory {
+public class SocketChannelFactory {
 
     private INetworkService networkService;
     private SelectorProvider selector;

@@ -6,12 +6,15 @@ import bt.it.fixture.SharedTrackerFeature;
 import bt.it.fixture.SharedTrackerFeature.PeerFilter;
 import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
-import bt.it.fixture.TestConfigurationFeature;
+import bt.peerexchange.PeerExchangeConfig;
 import bt.peerexchange.PeerExchangeModule;
 import bt.net.InetPeer;
 import bt.net.Peer;
+import bt.runtime.Config;
 import org.junit.Rule;
+import org.junit.Test;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,17 +35,33 @@ public class PeerExchange_IT extends BaseBtTest {
 
     @Rule
     public Swarm swarm = buildSwarm().withoutFiles()
+            .config(new Config() {
+                @Override
+                public Duration getPeerDiscoveryInterval() {
+                    return Duration.ofSeconds(1);
+                }
+            })
             .seeders(SEEDERS_COUNT).leechers(LEECHERS_COUNT).startingPort(6891).build();
 
     public PeerExchange_IT() {
         super(Arrays.asList(
-                (configuration, runtimeBuilder) -> runtimeBuilder.module(new PeerExchangeModule()),
-                new PersonalizedThreadNamesFeature(), new TestConfigurationFeature(),
+                (configuration, runtimeBuilder) ->
+                        runtimeBuilder.module(new PeerExchangeModule(new PeerExchangeConfig() {
+                            @Override
+                            public Duration getMinMessageInterval() {
+                                return Duration.ofSeconds(1);
+                            }
+
+                            @Override
+                            public int getMinEventsPerMessage() {
+                                return 1;
+                            }
+                        })),
+                new PersonalizedThreadNamesFeature(),
                 new SharedTrackerFeature(new PEXPeerFilter(SEEDERS_COUNT + LEECHERS_COUNT, 1))));
     }
 
-    // disabling the test until proper configuration management is added to Bt
-//    @Test
+    @Test
     public void testPeerExchange() {
 
         ConcurrentMap<Peer, Set<Peer>> discoveredPeers = new ConcurrentHashMap<>();
@@ -54,7 +73,7 @@ public class PeerExchange_IT extends BaseBtTest {
                 seeder.getHandle().startAsync(state -> discoveredPeers.put(seeder.getPeer(), state.getConnectedPeers()), 1000));
 
         try {
-            Thread.sleep(10000L);
+            Thread.sleep(5000L);
         } catch (InterruptedException e) {
             throw new RuntimeException("Test unexpectedly interrupted", e);
         }

@@ -1,23 +1,20 @@
 package bt.torrent.data;
 
 import bt.data.IDataDescriptor;
-import bt.service.IConfigurationService;
 import bt.service.IRuntimeLifecycleBinder;
-import com.google.inject.Inject;
 
 public class DataWorkerFactory implements IDataWorkerFactory {
 
-    private IConfigurationService configurationService;
     private IRuntimeLifecycleBinder lifecycleBinder;
+    private int maxIOQueueSize;
 
-    @Inject
-    public DataWorkerFactory(IConfigurationService configurationService, IRuntimeLifecycleBinder lifecycleBinder) {
-        this.configurationService = configurationService;
+    public DataWorkerFactory(IRuntimeLifecycleBinder lifecycleBinder, int maxIOQueueSize) {
         this.lifecycleBinder = lifecycleBinder;
+        this.maxIOQueueSize = maxIOQueueSize;
     }
 
     @Override
     public IDataWorker createWorker(IDataDescriptor dataDescriptor) {
-        return new DataWorker(lifecycleBinder, dataDescriptor, configurationService.getIOQueueMaxLength());
+        return new DataWorker(lifecycleBinder, dataDescriptor, maxIOQueueSize);
     }
 }

@@ -1,20 +1,17 @@
 package bt.data;
 
 import bt.metainfo.Torrent;
-import bt.service.IConfigurationService;
-import com.google.inject.Inject;
 
 public class DataDescriptorFactory implements IDataDescriptorFactory {
 
-    private IConfigurationService configurationService;
+    private int transferBlockSize;
 
-    @Inject
-    public DataDescriptorFactory(IConfigurationService configurationService) {
-        this.configurationService = configurationService;
+    public DataDescriptorFactory(int transferBlockSize) {
+        this.transferBlockSize = transferBlockSize;
     }
 
     @Override
     public IDataDescriptor createDescriptor(Torrent torrent, Storage storage) {
-        return new DataDescriptor(storage, configurationService, torrent);
+        return new DataDescriptor(storage, torrent, transferBlockSize);
     }
 }

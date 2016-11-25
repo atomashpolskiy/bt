@@ -2,10 +2,9 @@ package bt.net;
 
 import bt.metainfo.TorrentId;
 import bt.protocol.IHandshakeFactory;
-import bt.service.IConfigurationService;
 import bt.service.ITorrentRegistry;
-import com.google.inject.Inject;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -16,29 +15,29 @@ public class ConnectionHandlerFactory implements IConnectionHandlerFactory {
 
     private IHandshakeFactory handshakeFactory;
     private ConnectionHandler incomingHandler;
-    private IConfigurationService configurationService;
+    private Duration peerHandshakeTimeout;
 
     private List<ConnectionHandler> connectionHandlers;
     private Set<HandshakeHandler> handshakeHandlers;
 
     private Map<TorrentId, ConnectionHandler> outgoingHandlers;
 
-    @Inject
     public ConnectionHandlerFactory(IHandshakeFactory handshakeFactory, ITorrentRegistry torrentRegistry,
                                     Set<ConnectionHandler> connectionHandlers, Set<HandshakeHandler> handshakeHandlers,
-                                    IConfigurationService configurationService) {
+                                    Duration peerHandshakeTimeout) {
+
         this.handshakeFactory = handshakeFactory;
-        this.configurationService = configurationService;
 
         this.connectionHandlers = new ArrayList<>();
         this.connectionHandlers.addAll(connectionHandlers);
-
-        incomingHandler = new ConnectionSequence(
-                new IncomingHandshakeHandler(handshakeFactory, torrentRegistry, handshakeHandlers, configurationService),
+        this.incomingHandler = new ConnectionSequence(
+                new IncomingHandshakeHandler(handshakeFactory, torrentRegistry, handshakeHandlers, peerHandshakeTimeout),
                 this.connectionHandlers);
 
-        outgoingHandlers = new ConcurrentHashMap<>();
+        this.outgoingHandlers = new ConcurrentHashMap<>();
         this.handshakeHandlers = handshakeHandlers;
+
+        this.peerHandshakeTimeout = peerHandshakeTimeout;
     }
 
     @Override
@@ -53,7 +52,7 @@ public class ConnectionHandlerFactory implements IConnectionHandlerFactory {
         if (outgoing == null) {
             outgoing = new ConnectionSequence(
                     new OutgoingHandshakeHandler(handshakeFactory, torrentId, handshakeHandlers,
-                            configurationService.getHandshakeTimeOut()),
+                            peerHandshakeTimeout.toMillis()),
                     connectionHandlers);
 
             ConnectionHandler existing = outgoingHandlers.putIfAbsent(torrentId, outgoing);

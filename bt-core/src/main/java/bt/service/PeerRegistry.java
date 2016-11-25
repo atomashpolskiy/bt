@@ -5,10 +5,10 @@ import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.tracker.ITrackerService;
 import bt.tracker.TrackerPeerSourceFactory;
-import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -32,10 +32,12 @@ public class PeerRegistry implements IPeerRegistry {
 
     private ConcurrentMap<Torrent, List<Consumer<Peer>>> peerConsumers;
 
-    @Inject
-    public PeerRegistry(IRuntimeLifecycleBinder lifecycleBinder, INetworkService networkService,
-                        IdService idService, ITrackerService trackerService,
-                        Set<PeerSourceFactory> extraPeerSourceFactories) {
+    public PeerRegistry(IRuntimeLifecycleBinder lifecycleBinder,
+                        INetworkService networkService,
+                        IdService idService,
+                        ITrackerService trackerService,
+                        Set<PeerSourceFactory> extraPeerSourceFactories,
+                        Duration peerDiscoveryInterval) {
 
         this.peerConsumers = new ConcurrentHashMap<>();
         this.localPeer = new InetPeer(networkService.getInetAddress(), networkService.getPort(), idService.getLocalPeerId());
@@ -43,12 +45,13 @@ public class PeerRegistry implements IPeerRegistry {
         this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService);
         this.extraPeerSourceFactories = extraPeerSourceFactories;
 
-        createExecutor(lifecycleBinder);
+        createExecutor(lifecycleBinder, peerDiscoveryInterval);
     }
 
-    private void createExecutor(IRuntimeLifecycleBinder lifecycleBinder) {
+    private void createExecutor(IRuntimeLifecycleBinder lifecycleBinder, Duration peerDiscoveryInterval) {
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "Peer Registry"));
-        lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(this::collectAndVisitPeers, 1, 5, TimeUnit.SECONDS));
+        lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(
+                this::collectAndVisitPeers, 1, peerDiscoveryInterval.getSeconds(), TimeUnit.SECONDS));
         lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
     }
 
@@ -104,6 +107,7 @@ public class PeerRegistry implements IPeerRegistry {
         consumers.add(consumer);
     }
 
+    // TODO: someone should call this after torrent is stopped/completed
     @Override
     public void removePeerConsumers(Torrent torrent) {
         peerConsumers.remove(torrent);

@@ -5,7 +5,6 @@ import bt.it.fixture.PersonalizedThreadNamesFeature;
 import bt.it.fixture.SharedTrackerFeature;
 import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
-import bt.it.fixture.TestConfigurationFeature;
 import bt.runtime.BtClient;
 import org.junit.Rule;
 import org.junit.Test;
@@ -26,7 +25,7 @@ public class Swarm_IT extends BaseBtTest {
     public Swarm swarm = buildSwarm().files(getSingleFile()).seeders(10).leechers(10).startingPort(6891).build();
 
     public Swarm_IT() {
-        super(Arrays.asList(new SharedTrackerFeature(), new PersonalizedThreadNamesFeature(), new TestConfigurationFeature()));
+        super(Arrays.asList(new SharedTrackerFeature(), new PersonalizedThreadNamesFeature()));
     }
 
     @Test

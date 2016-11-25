@@ -12,7 +12,6 @@ import bt.runtime.BtRuntime;
 import bt.runtime.DefaultBtClient;
 import bt.runtime.LazyBtClient;
 import bt.runtime.RuntimeAwareBtClient;
-import bt.service.IConfigurationService;
 import bt.service.IPeerRegistry;
 import bt.service.ITorrentRegistry;
 import bt.torrent.DefaultTorrentSession;
@@ -183,14 +182,13 @@ public class Bt {
     private TorrentSession createSession(Torrent torrent, ITorrentDescriptor descriptor, IDataWorker dataWorker) {
 
         IPeerConnectionPool connectionPool = runtime.service(IPeerConnectionPool.class);
-        IConfigurationService configurationService = runtime.service(IConfigurationService.class);
         IMessageDispatcher messageDispatcher = runtime.service(IMessageDispatcher.class);
 
         PieceManager pieceManager = new PieceManager(descriptor.getDataDescriptor().getBitfield(), pieceSelectionStrategy);
         IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceManager, dataWorker);
 
-        DefaultTorrentSession session = new DefaultTorrentSession(connectionPool, configurationService,
-                pieceManager, messageDispatcher, peerWorkerFactory, torrent);
+        DefaultTorrentSession session = new DefaultTorrentSession(connectionPool, pieceManager,
+                messageDispatcher, peerWorkerFactory, torrent, runtime.getConfig().getMaxPeerConnectionsPerTorrent());
 
         IPeerRegistry peerRegistry = runtime.service(IPeerRegistry.class);
         peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);

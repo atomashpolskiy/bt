@@ -2,6 +2,7 @@ package bt.it.fixture;
 
 import bt.runtime.BtRuntime;
 import bt.runtime.BtRuntimeBuilder;
+import bt.runtime.Config;
 import bt.service.INetworkService;
 
 import java.net.InetAddress;
@@ -16,12 +17,12 @@ public class BtTestRuntimeBuilder {
     private BtRuntimeBuilder builder;
     private Collection<BtTestRuntimeFeature> features;
 
-    protected BtTestRuntimeBuilder(InetAddress address, int port) {
+    protected BtTestRuntimeBuilder(Config config, InetAddress address, int port) {
 
         this.address = address;
         this.port = port;
 
-        builder = BtRuntime.builder();
+        builder = BtRuntime.builder(config);
         builder.module(binder -> {
             binder.bind(INetworkService.class).toInstance(new INetworkService() {
                 @Override

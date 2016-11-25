@@ -8,6 +8,7 @@ import bt.data.IChunkDescriptor;
 import bt.data.IDataDescriptor;
 import bt.data.IDataDescriptorFactory;
 import bt.metainfo.Torrent;
+import bt.runtime.Config;
 import bt.torrent.Bitfield;
 import org.junit.rules.ExternalResource;
 import org.slf4j.Logger;
@@ -94,6 +95,7 @@ public class Swarm extends ExternalResource {
 
         private File root;
         private BtTestRuntimeFactory runtimeFactory;
+        private Config config;
         private Collection<BtTestRuntimeFeature> features;
 
         private boolean withoutFiles;
@@ -106,12 +108,18 @@ public class Swarm extends ExternalResource {
         private SwarmBuilder(File root, BtTestRuntimeFactory runtimeFactory) {
             this.root = Objects.requireNonNull(root);
             this.runtimeFactory = Objects.requireNonNull(runtimeFactory);
-            startingPort = 6891;
+            this.config = new Config();
+            this.startingPort = 6891;
         }
 
         private SwarmBuilder(File root, BtTestRuntimeFactory runtimeFactory, Collection<BtTestRuntimeFeature> features) {
             this(root, runtimeFactory);
             this.features = Objects.requireNonNull(features);
+        }
+
+        public SwarmBuilder config(Config config) {
+            this.config = config;
+            return this;
         }
 
         public SwarmBuilder seeders(int count) {
@@ -189,7 +197,7 @@ public class Swarm extends ExternalResource {
 
         private BtRuntime createPeerRuntime(int port) {
 
-            BtTestRuntimeBuilder runtimeBuilder = runtimeFactory.buildRuntime(localhostAddress(), port);
+            BtTestRuntimeBuilder runtimeBuilder = runtimeFactory.buildRuntime(config, localhostAddress(), port);
             features.forEach(runtimeBuilder::feature);
 
             if (withoutFiles) {

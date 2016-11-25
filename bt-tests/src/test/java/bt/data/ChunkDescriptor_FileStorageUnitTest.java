@@ -2,8 +2,8 @@ package bt.data;
 
 import bt.data.file.FileSystemStorage;
 import bt.metainfo.Torrent;
+import bt.runtime.Config;
 import bt.service.CryptoUtil;
-import bt.service.IConfigurationService;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -26,19 +26,14 @@ import static org.mockito.Mockito.when;
 public class ChunkDescriptor_FileStorageUnitTest {
 
     private static File rootDirectory;
-
     private static Storage storage;
-    private static IConfigurationService configurationService;
+    private static int transferBlockSize;
 
     @BeforeClass
     public static void setUp() {
         rootDirectory = new File("target/rt");
-
         storage = new FileSystemStorage(rootDirectory);
-
-        configurationService = mock(IConfigurationService.class);
-        when(configurationService.getTransferBlockSize()).thenReturn(4L);
-        when(configurationService.shouldVerifyChunksOnInit()).thenReturn(false);
+        transferBlockSize = 4;
     }
 
     private byte[] SINGLE_FILE = new byte[] {
@@ -62,7 +57,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
                 },
                 mockTorrentFile(fileSize, fileName));
 
-        IDataDescriptor descriptor = new DataDescriptor(storage, configurationService, torrent);
+        IDataDescriptor descriptor = new DataDescriptor(storage, torrent, transferBlockSize);
         assertEquals(4, descriptor.getChunkDescriptors().size());
 
         return descriptor;
@@ -202,7 +197,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
                 mockTorrentFile(fileSize3, fileName3), mockTorrentFile(fileSize4, fileName4),
                 mockTorrentFile(fileSize5, fileName5), mockTorrentFile(fileSize6, fileName6));
 
-        IDataDescriptor descriptor = new DataDescriptor(storage, configurationService, torrent);
+        IDataDescriptor descriptor = new DataDescriptor(storage, torrent, transferBlockSize);
         assertEquals(6, descriptor.getChunkDescriptors().size());
 
         return descriptor;

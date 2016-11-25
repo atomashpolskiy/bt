@@ -6,7 +6,7 @@ import com.google.inject.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -32,32 +32,38 @@ public class BtRuntime {
     private static final Logger LOGGER = LoggerFactory.getLogger(BtRuntime.class);
 
     /**
-     * @return Runtime builder
+     * @return Runtime builder with default configuration
      * @since 1.0
      */
     public static BtRuntimeBuilder builder() {
-        return new BtRuntimeBuilder();
+        return new BtRuntimeBuilder(new Config());
     }
 
     /**
-     * Creates a runtime with basic configuration.
+     * @param config Custom configuration
+     * @return Runtime builder
+     */
+    public static BtRuntimeBuilder builder(Config config) {
+        return new BtRuntimeBuilder(Objects.requireNonNull(config));
+    }
+
+    /**
+     * Creates a vanilla runtime with default configuration
      *
-     * @return Basic runtime without any extensions
+     * @return Runtime without any extensions
      * @since 1.0
      */
     public static BtRuntime defaultRuntime() {
         return builder().build();
     }
 
-    private Duration shutdownTimeout;
-
     private Injector injector;
+    private Config config;
     private Set<BtClient> knownClients;
     private AtomicBoolean started;
     private final Object lock;
 
-    BtRuntime(Injector injector) {
-        shutdownTimeout = Duration.ofSeconds(5);
+    BtRuntime(Injector injector, Config config) {
         Runtime.getRuntime().addShutdownHook(new Thread("BtShutdownThread") {
             @Override
             public void run() {
@@ -66,6 +72,7 @@ public class BtRuntime {
         });
 
         this.injector = injector;
+        this.config = config;
         this.knownClients = ConcurrentHashMap.newKeySet();
         this.started = new AtomicBoolean(false);
         this.lock = new Object();
@@ -77,6 +84,14 @@ public class BtRuntime {
      */
     public Injector getInjector() {
         return injector;
+    }
+
+    /**
+     * @return Runtime configuration
+     * @since 1.0
+     */
+    public Config getConfig() {
+        return config;
     }
 
     /**
@@ -160,7 +175,7 @@ public class BtRuntime {
                         Future<Optional<Throwable>> future = shutdownExecutor.submit(toCallable(r));
                         String description = descriptionOptional.orElse(r.toString());
                         try {
-                            future.get(shutdownTimeout.toMillis(), TimeUnit.MILLISECONDS)
+                            future.get(config.getShutdownHookTimeout().toMillis(), TimeUnit.MILLISECONDS)
                                     .ifPresent(throwable -> onShutdownHookError(description, throwable));
                         } catch (InterruptedException | ExecutionException | TimeoutException e) {
                             onShutdownHookError(description, e);
@@ -168,7 +183,7 @@ public class BtRuntime {
                     });
                 shutdownExecutor.shutdown();
                 try {
-                    shutdownExecutor.awaitTermination(shutdownTimeout.toMillis(), TimeUnit.MILLISECONDS);
+                    shutdownExecutor.awaitTermination(config.getShutdownHookTimeout().toMillis(), TimeUnit.MILLISECONDS);
                 } catch (InterruptedException e) {
                     // ignore
                     shutdownExecutor.shutdownNow();

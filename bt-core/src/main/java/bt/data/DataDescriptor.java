@@ -3,7 +3,6 @@ package bt.data;
 import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
-import bt.service.IConfigurationService;
 import bt.torrent.Bitfield;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +19,6 @@ public class DataDescriptor implements IDataDescriptor {
     private static final Logger LOGGER = LoggerFactory.getLogger(DataDescriptor.class);
 
     private Storage storage;
-    private IConfigurationService configurationService;
 
     private Torrent torrent;
     private List<IChunkDescriptor> chunkDescriptors;
@@ -28,17 +26,16 @@ public class DataDescriptor implements IDataDescriptor {
 
     private Set<StorageUnit> storageUnits;
 
-    public DataDescriptor(Storage storage, IConfigurationService configurationService, Torrent torrent) {
+    public DataDescriptor(Storage storage, Torrent torrent, int transferBlockSize) {
         this.storage = storage;
-        this.configurationService = configurationService;
         this.torrent = torrent;
 
         storageUnits = new HashSet<>();
 
-        init();
+        init(transferBlockSize);
     }
 
-    private void init() {
+    private void init(long transferBlockSize) {
 
         List<TorrentFile> torrentFiles = torrent.getFiles();
 
@@ -46,12 +43,12 @@ public class DataDescriptor implements IDataDescriptor {
         long totalSize = torrent.getSize();
         long chunkSize = torrent.getChunkSize();
 
-        long transferBlockSize = configurationService.getTransferBlockSize();
         if (transferBlockSize > chunkSize) {
             transferBlockSize = chunkSize;
         }
 
-        boolean shouldVerifyChunks = configurationService.shouldVerifyChunksOnInit();
+        // TODO: this should be configured and managed by the storage
+        boolean shouldVerifyChunks = true;
 
         List<IChunkDescriptor> chunkDescriptors = new ArrayList<>((int) Math.ceil(totalSize / chunkSize) + 1);
         Iterator<byte[]> chunkHashes = torrent.getChunkHashes().iterator();

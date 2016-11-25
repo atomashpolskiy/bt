@@ -23,14 +23,16 @@ import java.util.Objects;
  */
 public class BtRuntimeBuilder {
 
+    private Config config;
     private Map<Class<? extends Module>, Module> modules;
     private List<Module> adapters;
 
-    BtRuntimeBuilder() {
-        modules = new HashMap<>();
+    BtRuntimeBuilder(Config config) {
+        this.config = config;
+        this.modules = new HashMap<>();
         // default modules
-        modules.put(ServiceModule.class, new ServiceModule());
-        modules.put(ProtocolModule.class, new ProtocolModule());
+        this.modules.put(ServiceModule.class, new ServiceModule(config));
+        this.modules.put(ProtocolModule.class, new ProtocolModule());
     }
 
     /**
@@ -51,7 +53,7 @@ public class BtRuntimeBuilder {
      * @since 1.0
      */
     public BtRuntime build() {
-        return new BtRuntime(createInjector());
+        return new BtRuntime(createInjector(), config);
     }
 
     private Injector createInjector() {

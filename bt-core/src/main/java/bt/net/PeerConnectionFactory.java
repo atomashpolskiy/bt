@@ -2,30 +2,31 @@ package bt.net;
 
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
-import bt.service.IConfigurationService;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 
-class PeerConnectionFactory {
+public class PeerConnectionFactory {
 
     private MessageHandler<Message> messageHandler;
     private SocketChannelFactory socketChannelFactory;
-    private IConfigurationService configurationService;
 
-    public PeerConnectionFactory(MessageHandler<Message> messageHandler, SocketChannelFactory socketChannelFactory,
-                                 IConfigurationService configurationService) {
+    private int maxTransferBlockSize;
+
+    public PeerConnectionFactory(MessageHandler<Message> messageHandler,
+                                 SocketChannelFactory socketChannelFactory,
+                                 int maxTransferBlockSize) {
         this.messageHandler = messageHandler;
         this.socketChannelFactory = socketChannelFactory;
-        this.configurationService = configurationService;
+        this.maxTransferBlockSize = maxTransferBlockSize;
     }
 
     public PeerConnection createConnection(SocketChannel channel) throws IOException {
 
         Peer peer = getPeerForAddress((InetSocketAddress) channel.getRemoteAddress());
-        return new PeerConnection(messageHandler, peer, channel, configurationService.getMaxTransferBlockSize());
+        return new PeerConnection(messageHandler, peer, channel, maxTransferBlockSize);
     }
 
     private Peer getPeerForAddress(InetSocketAddress address) {
@@ -48,6 +49,6 @@ class PeerConnectionFactory {
             throw new IOException("Failed to create peer connection @ " + inetAddress + ":" + port, e);
         }
 
-        return new PeerConnection(messageHandler, peer, channel, configurationService.getMaxTransferBlockSize());
+        return new PeerConnection(messageHandler, peer, channel, maxTransferBlockSize);
     }
 }

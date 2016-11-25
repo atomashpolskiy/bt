@@ -6,6 +6,7 @@ import bt.metainfo.TorrentId;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
 import bt.net.PeerActivityListener;
+import bt.peerexchange.PeerExchangeConfig;
 import bt.peerexchange.protocol.PeerExchange;
 import bt.protocol.Message;
 import bt.protocol.extended.ExtendedHandshake;
@@ -39,9 +40,6 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerExchangePeerSourceFactory.class);
 
     private static final Duration CLEANER_INTERVAL = Duration.ofSeconds(37);
-    private static final Duration PEX_INTERVAL = Duration.ofMinutes(1);
-    private static final int MIN_EVENTS_PER_MESSAGE = 10; // TODO: move this to configuration?
-    private static final int MAX_EVENTS_PER_MESSAGE = 50;
 
     private Map<TorrentId, PeerExchangePeerSource> peerSources;
 
@@ -51,14 +49,22 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     private Set<Peer> peers;
     private Map<Peer, Long> lastSentPEXMessage;
 
+    private Duration minMessageInterval;
+    private int minEventsPerMessage;
+    private int maxEventsPerMessage;
+
     @Inject
     public PeerExchangePeerSourceFactory(Provider<IPeerConnectionPool> connectionPoolProvider,
-                                  IRuntimeLifecycleBinder lifecycleBinder) {
+                                         IRuntimeLifecycleBinder lifecycleBinder,
+                                         PeerExchangeConfig config) {
         this.peerSources = new ConcurrentHashMap<>();
         this.peerEvents = new PriorityBlockingQueue<>();
         this.rwLock = new ReentrantReadWriteLock();
         this.peers = ConcurrentHashMap.newKeySet();
         this.lastSentPEXMessage = new ConcurrentHashMap<>();
+        this.minMessageInterval = config.getMinMessageInterval();
+        this.minEventsPerMessage = config.getMinEventsPerMessage();
+        this.maxEventsPerMessage = config.getMaxEventsPerMessage();
 
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "PEX-Cleaner"));
         lifecycleBinder.onStartup(() -> connectionPoolProvider.get()
@@ -128,7 +134,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         long currentTime = System.currentTimeMillis();
         long lastSentPEXMessageToPeer = lastSentPEXMessage.getOrDefault(peer, 0L);
 
-        if (peers.contains(peer) && (currentTime - lastSentPEXMessageToPeer) - PEX_INTERVAL.toMillis() >= 0) {
+        if (peers.contains(peer) && (currentTime - lastSentPEXMessageToPeer) >= minMessageInterval.toMillis()) {
             List<PeerEvent> events = new ArrayList<>();
 
             rwLock.readLock().lock();
@@ -137,7 +143,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
                     if (event.getInstant() - lastSentPEXMessageToPeer >= 0) {
                         events.add(event);
                     }
-                    if (events.size() >= MAX_EVENTS_PER_MESSAGE) {
+                    if (events.size() >= maxEventsPerMessage) {
                         break;
                     }
                 }
@@ -145,7 +151,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
                 rwLock.readLock().unlock();
             }
 
-            if (events.size() >= MIN_EVENTS_PER_MESSAGE) {
+            if (events.size() >= minEventsPerMessage) {
                 lastSentPEXMessage.put(peer, currentTime);
                 PeerExchange.Builder messageBuilder = PeerExchange.builder();
                 events.forEach(event -> {

@@ -6,7 +6,6 @@ import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
 import bt.net.PeerActivityListener;
-import bt.service.IConfigurationService;
 import bt.torrent.messaging.IPeerWorkerFactory;
 import bt.torrent.messaging.TorrentWorker;
 
@@ -15,34 +14,32 @@ import java.util.Set;
 
 public class DefaultTorrentSession implements PeerActivityListener, TorrentSession {
 
-    private IConfigurationService configurationService;
-
-    private Torrent torrent;
-
     private IPeerConnectionPool connectionPool;
-
-    private TorrentSessionState sessionState;
+    private Torrent torrent;
     private TorrentWorker worker;
+    private TorrentSessionState sessionState;
 
-    public DefaultTorrentSession(IPeerConnectionPool connectionPool, IConfigurationService configurationService,
-                                 IPieceManager pieceManager, IMessageDispatcher dispatcher,
-                                 IPeerWorkerFactory peerWorkerFactory, Torrent torrent) {
+    private int maxPeerConnectionsPerTorrent;
+
+    public DefaultTorrentSession(IPeerConnectionPool connectionPool,
+                                 IPieceManager pieceManager,
+                                 IMessageDispatcher dispatcher,
+                                 IPeerWorkerFactory peerWorkerFactory,
+                                 Torrent torrent,
+                                 int maxPeerConnectionsPerTorrent) {
 
         this.connectionPool = connectionPool;
-        this.configurationService = configurationService;
-
         this.torrent = torrent;
-
-        this.sessionState = new DefaultTorrentSessionState(pieceManager.getBitfield());
         this.worker = new TorrentWorker(torrent.getTorrentId(), pieceManager, dispatcher, peerWorkerFactory);
+        this.sessionState = new DefaultTorrentSessionState(pieceManager.getBitfield());
+        this.maxPeerConnectionsPerTorrent = maxPeerConnectionsPerTorrent;
     }
 
     @Override
     public void onPeerDiscovered(Peer peer) {
         // TODO: Store discovered peers to use them later,
         // when some of the currently connected peers disconnects
-        if (worker.getPeers().size() >= configurationService.getMaxActiveConnectionsPerTorrent()
-                || worker.getPeers().contains(peer)) {
+        if (worker.getPeers().size() >= maxPeerConnectionsPerTorrent || worker.getPeers().contains(peer)) {
             return;
         }
         connectionPool.requestConnection(torrent.getTorrentId(), peer);
@@ -50,7 +47,7 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
 
     @Override
     public void onPeerConnected(TorrentId torrentId, Peer peer) {
-        if (worker.getPeers().size() >= configurationService.getMaxActiveConnectionsPerTorrent()) {
+        if (worker.getPeers().size() >= maxPeerConnectionsPerTorrent) {
             return;
         }
         if (torrent.getTorrentId().equals(torrentId)) {

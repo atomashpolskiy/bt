@@ -5,12 +5,12 @@ import bt.metainfo.TorrentId;
 import bt.protocol.Handshake;
 import bt.protocol.IHandshakeFactory;
 import bt.protocol.Message;
-import bt.service.IConfigurationService;
 import bt.service.ITorrentRegistry;
 import bt.torrent.ITorrentDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
 
@@ -26,20 +26,20 @@ public class IncomingHandshakeHandler implements ConnectionHandler {
     private IHandshakeFactory handshakeFactory;
     private ITorrentRegistry torrentRegistry;
     private Set<HandshakeHandler> handshakeHandlers;
-    private IConfigurationService configurationService;
+    private Duration handshakeTimeout;
 
     public IncomingHandshakeHandler(IHandshakeFactory handshakeFactory, ITorrentRegistry torrentRegistry,
-                                    Set<HandshakeHandler> handshakeHandlers, IConfigurationService configurationService) {
+                                    Set<HandshakeHandler> handshakeHandlers, Duration handshakeTimeout) {
         this.handshakeFactory = handshakeFactory;
         this.torrentRegistry = torrentRegistry;
         this.handshakeHandlers = handshakeHandlers;
-        this.configurationService = configurationService;
+        this.handshakeTimeout = handshakeTimeout;
     }
 
     @Override
     public boolean handleConnection(PeerConnection connection) {
 
-        Message firstMessage = connection.readMessage(configurationService.getHandshakeTimeOut());
+        Message firstMessage = connection.readMessage(handshakeTimeout.toMillis());
         if (firstMessage != null) {
             if (Handshake.class.equals(firstMessage.getClass())) {
 
