@@ -9,6 +9,7 @@ import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
+import bt.runtime.Config;
 import bt.runtime.DefaultBtClient;
 import bt.runtime.LazyBtClient;
 import bt.runtime.RuntimeAwareBtClient;
@@ -185,7 +186,7 @@ public class Bt {
         IMessageDispatcher messageDispatcher = runtime.service(IMessageDispatcher.class);
 
         PieceManager pieceManager = new PieceManager(descriptor.getDataDescriptor().getBitfield(), pieceSelectionStrategy);
-        IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceManager, dataWorker);
+        IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceManager, dataWorker, runtime.getConfig());
 
         DefaultTorrentSession session = new DefaultTorrentSession(connectionPool, pieceManager,
                 messageDispatcher, peerWorkerFactory, torrent, runtime.getConfig().getMaxPeerConnectionsPerTorrent());
@@ -199,13 +200,14 @@ public class Bt {
     }
 
     private IPeerWorkerFactory createPeerWorkerFactory(ITorrentDescriptor descriptor, IPieceManager pieceManager,
-                                                       IDataWorker dataWorker) {
+                                                       IDataWorker dataWorker, Config config) {
 
         Set<Object> messagingAgents = new HashSet<>();
         messagingAgents.add(GenericConsumer.consumer());
         messagingAgents.add(new BitfieldConsumer(pieceManager));
         messagingAgents.add(new PeerRequestProcessor(dataWorker));
-        messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor().getChunkDescriptors(), pieceManager));
+        messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor().getChunkDescriptors(),
+                pieceManager, config.getTransferBlockSize()));
         messagingAgents.add(new PieceConsumer(pieceManager, dataWorker));
 
         Binding<Set<Object>> extraMessagingAgents = runtime.getInjector()

@@ -29,8 +29,8 @@ public class PieceManagerTest extends BaseBitfieldTest {
         Verifier verifier3 = new Verifier(),
                  verifier5 = new Verifier();
 
-        IChunkDescriptor chunk3 = mockChunk(blockSize, chunkSize, new byte[]{0,0,0,0}, verifier3),
-                         chunk5 = mockChunk(blockSize, chunkSize, new byte[]{0,0,0,0}, verifier5);
+        IChunkDescriptor chunk3 = mockChunk(chunkSize, new byte[]{0,0,0,0}, verifier3),
+                         chunk5 = mockChunk(chunkSize, new byte[]{0,0,0,0}, verifier5);
 
         IChunkDescriptor[] chunkArray = new IChunkDescriptor[12];
         Arrays.fill(chunkArray, emptyChunk);

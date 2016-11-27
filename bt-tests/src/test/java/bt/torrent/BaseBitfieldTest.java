@@ -19,18 +19,17 @@ public abstract class BaseBitfieldTest {
 
     @BeforeClass
     public static void setUp() {
-        emptyChunk = mockChunk(blockSize, chunkSize, new byte[]{0,0,0,0}, null);
-        completeChunk = mockChunk(blockSize, chunkSize, new byte[]{1,1,1,1}, null);
+        emptyChunk = mockChunk(chunkSize, new byte[]{0,0,0,0}, null);
+        completeChunk = mockChunk(chunkSize, new byte[]{1,1,1,1}, null);
     }
 
-    protected static IChunkDescriptor mockChunk(long blockSize, long chunkSize, byte[] bitfield,
+    protected static IChunkDescriptor mockChunk(long chunkSize, byte[] bitfield,
                                               Supplier<Boolean> verifier) {
 
         byte[] _bitfield = Arrays.copyOf(bitfield, bitfield.length);
 
         IChunkDescriptor chunk = mock(IChunkDescriptor.class);
         when(chunk.getSize()).thenReturn(chunkSize);
-        when(chunk.getBlockSize()).thenReturn(blockSize);
         when(chunk.getBitfield()).thenReturn(_bitfield);
         when(chunk.getStatus()).then(it ->
                 verifier == null? statusForBitfield(_bitfield)

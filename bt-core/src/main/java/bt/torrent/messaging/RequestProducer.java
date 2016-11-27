@@ -35,10 +35,12 @@ public class RequestProducer {
 
     private IPieceManager pieceManager;
     private List<IChunkDescriptor> chunks;
+    private long blockSize;
 
-    public RequestProducer(List<IChunkDescriptor> chunks, IPieceManager pieceManager) {
+    public RequestProducer(List<IChunkDescriptor> chunks, IPieceManager pieceManager, long blockSize) {
         this.chunks = chunks;
         this.pieceManager = pieceManager;
+        this.blockSize = blockSize;
     }
 
     @Produces
@@ -164,8 +166,7 @@ public class RequestProducer {
 
         IChunkDescriptor chunk = chunks.get(pieceIndex);
         byte[] bitfield = chunk.getBitfield();
-        long blockSize = chunk.getBlockSize(),
-             chunkSize = chunk.getSize();
+        long chunkSize = chunk.getSize();
 
         for (int i = 0; i < bitfield.length; i++) {
             if (bitfield[i] == 0) {

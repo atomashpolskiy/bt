@@ -129,11 +129,6 @@ public class ChunkDescriptor implements IChunkDescriptor {
     }
 
     @Override
-    public long getBlockSize() {
-        return blockSize;
-    }
-
-    @Override
     public byte[] getBitfield() {
         return bitfield;
     }

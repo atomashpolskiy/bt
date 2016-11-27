@@ -38,13 +38,6 @@ public interface IChunkDescriptor {
      */
     long getSize();
 
-    // TODO: shouldn't this be moved to configuration?
-    /**
-     * @return Size of a block
-     * @since 1.0
-     */
-    long getBlockSize();
-
     // TODO: in fact it's currently a BYTEmask, need to rework
     /**
      * @return Bitmask of blocks in this chunk: 1 for complete and verified, 0 for empty or incomplete
