@@ -3,6 +3,8 @@ package bt.tracker.udp;
 import bt.BtException;
 import bt.protocol.Protocols;
 import bt.service.IRuntimeLifecycleBinder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -19,6 +21,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 class UdpMessageWorker {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(UdpMessageWorker.class);
 
     private static final int MIN_MESSAGE_LENGTH = 16;
     private static final int MESSAGE_TYPE_OFFSET = 0;
@@ -68,6 +72,7 @@ class UdpMessageWorker {
                               UdpTrackerResponseHandler<T> responseHandler, boolean retry) {
         int timeToWait = retry ? 60 : 15;
         try {
+            LOGGER.trace("Sending message " + message + " to remote address: " + remoteAddress);
             return CompletableFuture.supplyAsync(() ->
                     doSend(message, session, responseHandler), executor).get(timeToWait, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
@@ -94,6 +99,10 @@ class UdpMessageWorker {
 
                 if (!remoteAddress.equals(response.getSocketAddress())) {
                     // ignore packets received from unexpected senders
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Received unexpected datagram packet from remote address: " +
+                                response.getSocketAddress());
+                    }
                     continue;
                 }
 
@@ -106,15 +115,31 @@ class UdpMessageWorker {
                         return responseHandler.onError(error);
                     } else if (messageType != message.getMessageType()) {
                         // ignore messages with incorrect type
+                        if (LOGGER.isTraceEnabled()) {
+                            LOGGER.trace("Received message with incorrect type from remote address: " + remoteAddress +
+                                    "; expected: " + message.getMessageType() + ", actual: " + messageType);
+                        }
                         continue;
                     }
 
                     int messageId = Protocols.readInt(data, MESSAGE_ID_OFFSET);
                     if (messageId != message.getId()) {
+                        if (LOGGER.isTraceEnabled()) {
+                            LOGGER.trace("Received message with incorrect message ID from remote address: " + remoteAddress +
+                                    "; expected: " + message.getId() + ", actual: " + messageId);
+                        }
                         continue;
                     }
 
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Received response from remote address: " + remoteAddress +
+                                "; message ID: " + messageId + ", messageType: " + messageType);
+                    }
                     return responseHandler.onSuccess(Arrays.copyOfRange(data, DATA_OFFSET, data.length));
+
+                } else if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Received message with incorrect size from remote address: " + remoteAddress +
+                                "; expected: at least " + MIN_MESSAGE_LENGTH + " bytes, actual: " + response.getLength());
                 }
             }
         } catch (IOException e) {
@@ -130,6 +155,9 @@ class UdpMessageWorker {
         if (socket == null || socket.isClosed()) {
             synchronized (lock) {
                 if (socket == null || socket.isClosed()) {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Creating UDP socket {localAddress=" + localAddress + "}");
+                    }
                     socket = createSocket(localAddress);
                 }
             }
@@ -139,6 +167,10 @@ class UdpMessageWorker {
             synchronized (lock) {
                 if (!socket.isConnected()) {
                     try {
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Connecting UDP socket {localAddress=" + localAddress +
+                                    ", remoteAddress=" + remoteAddress + "}");
+                        }
                         socket.connect(remoteAddress);
                     } catch (SocketException e) {
                         throw new BtException("Failed to connect to the tracker {remoteAddress=" + remoteAddress + "}", e);

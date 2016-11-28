@@ -77,8 +77,22 @@ class AnnounceRequest extends UdpTrackerMessage {
         out.write(Protocols.getIntBytes(Objects.requireNonNull(eventType).code()));
         out.write(Protocols.getIntBytes(0)); // local ip
         out.write(Protocols.getIntBytes(0)); // secret key
-        out.write(Protocols.getIntBytes(50)); // numwant
+        out.write(Protocols.getIntBytes(-1)); // numwant
         out.write(Protocols.getShortBytes(listeningPort));
         out.write(Protocols.getShortBytes(0)); // extensions
+    }
+
+    @Override
+    public String toString() {
+        return "AnnounceRequest{" +
+                "id=" + getId() +
+                ", torrentId=" + torrentId +
+                ", peerId=" + peerId +
+                ", downloaded=" + downloaded +
+                ", left=" + left +
+                ", uploaded=" + uploaded +
+                ", eventType=" + eventType + (eventType == null ? "" : "(" + eventType.code + ")") +
+                ", listeningPort=" + listeningPort +
+                '}';
     }
 }
