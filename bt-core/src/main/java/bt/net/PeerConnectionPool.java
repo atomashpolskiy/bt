@@ -206,7 +206,9 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Closing the incoming channel...");
                 }
-                serverChannel.close();
+                if (serverChannel != null) {
+                    serverChannel.close();
+                }
             } catch (IOException e) {
                 LOGGER.warn("Failed to close the incoming channel", e);
             }

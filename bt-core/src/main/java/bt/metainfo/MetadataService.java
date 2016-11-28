@@ -151,19 +151,19 @@ public class MetadataService implements IMetadataService {
             // TODO: support for private torrents with multiple trackers
             if (!isPrivate && root.containsKey(ANNOUNCE_LIST_KEY)) {
 
-                List<List<URL>> trackerUrls;
+                List<List<String>> trackerUrls;
 
                 BEList announceList = (BEList) root.get(ANNOUNCE_LIST_KEY);
                 List<BEList> tierList = (List<BEList>) announceList.getValue();
                 trackerUrls = new ArrayList<>(tierList.size() + 1);
                 for (BEList tierElement : tierList) {
 
-                    List<URL> tierTackerUrls;
+                    List<String> tierTackerUrls;
 
                     List<BEString> trackerUrlList = (List<BEString>) tierElement.getValue();
                     tierTackerUrls = new ArrayList<>(trackerUrlList.size() + 1);
                     for (BEString trackerUrlElement : trackerUrlList) {
-                        tierTackerUrls.add(new URL(trackerUrlElement.getValue(defaultCharset)));
+                        tierTackerUrls.add(trackerUrlElement.getValue(defaultCharset));
                     }
                     trackerUrls.add(tierTackerUrls);
                 }
@@ -172,7 +172,7 @@ public class MetadataService implements IMetadataService {
 
             } else {
                 byte[] trackerUrl = (byte[]) root.get(ANNOUNCE_KEY).getValue();
-                announceKey = new AnnounceKey(new URL(new String(trackerUrl, defaultCharset)));
+                announceKey = new AnnounceKey(new String(trackerUrl, defaultCharset));
             }
 
             torrent.setAnnounceKey(announceKey);

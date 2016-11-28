@@ -47,15 +47,15 @@ public class HttpTracker implements Tracker {
     private ConcurrentMap<URI, byte[]> trackerIds;
 
     /**
-     * @param baseUrl Tracker URL
+     * @param trackerUrl Tracker URL
      * @param idService Identity service
      * @since 1.0
      */
-    public HttpTracker(URL baseUrl, IdService idService) {
+    public HttpTracker(String trackerUrl, IdService idService) {
         try {
-            this.baseUri = baseUrl.toURI();
+            this.baseUri = new URI(trackerUrl);
         } catch (URISyntaxException e) {
-            throw new BtException("Invalid URL: " + baseUrl, e);
+            throw new BtException("Invalid URL: " + trackerUrl, e);
         }
 
         this.idService = idService;

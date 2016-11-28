@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -34,12 +33,12 @@ public class MultiTracker implements Tracker {
 
     private List<List<Tracker>> initTrackers(AnnounceKey announceKey, boolean shouldShuffleTiers) {
 
-        List<List<URL>> trackerUrls = announceKey.getTrackerUrls();
+        List<List<String>> trackerUrls = announceKey.getTrackerUrls();
         List<List<Tracker>> trackers = new ArrayList<>(trackerUrls.size() + 1);
 
-        for (List<URL> tier : trackerUrls) {
+        for (List<String> tier : trackerUrls) {
             List<Tracker> tierTrackers = new ArrayList<>(tier.size() + 1);
-            for (URL trackerUrl : tier) {
+            for (String trackerUrl : tier) {
                 tierTrackers.add(new LazyTracker(() -> trackerService.getTracker(trackerUrl)));
             }
             // per BEP-12 spec each tier must be shuffled

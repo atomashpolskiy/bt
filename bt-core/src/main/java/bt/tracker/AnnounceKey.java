@@ -1,6 +1,5 @@
 package bt.tracker;
 
-import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 
@@ -12,15 +11,15 @@ import java.util.List;
  */
 public class AnnounceKey {
 
-    private final URL trackerUrl;
-    private final List<List<URL>> trackerUrls;
+    private final String trackerUrl;
+    private final List<List<String>> trackerUrls;
 
     /**
      * Create a single-tracker announce key
      *
      * @since 1.0
      */
-    public AnnounceKey(URL trackerUrl) {
+    public AnnounceKey(String trackerUrl) {
         this.trackerUrl = trackerUrl;
         this.trackerUrls = null;
     }
@@ -33,7 +32,7 @@ public class AnnounceKey {
      *                    subsequent lists contain backup trackers)
      * @since 1.0
      */
-    public AnnounceKey(List<List<URL>> trackerUrls) {
+    public AnnounceKey(List<List<String>> trackerUrls) {
         this.trackerUrl = null;
         this.trackerUrls = Collections.unmodifiableList(trackerUrls);
     }
@@ -50,7 +49,7 @@ public class AnnounceKey {
      * @return Tracker URL if {@link #isMultiKey()} is false, null otherwise
      * @since 1.0
      */
-    public URL getTrackerUrl() {
+    public String getTrackerUrl() {
         return trackerUrl;
     }
 
@@ -58,7 +57,7 @@ public class AnnounceKey {
      * @return List of Tracker tiers if {@link #isMultiKey()} is true, null otherwise
      * @since 1.0
      */
-    public List<List<URL>> getTrackerUrls() {
+    public List<List<String>> getTrackerUrls() {
         return trackerUrls;
     }
 
@@ -67,7 +66,7 @@ public class AnnounceKey {
         if (isMultiKey()) {
             return trackerUrls.toString();
         } else {
-            return trackerUrl.toExternalForm();
+            return trackerUrl;
         }
     }
 

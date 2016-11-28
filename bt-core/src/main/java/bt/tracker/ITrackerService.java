@@ -1,7 +1,5 @@
 package bt.tracker;
 
-import java.net.URL;
-
 /**
  * This service acts a factory of trackers.
  *
@@ -15,7 +13,7 @@ public interface ITrackerService {
      * @return Single tracker
      * @since 1.0
      */
-    Tracker getTracker(URL baseUrl);
+    Tracker getTracker(String trackerUrl);
 
     /**
      * Get a tracker by its' announce key

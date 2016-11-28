@@ -13,6 +13,7 @@ import bt.tracker.TrackerResponse;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
@@ -72,9 +73,15 @@ public class SharedTrackerFeature implements BtTestRuntimeFeature {
         }
 
         @Override
-        public Tracker getTracker(URL baseUrl) {
+        public Tracker getTracker(String url) {
 
-            Tracker tracker = trackers.get(baseUrl);
+            URL trackerUrl;
+            try {
+                trackerUrl = new URL(url);
+            } catch (MalformedURLException e) {
+                throw new RuntimeException("Unexpected error", e);
+            }
+            Tracker tracker = trackers.get(trackerUrl);
             if (tracker == null) {
 
                 tracker = new Tracker() {
@@ -84,13 +91,13 @@ public class SharedTrackerFeature implements BtTestRuntimeFeature {
 
                                 @Override
                                 public TrackerResponse start() {
-                                    knownPeersService.addPeer(baseUrl, peer);
+                                    knownPeersService.addPeer(trackerUrl, peer);
                                     return queryPeers();
                                 }
 
                                 @Override
                                 public TrackerResponse stop() {
-                                    knownPeersService.removePeer(baseUrl, peer);
+                                    knownPeersService.removePeer(trackerUrl, peer);
                                     return TrackerResponse.ok();
                                 }
 
@@ -106,7 +113,7 @@ public class SharedTrackerFeature implements BtTestRuntimeFeature {
 
                                 private TrackerResponse queryPeers() {
                                     return new StartResponse(peerFilter.filterPeers(
-                                            peer, knownPeersService.getPeersSnapshot(baseUrl)));
+                                            peer, knownPeersService.getPeersSnapshot(trackerUrl)));
                                 }
                     };
 
@@ -116,7 +123,7 @@ public class SharedTrackerFeature implements BtTestRuntimeFeature {
                     }
                 };
 
-                Tracker existing = trackers.putIfAbsent(baseUrl, tracker);
+                Tracker existing = trackers.putIfAbsent(trackerUrl, tracker);
 
                 if (existing != null) {
                     tracker = existing;

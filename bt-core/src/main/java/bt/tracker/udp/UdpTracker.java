@@ -9,6 +9,7 @@ import bt.tracker.TrackerResponse;
 import bt.tracker.udp.AnnounceRequest.EventType;
 
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.SocketAddress;
 import java.net.URL;
 import java.util.Objects;
@@ -21,14 +22,26 @@ public class UdpTracker implements Tracker {
 
     public UdpTracker(IdService idService,
                       IRuntimeLifecycleBinder lifecycleBinder,
-                      URL trackerUrl) {
+                      String trackerUrl) {
         this.idService = idService;
         this.localAddress = new InetSocketAddress(0);
         // TODO: one UDP socket for all outgoing tracker connections
         this.worker = new UdpMessageWorker(localAddress, getSocketAddress(trackerUrl), lifecycleBinder);
     }
 
-    private SocketAddress getSocketAddress(URL url) {
+    private SocketAddress getSocketAddress(String trackerUrl) {
+        if (!trackerUrl.startsWith("udp://")) {
+            throw new IllegalArgumentException("Unexpected URL format: " + trackerUrl);
+        }
+        // workaround for java.net.MalformedURLException (unsupported protocol: udp)
+        trackerUrl = trackerUrl.replace("udp://", "http://");
+
+        URL url;
+        try {
+            url = new URL(trackerUrl);
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException("Invalid URL: " + trackerUrl);
+        }
         String host = Objects.requireNonNull(url.getHost(), "Host name is required");
         int port = getPort(url);
         return new InetSocketAddress(host, port);

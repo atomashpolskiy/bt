@@ -25,7 +25,7 @@ public class UdpTrackerFactory implements TrackerFactory {
     }
 
     @Override
-    public Tracker getTracker(URL trackerUrl) {
+    public Tracker getTracker(String trackerUrl) {
         return new UdpTracker(idService, lifecycleBinder, trackerUrl);
     }
 }

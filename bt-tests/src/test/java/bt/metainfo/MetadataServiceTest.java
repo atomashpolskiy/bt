@@ -6,7 +6,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,7 +29,7 @@ public class MetadataServiceTest {
         Torrent torrent = metadataService.fromUrl(MetadataServiceTest.class.getResource("single_file.torrent"));
 
         assertHasAttributes(torrent,
-                new AnnounceKey(new URL("http://bt2.t-ru.org/ann")), "3du-Arch-Uni-i686.iso", 524288L, 1766, 925892608L);
+                new AnnounceKey("http://bt2.t-ru.org/ann"), "3du-Arch-Uni-i686.iso", 524288L, 1766, 925892608L);
 
         assertNotNull(torrent.getFiles());
         assertEquals(1, torrent.getFiles().size());
@@ -44,8 +43,8 @@ public class MetadataServiceTest {
         Torrent torrent = metadataService.fromUrl(MetadataServiceTest.class.getResource("multi_file.torrent"));
 
         AnnounceKey announceKey = new AnnounceKey(Arrays.asList(
-                Collections.singletonList(new URL("http://bt3.t-ru.org/ann")),
-                Collections.singletonList(new URL("http://retracker.local/announce"))
+                Collections.singletonList("http://bt3.t-ru.org/ann"),
+                Collections.singletonList("http://retracker.local/announce")
         ));
         assertHasAttributes(torrent, announceKey, "VMWARE_ARCH", 4194304L, 1329, 0L);
 

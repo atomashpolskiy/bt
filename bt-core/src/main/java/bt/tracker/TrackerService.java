@@ -1,11 +1,8 @@
 package bt.tracker;
 
 import bt.BtException;
-import bt.service.IRuntimeLifecycleBinder;
-import bt.service.IdService;
 import com.google.inject.Inject;
 
-import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -13,7 +10,7 @@ import java.util.concurrent.ConcurrentMap;
 public class TrackerService implements ITrackerService {
 
     private Map<String, TrackerFactory> trackerFactories;
-    private ConcurrentMap<URL, Tracker> knownTrackers;
+    private ConcurrentMap<String, Tracker> knownTrackers;
 
     @Inject
     public TrackerService(Map<String, TrackerFactory> trackerFactories) {
@@ -22,8 +19,8 @@ public class TrackerService implements ITrackerService {
     }
 
     @Override
-    public Tracker getTracker(URL baseUrl) {
-        return getOrCreateTracker(baseUrl);
+    public Tracker getTracker(String trackerUrl) {
+        return getOrCreateTracker(trackerUrl);
     }
 
     @Override
@@ -35,11 +32,11 @@ public class TrackerService implements ITrackerService {
         }
     }
 
-    private Tracker getOrCreateTracker(URL baseUrl) {
-        Tracker tracker = knownTrackers.get(baseUrl);
+    private Tracker getOrCreateTracker(String trackerUrl) {
+        Tracker tracker = knownTrackers.get(trackerUrl);
         if (tracker == null) {
-            tracker = createTracker(baseUrl);
-            Tracker existing = knownTrackers.putIfAbsent(baseUrl, tracker);
+            tracker = createTracker(trackerUrl);
+            Tracker existing = knownTrackers.putIfAbsent(trackerUrl, tracker);
             if (existing != null) {
                 tracker = existing;
             }
@@ -47,12 +44,20 @@ public class TrackerService implements ITrackerService {
         return tracker;
     }
 
-    private Tracker createTracker(URL baseUrl) {
-        String protocol = baseUrl.getProtocol();
+    private Tracker createTracker(String trackerUrl) {
+        String protocol = getProtocol(trackerUrl);
         TrackerFactory factory = trackerFactories.get(protocol);
         if (factory == null) {
             throw new BtException("Unsupported tracker protocol: " + protocol);
         }
-        return factory.getTracker(baseUrl);
+        return factory.getTracker(trackerUrl);
+    }
+
+    private String getProtocol(String url) {
+        int schemaDelimiterIndex = url.indexOf("://");
+        if (schemaDelimiterIndex < 1) {
+            throw new IllegalArgumentException("Invalid URL: " + url);
+        }
+        return url.substring(0, schemaDelimiterIndex);
     }
 }

@@ -6,8 +6,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -19,22 +17,18 @@ import static org.mockito.Mockito.when;
 
 public class MultiTrackerTest {
 
-    private static final URL trackerUrl1;
-    private static final URL trackerUrl2;
-    private static final URL trackerUrl3;
-    private static final URL backupUrl1;
-    private static final URL backupUrl2;
+    private static final String trackerUrl1;
+    private static final String trackerUrl2;
+    private static final String trackerUrl3;
+    private static final String backupUrl1;
+    private static final String backupUrl2;
 
     static {
-        try {
-            trackerUrl1 = new URL("http://tracker1.org/ann");
-            trackerUrl2 = new URL("http://tracker2.org/ann");
-            trackerUrl3 = new URL("http://tracker3.org/ann");
-            backupUrl1 = new URL("http://backup1.org/ann");
-            backupUrl2 = new URL("http://backup2.org/ann");
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("Can't happen");
-        }
+        trackerUrl1 = "http://tracker1.org/ann";
+        trackerUrl2 = "http://tracker2.org/ann";
+        trackerUrl3 = "http://tracker3.org/ann";
+        backupUrl1 = "http://backup1.org/ann";
+        backupUrl2 = "http://backup2.org/ann";
     }
 
     private AnnounceKey announceKey;
@@ -141,11 +135,11 @@ public class MultiTrackerTest {
     private static class StoppableTracker implements Tracker {
 
         private Tracker instance;
-        private final URL url;
+        private final String url;
         private TrackerRequestBuilder requestBuilder;
         private boolean shutdown;
 
-        public StoppableTracker(URL url, Torrent torrent, Consumer<Tracker> accessLog) {
+        public StoppableTracker(String url, Torrent torrent, Consumer<Tracker> accessLog) {
 
             instance = this;
             this.url = url;
@@ -193,7 +187,7 @@ public class MultiTrackerTest {
 
         @Override
         public String toString() {
-            return url.toExternalForm();
+            return url;
         }
     }
 }

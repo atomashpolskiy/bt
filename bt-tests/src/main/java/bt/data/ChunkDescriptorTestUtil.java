@@ -10,8 +10,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -27,7 +25,6 @@ public class ChunkDescriptorTestUtil {
     }
 
     public static Torrent mockTorrent(String name, long size, long chunkSize, byte[][] chunkHashes, TorrentFile... files) {
-
         Torrent torrent = mock(Torrent.class);
 
         when(torrent.getName()).thenReturn(name);
@@ -35,18 +32,12 @@ public class ChunkDescriptorTestUtil {
         when(torrent.getChunkSize()).thenReturn(chunkSize);
         when(torrent.getSize()).thenReturn(size);
         when(torrent.getFiles()).thenReturn(Arrays.asList(files));
-
-        try {
-            when(torrent.getAnnounceKey()).thenReturn(new AnnounceKey(URI.create("http://tracker.org/ann").toURL()));
-        } catch (MalformedURLException e) {
-            // not going to happen
-        }
+        when(torrent.getAnnounceKey()).thenReturn(new AnnounceKey("http://tracker.org/ann"));
 
         return torrent;
     }
 
     public static TorrentFile mockTorrentFile(long size, String... pathElements) {
-
         TorrentFile file = mock(TorrentFile.class);
 
         when(file.getSize()).thenReturn(size);
