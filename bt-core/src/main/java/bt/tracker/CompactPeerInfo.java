@@ -1,4 +1,4 @@
-package bt.tracker.http;
+package bt.tracker;
 
 import bt.BtException;
 import bt.net.InetPeer;
@@ -15,7 +15,7 @@ import java.util.Objects;
 
 /**
  * Wrapper for binary representation of a list of peers,
- * which is used by the majority of HTTP trackers.
+ * which is used by the majority of HTTP trackers and all UDP trackers.
  * See BEP-23 for more details.
  *
  * Decoding is performed lazily when {@link Iterable#iterator()} is used.

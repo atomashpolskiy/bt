@@ -17,6 +17,7 @@ public interface IdService {
      */
     PeerId getLocalPeerId();
 
+    // TODO: seems like it should be taken from the metainfo file
     /**
      * @return Secret key used for interaction with HTTP trackers
      * @since 1.0

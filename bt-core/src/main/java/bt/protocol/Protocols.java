@@ -39,21 +39,68 @@ public class Protocols {
     //-------------------------//
 
     /**
-     * Get 4-bytes long binary representation of an {@link Integer}.
+     * Get 8-bytes binary representation of a {@link Long}.
+     *
+     * @since 1.0
+     */
+    public static byte[] getLongBytes(long l) {
+        return new byte[] {
+                (byte) (l >> 56),
+                (byte) (l >> 48),
+                (byte) (l >> 40),
+                (byte) (l >> 32),
+                (byte) (l >> 24),
+                (byte) (l >> 16),
+                (byte) (l >> 8),
+                (byte) l};
+    }
+
+    /**
+     * Get 4-bytes binary representation of an {@link Integer}.
      *
      * @since 1.0
      */
     public static byte[] getIntBytes(int i) {
-        return new byte[] {(byte) (i >> 24), (byte) (i >> 16), (byte) (i >> 8), (byte) i};
+        return new byte[] {
+                (byte) (i >> 24),
+                (byte) (i >> 16),
+                (byte) (i >> 8),
+                (byte) i};
     }
 
     /**
-     * Get 2-bytes long binary representation of a {@link Short}.
+     * Get 2-bytes binary representation of a {@link Short}.
      *
      * @since 1.0
      */
     public static byte[] getShortBytes(int s) {
-        return new byte[] {(byte) (s >> 8), (byte) s};
+        return new byte[] {
+                (byte) (s >> 8),
+                (byte) s};
+    }
+
+    /**
+     * Decode a binary long representation into a {@link Long}.
+     *
+     * @param bytes Arbitrary byte array.
+     *              It's length must be at least {@code offset + 8}.
+     * @param offset Offset in byte array to start decoding from (inclusive, 0-based)
+     * @since 1.0
+     */
+    public static long readLong(byte[] bytes, int offset) {
+
+        if (bytes.length < offset + Long.BYTES) {
+            throw new ArrayIndexOutOfBoundsException("insufficient byte array length (length: " + bytes.length +
+                    ", offset: " + offset + ")");
+        }
+        return ((bytes[offset]     & 0xFFL) << 56) |
+               ((bytes[offset + 1] & 0xFFL) << 48) |
+               ((bytes[offset + 2] & 0xFFL) << 40) |
+               ((bytes[offset + 3] & 0xFFL) << 32) |
+               ((bytes[offset + 4] & 0xFFL)  << 24) |
+               ((bytes[offset + 5] & 0xFF)  << 16) |
+               ((bytes[offset + 6] & 0xFF)  << 8)  |
+                (bytes[offset + 7] & 0xFF);
     }
 
     /**
@@ -64,16 +111,34 @@ public class Protocols {
      * @param offset Offset in byte array to start decoding from (inclusive, 0-based)
      * @since 1.0
      */
-    public static int getInt(byte[] bytes, int offset) {
+    public static int readInt(byte[] bytes, int offset) {
 
         if (bytes.length < offset + Integer.BYTES) {
             throw new ArrayIndexOutOfBoundsException("insufficient byte array length (length: " + bytes.length +
                     ", offset: " + offset + ")");
         }
-        // intentionally do not check bytes.length,
-        // just take the first 4 bytes (starting with the offset)
-        return ((bytes[offset] << 24) & 0xFF000000) + ((bytes[offset + 1] << 16) & 0x00FF0000)
-                + ((bytes[offset + 2] << 8) & 0x0000FF00) + (bytes[offset + 3] & 0x000000FF);
+        return ((bytes[offset]     & 0xFF) << 24) |
+               ((bytes[offset + 1] & 0xFF) << 16) |
+               ((bytes[offset + 2] & 0xFF) << 8)  |
+                (bytes[offset + 3] & 0xFF);
+    }
+
+    /**
+     * Decode a binary short representation into a {@link Short}.
+     *
+     * @param bytes Arbitrary byte array.
+     *              It's length must be at least {@code offset + 2}.
+     * @param offset Offset in byte array to start decoding from (inclusive, 0-based)
+     * @since 1.0
+     */
+    public static short readShort(byte[] bytes, int offset) {
+
+        if (bytes.length < offset + Short.BYTES) {
+            throw new ArrayIndexOutOfBoundsException("insufficient byte array length (length: " + bytes.length +
+                    ", offset: " + offset + ")");
+        }
+        return (short)(((bytes[offset]     & 0xFF) << 8) |
+                       ((bytes[offset + 1] & 0xFF)));
     }
 
     /**

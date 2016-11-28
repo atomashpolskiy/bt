@@ -7,8 +7,9 @@ import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEObjectModel;
 import bt.bencoding.model.ValidationResult;
 import bt.bencoding.model.YamlBEObjectModelLoader;
+import bt.tracker.CompactPeerInfo;
 import bt.tracker.TrackerResponse;
-import bt.tracker.http.CompactPeerInfo.AddressType;
+import bt.tracker.CompactPeerInfo.AddressType;
 
 import java.io.IOException;
 import java.io.InputStream;

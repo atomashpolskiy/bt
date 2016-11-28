@@ -36,11 +36,14 @@ import bt.service.RuntimeLifecycleBinder;
 import bt.torrent.data.DataWorkerFactory;
 import bt.torrent.data.IDataWorkerFactory;
 import bt.tracker.ITrackerService;
+import bt.tracker.TrackerFactory;
 import bt.tracker.TrackerService;
+import bt.tracker.udp.UdpTrackerFactory;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
 
 import java.util.Set;
@@ -72,6 +75,15 @@ public class ServiceModule implements Module {
         return Multibinder.newSetBinder(binder, Object.class, MessagingAgent.class);
     }
 
+    /**
+     * Contribute a tracker factory for some protocol.
+     *
+     * @since 1.0
+     */
+    public static MapBinder<String, TrackerFactory> contributeTrackerFactory(Binder binder) {
+        return MapBinder.newMapBinder(binder, String.class, TrackerFactory.class);
+    }
+
     private Config config;
 
     public ServiceModule() {
@@ -87,6 +99,8 @@ public class ServiceModule implements Module {
 
         ServiceModule.contributeMessagingAgent(binder);
         ServiceModule.contributePeerSourceFactory(binder);
+
+        ServiceModule.contributeTrackerFactory(binder).addBinding("udp").to(UdpTrackerFactory.class);
 
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
         binder.bind(INetworkService.class).to(NetworkService.class).in(Singleton.class);

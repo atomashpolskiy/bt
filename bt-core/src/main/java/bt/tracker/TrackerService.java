@@ -1,22 +1,24 @@
 package bt.tracker;
 
+import bt.BtException;
+import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdService;
-import bt.tracker.http.HttpTracker;
 import com.google.inject.Inject;
 
 import java.net.URL;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class TrackerService implements ITrackerService {
 
-    private IdService idService;
+    private Map<String, TrackerFactory> trackerFactories;
     private ConcurrentMap<URL, Tracker> knownTrackers;
 
     @Inject
-    public TrackerService(IdService idService) {
-        this.idService = idService;
-        knownTrackers = new ConcurrentHashMap<>();
+    public TrackerService(Map<String, TrackerFactory> trackerFactories) {
+        this.trackerFactories = trackerFactories;
+        this.knownTrackers = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -34,13 +36,23 @@ public class TrackerService implements ITrackerService {
     }
 
     private Tracker getOrCreateTracker(URL baseUrl) {
-
         Tracker tracker = knownTrackers.get(baseUrl);
         if (tracker == null) {
-            tracker = new HttpTracker(baseUrl, idService);
-            Tracker oldTracker = knownTrackers.putIfAbsent(baseUrl, tracker);
-            tracker = (oldTracker == null) ? tracker : oldTracker;
+            tracker = createTracker(baseUrl);
+            Tracker existing = knownTrackers.putIfAbsent(baseUrl, tracker);
+            if (existing != null) {
+                tracker = existing;
+            }
         }
         return tracker;
+    }
+
+    private Tracker createTracker(URL baseUrl) {
+        String protocol = baseUrl.getProtocol();
+        TrackerFactory factory = trackerFactories.get(protocol);
+        if (factory == null) {
+            throw new BtException("Unsupported tracker protocol: " + protocol);
+        }
+        return factory.getTracker(baseUrl);
     }
 }
