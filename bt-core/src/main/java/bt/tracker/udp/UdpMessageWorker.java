@@ -72,7 +72,9 @@ class UdpMessageWorker {
                               UdpTrackerResponseHandler<T> responseHandler, boolean retry) {
         int timeToWait = retry ? 60 : 15;
         try {
-            LOGGER.trace("Sending message " + message + " to remote address: " + remoteAddress);
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Sending message " + message + " to remote address: " + remoteAddress);
+            }
             return CompletableFuture.supplyAsync(() ->
                     doSend(message, session, responseHandler), executor).get(timeToWait, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
