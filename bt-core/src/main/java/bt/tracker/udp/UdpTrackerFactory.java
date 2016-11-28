@@ -6,8 +6,6 @@ import bt.tracker.Tracker;
 import bt.tracker.TrackerFactory;
 import com.google.inject.Inject;
 
-import java.net.URL;
-
 /**
  * Creates UDP trackers.
  *

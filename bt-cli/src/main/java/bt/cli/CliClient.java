@@ -6,6 +6,7 @@ import bt.data.file.FileSystemStorage;
 import bt.peerexchange.PeerExchangeModule;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
+import bt.tracker.http.HttpTrackerModule;
 import joptsimple.OptionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ public class CliClient  {
 
         BtRuntime runtime = BtRuntime.builder()
                 .module(new PeerExchangeModule())
+                .module(new HttpTrackerModule())
                 .build();
 
         BtClient client = Bt.client(storage)
