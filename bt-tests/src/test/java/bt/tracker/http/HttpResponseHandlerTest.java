@@ -1,7 +1,8 @@
-package bt.tracker;
+package bt.tracker.http;
 
 import bt.net.InetPeer;
 import bt.net.Peer;
+import bt.tracker.TrackerResponse;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -15,21 +16,21 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class TrackerResponseHandlerTest {
+public class HttpResponseHandlerTest {
 
-    private TrackerResponseHandler responseHandler;
+    private HttpResponseHandler responseHandler;
     private Charset defaultCharset = Charset.forName("ISO-8859-1");
 
     @Before
     public void setUp() {
-        responseHandler = new TrackerResponseHandler();
+        responseHandler = new HttpResponseHandler();
     }
 
     @Test
     public void handleResponse_Success1() throws Exception {
 
         TrackerResponse trackerResponse = responseHandler.handleResponse(
-                TrackerResponseHandlerTest.class.getResourceAsStream("tracker_response_success1"), defaultCharset);
+                HttpResponseHandlerTest.class.getResourceAsStream("tracker_response_success1"), defaultCharset);
 
         assertNotNull(trackerResponse);
         assertTrue(trackerResponse.isSuccess());
@@ -86,12 +87,11 @@ public class TrackerResponseHandlerTest {
     public void handleResponse_Failure1() {
 
         TrackerResponse trackerResponse = responseHandler.handleResponse(
-                TrackerResponseHandlerTest.class.getResourceAsStream("tracker_response_failure1"), defaultCharset);
+                HttpResponseHandlerTest.class.getResourceAsStream("tracker_response_failure1"), defaultCharset);
 
         assertNotNull(trackerResponse);
         assertFalse(trackerResponse.isSuccess());
         assertFalse(trackerResponse.getError().isPresent());
         assertEquals("Invalid info_hash (0 - )", trackerResponse.getErrorMessage());
     }
-
 }

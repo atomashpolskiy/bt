@@ -70,7 +70,7 @@ public class Bt {
     private Bt(Storage storage) {
         this.storage = Objects.requireNonNull(storage, "Missing data storage");
         // set default piece selector
-        this.pieceSelectionStrategy = RarestFirstSelectionStrategy.randomized();
+        this.pieceSelectionStrategy = RarestFirstSelectionStrategy.randomizedRarest();
     }
 
     /**

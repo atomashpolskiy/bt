@@ -1,4 +1,4 @@
-package bt.tracker;
+package bt.tracker.http;
 
 import bt.BtException;
 import bt.bencoding.BEParser;
@@ -7,6 +7,8 @@ import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEObjectModel;
 import bt.bencoding.model.ValidationResult;
 import bt.bencoding.model.YamlBEObjectModelLoader;
+import bt.tracker.TrackerResponse;
+import bt.tracker.http.CompactPeerInfo.AddressType;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,12 +20,12 @@ import java.util.Map;
 import static bt.bencoding.model.ClassUtil.cast;
 
 /**
- * Basic tracker response handler,
+ * Basic HTTP tracker response handler,
  * that is expecting a response in the format specified in BEP-3.
  *
  * @since 1.0
  */
-public class TrackerResponseHandler {
+class HttpResponseHandler {
 
     private static final String FAILURE_REASON_KEY = "failure reason";
     private static final String WARNING_MESSAGE_KEY = "warning message";
@@ -39,10 +41,10 @@ public class TrackerResponseHandler {
     /**
      * @since 1.0
      */
-    public TrackerResponseHandler() {
+    public HttpResponseHandler() {
 
         try {
-            try (InputStream in = TrackerResponseHandler.class.getResourceAsStream("/tracker_response.yml")) {
+            try (InputStream in = HttpResponseHandler.class.getResourceAsStream("/tracker_response.yml")) {
                 trackerResponseModel = new YamlBEObjectModelLoader().load(in);
             }
         } catch (IOException e) {
@@ -138,7 +140,7 @@ public class TrackerResponseHandler {
             }
 
             byte[] peers = cast(byte[].class, PEERS_KEY, responseMap.get(PEERS_KEY).getValue());
-            response.setPeers(peers);
+            response.setPeers(new CompactPeerInfo(peers, AddressType.IPV4));
         }
 
         return response;

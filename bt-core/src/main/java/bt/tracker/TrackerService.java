@@ -1,6 +1,7 @@
 package bt.tracker;
 
 import bt.service.IdService;
+import bt.tracker.http.HttpTracker;
 import com.google.inject.Inject;
 
 import java.net.URL;

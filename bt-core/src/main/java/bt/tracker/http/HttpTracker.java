@@ -1,19 +1,17 @@
-package bt.tracker;
+package bt.tracker.http;
 
 import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.service.IdService;
 import bt.service.INetworkService;
 import bt.service.NetworkService;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
+import bt.tracker.SecretKey;
+import bt.tracker.Tracker;
+import bt.tracker.TrackerRequestBuilder;
+import bt.tracker.TrackerResponse;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +21,6 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -45,9 +42,7 @@ public class HttpTracker implements Tracker {
     private IdService idService;
     private INetworkService networkService;
     private HttpClient httpClient;
-    private HttpResponseHandler httpResponseHandler;
-
-    private Charset defaultHttpCharset;
+    private CommonsHttpResponseHandler httpResponseHandler;
 
     private ConcurrentMap<URI, byte[]> trackerIds;
 
@@ -57,7 +52,6 @@ public class HttpTracker implements Tracker {
      * @since 1.0
      */
     public HttpTracker(URL baseUrl, IdService idService) {
-
         try {
             this.baseUri = baseUrl.toURI();
         } catch (URISyntaxException e) {
@@ -67,11 +61,9 @@ public class HttpTracker implements Tracker {
         this.idService = idService;
         this.networkService = new NetworkService();
         this.httpClient = HttpClients.createMinimal();
-        this.httpResponseHandler = new HttpResponseHandler(new TrackerResponseHandler());
+        this.httpResponseHandler = new CommonsHttpResponseHandler(new bt.tracker.http.HttpResponseHandler());
 
-        defaultHttpCharset = Charset.forName("ISO-8859-1");
-
-        trackerIds = new ConcurrentHashMap<>();
+        this.trackerIds = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -225,51 +217,4 @@ public class HttpTracker implements Tracker {
         return buf.toString();
     }
 
-    private class HttpResponseHandler implements ResponseHandler<TrackerResponse> {
-
-        private TrackerResponseHandler trackerResponseHandler;
-
-        HttpResponseHandler(TrackerResponseHandler trackerResponseHandler) {
-            this.trackerResponseHandler = trackerResponseHandler;
-        }
-
-        @Override
-        public TrackerResponse handleResponse(HttpResponse response) {
-
-            final StatusLine statusLine = response.getStatusLine();
-            final HttpEntity entity = response.getEntity();
-            if (statusLine.getStatusCode() >= 300) {
-                try {
-                    EntityUtils.consume(entity);
-                } catch (IOException e) {
-                    // do nothing...
-                }
-                return TrackerResponse.exceptional(new BtException(
-                        "Tracker returned error (" + statusLine.getStatusCode() + ": "
-                                + statusLine.getReasonPhrase() + ")"));
-            }
-
-            if (entity == null) {
-                return TrackerResponse.exceptional(new BtException("Tracker response is empty"));
-            } else {
-                try {
-
-                    Charset charset = null;
-                    ContentType contentType = ContentType.get(entity);
-                    if (contentType != null) {
-                        charset = contentType.getCharset();
-                    }
-                    if (charset == null) {
-                        charset = defaultHttpCharset;
-                    }
-
-                    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                    entity.writeTo(bytes);
-                    return trackerResponseHandler.handleResponse(bytes.toByteArray(), charset);
-                } catch (IOException e) {
-                    return TrackerResponse.exceptional(new BtException("Failed to read tracker response", e));
-                }
-            }
-        }
-    }
 }

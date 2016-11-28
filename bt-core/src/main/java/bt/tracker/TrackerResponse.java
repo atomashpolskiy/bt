@@ -1,8 +1,9 @@
 package bt.tracker;
 
 import bt.net.Peer;
-import bt.tracker.CompactPeerInfo.AddressType;
 
+import java.util.Collections;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -45,11 +46,11 @@ public class TrackerResponse {
     private String warningMessage;
     private int interval;
     private int minInterval;
-    private byte[] trackerId;
+    private Optional<byte[]> trackerId;
     private int seederCount;
     private int leecherCount;
 
-    private CompactPeerInfo peerInfo;
+    private Iterable<Peer> peers;
 
     /**
      * Create an empty success response.
@@ -57,8 +58,7 @@ public class TrackerResponse {
      * @since 1.0
      */
     protected TrackerResponse() {
-        success = true;
-        error = Optional.empty();
+        this(true, null);
     }
 
     /**
@@ -67,9 +67,8 @@ public class TrackerResponse {
      * @since 1.0
      */
     protected TrackerResponse(String errorMessage) {
-        success = false;
+        this(false, null);
         this.errorMessage = errorMessage;
-        error = Optional.empty();
     }
 
     /**
@@ -80,8 +79,14 @@ public class TrackerResponse {
      * @since 1.0
      */
     protected TrackerResponse(Throwable error) {
-        success = false;
-        this.error = Optional.of(error);
+        this(false, Objects.requireNonNull(error));
+    }
+
+    private TrackerResponse(boolean success, Throwable error) {
+        this.success = success;
+        this.error = Optional.ofNullable(error);
+        this.trackerId = Optional.empty();
+        this.peers = Collections.emptyList();
     }
 
     /**
@@ -112,6 +117,14 @@ public class TrackerResponse {
     }
 
     /**
+     * @see #getWarningMessage()
+     * @since 1.0
+     */
+    public void setWarningMessage(String warningMessage) {
+        this.warningMessage = warningMessage;
+    }
+
+    /**
      * @return Exception that happened during interaction with the tracker.
      * @since 1.0
      */
@@ -128,6 +141,14 @@ public class TrackerResponse {
     }
 
     /**
+     * @see #getInterval()
+     * @since 1.0
+     */
+    public void setInterval(int interval) {
+        this.interval = interval;
+    }
+
+    /**
      * @return Absolutely minimal interval for querying peers from this tracker.
      * @since 1.0
      */
@@ -136,11 +157,27 @@ public class TrackerResponse {
     }
 
     /**
+     * @see #getMinInterval()
+     * @since 1.0
+     */
+    public void setMinInterval(int minInterval) {
+        this.minInterval = minInterval;
+    }
+
+    /**
      * @return Binary tracker ID.
      * @since 1.0
      */
-    public byte[] getTrackerId() {
+    public Optional<byte[]> getTrackerId() {
         return trackerId;
+    }
+
+    /**
+     * @see #getTrackerId()
+     * @since 1.0
+     */
+    public void setTrackerId(byte[] trackerId) {
+        this.trackerId = Optional.of(trackerId);
     }
 
     /**
@@ -152,6 +189,14 @@ public class TrackerResponse {
     }
 
     /**
+     * @see #getSeederCount()
+     * @since 1.0
+     */
+    public void setSeederCount(int seederCount) {
+        this.seederCount = seederCount;
+    }
+
+    /**
      * @return Number of leechers for the requested torrent.
      * @since 1.0
      */
@@ -160,66 +205,26 @@ public class TrackerResponse {
     }
 
     /**
+     * @see #getLeecherCount()
+     * @since 1.0
+     */
+    public void setLeecherCount(int leecherCount) {
+        this.leecherCount = leecherCount;
+    }
+
+    /**
      * @return Collection of peers, that are active for the requested torrent.
      * @since 1.0
      */
     public Iterable<Peer> getPeers() {
-        return peerInfo;
-    }
-
-    /**
-     * @see #getWarningMessage()
-     * @since 1.0
-     */
-    public void setWarningMessage(String warningMessage) {
-        this.warningMessage = warningMessage;
-    }
-
-    /**
-     * @see #getInterval()
-     * @since 1.0
-     */
-    void setInterval(int interval) {
-        this.interval = interval;
-    }
-
-    /**
-     * @see #getMinInterval()
-     * @since 1.0
-     */
-    void setMinInterval(int minInterval) {
-        this.minInterval = minInterval;
-    }
-
-    /**
-     * @see #getTrackerId()
-     * @since 1.0
-     */
-    void setTrackerId(byte[] trackerId) {
-        this.trackerId = trackerId;
-    }
-
-    /**
-     * @see #getSeederCount()
-     * @since 1.0
-     */
-    void setSeederCount(int seederCount) {
-        this.seederCount = seederCount;
-    }
-
-    /**
-     * @see #getLeecherCount()
-     * @since 1.0
-     */
-    void setLeecherCount(int leecherCount) {
-        this.leecherCount = leecherCount;
+        return peers;
     }
 
     /**
      * @see #getPeers()
      * @since 1.0
      */
-    public void setPeers(byte[] peers) {
-        peerInfo = new CompactPeerInfo(peers, AddressType.IPV4);
+    public void setPeers(Iterable<Peer> peers) {
+        this.peers = peers;
     }
 }

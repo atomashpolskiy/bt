@@ -39,7 +39,7 @@ public class PieceManagerTest extends BaseBitfieldTest {
 
         List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
         Bitfield bitfield = new Bitfield(chunks);
-        IPieceManager pieceManager = new PieceManager(bitfield, RarestFirstSelectionStrategy.regular());
+        IPieceManager pieceManager = new PieceManager(bitfield, RarestFirstSelectionStrategy.rarest());
 
         // peer has piece #3
         Peer peer1 = mock(Peer.class);
@@ -87,7 +87,7 @@ public class PieceManagerTest extends BaseBitfieldTest {
         List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
         Bitfield bitfield = new Bitfield(chunks);
 
-        IPieceManager pieceManager = new PieceManager(bitfield, RarestFirstSelectionStrategy.regular());
+        IPieceManager pieceManager = new PieceManager(bitfield, RarestFirstSelectionStrategy.rarest());
         Peer peer = mock(Peer.class);
         assertExceptionWithMessage(
                 it -> {

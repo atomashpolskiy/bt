@@ -7,8 +7,8 @@ import bt.bencoding.model.BEString;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.extended.ExtendedMessage;
-import bt.tracker.CompactPeerInfo;
-import bt.tracker.CompactPeerInfo.AddressType;
+import bt.tracker.http.CompactPeerInfo;
+import bt.tracker.http.CompactPeerInfo.AddressType;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

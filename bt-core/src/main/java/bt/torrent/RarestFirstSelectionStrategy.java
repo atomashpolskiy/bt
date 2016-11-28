@@ -37,7 +37,7 @@ public class RarestFirstSelectionStrategy implements PieceSelectionStrategy {
      *
      * @since 1.0
      */
-    public static RarestFirstSelectionStrategy regular() {
+    public static RarestFirstSelectionStrategy rarest() {
         return selector;
     }
 
@@ -49,7 +49,7 @@ public class RarestFirstSelectionStrategy implements PieceSelectionStrategy {
      *
      * @since 1.0
      */
-    public static RarestFirstSelectionStrategy randomized() {
+    public static RarestFirstSelectionStrategy randomizedRarest() {
         return randomizedSelector;
     }
 

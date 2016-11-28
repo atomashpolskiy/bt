@@ -104,19 +104,31 @@ public abstract class TrackerRequestBuilder {
         return this;
     }
 
-    TorrentId getTorrentId() {
+    /**
+     * @since 1.0
+     */
+    public TorrentId getTorrentId() {
         return torrentId;
     }
 
-    int getUploaded() {
+    /**
+     * @since 1.0
+     */
+    public int getUploaded() {
         return uploaded;
     }
 
-    int getDownloaded() {
+    /**
+     * @since 1.0
+     */
+    public int getDownloaded() {
         return downloaded;
     }
 
-    int getLeft() {
+    /**
+     * @since 1.0
+     */
+    public int getLeft() {
         return left;
     }
 }
