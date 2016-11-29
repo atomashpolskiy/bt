@@ -1,6 +1,7 @@
 package bt.tracker.udp;
 
 import java.time.Duration;
+import java.util.Date;
 
 class Session {
 
@@ -25,5 +26,13 @@ class Session {
 
     public long getId() {
         return id;
+    }
+
+    @Override
+    public String toString() {
+        return "Session{" +
+                "id=" + id +
+                ", createdOn=" + new Date(createdOn) +
+                '}';
     }
 }

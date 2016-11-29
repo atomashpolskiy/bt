@@ -14,7 +14,6 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -72,27 +71,28 @@ class UdpMessageWorker {
                               UdpTrackerResponseHandler<T> responseHandler, boolean retry) {
         int timeToWait = retry ? 60 : 15;
         try {
-            if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Sending message " + message + " to remote address: " + remoteAddress);
-            }
             return CompletableFuture.supplyAsync(() ->
                     doSend(message, session, responseHandler), executor).get(timeToWait, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             throw new BtException("Unexpectedly interrupted while waiting for response from the tracker", e);
-        } catch (ExecutionException e) {
-            throw new BtException("Failed to receive response from the tracker", e);
         } catch (TimeoutException e) {
             if (retry) {
                 throw new BtException("Failed to receive response from the tracker", e);
             } else {
                 return sendMessage(message, session, responseHandler, true);
             }
+        } catch (Throwable e) {
+            throw new BtException("Failed to receive response from the tracker", e);
         }
     }
 
     private <T> T doSend(UdpTrackerMessage message, Session session, UdpTrackerResponseHandler<T> responseHandler) {
         DatagramSocket socket = getSocket();
         try {
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("[Session {}] Sending message {} to remote address: {}",
+                        session.getId(), message, remoteAddress);
+            }
             socket.send(serialize(message, session));
             DatagramPacket response = new DatagramPacket(new byte[8192], 8192);
 
@@ -102,8 +102,8 @@ class UdpMessageWorker {
                 if (!remoteAddress.equals(response.getSocketAddress())) {
                     // ignore packets received from unexpected senders
                     if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Received unexpected datagram packet from remote address: " +
-                                response.getSocketAddress());
+                        LOGGER.trace("[Session {}] Received unexpected datagram packet from remote address: {}",
+                                session.getId(), response.getSocketAddress());
                     }
                     continue;
                 }
@@ -113,13 +113,19 @@ class UdpMessageWorker {
 
                     int messageType = Protocols.readInt(data, MESSAGE_TYPE_OFFSET);
                     if (messageType == ERROR_MESSAGE_TYPE) {
-                        String error = new String(Arrays.copyOfRange(data, DATA_OFFSET, data.length), "ASCII");
+                        String error = new String(Arrays.copyOfRange(data, DATA_OFFSET, response.getLength()), "ASCII");
+                        if (LOGGER.isTraceEnabled()) {
+                            LOGGER.trace("[Session {}] Received error from remote address: {}; " +
+                                    "message ID: {}, messageType: {}, error: {}",
+                                    session.getId(), remoteAddress, message.getId(), messageType, error);
+                        }
                         return responseHandler.onError(error);
                     } else if (messageType != message.getMessageType()) {
                         // ignore messages with incorrect type
                         if (LOGGER.isTraceEnabled()) {
-                            LOGGER.trace("Received message with incorrect type from remote address: " + remoteAddress +
-                                    "; expected: " + message.getMessageType() + ", actual: " + messageType);
+                            LOGGER.trace("[Session {}] Received message with incorrect type " +
+                                    "from remote address: {}; expected: {}, actual: {}",
+                                    session.getId(), remoteAddress, message.getMessageType(), messageType);
                         }
                         continue;
                     }
@@ -127,21 +133,25 @@ class UdpMessageWorker {
                     int messageId = Protocols.readInt(data, MESSAGE_ID_OFFSET);
                     if (messageId != message.getId()) {
                         if (LOGGER.isTraceEnabled()) {
-                            LOGGER.trace("Received message with incorrect message ID from remote address: " + remoteAddress +
-                                    "; expected: " + message.getId() + ", actual: " + messageId);
+                            LOGGER.trace("[Session {}] Received message with incorrect message ID " +
+                                    "from remote address: {}; expected: {}, actual: {}",
+                                    session.getId(), remoteAddress, message.getId(), messageId);
                         }
                         continue;
                     }
 
+                    T result = responseHandler.onSuccess(Arrays.copyOfRange(data, DATA_OFFSET, response.getLength()));
                     if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Received response from remote address: " + remoteAddress +
-                                "; message ID: " + messageId + ", messageType: " + messageType);
+                        LOGGER.trace("[Session {}] Received response " +
+                                "from remote address: {}; message ID: {}, messageType: {}, result: {}",
+                                session.getId(), remoteAddress, messageId, messageType, result);
                     }
-                    return responseHandler.onSuccess(Arrays.copyOfRange(data, DATA_OFFSET, data.length));
+                    return result;
 
                 } else if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Received message with incorrect size from remote address: " + remoteAddress +
-                                "; expected: at least " + MIN_MESSAGE_LENGTH + " bytes, actual: " + response.getLength());
+                    LOGGER.trace("[Session {}] Received message with incorrect size " +
+                            "from remote address: {}; expected: at least {} bytes, actual: {} bytes",
+                            session.getId(), remoteAddress, MIN_MESSAGE_LENGTH, response.getLength());
                 }
             }
         } catch (IOException e) {

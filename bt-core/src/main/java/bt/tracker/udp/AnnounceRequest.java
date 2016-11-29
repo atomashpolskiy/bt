@@ -6,6 +6,7 @@ import bt.protocol.Protocols;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.Objects;
 
 class AnnounceRequest extends UdpTrackerMessage {
@@ -34,6 +35,7 @@ class AnnounceRequest extends UdpTrackerMessage {
     private long uploaded;
     private EventType eventType;
     private short listeningPort;
+    private String requestString;
 
     public AnnounceRequest() {
         super(ANNOUNCE_TYPE_ID);
@@ -67,6 +69,10 @@ class AnnounceRequest extends UdpTrackerMessage {
         this.listeningPort = listeningPort;
     }
 
+    public void setRequestString(String requestString) {
+        this.requestString = requestString;
+    }
+
     @Override
     protected void writeBodyTo(OutputStream out) throws IOException {
         out.write(Objects.requireNonNull(torrentId).getBytes());
@@ -77,9 +83,22 @@ class AnnounceRequest extends UdpTrackerMessage {
         out.write(Protocols.getIntBytes(Objects.requireNonNull(eventType).code()));
         out.write(Protocols.getIntBytes(0)); // local ip
         out.write(Protocols.getIntBytes(0)); // secret key
-        out.write(Protocols.getIntBytes(-1)); // numwant
+        out.write(Protocols.getIntBytes(50)); // numwant
         out.write(Protocols.getShortBytes(listeningPort));
-        out.write(Protocols.getShortBytes(0)); // extensions
+
+        // extensions
+        if (requestString != null) {
+            out.write(0b0000000000000010);
+
+            byte[] bytes = requestString.getBytes("ISO-8859-1");
+            if (bytes.length > 255) {
+                bytes = Arrays.copyOfRange(bytes, 0, 255);
+            }
+            out.write(bytes.length);
+            out.write(bytes);
+        } else {
+            out.write(Protocols.getShortBytes(0));
+        }
     }
 
     @Override
@@ -93,6 +112,7 @@ class AnnounceRequest extends UdpTrackerMessage {
                 ", uploaded=" + uploaded +
                 ", eventType=" + eventType + (eventType == null ? "" : "(" + eventType.code + ")") +
                 ", listeningPort=" + listeningPort +
+                (requestString == null ? "" : ", requestString=" + requestString) +
                 '}';
     }
 }

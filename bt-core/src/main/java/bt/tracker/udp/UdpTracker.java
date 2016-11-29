@@ -13,12 +13,14 @@ import java.net.MalformedURLException;
 import java.net.SocketAddress;
 import java.net.URL;
 import java.util.Objects;
+import java.util.Optional;
 
 public class UdpTracker implements Tracker {
 
     private IdService idService;
-    private UdpMessageWorker worker;
     private InetSocketAddress localAddress;
+    private URL trackerUrl;
+    private UdpMessageWorker worker;
 
     public UdpTracker(IdService idService,
                       IRuntimeLifecycleBinder lifecycleBinder,
@@ -26,22 +28,25 @@ public class UdpTracker implements Tracker {
         this.idService = idService;
         this.localAddress = new InetSocketAddress(0);
         // TODO: one UDP socket for all outgoing tracker connections
-        this.worker = new UdpMessageWorker(localAddress, getSocketAddress(trackerUrl), lifecycleBinder);
+        this.trackerUrl = toUrl(trackerUrl);
+        this.worker = new UdpMessageWorker(localAddress, getSocketAddress(this.trackerUrl), lifecycleBinder);
     }
 
-    private SocketAddress getSocketAddress(String trackerUrl) {
-        if (!trackerUrl.startsWith("udp://")) {
-            throw new IllegalArgumentException("Unexpected URL format: " + trackerUrl);
+    private URL toUrl(String s) {
+        if (!s.startsWith("udp://")) {
+            throw new IllegalArgumentException("Unexpected URL format: " + s);
         }
         // workaround for java.net.MalformedURLException (unsupported protocol: udp)
-        trackerUrl = trackerUrl.replace("udp://", "http://");
+        s = s.replace("udp://", "http://");
 
-        URL url;
         try {
-            url = new URL(trackerUrl);
+            return new URL(s);
         } catch (MalformedURLException e) {
-            throw new IllegalArgumentException("Invalid URL: " + trackerUrl);
+            throw new IllegalArgumentException("Invalid URL: " + s);
         }
+    }
+
+    private SocketAddress getSocketAddress(URL url) {
         String host = Objects.requireNonNull(url.getHost(), "Host name is required");
         int port = getPort(url);
         return new InetSocketAddress(host, port);
@@ -90,8 +95,17 @@ public class UdpTracker implements Tracker {
                 request.setUploaded(getUploaded());
                 request.setEventType(eventType);
                 request.setListeningPort((short) localAddress.getPort());
+                getRequestString(trackerUrl).ifPresent(request::setRequestString);
                 return worker.sendMessage(request, AnnounceResponseHandler.handler());
             }
         };
+    }
+
+    private Optional<String> getRequestString(URL url) {
+        String result = url.getPath();
+        if (url.getQuery() != null) {
+            result += "?" + url.getQuery();
+        }
+        return result.isEmpty() ? Optional.empty() : Optional.of(result);
     }
 }

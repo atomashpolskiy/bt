@@ -27,7 +27,16 @@ abstract class UdpTrackerMessage {
     public void writeTo(OutputStream out) throws IOException {
         out.write(Protocols.getIntBytes(messageType));
         out.write(Protocols.getIntBytes(id));
+        writeBodyTo(out);
     }
 
     protected abstract void writeBodyTo(OutputStream out) throws IOException;
+
+    @Override
+    public String toString() {
+        return getClass().getName() + "{" +
+                "messageType=" + messageType +
+                ", id=" + id +
+                '}';
+    }
 }
