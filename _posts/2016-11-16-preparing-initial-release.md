@@ -16,8 +16,8 @@ That's all for now, stay tuned for further updates!
 - Validation of arbitrary bencoded documents according to user-provided object models and YAML schemas
 - Filesystem-based data back-end, support for providing custom data back-ends
 - URL metainfo fetcher, support for providing custom metainfo fetchers
-- HTTP tracker integration
-- Multi-trackers support
+- HTTP and UDP tracker integration
+- Multi-tracker support
 - Private tracker support
 - Standard bittorrent protocol and messaging
 - Full support for protocol extensions, including customization of handshake procedure
@@ -37,3 +37,10 @@ That's all for now, stay tuned for further updates!
 - <a href="http://bittorrent.org/beps/bep_0020.html">BEP-20: Peer ID Conventions</a>
 - <a href="http://bittorrent.org/beps/bep_0023.html">BEP-23: Tracker Returns Compact Peer Lists</a>
 - <a href="http://bittorrent.org/beps/bep_0027.html">BEP-27: Private Torrents</a>
+
+#### Update (29.11.2016)
+
+UDP tracker support will also be added in the release (mainly because it lets me move HTTP libs to a separate module):
+
+- <a href="http://bittorrent.org/beps/bep_0015.html">BEP-15: UDP Tracker Protocol</a>
+- <a href="http://bittorrent.org/beps/bep_0041.html">BEP-41: UDP Tracker Protocol Extensions</a>
