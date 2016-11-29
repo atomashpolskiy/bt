@@ -214,11 +214,9 @@ class UdpMessageWorker {
     public void shutdown() {
         synchronized (lock) {
             if (!shutdown) {
-                try {
-                    socket.close();
-                } finally {
-                    shutdown = true;
-                }
+                shutdown = true;
+                executor.shutdownNow();
+                socket.close();
             }
         }
     }
