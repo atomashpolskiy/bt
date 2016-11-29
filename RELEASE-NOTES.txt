@@ -13,8 +13,8 @@ Features:
 * Validation of arbitrary bencoded documents according to user-provided object models and YAML schemas
 * Filesystem-based data back-end, support for providing custom data back-ends
 * URL metainfo fetcher, support for providing custom metainfo fetchers
-* HTTP tracker integration
-* Multi-trackers support
+* HTTP and UDP tracker integration
+* Multi-tracker support
 * Private tracker support
 * Standard bittorrent protocol and messaging
 * Full support for protocol extensions, including customization of handshake procedure
@@ -31,6 +31,8 @@ Official BEPs:
 * BEP-10: Extension Protocol
 * BEP-11: Peer Exchange (PEX)
 * BEP-12: Multitracker metadata extension
+* BEP-15: UDP Tracker Protocol
 * BEP-20: Peer ID Conventions
 * BEP-23: Tracker Returns Compact Peer Lists
 * BEP-27: Private Torrents
+* BEP-41: UDP Tracker Protocol Extensions
