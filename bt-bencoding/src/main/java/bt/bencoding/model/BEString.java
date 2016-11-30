@@ -3,25 +3,24 @@ package bt.bencoding.model;
 import bt.bencoding.BEEncoder;
 import bt.bencoding.BEType;
 
+import java.io.IOException;
 import java.io.OutputStream;
-import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
-public class BEInteger implements BEObject<BigInteger> {
+public class BEString implements BEObject<byte[]> {
 
     private byte[] content;
-    private BigInteger value;
     private BEEncoder encoder;
 
-    public BEInteger(byte[] content, BigInteger value) {
+    public BEString(byte[] content) {
         this.content = content;
-        this.value = value;
         encoder = BEEncoder.encoder();
     }
 
     @Override
     public BEType getType() {
-        return BEType.INTEGER;
+        return BEType.STRING;
     }
 
     @Override
@@ -30,24 +29,28 @@ public class BEInteger implements BEObject<BigInteger> {
     }
 
     @Override
-    public BigInteger getValue() {
-        return value;
+    public byte[] getValue() {
+        return content;
     }
 
     @Override
-    public void writeTo(OutputStream out) {
+    public void writeTo(OutputStream out) throws IOException {
         encoder.encode(this, out);
+    }
+
+    public String getValue(Charset charset) {
+        return new String(content, charset);
     }
 
     @Override
     public int hashCode() {
-        return value.hashCode();
+        return Arrays.hashCode(content);
     }
 
     @Override
     public boolean equals(Object obj) {
 
-        if (obj == null || !(obj instanceof BEInteger)) {
+        if (obj == null || !(obj instanceof BEString)) {
             return false;
         }
 
@@ -55,6 +58,6 @@ public class BEInteger implements BEObject<BigInteger> {
             return true;
         }
 
-        return value.equals(((BEInteger) obj).getValue());
+        return Arrays.equals(content, ((BEString) obj).getContent());
     }
 }

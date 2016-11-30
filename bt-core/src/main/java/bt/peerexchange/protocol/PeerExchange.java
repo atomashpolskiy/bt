@@ -73,7 +73,7 @@ public class PeerExchange extends ExtendedMessage {
         return dropped;
     }
 
-    void writeTo(OutputStream out) {
+    void writeTo(OutputStream out) throws IOException {
 
         if (message == null) {
             message = new BEMap(null, new HashMap<String, BEObject<?>>() {{

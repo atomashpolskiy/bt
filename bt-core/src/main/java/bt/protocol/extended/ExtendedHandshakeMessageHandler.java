@@ -12,6 +12,7 @@ import bt.protocol.DecodingContext;
 import bt.protocol.handler.MessageHandler;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
@@ -112,7 +113,11 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
     public boolean encode(ExtendedHandshake message, ByteBuffer buffer) {
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        new BEMap(null, message.getData()).writeTo(out);
+        try {
+            new BEMap(null, message.getData()).writeTo(out);
+        } catch (IOException e) {
+            // can't happen
+        }
 
         byte[] payload = out.toByteArray();
         if (buffer.remaining() < payload.length) {

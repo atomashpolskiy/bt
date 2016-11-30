@@ -13,6 +13,7 @@
     <description>BitTorrent Library</description>
 
     <modules>
+        <module>bt-bencoding</module>
         <module>bt-core</module>
         <module>bt-http-tracker-client</module>
         <module>bt-tests</module>
@@ -23,7 +24,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <!-- dependencies versions -->
-        <snakeyaml-version>1.17</snakeyaml-version>
         <slf4j-version>1.7.21</slf4j-version>
         <guice-version>4.1.0</guice-version>
         <junit-version>4.12</junit-version>
@@ -56,11 +56,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.yaml</groupId>
-                <artifactId>snakeyaml</artifactId>
-                <version>${snakeyaml-version}</version>
-            </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>

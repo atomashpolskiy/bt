@@ -1,6 +1,5 @@
 package bt.bencoding;
 
-import bt.BtException;
 import bt.bencoding.model.BEInteger;
 import bt.bencoding.model.BEList;
 import bt.bencoding.model.BEMap;
@@ -29,7 +28,7 @@ public class BEParser implements AutoCloseable {
         try {
             this.scanner = new Scanner(url.openStream());
         } catch (IOException e) {
-            throw new BtException("Failed to open stream for URL: " + url, e);
+            throw new BtParseException("Failed to open stream for URL: " + url, new byte[0], e);
         }
         this.type = getTypeForPrefix((char) scanner.peek());
     }

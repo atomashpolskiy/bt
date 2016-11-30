@@ -1,6 +1,5 @@
 package bt.bencoding;
 
-import bt.BtException;
 import bt.bencoding.model.BEInteger;
 import bt.bencoding.model.BEList;
 import bt.bencoding.model.BEMap;
@@ -26,7 +25,7 @@ public class BEEncoder {
         return instance;
     }
 
-    public void encode(BEString string, OutputStream out) {
+    public void encode(BEString string, OutputStream out) throws IOException {
 
         Objects.requireNonNull(string);
 
@@ -34,13 +33,13 @@ public class BEEncoder {
         encodeString(bytes, out);
     }
 
-    private void encodeString(byte[] bytes, OutputStream out) {
+    private void encodeString(byte[] bytes, OutputStream out) throws IOException {
         write(out, Integer.toString(bytes.length).getBytes(defaultCharset));
         write(out, ':');
         write(out, bytes);
     }
 
-    public void encode(BEInteger integer, OutputStream out) {
+    public void encode(BEInteger integer, OutputStream out) throws IOException {
 
         Objects.requireNonNull(integer);
 
@@ -50,7 +49,7 @@ public class BEEncoder {
         write(out, BEParser.EOF);
     }
 
-    public void encode(BEList list, OutputStream out) {
+    public void encode(BEList list, OutputStream out) throws IOException {
 
         Objects.requireNonNull(list);
 
@@ -64,7 +63,7 @@ public class BEEncoder {
         write(out, BEParser.EOF);
     }
 
-    public void encode(BEMap map, OutputStream out) {
+    public void encode(BEMap map, OutputStream out) throws IOException {
 
         Objects.requireNonNull(map);
 
@@ -81,19 +80,11 @@ public class BEEncoder {
         write(out, BEParser.EOF);
     }
 
-    private void write(OutputStream out, int i) {
-        try {
-            out.write(i);
-        } catch (IOException e) {
-            throw new BtException("Unexpected I/O error", e);
-        }
+    private void write(OutputStream out, int i) throws IOException {
+        out.write(i);
     }
 
-    private void write(OutputStream out, byte[] bytes) {
-        try {
-            out.write(bytes);
-        } catch (IOException e) {
-            throw new BtException("Unexpected I/O error", e);
-        }
+    private void write(OutputStream out, byte[] bytes) throws IOException {
+        out.write(bytes);
     }
 }

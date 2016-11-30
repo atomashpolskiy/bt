@@ -1,6 +1,5 @@
 package bt.bencoding.model.rule;
 
-import bt.BtException;
 import bt.bencoding.model.ClassUtil;
 
 import java.util.Arrays;
@@ -22,7 +21,7 @@ public class RequiredRule implements Rule {
         try {
             map = ClassUtil.cast(Map.class, null, object);
         } catch (Exception e) {
-            throw new BtException("Unexpected validation exception", e);
+            throw new RuntimeException("Unexpected validation exception", e);
         }
 
         for (String requiredKey : requiredKeys) {

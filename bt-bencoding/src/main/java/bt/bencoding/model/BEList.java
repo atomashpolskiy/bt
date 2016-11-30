@@ -3,26 +3,27 @@ package bt.bencoding.model;
 import bt.bencoding.BEEncoder;
 import bt.bencoding.BEType;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Map;
+import java.util.List;
 
-public class BEMap implements BEObject<Map<String, BEObject<?>>> {
+public class BEList implements BEObject<List<? extends BEObject<?>>> {
 
     private byte[] content;
-    private Map<String, BEObject<?>> value;
+    private List<? extends BEObject<?>> value;
     private BEEncoder encoder;
 
-    public BEMap(byte[] content, Map<String, BEObject<?>> value) {
+    public BEList(byte[] content, List<? extends BEObject<?>> value) {
         this.content = content;
-        this.value = Collections.unmodifiableMap(value);
+        this.value = Collections.unmodifiableList(value);
         encoder = BEEncoder.encoder();
     }
 
     @Override
     public BEType getType() {
-        return BEType.MAP;
+        return BEType.LIST;
     }
 
     @Override
@@ -31,12 +32,12 @@ public class BEMap implements BEObject<Map<String, BEObject<?>>> {
     }
 
     @Override
-    public Map<String, BEObject<?>> getValue() {
+    public List<? extends BEObject<?>> getValue() {
         return value;
     }
 
     @Override
-    public void writeTo(OutputStream out) {
+    public void writeTo(OutputStream out) throws IOException {
         encoder.encode(this, out);
     }
 
@@ -48,7 +49,7 @@ public class BEMap implements BEObject<Map<String, BEObject<?>>> {
     @Override
     public boolean equals(Object obj) {
 
-        if (obj == null || !(obj instanceof BEMap)) {
+        if (obj == null || !(obj instanceof BEList)) {
             return false;
         }
 
@@ -56,6 +57,6 @@ public class BEMap implements BEObject<Map<String, BEObject<?>>> {
             return true;
         }
 
-        return value.equals(((BEMap) obj).getValue());
+        return value.equals(((BEList) obj).getValue());
     }
 }

@@ -6,6 +6,7 @@ import bt.protocol.DecodingContext;
 import bt.protocol.handler.MessageHandler;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,7 +45,11 @@ public class PeerExchangeMessageHandler implements MessageHandler<PeerExchange> 
     @Override
     public boolean encode(PeerExchange message, ByteBuffer buffer) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        message.writeTo(bos);
+        try {
+            message.writeTo(bos);
+        } catch (IOException e) {
+            // can't happen
+        }
 
         byte[] payload = bos.toByteArray();
         if (buffer.remaining() < payload.length) {

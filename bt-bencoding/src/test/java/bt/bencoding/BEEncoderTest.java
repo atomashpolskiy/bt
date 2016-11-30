@@ -8,6 +8,7 @@ import bt.bencoding.model.BEString;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -76,7 +77,11 @@ public class BEEncoderTest {
 
     private static BEParser encodeAndCreateParser(BEObject<?> object) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        object.writeTo(out);
+        try {
+            object.writeTo(out);
+        } catch (IOException e) {
+            // can't happen
+        }
         return new BEParser(out.toByteArray());
     }
 }

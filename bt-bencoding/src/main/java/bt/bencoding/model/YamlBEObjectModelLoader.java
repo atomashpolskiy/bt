@@ -1,6 +1,5 @@
 package bt.bencoding.model;
 
-import bt.BtException;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
@@ -33,7 +32,7 @@ public class YamlBEObjectModelLoader implements BEObjectModelLoader {
     private BEObjectModel fromYaml(Object yamlObject) {
 
         if (!List.class.isAssignableFrom(yamlObject.getClass())) {
-            throw new BtException("Invalid model -- root document must be a list");
+            throw new IllegalArgumentException("Invalid model -- root document must be a list");
         }
 
         List entries = (List) yamlObject;
@@ -42,7 +41,7 @@ public class YamlBEObjectModelLoader implements BEObjectModelLoader {
                 return buildObjectModel(((Map) entry).get(MODEL_DEFINITION_KEY));
             }
         }
-        throw new BtException("Invalid model -- missing model definition");
+        throw new IllegalArgumentException("Invalid model -- missing model definition");
     }
 
     private BEObjectModel buildObjectModel(Object modelDefinition) {

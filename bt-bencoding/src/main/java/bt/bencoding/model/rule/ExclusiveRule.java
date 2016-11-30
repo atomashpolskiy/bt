@@ -1,6 +1,5 @@
 package bt.bencoding.model.rule;
 
-import bt.BtException;
 import bt.bencoding.model.ClassUtil;
 
 import java.util.ArrayList;
@@ -72,7 +71,7 @@ public class ExclusiveRule implements Rule {
             }
 
         } catch (Exception e) {
-            throw new BtException("Unexpected validation exception", e);
+            throw new RuntimeException("Unexpected validation exception", e);
         }
     }
 

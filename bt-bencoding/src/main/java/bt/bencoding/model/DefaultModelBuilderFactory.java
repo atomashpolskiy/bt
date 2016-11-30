@@ -1,7 +1,5 @@
 package bt.bencoding.model;
 
-import bt.BtException;
-
 import java.util.Map;
 
 public class DefaultModelBuilderFactory implements BEObjectModelBuilderFactory {
@@ -17,6 +15,6 @@ public class DefaultModelBuilderFactory implements BEObjectModelBuilderFactory {
         if (Map.class.isAssignableFrom(sourceType)) {
             return (BEObjectModelBuilder<T>) new JUMModelBuilder();
         }
-        throw new BtException("No builders registered for type: " + sourceType.getName());
+        throw new IllegalArgumentException("No builders registered for type: " + sourceType.getName());
     }
 }

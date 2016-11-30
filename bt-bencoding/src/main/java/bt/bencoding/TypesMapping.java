@@ -1,7 +1,5 @@
 package bt.bencoding;
 
-import bt.BtException;
-
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +14,7 @@ public class TypesMapping {
             case INTEGER: return BigInteger.class;
             case STRING: return byte[].class;
             default: {
-                throw new BtException("Unknown BE type: " + type);
+                throw new IllegalArgumentException("Unknown BE type: " + type);
             }
         }
     }

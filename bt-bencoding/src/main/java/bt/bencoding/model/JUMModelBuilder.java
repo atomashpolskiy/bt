@@ -1,6 +1,5 @@
 package bt.bencoding.model;
 
-import bt.BtException;
 import bt.bencoding.model.rule.ExclusiveRule;
 import bt.bencoding.model.rule.RequiredRule;
 import bt.bencoding.model.rule.Rule;
@@ -50,11 +49,11 @@ public class JUMModelBuilder implements BEObjectModelBuilder<Map> {
                     return new BEIntegerModel(Collections.emptyList());
                 }
                 default: {
-                    throw new BtException("Unsupported BE type: " + sourceType);
+                    throw new IllegalArgumentException("Unsupported BE type: " + sourceType);
                 }
             }
         } catch (Exception e) {
-            throw new BtException("Failed to build BE model", e);
+            throw new RuntimeException("Failed to build BE model", e);
         }
     }
 
@@ -62,7 +61,7 @@ public class JUMModelBuilder implements BEObjectModelBuilder<Map> {
         try {
             return readNotNull(map, String.class, TYPE_KEY).toLowerCase();
         } catch (Exception e) {
-            throw new BtException("Failed to read type", e);
+            throw new RuntimeException("Failed to read type", e);
         }
     }
 
@@ -87,7 +86,7 @@ public class JUMModelBuilder implements BEObjectModelBuilder<Map> {
                     try {
                         return readNotNull(entry, String.class, MAP_ENTRY_KEY_KEY);
                     } catch (Exception e) {
-                        throw new BtException("Unexpected error", e);
+                        throw new RuntimeException("Unexpected error", e);
                     }
                 })
                 .collect(Collectors.toList());
@@ -104,7 +103,7 @@ public class JUMModelBuilder implements BEObjectModelBuilder<Map> {
                             List<String> strings = castList(String.class, cast(List.class, null, item));
                             return new HashSet<>(strings);
                         } catch (Exception e) {
-                            throw new BtException("Unexpected error", e);
+                            throw new RuntimeException("Unexpected error", e);
                         }
                     }
                 })
@@ -123,7 +122,7 @@ public class JUMModelBuilder implements BEObjectModelBuilder<Map> {
             return (map.get(REQUIRED_KEY) == null) ?
                     true : cast(Boolean.class, REQUIRED_KEY, map.get(REQUIRED_KEY));
         } catch (Exception e) {
-            throw new BtException("Failed to check if object is required", e);
+            throw new RuntimeException("Failed to check if object is required", e);
         }
     }
 

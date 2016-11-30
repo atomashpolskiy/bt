@@ -1,6 +1,5 @@
 package bt.bencoding.model;
 
-import bt.BtException;
 import bt.bencoding.BEParser;
 import org.junit.Before;
 import org.junit.Test;
@@ -8,7 +7,6 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.InputStream;
 
-import static bt.TestUtil.assertExceptionWithMessage;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -35,14 +33,6 @@ public class YamlBEObjectModelLoaderTest {
         try (BEParser parser = new BEParser(YamlBEObjectModelLoaderTest.class.getResource(name))) {
             return parser.readMap();
         }
-    }
-
-    @Test
-    public void testLoadModel_MissingModel() {
-
-        assertExceptionWithMessage(
-                it -> loadModel("metainfo_missing_model.yml"),
-                "Invalid model -- missing model definition");
     }
 
     @Test
@@ -87,7 +77,7 @@ public class YamlBEObjectModelLoaderTest {
                 if (actualMessage.contains(expectedMessage)) {
                     continue;
                 }
-                throw new BtException("Validation result does not contain expected message: " + expectedMessage);
+                throw new RuntimeException("Validation result does not contain expected message: " + expectedMessage);
             }
         }
     }
