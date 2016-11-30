@@ -21,14 +21,14 @@ import bt.protocol.handler.MessageHandler;
 import bt.runtime.Config;
 import bt.service.AdhocTorrentRegistry;
 import bt.service.ClasspathApplicationService;
-import bt.service.DefaultIdService;
+import bt.service.VersionAwareIdentityService;
 import bt.service.ExecutorServiceProvider;
-import bt.service.IApplicationService;
+import bt.service.ApplicationService;
 import bt.service.INetworkService;
 import bt.service.IPeerRegistry;
 import bt.service.IRuntimeLifecycleBinder;
-import bt.service.ITorrentRegistry;
-import bt.service.IdService;
+import bt.service.TorrentRegistry;
+import bt.service.IdentityService;
 import bt.service.NetworkService;
 import bt.service.PeerRegistry;
 import bt.service.PeerSourceFactory;
@@ -104,10 +104,10 @@ public class ServiceModule implements Module {
 
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
         binder.bind(INetworkService.class).to(NetworkService.class).in(Singleton.class);
-        binder.bind(IApplicationService.class).to(ClasspathApplicationService.class).in(Singleton.class);
-        binder.bind(IdService.class).to(DefaultIdService.class).in(Singleton.class);
+        binder.bind(ApplicationService.class).to(ClasspathApplicationService.class).in(Singleton.class);
+        binder.bind(IdentityService.class).to(VersionAwareIdentityService.class).in(Singleton.class);
         binder.bind(ITrackerService.class).to(TrackerService.class).in(Singleton.class);
-        binder.bind(ITorrentRegistry.class).to(AdhocTorrentRegistry.class).in(Singleton.class);
+        binder.bind(TorrentRegistry.class).to(AdhocTorrentRegistry.class).in(Singleton.class);
         binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).in(Singleton.class);
         binder.bind(IHandshakeFactory.class).to(HandshakeFactory.class).in(Singleton.class);
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
@@ -141,7 +141,7 @@ public class ServiceModule implements Module {
     @Provides
     @Singleton
     public IConnectionHandlerFactory provideConnectionHandlerFactory(IHandshakeFactory handshakeFactory,
-                                                                     ITorrentRegistry torrentRegistry,
+                                                                     TorrentRegistry torrentRegistry,
                                                                      Set<ConnectionHandler> connectionHandlers,
                                                                      Set<HandshakeHandler> handshakeHandlers) {
         return new ConnectionHandlerFactory(handshakeFactory, torrentRegistry, connectionHandlers,
@@ -158,7 +158,7 @@ public class ServiceModule implements Module {
     @Singleton
     public IPeerRegistry providePeerRegistry(IRuntimeLifecycleBinder lifecycleBinder,
                                              INetworkService networkService,
-                                             IdService idService,
+                                             IdentityService idService,
                                              ITrackerService trackerService,
                                              Set<PeerSourceFactory> peerSourceFactories) {
         return new PeerRegistry(lifecycleBinder, networkService, idService, trackerService,

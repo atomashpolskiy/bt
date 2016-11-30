@@ -14,12 +14,14 @@ public interface StorageUnit extends Closeable {
     /**
      * Read a block of data into the provided buffer, starting with a given offset.
      * Number of bytes to be read is determined by {@link Buffer#remaining()}.
-     * Hence, storage must throw an exception
-     * if offset > ({@link #capacity()} - buffer.remaining())
+     * <p>Hence, storage must throw an exception if
+     * <blockquote>
+     * {@code offset >} {@link #capacity()} {@code - buffer.remaining()}
+     * </blockquote>
      *
-     * @param buffer Buffer to read bytes into. Value returned by its' remaining() method determines
-     *               the total number of bytes to read
-     * @param offset Index to starting reading from (0-based)
+     * @param buffer Buffer to read bytes into.
+     *               Value returned by <b>buffer.remaining()</b> determines the total number of bytes to read.
+     * @param offset Index to start reading from (0-based)
      *
      * @since 1.0
      */
@@ -27,8 +29,10 @@ public interface StorageUnit extends Closeable {
 
     /**
      * Read a block of data, starting with a given offset.
-     * Storage must throw an exception
-     * if offset > ({@link #capacity()} - length)
+     * <p>Storage must throw an exception if
+     * <blockquote>
+     * {@code offset >} {@link #capacity()} {@code - length}
+     * </blockquote>
      *
      * @param offset Index to starting reading from (0-based)
      * @param length Total number of bytes to read
@@ -39,13 +43,15 @@ public interface StorageUnit extends Closeable {
 
     /**
      * Write a block of data from the provided buffer to this storage, starting with a given offset.
-     * Number of bytes to be written is determined by {@link Buffer#remaining()}.
-     * Hence, storage must throw an exception
-     * if offset > ({@link #capacity()} - buffer.remaining())
+     * <p>Number of bytes to be written is determined by {@link Buffer#remaining()}.
+     * <p>Hence, storage must throw an exception if
+     * <blockquote>
+     * {@code offset >} {@link #capacity()} {@code - buffer.remaining()}
+     * </blockquote>
      *
      * @param buffer Buffer containing the block of data to write to this storage.
-     *               Value returned by its' remaining() method determines
-     *               the total number of bytes to write
+     *               Value returned by <b>buffer.remaining()</b> determines
+     *               the total number of bytes to write.
      * @param offset Offset in this storage's data to start writing to (0-based)
      *
      * @since 1.0
@@ -54,11 +60,13 @@ public interface StorageUnit extends Closeable {
 
     /**
      * Write a block of data to this storage, starting with a given offset.
-     * Number of bytes to be written is determined by block's length.
-     * Storage must throw an exception
-     * if offset > ({@link #capacity()} - block.length)
+     * <p>Number of bytes to be written is determined by block's length.
+     * <p>Storage must throw an exception if
+     * <blockquote>
+     * {@code offset >} {@link #capacity()} {@code - block.length}
+     * </blockquote>
      *
-     * @param block Block of data to write to this storage.
+     * @param block Block of data to write to this storage
      * @param offset Offset in this storage's data to start writing to (0-based)
      *
      * @since 1.0
@@ -66,7 +74,9 @@ public interface StorageUnit extends Closeable {
     void writeBlock(byte[] block, long offset);
 
     /**
-     * @return Total maximum capacity of this storage.
+     * Get total maximum capacity of this storage.
+     *
+     * @return Total maximum capacity of this storage
      * @since 1.0
      */
     long capacity();

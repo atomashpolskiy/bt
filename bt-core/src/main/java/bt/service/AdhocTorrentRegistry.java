@@ -14,7 +14,14 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-public class AdhocTorrentRegistry implements ITorrentRegistry {
+/**
+ * Simple in-memory torrent registry, that creates new descriptors upon request.
+ *
+ *<p><b>Note that this class is not a part of the public API and is a subject to change.</b></p>
+ *
+ * @since 1.0
+ */
+public class AdhocTorrentRegistry implements TorrentRegistry {
 
     private ITrackerService trackerService;
     private IDataDescriptorFactory dataDescriptorFactory;
@@ -24,15 +31,16 @@ public class AdhocTorrentRegistry implements ITorrentRegistry {
     private ConcurrentMap<Torrent, ITorrentDescriptor> descriptors;
 
     @Inject
-    public AdhocTorrentRegistry(ITrackerService trackerService, IDataDescriptorFactory dataDescriptorFactory,
+    public AdhocTorrentRegistry(ITrackerService trackerService,
+                                IDataDescriptorFactory dataDescriptorFactory,
                                 IRuntimeLifecycleBinder lifecycleBinder) {
 
         this.trackerService = trackerService;
         this.dataDescriptorFactory = dataDescriptorFactory;
         this.lifecycleBinder = lifecycleBinder;
 
-        torrents = new ConcurrentHashMap<>();
-        descriptors = new ConcurrentHashMap<>();
+        this.torrents = new ConcurrentHashMap<>();
+        this.descriptors = new ConcurrentHashMap<>();
     }
 
     @Override

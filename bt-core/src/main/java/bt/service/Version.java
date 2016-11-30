@@ -40,4 +40,13 @@ public class Version {
     public boolean isSnapshot() {
         return snapshot;
     }
+
+    @Override
+    public String toString() {
+        String version = major + "." + minor;
+        if (snapshot) {
+            version += " (Snapshot)";
+        }
+        return version;
+    }
 }

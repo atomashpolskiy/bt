@@ -6,7 +6,7 @@
 
     <parent>
         <artifactId>bt-parent</artifactId>
-        <groupId>bt</groupId>
+        <groupId>com.github.atomashpolskiy</groupId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
@@ -29,7 +29,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>2.4.2</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -38,12 +37,41 @@
                         </goals>
                         <configuration>
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>${main.class}</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                            <addClasspath>true</addClasspath>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>bundle-manifest</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>manifest</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
@@ -52,12 +80,12 @@
 
     <dependencies>
         <dependency>
-            <groupId>bt</groupId>
+            <groupId>com.github.atomashpolskiy</groupId>
             <artifactId>bt-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>bt</groupId>
+            <groupId>com.github.atomashpolskiy</groupId>
             <artifactId>bt-http-tracker-client</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -82,5 +110,4 @@
             <version>${log4j-version}</version>
         </dependency>
     </dependencies>
-
 </project>

@@ -1,23 +1,23 @@
 package bt.tracker.udp;
 
 import bt.service.IRuntimeLifecycleBinder;
-import bt.service.IdService;
+import bt.service.IdentityService;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerFactory;
 import com.google.inject.Inject;
 
 /**
- * Creates UDP trackers.
+ * Creates UDP tracker clients.
  *
  * @since 1.0
  */
 public class UdpTrackerFactory implements TrackerFactory {
 
-    private IdService idService;
+    private IdentityService idService;
     private IRuntimeLifecycleBinder lifecycleBinder;
 
     @Inject
-    public UdpTrackerFactory(IdService idService, IRuntimeLifecycleBinder lifecycleBinder) {
+    public UdpTrackerFactory(IdentityService idService, IRuntimeLifecycleBinder lifecycleBinder) {
         this.idService = idService;
         this.lifecycleBinder = lifecycleBinder;
     }

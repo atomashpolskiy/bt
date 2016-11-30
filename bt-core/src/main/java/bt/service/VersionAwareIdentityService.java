@@ -8,12 +8,12 @@ import com.google.inject.Inject;
 import java.util.Optional;
 import java.util.Random;
 
-public class DefaultIdService implements IdService {
+public class VersionAwareIdentityService implements IdentityService {
 
     private final PeerId peerId;
 
     @Inject
-    public DefaultIdService(IApplicationService applicationService) {
+    public VersionAwareIdentityService(ApplicationService applicationService) {
         peerId = buildPeerId(buildVersionPrefix(applicationService.getVersion()));
     }
 

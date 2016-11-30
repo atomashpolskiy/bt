@@ -2,7 +2,7 @@ package bt.tracker.http;
 
 import bt.BtException;
 import bt.metainfo.Torrent;
-import bt.service.IdService;
+import bt.service.IdentityService;
 import bt.service.INetworkService;
 import bt.service.NetworkService;
 import bt.tracker.SecretKey;
@@ -34,12 +34,12 @@ public class HttpTracker implements Tracker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpTracker.class);
 
-    enum TrackerRequestType {
+    private enum TrackerRequestType {
         START, STOP, COMPLETE, QUERY
     }
 
     private URI baseUri;
-    private IdService idService;
+    private IdentityService idService;
     private INetworkService networkService;
     private HttpClient httpClient;
     private CommonsHttpResponseHandler httpResponseHandler;
@@ -51,7 +51,7 @@ public class HttpTracker implements Tracker {
      * @param idService Identity service
      * @since 1.0
      */
-    public HttpTracker(String trackerUrl, IdService idService) {
+    public HttpTracker(String trackerUrl, IdentityService idService) {
         try {
             this.baseUri = new URI(trackerUrl);
         } catch (URISyntaxException e) {

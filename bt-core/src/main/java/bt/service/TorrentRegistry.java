@@ -8,16 +8,16 @@ import bt.torrent.ITorrentDescriptor;
 import java.util.Optional;
 
 /**
- * Registry of all torrents known to current runtime.
+ * Registry of all torrents known to the current runtime.
  *
  * @since 1.0
  */
-public interface ITorrentRegistry {
+public interface TorrentRegistry {
 
     /**
      * Get a torrent with a given torrent ID, if exists.
      *
-     * @return {@link Optional#empty()} if this torrent ID is not known to current runtime.
+     * @return {@link Optional#empty()} if this torrent ID is not known to the current runtime.
      * @since 1.0
      */
     Optional<Torrent> getTorrent(TorrentId torrentId);
@@ -25,7 +25,7 @@ public interface ITorrentRegistry {
     /**
      * Get a torrent descriptor for a given torrent, if exists.
      *
-     * @return {@link Optional#empty()} if torrent descriptor hasn't yet been created.
+     * @return {@link Optional#empty()} if torrent descriptor hasn't been created yet.
      * @since 1.0
      */
     Optional<ITorrentDescriptor> getDescriptor(Torrent torrent);
@@ -34,7 +34,8 @@ public interface ITorrentRegistry {
      * Get an existing torrent descriptor for a given torrent
      * or create a new one if it does not exist.
      *
-     * @param storage Storage to use for storing this torrent's files
+     * @param storage Storage to use for storing this torrent's files.
+     *                Will be used when creating a new torrent descriptor.
      * @return Torrent descriptor
      * @since 1.0
      */

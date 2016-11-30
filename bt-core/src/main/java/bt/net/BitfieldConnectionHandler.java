@@ -2,7 +2,7 @@ package bt.net;
 
 import bt.BtException;
 import bt.metainfo.Torrent;
-import bt.service.ITorrentRegistry;
+import bt.service.TorrentRegistry;
 import bt.torrent.Bitfield;
 import bt.torrent.ITorrentDescriptor;
 import com.google.inject.Inject;
@@ -20,10 +20,10 @@ public class BitfieldConnectionHandler implements ConnectionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BitfieldConnectionHandler.class);
 
-    private ITorrentRegistry torrentRegistry;
+    private TorrentRegistry torrentRegistry;
 
     @Inject
-    public BitfieldConnectionHandler(ITorrentRegistry torrentRegistry) {
+    public BitfieldConnectionHandler(TorrentRegistry torrentRegistry) {
         this.torrentRegistry = torrentRegistry;
     }
 

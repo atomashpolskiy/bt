@@ -8,9 +8,12 @@ import java.lang.annotation.Target;
 /**
  * Annotates messaging agents, that act as message producers.
  *
- * Annotated method must be public and have one of the following lists of parameters:
- * - (Consumer<Message> consumer, {@link bt.torrent.messaging.MessageContext} context),
- * - (Consumer<Message> consumer)
+ * <p>Annotated method must be public and have one of the following lists of parameters:</p>
+ * <ul>
+ * <li>({@link java.util.function.Consumer}&lt;{@link bt.protocol.Message}&gt; consumer,
+ * {@link bt.torrent.messaging.MessageContext} context)</li>
+ * <li>({@link java.util.function.Consumer}&lt;{@link bt.protocol.Message}&gt; consumer)</li>
+ * </ul>
  *
  * @since 1.0
  */

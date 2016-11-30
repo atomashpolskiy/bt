@@ -10,9 +10,10 @@ import java.lang.annotation.Target;
 /**
  * Annotates individual message handlers,
  * that work with extended protocol message types.
- * Each message type is assigned a unique name,
+ *
+ * <p>Each message type is assigned a unique name,
  * thus annotated value should be a
- * java.util.Map<String,bt.protocol.handler.MessageHandler<? extends bt.protocol.extended.ExtendedMessage>>.
+ * {@link java.util.Map}&lt;{@link String}, {@link bt.protocol.handler.MessageHandler}&lt;{@code ? extends} {@link bt.protocol.extended.ExtendedMessage}&gt;&gt;.
  *
  * @since 1.0
  */

@@ -34,7 +34,7 @@ public class PeerRegistry implements IPeerRegistry {
 
     public PeerRegistry(IRuntimeLifecycleBinder lifecycleBinder,
                         INetworkService networkService,
-                        IdService idService,
+                        IdentityService idService,
                         ITrackerService trackerService,
                         Set<PeerSourceFactory> extraPeerSourceFactories,
                         Duration peerDiscoveryInterval) {

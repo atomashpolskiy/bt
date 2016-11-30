@@ -10,8 +10,10 @@ import java.lang.annotation.Target;
 /**
  * Annotates individual message handlers,
  * that work with core BitTorrent message types.
- * Each message type is assigned a unique numeric ID,
- * thus annotated value should be a java.util.Map<Integer,bt.protocol.handler.MessageHandler>.
+ *
+ * <p>Each message type is assigned a unique numeric ID,
+ * thus annotated value should be a
+ * {@link java.util.Map}&lt;{@link Integer}, {@link bt.protocol.handler.MessageHandler}&gt;.
  *
  * @since 1.0
  */

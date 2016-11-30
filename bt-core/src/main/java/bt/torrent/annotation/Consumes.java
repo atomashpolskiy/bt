@@ -8,18 +8,24 @@ import java.lang.annotation.Target;
 /**
  * Annotates messaging agents, that act as message consumers.
  *
- * Annotated method must be public and have one of the following lists of parameters:
- * - (T message, {@link bt.torrent.messaging.MessageContext} context),
- * - (T message),
- * where T is (a subtype of) {@link bt.protocol.Message}.
+ * <p>Annotated method must be public and have one of the following lists of parameters:</p>
+ * <ul>
+ * <li>(T message, {@link bt.torrent.messaging.MessageContext} context)</li>
+ * <li>(T message)</li>
+ * </ul>
+ * <p>where T is a (subtype of) {@link bt.protocol.Message}.</p>
  *
- * For instance, consumer of {@link bt.protocol.Piece} messages may have one of two forms:
- * - public void consume(Piece piece, MessageContext context)
- * - public void consume(Piece piece)
+ * <p>For instance, consumer of {@link bt.protocol.Piece} messages may have one of two forms:</p>
+ * <ul>
+ * <li>{@code public void consume(Piece piece, MessageContext context)}</li>
+ * <li>{@code public void consume(Piece piece)}</li>
+ * </ul>
  *
- * A generic consumer, that is interested in receiving all types of messages:
- * - public void consume(Message message, MessageContext context)
- * - public void consume(Message message)
+ * <p>A generic consumer, that is interested in receiving all types of messages:</p>
+ * <ul>
+ * <li>{@code public void consume(Message message, MessageContext context)}</li>
+ * <li>{@code public void consume(Message message)}</li>
+ * </ul>
  *
  * @see bt.torrent.messaging.MessageConsumer
  * @since 1.0

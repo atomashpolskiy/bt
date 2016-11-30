@@ -2,7 +2,7 @@ package bt.net;
 
 import bt.metainfo.TorrentId;
 import bt.protocol.IHandshakeFactory;
-import bt.service.ITorrentRegistry;
+import bt.service.TorrentRegistry;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -22,7 +22,7 @@ public class ConnectionHandlerFactory implements IConnectionHandlerFactory {
 
     private Map<TorrentId, ConnectionHandler> outgoingHandlers;
 
-    public ConnectionHandlerFactory(IHandshakeFactory handshakeFactory, ITorrentRegistry torrentRegistry,
+    public ConnectionHandlerFactory(IHandshakeFactory handshakeFactory, TorrentRegistry torrentRegistry,
                                     Set<ConnectionHandler> connectionHandlers, Set<HandshakeHandler> handshakeHandlers,
                                     Duration peerHandshakeTimeout) {
 

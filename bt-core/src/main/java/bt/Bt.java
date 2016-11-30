@@ -14,7 +14,7 @@ import bt.runtime.DefaultBtClient;
 import bt.runtime.LazyBtClient;
 import bt.runtime.RuntimeAwareBtClient;
 import bt.service.IPeerRegistry;
-import bt.service.ITorrentRegistry;
+import bt.service.TorrentRegistry;
 import bt.torrent.DefaultTorrentSession;
 import bt.torrent.IPieceManager;
 import bt.torrent.ITorrentDescriptor;
@@ -171,7 +171,7 @@ public class Bt {
     }
 
     private ITorrentDescriptor getTorrentDescriptor(Torrent torrent) {
-        ITorrentRegistry torrentRegistry = runtime.service(ITorrentRegistry.class);
+        TorrentRegistry torrentRegistry = runtime.service(TorrentRegistry.class);
         return torrentRegistry.getOrCreateDescriptor(torrent, storage);
     }
 

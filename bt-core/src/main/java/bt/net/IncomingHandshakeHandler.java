@@ -5,7 +5,7 @@ import bt.metainfo.TorrentId;
 import bt.protocol.Handshake;
 import bt.protocol.IHandshakeFactory;
 import bt.protocol.Message;
-import bt.service.ITorrentRegistry;
+import bt.service.TorrentRegistry;
 import bt.torrent.ITorrentDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,11 +24,11 @@ public class IncomingHandshakeHandler implements ConnectionHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(IncomingHandshakeHandler.class);
 
     private IHandshakeFactory handshakeFactory;
-    private ITorrentRegistry torrentRegistry;
+    private TorrentRegistry torrentRegistry;
     private Set<HandshakeHandler> handshakeHandlers;
     private Duration handshakeTimeout;
 
-    public IncomingHandshakeHandler(IHandshakeFactory handshakeFactory, ITorrentRegistry torrentRegistry,
+    public IncomingHandshakeHandler(IHandshakeFactory handshakeFactory, TorrentRegistry torrentRegistry,
                                     Set<HandshakeHandler> handshakeHandlers, Duration handshakeTimeout) {
         this.handshakeFactory = handshakeFactory;
         this.torrentRegistry = torrentRegistry;

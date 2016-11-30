@@ -1,21 +1,21 @@
 package bt.tracker.http;
 
-import bt.service.IdService;
+import bt.service.IdentityService;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerFactory;
 import com.google.inject.Inject;
 
 /**
- * Creates HTTP trackers.
+ * Creates HTTP tracker clients.
  *
  * @since 1.0
  */
 public class HttpTrackerFactory implements TrackerFactory {
 
-    private IdService idService;
+    private IdentityService idService;
 
     @Inject
-    public HttpTrackerFactory(IdService idService) {
+    public HttpTrackerFactory(IdentityService idService) {
         this.idService = idService;
     }
 

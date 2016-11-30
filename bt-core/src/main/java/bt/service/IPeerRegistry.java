@@ -6,7 +6,7 @@ import bt.net.Peer;
 import java.util.function.Consumer;
 
 /**
- * Shared registry of all peers, known by current runtime.
+ * Shared registry of all peers, known to the current runtime.
  *
  * @since 1.0
  */

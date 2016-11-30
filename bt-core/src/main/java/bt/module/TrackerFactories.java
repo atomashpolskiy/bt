@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 /**
  * Annotates a collection of tracker factories for different protocols.
  *
- * Annotated value should be a java.util.Map<String,bt.tracker.TrackerFactory>
+ * Annotated value should be a {@link java.util.Map}&lt;{@link String}, {@link bt.tracker.TrackerFactory}&gt;
  *
  * @since 1.0
  */

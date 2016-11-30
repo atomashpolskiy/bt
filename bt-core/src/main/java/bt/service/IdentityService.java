@@ -10,7 +10,7 @@ import java.util.Optional;
  *
  * @since 1.0
  */
-public interface IdService {
+public interface IdentityService {
 
     /**
      * @return Peer ID used by current runtime

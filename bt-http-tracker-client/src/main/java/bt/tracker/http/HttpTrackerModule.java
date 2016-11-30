@@ -5,6 +5,8 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 
 /**
+ * Provides support for integration with HTTP trackers.
+ *
  * @since 1.0
  */
 public class HttpTrackerModule implements Module {

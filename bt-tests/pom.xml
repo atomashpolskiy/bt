@@ -6,30 +6,28 @@
 
     <parent>
         <artifactId>bt-parent</artifactId>
-        <groupId>bt</groupId>
+        <groupId>com.github.atomashpolskiy</groupId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
-    
+
     <artifactId>bt-tests</artifactId>
     <name>Bt Tests</name>
+    <description>Contains tests for Bt Core and provides a framework for creating Bt integration tests</description>
 
     <dependencies>
         <dependency>
-            <groupId>bt</groupId>
+            <groupId>com.github.atomashpolskiy</groupId>
             <artifactId>bt-core</artifactId>
             <version>${project.version}</version>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
-            <scope>compile</scope>
         </dependency>
 
         <!-- Test dependencies -->

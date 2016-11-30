@@ -2,7 +2,7 @@ package bt.tracker.udp;
 
 import bt.metainfo.Torrent;
 import bt.service.IRuntimeLifecycleBinder;
-import bt.service.IdService;
+import bt.service.IdentityService;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
 import bt.tracker.TrackerResponse;
@@ -15,14 +15,24 @@ import java.net.URL;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Simple implementation of a UDP tracker client
+ *
+ * @since 1.0
+ */
 public class UdpTracker implements Tracker {
 
-    private IdService idService;
+    private IdentityService idService;
     private InetSocketAddress localAddress;
     private URL trackerUrl;
     private UdpMessageWorker worker;
 
-    public UdpTracker(IdService idService,
+    /**
+     * @param trackerUrl String representation of the tracker's URL.
+     *                   Must start with "udp://" pseudo-protocol.
+     * @since 1.0
+     */
+    public UdpTracker(IdentityService idService,
                       IRuntimeLifecycleBinder lifecycleBinder,
                       String trackerUrl) {
         this.idService = idService;

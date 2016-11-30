@@ -6,7 +6,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 /**
- * Utility class to use in binary protocol implementations.
+ * Provides utility functions for binary protocol implementations.
  *
  * @since 1.0
  */
@@ -83,7 +83,7 @@ public class Protocols {
      * Decode a binary long representation into a {@link Long}.
      *
      * @param bytes Arbitrary byte array.
-     *              It's length must be at least {@code offset + 8}.
+     *              It's length must be at least <b>offset</b> + 8.
      * @param offset Offset in byte array to start decoding from (inclusive, 0-based)
      * @since 1.0
      */
@@ -107,7 +107,7 @@ public class Protocols {
      * Decode a binary integer representation into an {@link Integer}.
      *
      * @param bytes Arbitrary byte array.
-     *              It's length must be at least {@code offset + 4}.
+     *              It's length must be at least <b>offset</b> + 4.
      * @param offset Offset in byte array to start decoding from (inclusive, 0-based)
      * @since 1.0
      */
@@ -127,7 +127,7 @@ public class Protocols {
      * Decode a binary short representation into a {@link Short}.
      *
      * @param bytes Arbitrary byte array.
-     *              It's length must be at least {@code offset + 2}.
+     *              It's length must be at least <b>offset</b> + 2.
      * @param offset Offset in byte array to start decoding from (inclusive, 0-based)
      * @since 1.0
      */
@@ -147,7 +147,7 @@ public class Protocols {
      * @param buffer Buffer to read from.
      *               Decoding will be done starting with the index denoted by {@link Buffer#position()}
      * @return Decoded integer, or null if there are insufficient bytes in buffer
-     *         (i.e. {@link Buffer#remaining()} < 4)
+     *         (i.e. <b>buffer.remaining()</b> &lt; 4)
      * @since 1.0
      */
     public static Integer readInt(ByteBuffer buffer) {
@@ -158,31 +158,12 @@ public class Protocols {
     }
 
     /**
-     * Decode a binary short integer representation into a {@link Short}.
-     *
-     * @param bytes Arbitrary byte array.
-     *              It's length must be at least {@code offset + 2}.
-     * @param offset Offset in byte array to start decoding from (inclusive, 0-based)
-     * @since 1.0
-     */
-    public static int getShort(byte[] bytes, int offset) {
-
-        if (bytes.length < offset + Short.BYTES) {
-            throw new ArrayIndexOutOfBoundsException("insufficient byte array length (length: " + bytes.length +
-                    ", offset: " + offset + ")");
-        }
-        // intentionally do not check bytes.length,
-        // just take the first 2 bytes (starting with the offset)
-        return ((bytes[offset] << 8) & 0xFF00) + (bytes[offset + 1] & 0x00FF);
-    }
-
-    /**
      * Decode a binary short integer representation from a buffer into a {@link Short}.
      *
      * @param buffer Buffer to read from.
      *               Decoding will be done starting with the index denoted by {@link Buffer#position()}
      * @return Decoded short integer, or null if there are insufficient bytes in buffer
-     *         (i.e. {@link Buffer#remaining()} < 2)
+     *         (i.e. <b>buffer.remaining()</b> &lt; 2)
      * @since 1.0
      */
     public static Integer readShort(ByteBuffer buffer) {
@@ -197,7 +178,7 @@ public class Protocols {
     /**
      * Convenience method to check if actual message length is the same as expected length.
      *
-     * @throws InvalidMessageException if expectedLength != actualLength
+     * @throws InvalidMessageException if <b>expectedLength</b> != <b>actualLength</b>
      * @since 1.0
      */
     public static void verifyPayloadHasLength(Class<? extends Message> type, int expectedLength, int actualLength) {
