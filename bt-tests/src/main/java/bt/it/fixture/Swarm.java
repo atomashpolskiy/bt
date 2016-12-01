@@ -272,8 +272,18 @@ public class Swarm extends ExternalResource {
                         }
 
                         @Override
-                        public byte[] getBitfield() {
-                            return new byte[]{-1};
+                        public int getBlockCount() {
+                            return 1;
+                        }
+
+                        @Override
+                        public long getBlockSize() {
+                            return 4;
+                        }
+
+                        @Override
+                        public boolean isBlockVerified(int blockIndex) {
+                            return true;
                         }
 
                         @Override

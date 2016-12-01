@@ -8,9 +8,9 @@ import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.NotInterested;
 import bt.protocol.Request;
+import bt.torrent.IPieceManager;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
-import bt.torrent.IPieceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,12 +35,10 @@ public class RequestProducer {
 
     private IPieceManager pieceManager;
     private List<IChunkDescriptor> chunks;
-    private long blockSize;
 
-    public RequestProducer(List<IChunkDescriptor> chunks, IPieceManager pieceManager, long blockSize) {
+    public RequestProducer(List<IChunkDescriptor> chunks, IPieceManager pieceManager) {
         this.chunks = chunks;
         this.pieceManager = pieceManager;
-        this.blockSize = blockSize;
     }
 
     @Produces
@@ -161,16 +159,14 @@ public class RequestProducer {
     }
 
     private Collection<Request> buildRequests(int pieceIndex) {
-
         List<Request> requests = new ArrayList<>();
-
         IChunkDescriptor chunk = chunks.get(pieceIndex);
-        byte[] bitfield = chunk.getBitfield();
         long chunkSize = chunk.getSize();
+        long blockSize = chunk.getBlockSize();
 
-        for (int i = 0; i < bitfield.length; i++) {
-            if (bitfield[i] == 0) {
-                int offset = (int) (i * blockSize);
+        for (int blockIndex = 0; blockIndex < chunk.getBlockCount(); blockIndex++) {
+            if (!chunk.isBlockVerified(blockIndex)) {
+                int offset = (int) (blockIndex * blockSize);
                 int length = (int) Math.min(blockSize, chunkSize - offset);
                 try {
                     requests.add(new Request(pieceIndex, offset, length));

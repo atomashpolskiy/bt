@@ -38,14 +38,34 @@ public interface IChunkDescriptor {
      */
     long getSize();
 
-    // TODO: in fact it's currently a BYTEmask, need to rework
     /**
-     * @return Bitmask of blocks in this chunk:
-     *         <ul><li>a bit is set to 1 if the corresponding block is complete and verified</li>
-     *         <li>a bit is set to 0 if the corresponding block is empty or incomplete</li></ul>
+     * Get the total number of blocks in this chunk.
+     *
+     * @return Total number of blocks in this chunk.
      * @since 1.0
      */
-    byte[] getBitfield();
+    int getBlockCount();
+
+    /**
+     * Get the size of a block in this chunk.
+     *
+     * <p>Note that the last block might be smaller due to truncation
+     * (i.e. when the chunk's size is not a factor of the size of a block).
+     *
+     * @return Block size
+     * @since 1.0
+     */
+    long getBlockSize();
+
+    /**
+     * Check if a block is complete and verified.
+     *
+     * @param blockIndex Index of a block in this chunk
+     *                   (0-based, maximum value is <code>{@link #getBlockCount()} - 1</code>)
+     * @return true if block is complete and verified.
+     * @since 1.0
+     */
+    boolean isBlockVerified(int blockIndex);
 
     /**
      * Reads a block of data.

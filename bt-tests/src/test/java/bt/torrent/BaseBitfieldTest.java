@@ -7,9 +7,6 @@ import org.junit.BeforeClass;
 import java.util.Arrays;
 import java.util.function.Supplier;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 public abstract class BaseBitfieldTest {
 
     protected static long blockSize = 4;
@@ -28,16 +25,48 @@ public abstract class BaseBitfieldTest {
 
         byte[] _bitfield = Arrays.copyOf(bitfield, bitfield.length);
 
-        IChunkDescriptor chunk = mock(IChunkDescriptor.class);
-        when(chunk.getSize()).thenReturn(chunkSize);
-        when(chunk.getBitfield()).thenReturn(_bitfield);
-        when(chunk.getStatus()).then(it ->
-                verifier == null? statusForBitfield(_bitfield)
-                        : (verifier.get()? DataStatus.VERIFIED : statusForBitfield(_bitfield)));
+        return new IChunkDescriptor() {
+            @Override
+            public DataStatus getStatus() {
+                return (verifier == null) ? statusForBitfield(_bitfield)
+                        : (verifier.get()? DataStatus.VERIFIED : statusForBitfield(_bitfield));
+            }
 
-        when(chunk.verify()).then(it -> verifier == null? false : verifier.get());
+            @Override
+            public long getSize() {
+                return chunkSize;
+            }
 
-        return chunk;
+            @Override
+            public int getBlockCount() {
+                return _bitfield.length;
+            }
+
+            @Override
+            public long getBlockSize() {
+                return blockSize;
+            }
+
+            @Override
+            public boolean isBlockVerified(int blockIndex) {
+                return _bitfield[blockIndex] == 1;
+            }
+
+            @Override
+            public byte[] readBlock(long offset, int length) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void writeBlock(byte[] block, long offset) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public boolean verify() {
+                return (verifier == null) ? false : verifier.get();
+            }
+        };
     }
 
     private static DataStatus statusForBitfield(byte[] bitfield) {

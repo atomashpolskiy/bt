@@ -32,9 +32,9 @@ class ChunkDescriptor implements IChunkDescriptor {
     private byte[] checksum;
 
     /**
-     * Bitmask of blocks in this chunk: 1 for complete, 0 for incomplete
+     * List of statuses of this chunk's blocks: true for complete-and-verified blocks
      */
-    private byte[] bitfield;
+    private boolean[] bitfield;
 
     /**
      * This is a "map" of this chunk's "virtual addresses" (offsets) into the chunk's files.
@@ -99,7 +99,7 @@ class ChunkDescriptor implements IChunkDescriptor {
         if (blockCount > Integer.MAX_VALUE) {
             throw new BtException("Integer overflow while constructing chunk: too many blocks");
         }
-        bitfield = new byte[(int) blockCount];
+        bitfield = new boolean[(int) blockCount];
 
         fileOffsets = new long[units.length];
         // first "virtual" address (first file begins with offset 0)
@@ -129,8 +129,22 @@ class ChunkDescriptor implements IChunkDescriptor {
     }
 
     @Override
-    public byte[] getBitfield() {
-        return bitfield;
+    public int getBlockCount() {
+        return bitfield.length;
+    }
+
+    @Override
+    public long getBlockSize() {
+        return blockSize;
+    }
+
+    @Override
+    public boolean isBlockVerified(int blockIndex) {
+        if (blockIndex < 0 || blockIndex >= bitfield.length) {
+            throw new IllegalArgumentException("Invalid block index: " + blockIndex + "." +
+                    " Expected 0.." + (bitfield.length - 1));
+        }
+        return bitfield[blockIndex];
     }
 
     /**
@@ -235,7 +249,7 @@ class ChunkDescriptor implements IChunkDescriptor {
             // then don't count it
             boolean shouldCheckIfComplete = false;
             if (offset + block.length == size) {
-                bitfield[bitfield.length - 1] = 1;
+                bitfield[bitfield.length - 1] = true;
                 shouldCheckIfComplete = true;
             }
             if (block.length >= blockSize) {
@@ -244,7 +258,7 @@ class ChunkDescriptor implements IChunkDescriptor {
                     int firstBlockIndex = (int) Math.ceil(((double) offset) / blockSize);
                     int lastBlockIndex = (int) Math.floor(((double)(offset + block.length)) / blockSize) - 1;
                     if (lastBlockIndex >= firstBlockIndex) {
-                        Arrays.fill(bitfield, firstBlockIndex, lastBlockIndex + 1, (byte) 1);
+                        Arrays.fill(bitfield, firstBlockIndex, lastBlockIndex + 1, true);
                         shouldCheckIfComplete = true;
                     }
                 }
@@ -316,8 +330,8 @@ class ChunkDescriptor implements IChunkDescriptor {
     private boolean isComplete() {
 
         // check if all chunk's blocks are present
-        for (byte b : bitfield) {
-            if (b == 0) {
+        for (boolean b : bitfield) {
+            if (!b) {
                 return false;
             }
         }

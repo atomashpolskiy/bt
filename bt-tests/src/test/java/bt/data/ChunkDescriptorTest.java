@@ -3,8 +3,9 @@ package bt.data;
 import org.junit.Test;
 
 import static bt.data.ChunkDescriptorTestUtil.mockStorageUnit;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class ChunkDescriptorTest {
 
@@ -31,7 +32,7 @@ public class ChunkDescriptorTest {
         chunkDescriptor.writeBlock(new byte[4], blockSize * 3);
         assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
 
-        assertArrayEquals(new byte[]{1,1,1,1}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1,1});
     }
 
     @Test
@@ -54,7 +55,7 @@ public class ChunkDescriptorTest {
         chunkDescriptor.writeBlock(new byte[3], blockSize * 2);
         assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
 
-        assertArrayEquals(new byte[]{1,1,1}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1});
     }
 
     @Test
@@ -74,7 +75,7 @@ public class ChunkDescriptorTest {
         chunkDescriptor.writeBlock(new byte[7], blockSize);
         assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
 
-        assertArrayEquals(new byte[]{1,1,1}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1});
     }
 
     @Test
@@ -102,7 +103,7 @@ public class ChunkDescriptorTest {
         chunkDescriptor.writeBlock(new byte[4], blockSize * 3);
         assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
 
-        assertArrayEquals(new byte[]{1,1,1,1}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1,1});
     }
 
     @Test
@@ -121,27 +122,27 @@ public class ChunkDescriptorTest {
 
         chunkDescriptor.writeBlock(new byte[7], 1);
         assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
-        assertArrayEquals(new byte[]{0,1,0,0}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,0,0});
 
         chunkDescriptor.writeBlock(new byte[6], blockSize * 2);
         assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
-        assertArrayEquals(new byte[]{0,1,1,0}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,1,0});
 
         chunkDescriptor.writeBlock(new byte[1], blockSize * 3 + 1);
         assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
-        assertArrayEquals(new byte[]{0,1,1,0}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,1,0});
 
         chunkDescriptor.writeBlock(new byte[1], blockSize - 1);
         assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
-        assertArrayEquals(new byte[]{0,1,1,0}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,1,0});
 
         chunkDescriptor.writeBlock(new byte[5], 0);
         assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
-        assertArrayEquals(new byte[]{1,1,1,0}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1,0});
 
         chunkDescriptor.writeBlock(new byte[5], blockSize * 3 - 1);
         assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
-        assertArrayEquals(new byte[]{1,1,1,1}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1,1});
     }
 
     @Test
@@ -165,26 +166,45 @@ public class ChunkDescriptorTest {
 
         chunkDescriptor.writeBlock(new byte[7], 1);
         assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
-        assertArrayEquals(new byte[]{0,1,0,0}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,0,0});
 
         chunkDescriptor.writeBlock(new byte[6], blockSize * 2);
         assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
-        assertArrayEquals(new byte[]{0,1,1,0}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,1,0});
 
         chunkDescriptor.writeBlock(new byte[1], blockSize * 3 + 1);
         assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
-        assertArrayEquals(new byte[]{0,1,1,0}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,1,0});
 
         chunkDescriptor.writeBlock(new byte[1], blockSize - 1);
         assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
-        assertArrayEquals(new byte[]{0,1,1,0}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,1,0});
 
         chunkDescriptor.writeBlock(new byte[5], 0);
         assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
-        assertArrayEquals(new byte[]{1,1,1,0}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1,0});
 
         chunkDescriptor.writeBlock(new byte[5], blockSize * 3 - 1);
         assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
-        assertArrayEquals(new byte[]{1,1,1,1}, chunkDescriptor.getBitfield());
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1,1});
+    }
+
+    private static void assertHasBlockStatuses(IChunkDescriptor chunkDescriptor, byte[] blockStatuses) {
+        for (int i = 0; i < blockStatuses.length; i++) {
+            int status = blockStatuses[i];
+            switch (status) {
+                case 1: {
+                    assertTrue("Expected block at position " + i + " to be verified", chunkDescriptor.isBlockVerified(i));
+                    break;
+                }
+                case 0: {
+                    assertFalse("Expected block at position " + i + " to be unverified", chunkDescriptor.isBlockVerified(i));
+                    break;
+                }
+                default: {
+                    throw new IllegalArgumentException("Invalid block status at position " + i + ": " + status);
+                }
+            }
+        }
     }
 }

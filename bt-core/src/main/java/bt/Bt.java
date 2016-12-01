@@ -9,7 +9,6 @@ import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
-import bt.runtime.Config;
 import bt.peer.IPeerRegistry;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.DefaultTorrentSession;
@@ -183,7 +182,7 @@ public class Bt {
         IMessageDispatcher messageDispatcher = runtime.service(IMessageDispatcher.class);
 
         PieceManager pieceManager = new PieceManager(descriptor.getDataDescriptor().getBitfield(), pieceSelectionStrategy);
-        IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceManager, dataWorker, runtime.getConfig());
+        IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceManager, dataWorker);
 
         DefaultTorrentSession session = new DefaultTorrentSession(connectionPool, pieceManager,
                 messageDispatcher, peerWorkerFactory, torrent, runtime.getConfig().getMaxPeerConnectionsPerTorrent());
@@ -196,15 +195,15 @@ public class Bt {
         return session;
     }
 
-    private IPeerWorkerFactory createPeerWorkerFactory(ITorrentDescriptor descriptor, IPieceManager pieceManager,
-                                                       IDataWorker dataWorker, Config config) {
+    private IPeerWorkerFactory createPeerWorkerFactory(ITorrentDescriptor descriptor,
+                                                       IPieceManager pieceManager,
+                                                       IDataWorker dataWorker) {
 
         Set<Object> messagingAgents = new HashSet<>();
         messagingAgents.add(GenericConsumer.consumer());
         messagingAgents.add(new BitfieldConsumer(pieceManager));
         messagingAgents.add(new PeerRequestProcessor(dataWorker));
-        messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor().getChunkDescriptors(),
-                pieceManager, config.getTransferBlockSize()));
+        messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor().getChunkDescriptors(), pieceManager));
         messagingAgents.add(new PieceConsumer(pieceManager, dataWorker));
 
         Binding<Set<Object>> extraMessagingAgents = runtime.getInjector()
