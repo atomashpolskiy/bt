@@ -3,8 +3,8 @@ package bt.module;
 import bt.net.BitfieldConnectionHandler;
 import bt.net.ConnectionHandler;
 import bt.net.HandshakeHandler;
-import bt.net.extended.ExtendedConnectionHandler;
-import bt.net.extended.ExtendedHandshakeHandler;
+import bt.net.extended.ExtendedProtocolConnectionHandler;
+import bt.net.extended.ExtendedProtocolHandshakeHandler;
 import bt.protocol.Message;
 import bt.protocol.StandardBittorrentProtocol;
 import bt.protocol.extended.AlphaSortedMapping;
@@ -98,9 +98,9 @@ public class ProtocolModule implements Module {
         binder.bind(ExtendedHandshake.class).toProvider(ExtendedHandshakeProvider.class).in(Singleton.class);
 
         ProtocolModule.contributeConnectionHandler(binder).addBinding().to(BitfieldConnectionHandler.class);
-        ProtocolModule.contributeConnectionHandler(binder).addBinding().to(ExtendedConnectionHandler.class);
+        ProtocolModule.contributeConnectionHandler(binder).addBinding().to(ExtendedProtocolConnectionHandler.class);
 
-        ProtocolModule.contributeHandshakeHandler(binder).addBinding().to(ExtendedHandshakeHandler.class);
+        ProtocolModule.contributeHandshakeHandler(binder).addBinding().to(ExtendedProtocolHandshakeHandler.class);
     }
 
     @Provides
