@@ -10,10 +10,11 @@ import java.io.File;
 public class FileSystemStorage implements Storage {
 
     private final File rootDirectory;
+    private final PathNormalizer pathNormalizer;
 
     public FileSystemStorage(File rootDirectory) {
-        // TODO: there should be a service to track directories for each torrent
         this.rootDirectory = rootDirectory;
+        this.pathNormalizer = new PathNormalizer();
     }
 
     @Override
@@ -23,9 +24,11 @@ public class FileSystemStorage implements Storage {
         if (torrent.getFiles().size() == 1) {
             torrentDirectory = rootDirectory;
         } else {
-            torrentDirectory = new File(rootDirectory, torrent.getName());
+            String normalizedName = pathNormalizer.normalize(torrent.getName());
+            torrentDirectory = new File(rootDirectory, normalizedName);
         }
 
-        return new FileSystemStorageUnit(torrentDirectory, torrentFile.getPathElements(), torrentFile.getSize());
+        String normalizedPath = pathNormalizer.normalize(torrentFile.getPathElements());
+        return new FileSystemStorageUnit(torrentDirectory, normalizedPath, torrentFile.getSize());
     }
 }

@@ -10,7 +10,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.util.List;
 
 class FileSystemStorageUnit implements StorageUnit {
 
@@ -22,23 +21,11 @@ class FileSystemStorageUnit implements StorageUnit {
 
     private volatile boolean closed;
 
-    FileSystemStorageUnit(File root, List<String> pathElements, long capacity) {
-
-        if (pathElements.isEmpty()) {
-            throw new BtException("Can't create file storage -- no path elements");
-        }
-
-        File parent = root;
-        int len = pathElements.size();
-        for (int i = 0; i < len - 1; i++) {
-            parent = new File(parent, pathElements.get(i));
-        }
-        this.parent = parent;
-        this.file = new File(parent, pathElements.get(len - 1));
-
+    FileSystemStorageUnit(File root, String path, long capacity) {
+        this.file = new File(root, path);
+        this.parent = file.getParentFile();
         this.capacity = capacity;
-
-        closed = true;
+        this.closed = true;
     }
 
     // TODO: this is temporary fix for verification upon app start
