@@ -33,7 +33,7 @@ public class ExecutorServiceProvider implements Provider<ExecutorService> {
 
                         @Override
                         public Thread newThread(Runnable r) {
-                            return new Thread(r, "bt-pool-thread-" + threadId.getAndIncrement());
+                            return new Thread(r, "bt.service.executor-thread-" + threadId.getAndIncrement());
                         }
                     });
                 }

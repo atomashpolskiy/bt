@@ -68,7 +68,8 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         this.minEventsPerMessage = config.getMinEventsPerMessage();
         this.maxEventsPerMessage = config.getMaxEventsPerMessage();
 
-        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "PEX-Cleaner"));
+        ScheduledExecutorService executor =
+                Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "bt.peerexchange.cleaner"));
         lifecycleBinder.onStartup(() -> connectionPoolProvider.get()
                 .addConnectionListener(createPeerActivityListener()));
         lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(

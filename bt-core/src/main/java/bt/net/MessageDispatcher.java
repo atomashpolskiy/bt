@@ -43,7 +43,7 @@ public class MessageDispatcher implements IMessageDispatcher {
 
         disconnectedPeers = new LinkedBlockingQueue<>();
 
-        ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "Message Dispatcher"));
+        ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.net.message-dispatcher"));
         Worker worker = new Worker(pool);
         lifecycleBinder.onStartup(() -> executor.execute(worker));
         lifecycleBinder.onShutdown(this.getClass().getName(), worker::shutdown);

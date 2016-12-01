@@ -46,7 +46,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     private ExecutorService executor;
     private ScheduledExecutorService cleaner;
-    private ScheduledExecutorService connectionRequestor;
 
     private final Map<Peer, CompletableFuture<IPeerConnection>> pendingConnections;
     private ConcurrentMap<Peer, PeerConnection> connections;
@@ -78,10 +77,10 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         IncomingAcceptor acceptor = new IncomingAcceptor(socketChannelFactory);
         ExecutorService incomingAcceptor = Executors.newSingleThreadExecutor(
-                runnable -> new Thread(runnable, "PeerConnectionPool-IncomingAcceptor"));
+                runnable -> new Thread(runnable, "bt.net.pool.incoming-acceptor"));
         lifecycleBinder.onStartup(() -> incomingAcceptor.execute(acceptor));
 
-        cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, "PeerConnectionPool-Cleaner"));
+        cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, "bt.net.pool.cleaner"));
         lifecycleBinder.onStartup(() -> cleaner.scheduleAtFixedRate(new Cleaner(), 1000, 1000, TimeUnit.MILLISECONDS));
 
         executor = Executors.newCachedThreadPool(
@@ -91,17 +90,13 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
                     @Override
                     public Thread newThread(Runnable r) {
-                        Thread t = new Thread(r, "PeerConnectionPool-Worker[" + threadCount.getAndIncrement() + "]");
+                        Thread t = new Thread(r, "bt.net.pool.connection-worker-" + threadCount.getAndIncrement());
                         t.setDaemon(true);
                         return t;
                     }
                 }
         );
 
-        connectionRequestor = Executors.newSingleThreadScheduledExecutor(r ->
-                new Thread(r, "TorrentSession-ConnectionRequestor"));
-
-        lifecycleBinder.onShutdown(this.getClass().getName(), connectionRequestor::shutdownNow);
         lifecycleBinder.onShutdown(this.getClass().getName(), acceptor::shutdown);
         lifecycleBinder.onShutdown(this.getClass().getName(), incomingAcceptor::shutdownNow);
         lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
@@ -155,8 +150,9 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 }
             }, executor).whenComplete((acquiredConnection, throwable) -> {
                 if (throwable != null) {
-                    LOGGER.error("Failed to connect to peer: " + peer + "; will retry in 5 minutes", throwable);
-                    connectionRequestor.schedule(() -> requestConnection(torrentId, peer), 5, TimeUnit.MINUTES);
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Failed to connect to peer: " + peer, throwable);
+                    }
                 }
             });
 

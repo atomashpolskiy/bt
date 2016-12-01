@@ -32,7 +32,7 @@ class DataWorker implements IDataWorker {
 
             @Override
             public Thread newThread(Runnable r) {
-                return new Thread(r, "dataworker-pool-thread-" + i.incrementAndGet());
+                return new Thread(r, "bt.torrent.data.worker-" + i.incrementAndGet());
             }
         });
         this.maxPendingTasks = maxQueueLength;

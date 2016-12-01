@@ -64,7 +64,7 @@ public class BtRuntime {
     private final Object lock;
 
     BtRuntime(Injector injector, Config config) {
-        Runtime.getRuntime().addShutdownHook(new Thread("BtShutdownThread") {
+        Runtime.getRuntime().addShutdownHook(new Thread("bt.runtime.shutdown-manager") {
             @Override
             public void run() {
                 shutdown();
@@ -170,7 +170,7 @@ public class BtRuntime {
 
                 AtomicInteger threadCount = new AtomicInteger();
                 ExecutorService shutdownExecutor = Executors.newCachedThreadPool(r -> {
-                    Thread t = new Thread(r, "BtShutdownHandler-" + threadCount.incrementAndGet());
+                    Thread t = new Thread(r, "bt.runtime.shutdown-worker-" + threadCount.incrementAndGet());
                     t.setDaemon(true);
                     return t;
                 });
