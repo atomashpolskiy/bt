@@ -3,13 +3,15 @@ package bt.protocol.handler;
 import bt.BtException;
 import bt.protocol.Message;
 import bt.protocol.DecodingContext;
-import bt.protocol.Protocols;
+import bt.protocol.StandardBittorrentProtocol;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
 import static bt.protocol.Protocols.readInt;
+import static bt.protocol.StandardBittorrentProtocol.MESSAGE_PREFIX_SIZE;
+import static bt.protocol.StandardBittorrentProtocol.MESSAGE_TYPE_SIZE;
 
 /**
  * Base class for {@link MessageHandler} implementations, that work with a single message type.
@@ -22,20 +24,20 @@ public abstract class BaseMessageHandler<T extends Message> implements MessageHa
     @Override
     public boolean encode(T message, ByteBuffer buffer) {
 
-        if (buffer.remaining() < Protocols.MESSAGE_PREFIX_SIZE) {
+        if (buffer.remaining() < MESSAGE_PREFIX_SIZE) {
             return false;
         }
 
         int begin = buffer.position();
-        buffer.position(begin + Protocols.MESSAGE_PREFIX_SIZE);
+        buffer.position(begin + MESSAGE_PREFIX_SIZE);
         if (doEncode(message, buffer)) {
             int end = buffer.position();
-            int payloadLength = end - begin - Protocols.MESSAGE_PREFIX_SIZE;
+            int payloadLength = end - begin - MESSAGE_PREFIX_SIZE;
             if (payloadLength < 0) {
                 throw new BtException("Unexpected payload length: " + payloadLength);
             }
             buffer.position(begin);
-            buffer.putInt(payloadLength + Protocols.MESSAGE_TYPE_SIZE);
+            buffer.putInt(payloadLength + MESSAGE_TYPE_SIZE);
             buffer.put(message.getMessageId().byteValue());
             buffer.position(end);
             return true;
@@ -46,7 +48,7 @@ public abstract class BaseMessageHandler<T extends Message> implements MessageHa
     }
 
     /**
-     * Encode the payload of a message (excluding message prefix -- see {@link Protocols#MESSAGE_PREFIX_SIZE})
+     * Encode the payload of a message (excluding message prefix -- see {@link StandardBittorrentProtocol#MESSAGE_PREFIX_SIZE})
      * and write it into the provided buffer.
      *
      * @param buffer Byte buffer to write to.
@@ -63,7 +65,7 @@ public abstract class BaseMessageHandler<T extends Message> implements MessageHa
     @Override
     public int decode(DecodingContext context, ByteBuffer buffer) {
 
-        if (buffer.remaining() < Protocols.MESSAGE_PREFIX_SIZE) {
+        if (buffer.remaining() < MESSAGE_PREFIX_SIZE) {
             return 0;
         }
 
@@ -74,11 +76,11 @@ public abstract class BaseMessageHandler<T extends Message> implements MessageHa
         buffer.get(); // skip message ID
 
         int initialLimit = buffer.limit();
-        buffer.limit(buffer.position() + length - Protocols.MESSAGE_TYPE_SIZE);
+        buffer.limit(buffer.position() + length - MESSAGE_TYPE_SIZE);
         try {
             int consumed = doDecode(context, buffer);
             if (context.getMessage() != null) {
-                return consumed + Protocols.MESSAGE_PREFIX_SIZE;
+                return consumed + MESSAGE_PREFIX_SIZE;
             }
         } finally {
             buffer.limit(initialLimit);
@@ -87,7 +89,7 @@ public abstract class BaseMessageHandler<T extends Message> implements MessageHa
     }
 
     /**
-     * Decode the payload of a message (excluding message prefix -- see {@link Protocols#MESSAGE_PREFIX_SIZE})
+     * Decode the payload of a message (excluding message prefix -- see {@link StandardBittorrentProtocol#MESSAGE_PREFIX_SIZE})
      * and place it into the provided context.
      *
      * @param context The context to place the decoded message into.

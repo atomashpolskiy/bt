@@ -12,28 +12,6 @@ import java.nio.ByteBuffer;
  */
 public class Protocols {
 
-    /**
-     * BitTorrent message prefix size in bytes.
-     *
-     * @since 1.0
-     */
-    public static final int MESSAGE_LENGTH_PREFIX_SIZE = 4;
-
-    /**
-     * BitTorrent message ID size in bytes.
-     *
-     * @since 1.0
-     */
-    public static final int MESSAGE_TYPE_SIZE = 1;
-
-    /**
-     * BitTorrent message prefix size in bytes.
-     * Message prefix is a concatenation of message length prefix and message ID.
-     *
-     * @since 1.0
-     */
-    public static final int MESSAGE_PREFIX_SIZE = MESSAGE_LENGTH_PREFIX_SIZE + MESSAGE_TYPE_SIZE;
-
     //-------------------------//
     //--- utility functions ---//
     //-------------------------//
@@ -80,7 +58,7 @@ public class Protocols {
     }
 
     /**
-     * Decode a binary long representation into a {@link Long}.
+     * Decode the binary representation of a {@link Long} from a byte array.
      *
      * @param bytes Arbitrary byte array.
      *              It's length must be at least <b>offset</b> + 8.
@@ -104,7 +82,23 @@ public class Protocols {
     }
 
     /**
-     * Decode a binary integer representation into an {@link Integer}.
+     * Decode the binary representation of a {@link Long} from a buffer.
+     *
+     * @param buffer Buffer to read from.
+     *               Decoding will be done starting with the index denoted by {@link Buffer#position()}
+     * @return Decoded value, or null if there are insufficient bytes in buffer
+     *         (i.e. <b>buffer.remaining()</b> &lt; 8)
+     * @since 1.0
+     */
+    public static Long readLong(ByteBuffer buffer) {
+        if (buffer.remaining() < Long.BYTES) {
+            return null;
+        }
+        return buffer.getLong();
+    }
+
+    /**
+     * Decode the binary representation of an {@link Integer} from a byte array.
      *
      * @param bytes Arbitrary byte array.
      *              It's length must be at least <b>offset</b> + 4.
@@ -124,7 +118,23 @@ public class Protocols {
     }
 
     /**
-     * Decode a binary short representation into a {@link Short}.
+     * Decode the binary representation of an {@link Integer} from a buffer.
+     *
+     * @param buffer Buffer to read from.
+     *               Decoding will be done starting with the index denoted by {@link Buffer#position()}
+     * @return Decoded value, or null if there are insufficient bytes in buffer
+     *         (i.e. <b>buffer.remaining()</b> &lt; 4)
+     * @since 1.0
+     */
+    public static Integer readInt(ByteBuffer buffer) {
+        if (buffer.remaining() < Integer.BYTES) {
+            return null;
+        }
+        return buffer.getInt();
+    }
+
+    /**
+     * Decode the binary representation of a {@link Short} from a byte array.
      *
      * @param bytes Arbitrary byte array.
      *              It's length must be at least <b>offset</b> + 2.
@@ -142,37 +152,19 @@ public class Protocols {
     }
 
     /**
-     * Decode a binary integer representation from a buffer into an {@link Integer}.
+     * Decode the binary representation of a {@link Short} from a buffer.
      *
      * @param buffer Buffer to read from.
      *               Decoding will be done starting with the index denoted by {@link Buffer#position()}
-     * @return Decoded integer, or null if there are insufficient bytes in buffer
-     *         (i.e. <b>buffer.remaining()</b> &lt; 4)
-     * @since 1.0
-     */
-    public static Integer readInt(ByteBuffer buffer) {
-        if (buffer.remaining() < Integer.BYTES) {
-            return null;
-        }
-        return buffer.getInt();
-    }
-
-    /**
-     * Decode a binary short integer representation from a buffer into a {@link Short}.
-     *
-     * @param buffer Buffer to read from.
-     *               Decoding will be done starting with the index denoted by {@link Buffer#position()}
-     * @return Decoded short integer, or null if there are insufficient bytes in buffer
+     * @return Decoded value, or null if there are insufficient bytes in buffer
      *         (i.e. <b>buffer.remaining()</b> &lt; 2)
      * @since 1.0
      */
-    public static Integer readShort(ByteBuffer buffer) {
-
-        if (buffer.remaining() < Integer.BYTES) {
+    public static Short readShort(ByteBuffer buffer) {
+        if (buffer.remaining() < Short.BYTES) {
             return null;
         }
-        // TODO: switch to ByteBuffer.getShort
-        return ((buffer.get() << 8) & 0xFF00) + (buffer.get() & 0x00FF);
+        return buffer.getShort();
     }
 
     /**

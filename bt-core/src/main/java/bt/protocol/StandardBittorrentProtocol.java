@@ -28,17 +28,72 @@ import static bt.protocol.Protocols.readInt;
 
 public class StandardBittorrentProtocol implements MessageHandler<Message> {
 
-    private static final String PROTOCOL_NAME = "BitTorrent protocol";
+    /**
+     * BitTorrent message prefix size in bytes.
+     *
+     * @since 1.0
+     */
+    public static final int MESSAGE_LENGTH_PREFIX_SIZE = 4;
+    /**
+     * BitTorrent message ID size in bytes.
+     *
+     * @since 1.0
+     */
+    public static final int MESSAGE_TYPE_SIZE = 1;
+    /**
+     * BitTorrent message prefix size in bytes.
+     * Message prefix is a concatenation of message length prefix and message ID.
+     *
+     * @since 1.0
+     */
+    public static final int MESSAGE_PREFIX_SIZE = MESSAGE_LENGTH_PREFIX_SIZE + MESSAGE_TYPE_SIZE;
 
+    /**
+     * @since 1.0
+     */
     public static final int CHOKE_ID = 0;
+
+    /**
+     * @since 1.0
+     */
     public static final int UNCHOKE_ID = 1;
+
+    /**
+     * @since 1.0
+     */
     public static final int INTERESTED_ID = 2;
+
+    /**
+     * @since 1.0
+     */
     public static final int NOT_INTERESTED_ID = 3;
+
+    /**
+     * @since 1.0
+     */
     public static final int HAVE_ID = 4;
+
+    /**
+     * @since 1.0
+     */
     public static final int BITFIELD_ID = 5;
+
+    /**
+     * @since 1.0
+     */
     public static final int REQUEST_ID = 6;
+
+    /**
+     * @since 1.0
+     */
     public static final int PIECE_ID = 7;
+
+    /**
+     * @since 1.0
+     */
     public static final int CANCEL_ID = 8;
+
+    private static final String PROTOCOL_NAME = "BitTorrent protocol";
 
     private static final byte[] PROTOCOL_NAME_BYTES;
     private static final byte[] HANDSHAKE_PREFIX;
