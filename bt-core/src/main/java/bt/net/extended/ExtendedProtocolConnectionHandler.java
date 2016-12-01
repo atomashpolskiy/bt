@@ -11,12 +11,12 @@ import com.google.inject.Provider;
  *
  * @since 1.0
  */
-public class ExtendedConnectionHandler implements ConnectionHandler {
+public class ExtendedProtocolConnectionHandler implements ConnectionHandler {
 
     private Provider<ExtendedHandshake> extendedHandshakeProvider;
 
     @Inject
-    public ExtendedConnectionHandler(Provider<ExtendedHandshake> extendedHandshakeProvider) {
+    public ExtendedProtocolConnectionHandler(Provider<ExtendedHandshake> extendedHandshakeProvider) {
         this.extendedHandshakeProvider = extendedHandshakeProvider;
     }
 

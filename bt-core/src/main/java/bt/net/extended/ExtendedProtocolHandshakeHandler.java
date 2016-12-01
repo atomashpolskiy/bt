@@ -13,14 +13,14 @@ import com.google.inject.Provider;
  *
  * @since 1.0
  */
-public class ExtendedHandshakeHandler implements HandshakeHandler {
+public class ExtendedProtocolHandshakeHandler implements HandshakeHandler {
 
     private static final int EXTENDED_FLAG_BIT_INDEX = 43;
 
     private Provider<ExtendedHandshake> extendedHandshakeProvider;
 
     @Inject
-    public ExtendedHandshakeHandler(Provider<ExtendedHandshake> extendedHandshakeProvider) {
+    public ExtendedProtocolHandshakeHandler(Provider<ExtendedHandshake> extendedHandshakeProvider) {
         this.extendedHandshakeProvider = extendedHandshakeProvider;
     }
 
