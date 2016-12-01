@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 
 import static bt.protocol.Protocols.verifyPayloadHasLength;
 
-public class ChokeHandler extends UniqueMessageHandler<Choke> {
+public final class ChokeHandler extends UniqueMessageHandler<Choke> {
 
     public ChokeHandler() {
         super(Choke.class);

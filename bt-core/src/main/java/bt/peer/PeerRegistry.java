@@ -1,10 +1,12 @@
-package bt.service;
+package bt.peer;
 
 import bt.metainfo.Torrent;
 import bt.net.InetPeer;
 import bt.net.Peer;
+import bt.service.INetworkService;
+import bt.service.IRuntimeLifecycleBinder;
+import bt.service.IdentityService;
 import bt.tracker.ITrackerService;
-import bt.tracker.TrackerPeerSourceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +23,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+/**
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
+ */
 public class PeerRegistry implements IPeerRegistry {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerRegistry.class);

@@ -1,5 +1,7 @@
-package bt.runtime;
+package bt;
 
+import bt.runtime.BtClient;
+import bt.runtime.BtRuntime;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
 
@@ -11,7 +13,7 @@ import java.util.function.Consumer;
  *
  * @since 1.0
  */
-public class RuntimeAwareBtClient implements BtClient {
+class RuntimeAwareBtClient implements BtClient {
 
     private BtRuntime runtime;
     private BtClient delegate;

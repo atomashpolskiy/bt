@@ -14,7 +14,7 @@ import java.util.function.Consumer;
  *
  * @since 1.0
  */
-public class Choker {
+class Choker {
 
     private static final Duration CHOKING_THRESHOLD = Duration.ofMillis(10000);
 

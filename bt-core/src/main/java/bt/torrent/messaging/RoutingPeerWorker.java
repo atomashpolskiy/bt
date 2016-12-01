@@ -27,7 +27,7 @@ import java.util.concurrent.LinkedBlockingDeque;
  *
  * @since 1.0
  */
-public class RoutingPeerWorker implements IPeerWorker {
+class RoutingPeerWorker implements IPeerWorker {
 
     private ConnectionState connectionState;
 

@@ -7,6 +7,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
+ */
 public class TrackerService implements ITrackerService {
 
     private Map<String, TrackerFactory> trackerFactories;

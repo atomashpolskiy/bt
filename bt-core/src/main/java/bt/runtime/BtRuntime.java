@@ -125,7 +125,12 @@ public class BtRuntime {
         }
     }
 
-    void registerClient(BtClient client) {
+    /**
+     * Attach the provided client to this runtime.
+     *
+     * @since 1.0
+     */
+    public void registerClient(BtClient client) {
         knownClients.add(client);
     }
 

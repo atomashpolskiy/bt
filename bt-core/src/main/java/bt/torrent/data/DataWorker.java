@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class DataWorker implements IDataWorker {
+class DataWorker implements IDataWorker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DataWorker.class);
 

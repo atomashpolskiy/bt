@@ -10,7 +10,7 @@ import java.util.Objects;
 import static bt.protocol.Protocols.readInt;
 import static bt.protocol.Protocols.verifyPayloadHasLength;
 
-public class CancelHandler extends UniqueMessageHandler<Cancel> {
+public final class CancelHandler extends UniqueMessageHandler<Cancel> {
 
     public CancelHandler() {
         super(Cancel.class);

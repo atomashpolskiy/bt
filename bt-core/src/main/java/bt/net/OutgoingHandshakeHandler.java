@@ -14,7 +14,7 @@ import java.util.Set;
  *
  * @since 1.0
  */
-public class OutgoingHandshakeHandler implements ConnectionHandler {
+class OutgoingHandshakeHandler implements ConnectionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OutgoingHandshakeHandler.class);
 
@@ -32,7 +32,7 @@ public class OutgoingHandshakeHandler implements ConnectionHandler {
     }
 
     @Override
-    public boolean handleConnection(PeerConnection connection) {
+    public boolean handleConnection(IPeerConnection connection) {
 
         Handshake handshake = handshakeFactory.createHandshake(torrentId);
         handshakeHandlers.forEach(handler ->
@@ -45,7 +45,7 @@ public class OutgoingHandshakeHandler implements ConnectionHandler {
                 Handshake peerHandshake = (Handshake) firstMessage;
                 TorrentId incomingTorrentId = peerHandshake.getTorrentId();
                 if (torrentId.equals(incomingTorrentId)) {
-                    connection.setTorrentId(torrentId);
+                    ((PeerConnection) connection).setTorrentId(torrentId);
 
                     handshakeHandlers.forEach(handler ->
                             handler.processIncomingHandshake(connection.getRemotePeer(), peerHandshake));

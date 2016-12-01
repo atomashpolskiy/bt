@@ -4,7 +4,7 @@ import bt.BtException;
 
 import java.util.List;
 
-public class DefaultTorrentFile implements TorrentFile {
+class DefaultTorrentFile implements TorrentFile {
 
     private long size;
     private List<String> pathElements;

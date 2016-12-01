@@ -1,4 +1,4 @@
-package bt.peerexchange.service;
+package bt.peerexchange;
 
 import bt.net.Peer;
 

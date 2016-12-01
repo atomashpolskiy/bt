@@ -13,7 +13,8 @@ import java.lang.annotation.Target;
  *
  * <p>Each message type is assigned a unique name,
  * thus annotated value should be a
- * {@link java.util.Map}&lt;{@link String}, {@link bt.protocol.handler.MessageHandler}&lt;{@code ? extends} {@link bt.protocol.extended.ExtendedMessage}&gt;&gt;.
+ * <code>{@link java.util.Map}&lt;{@link String}, {@link bt.protocol.handler.MessageHandler}&lt;{@code ? extends}
+ * {@link bt.protocol.extended.ExtendedMessage}&gt;&gt;</code>.
  *
  * @since 1.0
  */

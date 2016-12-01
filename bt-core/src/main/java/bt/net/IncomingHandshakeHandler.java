@@ -5,7 +5,7 @@ import bt.metainfo.TorrentId;
 import bt.protocol.Handshake;
 import bt.protocol.IHandshakeFactory;
 import bt.protocol.Message;
-import bt.service.TorrentRegistry;
+import bt.torrent.TorrentRegistry;
 import bt.torrent.ITorrentDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +19,7 @@ import java.util.Set;
  *
  * @since 1.0
  */
-public class IncomingHandshakeHandler implements ConnectionHandler {
+class IncomingHandshakeHandler implements ConnectionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IncomingHandshakeHandler.class);
 
@@ -37,7 +37,7 @@ public class IncomingHandshakeHandler implements ConnectionHandler {
     }
 
     @Override
-    public boolean handleConnection(PeerConnection connection) {
+    public boolean handleConnection(IPeerConnection connection) {
 
         Message firstMessage = connection.readMessage(handshakeTimeout.toMillis());
         if (firstMessage != null) {
@@ -56,7 +56,7 @@ public class IncomingHandshakeHandler implements ConnectionHandler {
                                 handler.processOutgoingHandshake(handshake));
 
                         connection.postMessage(handshake);
-                        connection.setTorrentId(torrentId);
+                        ((PeerConnection) connection).setTorrentId(torrentId);
 
                         handshakeHandlers.forEach(handler ->
                                 handler.processIncomingHandshake(connection.getRemotePeer(), peerHandshake));

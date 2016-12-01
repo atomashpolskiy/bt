@@ -9,7 +9,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-public class DefaultTorrent implements Torrent {
+class DefaultTorrent implements Torrent {
 
     private static final int CHUNK_HASH_LENGTH = 20;
 

@@ -10,8 +10,8 @@ import java.lang.annotation.Target;
  *
  * <p>Annotated method must be public and have one of the following lists of parameters:</p>
  * <ul>
- * <li>(T message, {@link bt.torrent.messaging.MessageContext} context)</li>
- * <li>(T message)</li>
+ * <li><code>(T message, {@link bt.torrent.messaging.MessageContext} context)</code></li>
+ * <li><code>(T message)</code></li>
  * </ul>
  * <p>where T is a (subtype of) {@link bt.protocol.Message}.</p>
  *

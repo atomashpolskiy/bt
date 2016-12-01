@@ -32,9 +32,24 @@ import java.util.Map;
 public class ProtocolModule implements Module {
 
     /**
+     * Contribute a message handler for some message type.
+     * <p>Binding key is a unique message type ID, that will be used
+     * to encode and decode the binary representation of a message of this type.
+     *
+     * @since 1.0
+     */
+    public static MapBinder<Integer, MessageHandler<? extends Message>> contributeMessageHandler(Binder binder) {
+        return MapBinder.newMapBinder(
+                binder,
+                new TypeLiteral<Integer>(){},
+                new TypeLiteral<MessageHandler<?>>(){},
+                MessageHandlers.class);
+    }
+
+    /**
      * Contribute a message handler for some extended message type.
-     * See BEP-10 for details on protocol extensions.
-     * Binding key is a unique message type ID, that will be communicated to a peer
+     * <p>See BEP-10 for details on protocol extensions.
+     * <p>Binding key is a unique message type ID, that will be communicated to a peer
      * during the extended handshake procedure in the 'm' dictionary of an extended handshake message.
      *
      * @since 1.0
@@ -47,27 +62,45 @@ public class ProtocolModule implements Module {
                 ExtendedMessageHandlers.class);
     }
 
+    /**
+     * Contribute a peer connection handler.
+     *
+     * @since 1.0
+     */
+    public static Multibinder<ConnectionHandler> contributeConnectionHandler(Binder binder) {
+        return Multibinder.newSetBinder(binder, ConnectionHandler.class);
+    }
+
+    /**
+     * Contribute a handshake handler.
+     *
+     * @since 1.0
+     */
+    public static Multibinder<HandshakeHandler> contributeHandshakeHandler(Binder binder) {
+        return Multibinder.newSetBinder(binder, HandshakeHandler.class);
+    }
+
     @Override
     public void configure(Binder binder) {
 
+        // trigger creation of extension points
+        ProtocolModule.contributeMessageHandler(binder);
         ProtocolModule.contributeExtendedMessageHandler(binder);
+        ProtocolModule.contributeConnectionHandler(binder);
+        ProtocolModule.contributeHandshakeHandler(binder);
 
         binder.bind(new TypeLiteral<MessageHandler<Message>>(){}).annotatedWith(BitTorrentProtocol.class)
                 .to(StandardBittorrentProtocol.class).in(Singleton.class);
 
-        MapBinder<Integer, MessageHandler<?>> extraMessageHandlerMapBinder =
-                    MapBinder.newMapBinder(binder, new TypeLiteral<Integer>(){},
-                            new TypeLiteral<MessageHandler<?>>(){}, MessageHandlers.class);
-        extraMessageHandlerMapBinder.addBinding(ExtendedProtocol.EXTENDED_MESSAGE_ID).to(ExtendedProtocol.class);
+        ProtocolModule.contributeMessageHandler(binder)
+                .addBinding(ExtendedProtocol.EXTENDED_MESSAGE_ID).to(ExtendedProtocol.class);
 
         binder.bind(ExtendedHandshake.class).toProvider(ExtendedHandshakeProvider.class).in(Singleton.class);
 
-        Multibinder<ConnectionHandler> extraConnectionHandlers = Multibinder.newSetBinder(binder, ConnectionHandler.class);
-        extraConnectionHandlers.addBinding().to(BitfieldConnectionHandler.class);
-        extraConnectionHandlers.addBinding().to(ExtendedConnectionHandler.class);
+        ProtocolModule.contributeConnectionHandler(binder).addBinding().to(BitfieldConnectionHandler.class);
+        ProtocolModule.contributeConnectionHandler(binder).addBinding().to(ExtendedConnectionHandler.class);
 
-        Multibinder<HandshakeHandler> extraHandshakeHandlers = Multibinder.newSetBinder(binder, HandshakeHandler.class);
-        extraHandshakeHandlers.addBinding().to(ExtendedHandshakeHandler.class);
+        ProtocolModule.contributeHandshakeHandler(binder).addBinding().to(ExtendedHandshakeHandler.class);
     }
 
     @Provides

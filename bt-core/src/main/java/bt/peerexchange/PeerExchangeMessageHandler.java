@@ -1,4 +1,4 @@
-package bt.peerexchange.protocol;
+package bt.peerexchange;
 
 import bt.bencoding.BEParser;
 import bt.bencoding.model.BEMap;
@@ -11,7 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 
-public class PeerExchangeMessageHandler implements MessageHandler<PeerExchange> {
+class PeerExchangeMessageHandler implements MessageHandler<PeerExchange> {
 
     private final Collection<Class<? extends PeerExchange>> supportedTypes;
 

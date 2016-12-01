@@ -1,11 +1,10 @@
-package bt.service;
+package bt.torrent;
 
 import bt.data.Storage;
 import bt.data.IDataDescriptorFactory;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.torrent.ITorrentDescriptor;
-import bt.torrent.TorrentDescriptor;
+import bt.service.IRuntimeLifecycleBinder;
 import bt.tracker.ITrackerService;
 import com.google.inject.Inject;
 
@@ -17,9 +16,8 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * Simple in-memory torrent registry, that creates new descriptors upon request.
  *
- *<p><b>Note that this class is not a part of the public API and is a subject to change.</b></p>
- *
- * @since 1.0
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
 public class AdhocTorrentRegistry implements TorrentRegistry {
 

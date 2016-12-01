@@ -2,9 +2,9 @@ package bt.net;
 
 import bt.BtException;
 import bt.metainfo.Torrent;
-import bt.service.TorrentRegistry;
 import bt.torrent.Bitfield;
 import bt.torrent.ITorrentDescriptor;
+import bt.torrent.TorrentRegistry;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +28,7 @@ public class BitfieldConnectionHandler implements ConnectionHandler {
     }
 
     @Override
-    public boolean handleConnection(PeerConnection connection) {
+    public boolean handleConnection(IPeerConnection connection) {
         Torrent torrent = torrentRegistry.getTorrent(connection.getTorrentId())
                 // this should not happen, because presence of requested torrent
                 // should have already been tested by other connection handlers

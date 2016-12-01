@@ -1,4 +1,4 @@
-package bt.peerexchange.protocol;
+package bt.peerexchange;
 
 import bt.BtException;
 import bt.bencoding.model.BEMap;
@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.stream.Collectors;
 
-public class PeerExchange extends ExtendedMessage {
+class PeerExchange extends ExtendedMessage {
 
     private static final String ADDED_IPV4_KEY = "added";
     private static final String ADDED_IPV6_KEY = "added6";

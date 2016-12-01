@@ -1,6 +1,6 @@
-package bt.runtime;
+package bt;
 
-import bt.BtException;
+import bt.runtime.BtClient;
 import bt.torrent.ITorrentDescriptor;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
@@ -19,7 +19,7 @@ import java.util.function.Consumer;
  *
  * @since 1.0
  */
-public class DefaultBtClient implements BtClient {
+class DefaultBtClient implements BtClient {
 
     private ITorrentDescriptor delegate;
     private TorrentSession session;

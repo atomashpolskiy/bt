@@ -10,7 +10,7 @@ import bt.tracker.TrackerResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TorrentDescriptor implements ITorrentDescriptor {
+class TorrentDescriptor implements ITorrentDescriptor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TorrentDescriptor.class);
 

@@ -14,7 +14,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-public class DataDescriptor implements IDataDescriptor {
+class DataDescriptor implements IDataDescriptor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DataDescriptor.class);
 

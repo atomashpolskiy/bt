@@ -1,5 +1,6 @@
-package bt.runtime;
+package bt;
 
+import bt.runtime.BtClient;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
 
@@ -12,7 +13,7 @@ import java.util.function.Supplier;
  *
  * @since 1.0
  */
-public class LazyBtClient implements BtClient {
+class LazyBtClient implements BtClient {
 
     private Supplier<BtClient> clientSupplier;
     private volatile BtClient delegate;

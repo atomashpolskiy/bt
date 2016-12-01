@@ -7,6 +7,10 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
 
+/**
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
+ */
 public class NetworkService implements INetworkService {
 
     @Override

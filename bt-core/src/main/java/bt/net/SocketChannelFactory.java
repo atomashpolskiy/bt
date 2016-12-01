@@ -13,10 +13,8 @@ import java.nio.channels.spi.SelectorProvider;
 /**
  * Provides the basic capabilities
  * for establishing inbound and outbound connections.
- *
- * @since 1.0
  */
-public class SocketChannelFactory {
+class SocketChannelFactory {
 
     private INetworkService networkService;
     private SelectorProvider selector;

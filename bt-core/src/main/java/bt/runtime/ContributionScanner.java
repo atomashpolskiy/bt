@@ -1,6 +1,7 @@
-package bt.module;
+package bt.runtime;
 
 import bt.BtException;
+import bt.module.Contribute;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -9,7 +10,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public class ContributionScanner {
+class ContributionScanner {
 
     private static final ContributionScanner instance = new ContributionScanner();
 

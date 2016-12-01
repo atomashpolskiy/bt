@@ -1,8 +1,7 @@
-package bt.peerexchange.service;
+package bt.peerexchange;
 
 import bt.net.Peer;
-import bt.peerexchange.protocol.PeerExchange;
-import bt.service.PeerSource;
+import bt.peer.PeerSource;
 
 import java.util.Collection;
 import java.util.Collections;

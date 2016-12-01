@@ -2,7 +2,7 @@ package bt.net;
 
 import bt.metainfo.TorrentId;
 import bt.protocol.IHandshakeFactory;
-import bt.service.TorrentRegistry;
+import bt.torrent.TorrentRegistry;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -11,6 +11,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
+ */
 public class ConnectionHandlerFactory implements IConnectionHandlerFactory {
 
     private IHandshakeFactory handshakeFactory;
@@ -74,7 +78,7 @@ public class ConnectionHandlerFactory implements IConnectionHandlerFactory {
         }
 
         @Override
-        public boolean handleConnection(PeerConnection connection) {
+        public boolean handleConnection(IPeerConnection connection) {
 
             if (!firstHandler.handleConnection(connection)) {
                 return false;

@@ -23,7 +23,8 @@ import java.util.function.Supplier;
 /**
  * Default single-threaded message dispatcher implementation.
  *
- * @since 1.0
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
 public class MessageDispatcher implements IMessageDispatcher {
 

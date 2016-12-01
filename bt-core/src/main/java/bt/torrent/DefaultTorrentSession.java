@@ -7,11 +7,14 @@ import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
 import bt.net.PeerActivityListener;
 import bt.torrent.messaging.IPeerWorkerFactory;
-import bt.torrent.messaging.TorrentWorker;
 
 import java.util.Collections;
 import java.util.Set;
 
+/**
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
+ */
 public class DefaultTorrentSession implements PeerActivityListener, TorrentSession {
 
     private IPeerConnectionPool connectionPool;

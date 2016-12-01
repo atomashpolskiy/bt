@@ -1,4 +1,4 @@
-package bt.service;
+package bt.torrent;
 
 import bt.data.Storage;
 import bt.metainfo.Torrent;

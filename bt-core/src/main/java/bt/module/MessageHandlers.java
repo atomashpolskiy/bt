@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
  *
  * <p>Each message type is assigned a unique numeric ID,
  * thus annotated value should be a
- * {@link java.util.Map}&lt;{@link Integer}, {@link bt.protocol.handler.MessageHandler}&gt;.
+ * <code>{@link java.util.Map}&lt;{@link Integer}, {@link bt.protocol.handler.MessageHandler}&gt;</code>.
  *
  * @since 1.0
  */

@@ -9,6 +9,10 @@ import org.slf4j.LoggerFactory;
 import java.util.Optional;
 import java.util.function.Predicate;
 
+/**
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
+ */
 public class PieceManager implements IPieceManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceManager.class);

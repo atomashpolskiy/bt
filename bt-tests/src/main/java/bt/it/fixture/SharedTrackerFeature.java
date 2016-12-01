@@ -4,7 +4,7 @@ import bt.runtime.BtRuntimeBuilder;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
-import bt.service.IPeerRegistry;
+import bt.peer.IPeerRegistry;
 import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
 import bt.tracker.Tracker;

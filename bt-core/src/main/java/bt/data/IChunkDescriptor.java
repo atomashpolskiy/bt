@@ -51,7 +51,7 @@ public interface IChunkDescriptor {
      * Reads a block of data.
      * <p>Implementations must throw an exception, if
      * <blockquote>
-     * {@code offset >} {@link #getSize()} {@code - length}
+     * <code>offset &gt; {@link #getSize()} - length</code>
      * </blockquote>
      *
      * @param offset Offset from the beginning of this chunk (0-based)
@@ -64,7 +64,7 @@ public interface IChunkDescriptor {
      * Writes a block of data.
      * <p>Implementations must throw an exception, if
      * <blockquote>
-     * {@code offset >} {@link #getSize()} {@code - block.length}
+     * <code>offset &gt; {@link #getSize()} - block.length</code>
      * </blockquote>
      *
      * @param block A block to write

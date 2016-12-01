@@ -16,7 +16,7 @@ public interface StorageUnit extends Closeable {
      * Number of bytes to be read is determined by {@link Buffer#remaining()}.
      * <p>Hence, storage must throw an exception if
      * <blockquote>
-     * {@code offset >} {@link #capacity()} {@code - buffer.remaining()}
+     * <code>offset &gt; {@link #capacity()} - buffer.remaining()</code>
      * </blockquote>
      *
      * @param buffer Buffer to read bytes into.
@@ -31,7 +31,7 @@ public interface StorageUnit extends Closeable {
      * Read a block of data, starting with a given offset.
      * <p>Storage must throw an exception if
      * <blockquote>
-     * {@code offset >} {@link #capacity()} {@code - length}
+     * <code>offset &gt; {@link #capacity()} - length</code>
      * </blockquote>
      *
      * @param offset Index to starting reading from (0-based)
@@ -46,7 +46,7 @@ public interface StorageUnit extends Closeable {
      * <p>Number of bytes to be written is determined by {@link Buffer#remaining()}.
      * <p>Hence, storage must throw an exception if
      * <blockquote>
-     * {@code offset >} {@link #capacity()} {@code - buffer.remaining()}
+     * <code>offset &gt; {@link #capacity()} - buffer.remaining()</code>
      * </blockquote>
      *
      * @param buffer Buffer containing the block of data to write to this storage.
@@ -63,7 +63,7 @@ public interface StorageUnit extends Closeable {
      * <p>Number of bytes to be written is determined by block's length.
      * <p>Storage must throw an exception if
      * <blockquote>
-     * {@code offset >} {@link #capacity()} {@code - block.length}
+     * <code>offset &gt; {@link #capacity()} - block.length</code>
      * </blockquote>
      *
      * @param block Block of data to write to this storage

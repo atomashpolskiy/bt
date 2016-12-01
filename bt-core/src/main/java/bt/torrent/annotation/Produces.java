@@ -10,9 +10,9 @@ import java.lang.annotation.Target;
  *
  * <p>Annotated method must be public and have one of the following lists of parameters:</p>
  * <ul>
- * <li>({@link java.util.function.Consumer}&lt;{@link bt.protocol.Message}&gt; consumer,
- * {@link bt.torrent.messaging.MessageContext} context)</li>
- * <li>({@link java.util.function.Consumer}&lt;{@link bt.protocol.Message}&gt; consumer)</li>
+ * <li><code>({@link java.util.function.Consumer}&lt;{@link bt.protocol.Message}&gt; consumer,
+ * {@link bt.torrent.messaging.MessageContext} context)</code></li>
+ * <li><code>({@link java.util.function.Consumer}&lt;{@link bt.protocol.Message}&gt; consumer)</code></li>
  * </ul>
  *
  * @since 1.0

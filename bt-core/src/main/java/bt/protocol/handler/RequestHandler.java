@@ -10,7 +10,7 @@ import java.util.Objects;
 import static bt.protocol.Protocols.readInt;
 import static bt.protocol.Protocols.verifyPayloadHasLength;
 
-public class RequestHandler extends UniqueMessageHandler<Request> {
+public final class RequestHandler extends UniqueMessageHandler<Request> {
 
     public RequestHandler() {
         super(Request.class);

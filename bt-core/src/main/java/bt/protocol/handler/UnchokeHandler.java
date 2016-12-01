@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 
 import static bt.protocol.Protocols.verifyPayloadHasLength;
 
-public class UnchokeHandler extends UniqueMessageHandler<Unchoke> {
+public final class UnchokeHandler extends UniqueMessageHandler<Unchoke> {
 
     public UnchokeHandler() {
         super(Unchoke.class);

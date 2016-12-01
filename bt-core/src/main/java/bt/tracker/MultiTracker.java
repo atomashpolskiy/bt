@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class MultiTracker implements Tracker {
+class MultiTracker implements Tracker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MultiTracker.class);
 

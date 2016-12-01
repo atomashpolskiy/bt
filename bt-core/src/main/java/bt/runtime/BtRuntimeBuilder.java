@@ -1,8 +1,6 @@
 package bt.runtime;
 
 import bt.BtException;
-import bt.module.Contribution;
-import bt.module.ContributionScanner;
 import bt.module.ProtocolModule;
 import bt.module.ServiceModule;
 import com.google.inject.Guice;

@@ -1,10 +1,10 @@
-package bt.module;
+package bt.runtime;
 
 import com.google.inject.Module;
 
 import java.util.function.Consumer;
 
-public class Contribution<T extends Module> {
+class Contribution<T extends Module> {
 
     private Class<T> moduleType;
     private Consumer<T> contributor;

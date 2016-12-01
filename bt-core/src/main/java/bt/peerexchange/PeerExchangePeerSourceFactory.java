@@ -1,4 +1,4 @@
-package bt.peerexchange.service;
+package bt.peerexchange;
 
 import bt.BtException;
 import bt.metainfo.Torrent;
@@ -6,13 +6,11 @@ import bt.metainfo.TorrentId;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
 import bt.net.PeerActivityListener;
-import bt.peerexchange.PeerExchangeConfig;
-import bt.peerexchange.protocol.PeerExchange;
 import bt.protocol.Message;
 import bt.protocol.extended.ExtendedHandshake;
 import bt.service.IRuntimeLifecycleBinder;
-import bt.service.PeerSource;
-import bt.service.PeerSourceFactory;
+import bt.peer.PeerSource;
+import bt.peer.PeerSourceFactory;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.messaging.MessageContext;
@@ -35,6 +33,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 
+/**
+ * <p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
+ */
 public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerExchangePeerSourceFactory.class);

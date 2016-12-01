@@ -17,7 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * @since 1.0
  */
-public class PeerConnection implements IPeerConnection {
+class PeerConnection implements IPeerConnection {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnection.class);
 

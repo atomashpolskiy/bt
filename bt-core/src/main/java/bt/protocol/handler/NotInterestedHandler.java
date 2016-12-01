@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 
 import static bt.protocol.Protocols.verifyPayloadHasLength;
 
-public class NotInterestedHandler extends UniqueMessageHandler<NotInterested> {
+public final class NotInterestedHandler extends UniqueMessageHandler<NotInterested> {
 
     public NotInterestedHandler() {
         super(NotInterested.class);

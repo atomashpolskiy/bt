@@ -22,7 +22,7 @@ import java.util.Set;
  *
  * @since 1.0
  */
-public class ExtendedHandshake extends ExtendedMessage {
+public final class ExtendedHandshake extends ExtendedMessage {
 
     /**
      * Message type mapping key in the extended handshake.

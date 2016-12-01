@@ -13,7 +13,8 @@ import java.util.function.BiConsumer;
  * in which numeric IDs are assigned to message type names
  * sequentially starting with 1, in the alphanumeric order of type names.
  *
- *<p><b>Note that this class is not a part of the public API and is a subject to change.</b></p>
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
  *
  * @since 1.0
  */

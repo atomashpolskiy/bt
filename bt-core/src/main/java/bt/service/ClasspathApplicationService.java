@@ -21,9 +21,8 @@ import java.util.regex.Pattern;
  * by testing if 'Bundle-SymbolicName' attribute is present in the manifest
  * and if its' value starts with 'com.github.atomashpolskiy.bt'.</p>
  *
- * <p><b>Note that this class is not a part of the public API and is a subject to change.</b></p>
- *
- * @since 1.0
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
 public class ClasspathApplicationService implements ApplicationService {
 

@@ -9,7 +9,7 @@ import java.util.Objects;
 
 import static bt.protocol.Protocols.readInt;
 
-public class PieceHandler extends UniqueMessageHandler<Piece> {
+public final class PieceHandler extends UniqueMessageHandler<Piece> {
 
     public PieceHandler() {
         super(Piece.class);

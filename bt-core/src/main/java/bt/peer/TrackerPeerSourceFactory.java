@@ -1,14 +1,13 @@
-package bt.tracker;
+package bt.peer;
 
 import bt.metainfo.Torrent;
-import bt.service.PeerSource;
-import bt.service.PeerSourceFactory;
+import bt.tracker.ITrackerService;
 import com.google.inject.Inject;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class TrackerPeerSourceFactory implements PeerSourceFactory {
+class TrackerPeerSourceFactory implements PeerSourceFactory {
 
     private ITrackerService trackerService;
     private Map<Torrent, TrackerPeerSource> peerSources;

@@ -24,6 +24,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
+ */
 public class MetadataService implements IMetadataService {
 
     private static final String ANNOUNCE_KEY = "announce";

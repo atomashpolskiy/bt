@@ -20,7 +20,7 @@ import java.util.Optional;
  *
  * @since 1.0
  */
-public class UdpTracker implements Tracker {
+class UdpTracker implements Tracker {
 
     private IdentityService idService;
     private InetSocketAddress localAddress;

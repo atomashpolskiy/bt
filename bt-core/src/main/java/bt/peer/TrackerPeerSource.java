@@ -1,9 +1,10 @@
-package bt.tracker;
+package bt.peer;
 
 import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.net.Peer;
-import bt.service.PeerSource;
+import bt.tracker.Tracker;
+import bt.tracker.TrackerResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

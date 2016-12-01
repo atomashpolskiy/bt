@@ -5,7 +5,7 @@ import bt.protocol.DecodingContext;
 
 import java.nio.ByteBuffer;
 
-public class BitfieldHandler extends UniqueMessageHandler<Bitfield> {
+public final class BitfieldHandler extends UniqueMessageHandler<Bitfield> {
 
     public BitfieldHandler() {
         super(Bitfield.class);

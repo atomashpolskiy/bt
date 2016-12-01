@@ -4,7 +4,8 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 /**
- * @since 1.0
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
 public class ExtendedHandshakeProvider implements Provider<ExtendedHandshake> {
 

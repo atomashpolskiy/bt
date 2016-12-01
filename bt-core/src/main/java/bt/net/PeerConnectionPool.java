@@ -2,7 +2,13 @@ package bt.net;
 
 import bt.BtException;
 import bt.metainfo.TorrentId;
+import bt.module.BitTorrentProtocol;
+import bt.protocol.Message;
+import bt.protocol.handler.MessageHandler;
+import bt.runtime.Config;
+import bt.service.INetworkService;
 import bt.service.IRuntimeLifecycleBinder;
+import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +33,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
+ */
 public class PeerConnectionPool implements IPeerConnectionPool {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionPool.class);
@@ -46,15 +56,19 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     private Duration peerConnectionInactivityThreshold;
 
-    public PeerConnectionPool(SocketChannelFactory socketChannelFactory,
-                              PeerConnectionFactory connectionFactory,
+    @Inject
+    public PeerConnectionPool(INetworkService networkService,
+                              @BitTorrentProtocol MessageHandler<Message> messageHandler,
                               IConnectionHandlerFactory connectionHandlerFactory,
                               IRuntimeLifecycleBinder lifecycleBinder,
-                              Duration peerConnectionInactivityThreshold) {
+                              Config config) {
 
-        this.connectionFactory = connectionFactory;
+        SocketChannelFactory socketChannelFactory = new SocketChannelFactory(networkService);
+        this.connectionFactory = new PeerConnectionFactory(messageHandler,
+                socketChannelFactory, config.getMaxTransferBlockSize());
+
         this.connectionHandlerFactory = connectionHandlerFactory;
-        this.peerConnectionInactivityThreshold = peerConnectionInactivityThreshold;
+        this.peerConnectionInactivityThreshold = config.getPeerConnectionInactivityThreshold();
 
         pendingConnections = new ConcurrentHashMap<>();
         connections = new ConcurrentHashMap<>();

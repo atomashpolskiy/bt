@@ -7,6 +7,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
+/**
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
+ */
 public class RuntimeLifecycleBinder implements IRuntimeLifecycleBinder {
 
     private Map<LifecycleEvent, List<Binding>> bindings;

@@ -1,4 +1,4 @@
-package bt.service;
+package bt.peer;
 
 import bt.metainfo.Torrent;
 import bt.net.Peer;

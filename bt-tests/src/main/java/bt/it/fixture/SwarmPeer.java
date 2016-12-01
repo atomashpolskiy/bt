@@ -5,7 +5,7 @@ import bt.runtime.BtRuntime;
 import bt.data.file.FileSystemStorage;
 import bt.runtime.BtClient;
 import bt.net.Peer;
-import bt.service.IPeerRegistry;
+import bt.peer.IPeerRegistry;
 
 import java.io.Closeable;
 import java.io.File;

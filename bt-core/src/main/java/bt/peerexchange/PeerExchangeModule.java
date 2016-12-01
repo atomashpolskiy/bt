@@ -2,8 +2,6 @@ package bt.peerexchange;
 
 import bt.module.ProtocolModule;
 import bt.module.ServiceModule;
-import bt.peerexchange.protocol.PeerExchangeMessageHandler;
-import bt.peerexchange.service.PeerExchangePeerSourceFactory;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Singleton;

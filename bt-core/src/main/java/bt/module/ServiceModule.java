@@ -11,28 +11,24 @@ import bt.net.IConnectionHandlerFactory;
 import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.net.MessageDispatcher;
-import bt.net.PeerConnectionFactory;
 import bt.net.PeerConnectionPool;
-import bt.net.SocketChannelFactory;
+import bt.peer.IPeerRegistry;
+import bt.peer.PeerRegistry;
+import bt.peer.PeerSourceFactory;
 import bt.protocol.HandshakeFactory;
 import bt.protocol.IHandshakeFactory;
-import bt.protocol.Message;
-import bt.protocol.handler.MessageHandler;
 import bt.runtime.Config;
-import bt.service.AdhocTorrentRegistry;
-import bt.service.ClasspathApplicationService;
-import bt.service.VersionAwareIdentityService;
-import bt.service.ExecutorServiceProvider;
 import bt.service.ApplicationService;
+import bt.service.ClasspathApplicationService;
+import bt.service.ExecutorServiceProvider;
 import bt.service.INetworkService;
-import bt.service.IPeerRegistry;
 import bt.service.IRuntimeLifecycleBinder;
-import bt.service.TorrentRegistry;
 import bt.service.IdentityService;
 import bt.service.NetworkService;
-import bt.service.PeerRegistry;
-import bt.service.PeerSourceFactory;
 import bt.service.RuntimeLifecycleBinder;
+import bt.service.VersionAwareIdentityService;
+import bt.torrent.AdhocTorrentRegistry;
+import bt.torrent.TorrentRegistry;
 import bt.torrent.data.DataWorkerFactory;
 import bt.torrent.data.IDataWorkerFactory;
 import bt.tracker.ITrackerService;
@@ -97,10 +93,12 @@ public class ServiceModule implements Module {
     @Override
     public void configure(Binder binder) {
 
+        // trigger creation of extension points
         ServiceModule.contributeMessagingAgent(binder);
         ServiceModule.contributePeerSourceFactory(binder);
+        ServiceModule.contributeTrackerFactory(binder);
 
-        ServiceModule.contributeTrackerFactory(binder).addBinding("udp").to(UdpTrackerFactory.class);
+        binder.bind(Config.class).in(Singleton.class);
 
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
         binder.bind(INetworkService.class).to(NetworkService.class).in(Singleton.class);
@@ -108,6 +106,7 @@ public class ServiceModule implements Module {
         binder.bind(IdentityService.class).to(VersionAwareIdentityService.class).in(Singleton.class);
         binder.bind(ITrackerService.class).to(TrackerService.class).in(Singleton.class);
         binder.bind(TorrentRegistry.class).to(AdhocTorrentRegistry.class).in(Singleton.class);
+        binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).in(Singleton.class);
         binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).in(Singleton.class);
         binder.bind(IHandshakeFactory.class).to(HandshakeFactory.class).in(Singleton.class);
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
@@ -115,27 +114,14 @@ public class ServiceModule implements Module {
         // TODO: register a shutdown hook in the runtime
         binder.bind(ExecutorService.class).annotatedWith(ClientExecutor.class)
                 .toProvider(ExecutorServiceProvider.class).in(Singleton.class);
+
+        ServiceModule.contributeTrackerFactory(binder).addBinding("udp").to(UdpTrackerFactory.class);
     }
 
     @Provides
     @Singleton
     public IDataDescriptorFactory provideDataDescriptorFactory() {
         return new DataDescriptorFactory(config.getTransferBlockSize());
-    }
-
-    @Provides
-    @Singleton
-    public IPeerConnectionPool providePeerConnectionPool(INetworkService networkService,
-                                                         IConnectionHandlerFactory connectionHandlerFactory,
-                                                         @BitTorrentProtocol MessageHandler<Message> messageHandler,
-                                                         IRuntimeLifecycleBinder lifecycleBinder) {
-
-        SocketChannelFactory socketChannelFactory = new SocketChannelFactory(networkService);
-        PeerConnectionFactory connectionFactory = new PeerConnectionFactory(messageHandler,
-                socketChannelFactory, config.getMaxTransferBlockSize());
-
-        return new PeerConnectionPool(socketChannelFactory, connectionFactory,
-                connectionHandlerFactory, lifecycleBinder, config.getPeerConnectionInactivityThreshold());
     }
 
     @Provides

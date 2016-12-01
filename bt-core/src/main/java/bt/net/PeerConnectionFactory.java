@@ -8,7 +8,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 
-public class PeerConnectionFactory {
+class PeerConnectionFactory {
 
     private MessageHandler<Message> messageHandler;
     private SocketChannelFactory socketChannelFactory;

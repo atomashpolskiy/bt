@@ -14,7 +14,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * @since 1.0
  */
-public class ChunkDescriptor implements IChunkDescriptor {
+class ChunkDescriptor implements IChunkDescriptor {
 
     private volatile DataStatus status;
     private StorageUnit[] units;

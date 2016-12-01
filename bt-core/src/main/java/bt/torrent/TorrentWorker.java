@@ -1,11 +1,13 @@
-package bt.torrent.messaging;
+package bt.torrent;
 
 import bt.metainfo.TorrentId;
 import bt.net.IMessageDispatcher;
 import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
-import bt.torrent.IPieceManager;
+import bt.torrent.messaging.ConnectionState;
+import bt.torrent.messaging.IPeerWorker;
+import bt.torrent.messaging.IPeerWorkerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +23,7 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @since 1.0
  */
-public class TorrentWorker {
+class TorrentWorker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TorrentWorker.class);
 

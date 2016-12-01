@@ -8,6 +8,10 @@ import com.google.inject.Inject;
 import java.util.Optional;
 import java.util.Random;
 
+/**
+ *<p><b>Note that this class implements a service.
+ * Hence, is not a part of the public API and is a subject to change.</b></p>
+ */
 public class VersionAwareIdentityService implements IdentityService {
 
     private final PeerId peerId;
