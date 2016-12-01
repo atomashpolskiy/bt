@@ -43,12 +43,13 @@ public class PeerRegistry implements IPeerRegistry {
                         IdentityService idService,
                         ITrackerService trackerService,
                         Set<PeerSourceFactory> extraPeerSourceFactories,
-                        Duration peerDiscoveryInterval) {
+                        Duration peerDiscoveryInterval,
+                        Duration trackerQueryInterval) {
 
         this.peerConsumers = new ConcurrentHashMap<>();
         this.localPeer = new InetPeer(networkService.getInetAddress(), networkService.getPort(), idService.getLocalPeerId());
 
-        this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService);
+        this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, trackerQueryInterval);
         this.extraPeerSourceFactories = extraPeerSourceFactories;
 
         createExecutor(lifecycleBinder, peerDiscoveryInterval);

@@ -15,6 +15,7 @@ public class Config {
     private Duration peerConnectionRetryCount;
     private Duration peerConnectionTimeout;
     private Duration peerConnectionInactivityThreshold;
+    private Duration trackerQueryInterval;
     private int maxPeerConnections;
     private int maxPeerConnectionsPerTorrent;
     private int transferBlockSize;
@@ -26,6 +27,8 @@ public class Config {
         this.peerDiscoveryInterval = Duration.ofSeconds(5);
         this.peerHandshakeTimeout = Duration.ofSeconds(3);
         this.peerConnectionInactivityThreshold = Duration.ofMinutes(3);
+        this.trackerQueryInterval = Duration.ofMinutes(5);
+
         this.maxPeerConnections = Integer.MAX_VALUE;
         this.maxPeerConnectionsPerTorrent = 20;
         this.transferBlockSize = 2 << 13; // 8 KB
@@ -122,6 +125,21 @@ public class Config {
      */
     public Duration getPeerConnectionInactivityThreshold() {
         return peerConnectionInactivityThreshold;
+    }
+
+    /**
+     * @param trackerQueryInterval Interval at which trackers will be queried for peers.
+     * @since 1.0
+     */
+    public void setTrackerQueryInterval(Duration trackerQueryInterval) {
+        this.trackerQueryInterval = trackerQueryInterval;
+    }
+
+    /**
+     * @since 1.0
+     */
+    public Duration getTrackerQueryInterval() {
+        return trackerQueryInterval;
     }
 
     /**

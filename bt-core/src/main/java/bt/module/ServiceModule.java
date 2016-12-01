@@ -148,6 +148,6 @@ public class ServiceModule implements Module {
                                              ITrackerService trackerService,
                                              Set<PeerSourceFactory> peerSourceFactories) {
         return new PeerRegistry(lifecycleBinder, networkService, idService, trackerService,
-                peerSourceFactories, config.getPeerDiscoveryInterval());
+                peerSourceFactories, config.getPeerDiscoveryInterval(), config.getTrackerQueryInterval());
     }
 }

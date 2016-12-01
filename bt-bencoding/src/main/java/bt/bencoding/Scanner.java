@@ -42,7 +42,7 @@ class Scanner {
         try {
             source.close();
         } catch (IOException e) {
-            // TODO: log warning
+            // do nothing
         }
     }
 
