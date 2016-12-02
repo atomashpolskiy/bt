@@ -38,7 +38,7 @@ That's all for now, stay tuned for further updates!
 - <a href="http://bittorrent.org/beps/bep_0023.html">BEP-23: Tracker Returns Compact Peer Lists</a>
 - <a href="http://bittorrent.org/beps/bep_0027.html">BEP-27: Private Torrents</a>
 
-#### Update (29.11.2016)
+### Update (29.11.2016)
 
 UDP tracker support will also be added in the release (mainly because it lets me move HTTP libs to a separate module):
 
