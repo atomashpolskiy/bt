@@ -76,12 +76,12 @@ public class PeerWorkerFactory implements IPeerWorkerFactory {
     }
 
     @Override
-    public IPeerWorker createPeerWorker(Peer peer) {
+    public PeerWorker createPeerWorker(Peer peer) {
         return new RoutingPeerWorker(peer, Optional.empty(), consumers, producers);
     }
 
     @Override
-    public IPeerWorker createPeerWorker(TorrentId torrentId, Peer peer) {
+    public PeerWorker createPeerWorker(TorrentId torrentId, Peer peer) {
         return new RoutingPeerWorker(peer, Optional.of(torrentId), consumers, producers);
     }
 }

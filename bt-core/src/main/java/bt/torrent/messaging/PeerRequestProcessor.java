@@ -9,7 +9,7 @@ import bt.protocol.Request;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockRead;
-import bt.torrent.data.IDataWorker;
+import bt.torrent.data.DataWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,10 +29,10 @@ public class PeerRequestProcessor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerRequestProcessor.class);
 
-    private IDataWorker dataWorker;
+    private DataWorker dataWorker;
     private Map<Peer, Queue<BlockRead>> completedRequests;
 
-    public PeerRequestProcessor(IDataWorker dataWorker) {
+    public PeerRequestProcessor(DataWorker dataWorker) {
         this.dataWorker = dataWorker;
         this.completedRequests = new ConcurrentHashMap<>();
     }

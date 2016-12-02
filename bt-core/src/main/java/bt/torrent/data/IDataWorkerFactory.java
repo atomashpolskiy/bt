@@ -1,6 +1,6 @@
 package bt.torrent.data;
 
-import bt.data.IDataDescriptor;
+import bt.data.DataDescriptor;
 
 /**
  * Factory of data workers.
@@ -14,5 +14,5 @@ public interface IDataWorkerFactory {
      *
      * @since 1.0
      */
-    IDataWorker createWorker(IDataDescriptor dataDescriptor);
+    DataWorker createWorker(DataDescriptor dataDescriptor);
 }

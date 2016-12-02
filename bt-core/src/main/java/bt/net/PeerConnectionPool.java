@@ -48,8 +48,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private ExecutorService executor;
     private ScheduledExecutorService cleaner;
 
-    private final Map<Peer, CompletableFuture<IPeerConnection>> pendingConnections;
-    private ConcurrentMap<Peer, PeerConnection> connections;
+    private final Map<Peer, CompletableFuture<PeerConnection>> pendingConnections;
+    private ConcurrentMap<Peer, DefaultPeerConnection> connections;
     private Set<PeerActivityListener> connectionListeners;
     private ReentrantReadWriteLock listenerLock;
     private ReentrantLock connectionLock;
@@ -117,13 +117,13 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     }
 
     @Override
-    public IPeerConnection getConnection(Peer peer) {
+    public PeerConnection getConnection(Peer peer) {
         return connections.get(peer);
     }
 
     @Override
-    public CompletableFuture<IPeerConnection> requestConnection(TorrentId torrentId, Peer peer) {
-        CompletableFuture<IPeerConnection> connection = getExistingOrPendingConnection(peer);
+    public CompletableFuture<PeerConnection> requestConnection(TorrentId torrentId, Peer peer) {
+        CompletableFuture<PeerConnection> connection = getExistingOrPendingConnection(peer);
         if (connection != null) {
             return connection;
         }
@@ -142,12 +142,12 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             ConnectionHandler connectionHandler = connectionHandlerFactory.getOutgoingHandler(torrentId);
             connection = CompletableFuture.supplyAsync(() -> {
                 try {
-                    PeerConnection newConnection = connectionFactory.createConnection(peer);
+                    DefaultPeerConnection newConnection = connectionFactory.createConnection(peer);
 
                     if (!initConnection(newConnection, connectionHandler, true)) {
                         throw new BtException("Failed to initialize new connection for peer: " + peer);
                     }
-                    return (IPeerConnection) connections.get(newConnection.getRemotePeer());
+                    return (PeerConnection) connections.get(newConnection.getRemotePeer());
                 } catch (IOException e) {
                     throw new BtException("Failed to create new outgoing connection for peer: " + peer, e);
                 } finally {
@@ -169,14 +169,14 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         }
     }
 
-    private CompletableFuture<IPeerConnection> getExistingOrPendingConnection(Peer peer) {
+    private CompletableFuture<PeerConnection> getExistingOrPendingConnection(Peer peer) {
 
-        IPeerConnection existingConnection = getConnection(peer);
+        PeerConnection existingConnection = getConnection(peer);
         if (existingConnection != null) {
             return CompletableFuture.completedFuture(existingConnection);
         }
 
-        CompletableFuture<IPeerConnection> pendingConnection = pendingConnections.get(peer);
+        CompletableFuture<PeerConnection> pendingConnection = pendingConnections.get(peer);
         if (pendingConnection != null) {
             return pendingConnection;
         }
@@ -267,10 +267,10 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
             connectionLock.lock();
             try {
-                Iterator<PeerConnection> iter = connections.values().iterator();
+                Iterator<DefaultPeerConnection> iter = connections.values().iterator();
                 while (iter.hasNext()) {
 
-                    PeerConnection connection = iter.next();
+                    DefaultPeerConnection connection = iter.next();
                     if (connection.isClosed()) {
                         purgeConnectionWithPeer(connection.getRemotePeer());
                         iter.remove();
@@ -296,7 +296,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         executor.execute(() -> {
             try {
                 incomingChannel.configureBlocking(false);
-                PeerConnection incomingConnection = connectionFactory.createConnection(incomingChannel);
+                DefaultPeerConnection incomingConnection = connectionFactory.createConnection(incomingChannel);
                 initConnection(incomingConnection, connectionHandlerFactory.getIncomingHandler(), true);
             } catch (IOException e) {
                 LOGGER.error("Failed to process incoming connection", e);
@@ -304,7 +304,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         });
     }
 
-    private boolean initConnection(PeerConnection newConnection, ConnectionHandler connectionHandler, boolean shouldNotifyListeners) {
+    private boolean initConnection(DefaultPeerConnection newConnection, ConnectionHandler connectionHandler, boolean shouldNotifyListeners) {
         boolean success = connectionHandler.handleConnection(newConnection);
         if (success) {
             success = addConnection(newConnection, shouldNotifyListeners);
@@ -322,10 +322,10 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         return success;
     }
 
-    private boolean addConnection(PeerConnection newConnection, boolean shouldNotifyListeners) {
+    private boolean addConnection(DefaultPeerConnection newConnection, boolean shouldNotifyListeners) {
 
         boolean added = false;
-        PeerConnection existingConnection = null;
+        DefaultPeerConnection existingConnection = null;
 
         connectionLock.lock();
         try {
@@ -365,7 +365,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     }
 
     private void purgeConnectionWithPeer(Peer peer) {
-        PeerConnection purged = connections.remove(peer);
+        DefaultPeerConnection purged = connections.remove(peer);
         if (purged != null) {
             if (!purged.isClosed()) {
                 purged.closeQuietly();
@@ -378,7 +378,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     private void shutdown() {
         shutdownCleaner();
-        connections.values().forEach(PeerConnection::closeQuietly);
+        connections.values().forEach(DefaultPeerConnection::closeQuietly);
     }
 
     private void shutdownCleaner() {

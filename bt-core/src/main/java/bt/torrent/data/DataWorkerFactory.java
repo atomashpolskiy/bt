@@ -1,6 +1,6 @@
 package bt.torrent.data;
 
-import bt.data.IDataDescriptor;
+import bt.data.DataDescriptor;
 import bt.service.IRuntimeLifecycleBinder;
 
 /**
@@ -18,7 +18,7 @@ public class DataWorkerFactory implements IDataWorkerFactory {
     }
 
     @Override
-    public IDataWorker createWorker(IDataDescriptor dataDescriptor) {
-        return new DataWorker(lifecycleBinder, dataDescriptor, maxIOQueueSize);
+    public DataWorker createWorker(DataDescriptor dataDescriptor) {
+        return new DefaultDataWorker(lifecycleBinder, dataDescriptor, maxIOQueueSize);
     }
 }

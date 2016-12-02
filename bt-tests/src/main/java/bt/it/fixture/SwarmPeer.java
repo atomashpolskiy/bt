@@ -15,12 +15,12 @@ import java.util.Objects;
 public class SwarmPeer implements Closeable {
 
     private File localRoot;
-    private ITorrentFiles files;
+    private TorrentFiles files;
     private BtRuntime runtime;
 
     private BtClient handle;
 
-    SwarmPeer(File localRoot, ITorrentFiles files, BtRuntime runtime) {
+    SwarmPeer(File localRoot, TorrentFiles files, BtRuntime runtime) {
 
         this.localRoot = Objects.requireNonNull(localRoot);
         this.files = Objects.requireNonNull(files);

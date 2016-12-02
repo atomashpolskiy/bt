@@ -21,5 +21,5 @@ public interface IDataDescriptorFactory {
      * @return Data descriptor
      * @since 1.0
      */
-    IDataDescriptor createDescriptor(Torrent torrent, Storage storage);
+    DataDescriptor createDescriptor(Torrent torrent, Storage storage);
 }

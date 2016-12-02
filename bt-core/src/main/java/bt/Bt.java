@@ -13,12 +13,12 @@ import bt.peer.IPeerRegistry;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.DefaultTorrentSession;
 import bt.torrent.IPieceManager;
-import bt.torrent.ITorrentDescriptor;
+import bt.torrent.TorrentDescriptor;
 import bt.torrent.PieceManager;
 import bt.torrent.PieceSelectionStrategy;
 import bt.torrent.RarestFirstSelectionStrategy;
 import bt.torrent.TorrentSession;
-import bt.torrent.data.IDataWorker;
+import bt.torrent.data.DataWorker;
 import bt.torrent.data.IDataWorkerFactory;
 import bt.torrent.messaging.BitfieldConsumer;
 import bt.torrent.messaging.GenericConsumer;
@@ -146,19 +146,19 @@ public class Bt {
         Objects.requireNonNull(torrentSupplier, "Missing torrent supplier");
         Objects.requireNonNull(pieceSelectionStrategy, "Missing piece selection strategy");
 
-        return shouldInitEagerly ? createClient() : new LazyBtClient(this::createClient);
+        return shouldInitEagerly ? createClient() : new LazyClient(this::createClient);
     }
 
     private BtClient createClient() {
 
         Torrent torrent = torrentSupplier.get();
-        ITorrentDescriptor descriptor = getTorrentDescriptor(torrent);
-        IDataWorker dataWorker = createDataWorker(descriptor);
+        TorrentDescriptor descriptor = getTorrentDescriptor(torrent);
+        DataWorker dataWorker = createDataWorker(descriptor);
 
         TorrentSession session = createSession(torrent, descriptor, dataWorker);
 
-        return new RuntimeAwareBtClient(runtime,
-                new DefaultBtClient(getExecutor(), descriptor, session));
+        return new RuntimeAwareClient(runtime,
+                new DefaultClient(getExecutor(), descriptor, session));
     }
 
     private Torrent fetchTorrentFromUrl(URL metainfoUrl) {
@@ -166,17 +166,17 @@ public class Bt {
         return metadataService.fromUrl(metainfoUrl);
     }
 
-    private ITorrentDescriptor getTorrentDescriptor(Torrent torrent) {
+    private TorrentDescriptor getTorrentDescriptor(Torrent torrent) {
         TorrentRegistry torrentRegistry = runtime.service(TorrentRegistry.class);
         return torrentRegistry.getOrCreateDescriptor(torrent, storage);
     }
 
-    private IDataWorker createDataWorker(ITorrentDescriptor descriptor) {
+    private DataWorker createDataWorker(TorrentDescriptor descriptor) {
         IDataWorkerFactory dataWorkerFactory = runtime.service(IDataWorkerFactory.class);
         return dataWorkerFactory.createWorker(descriptor.getDataDescriptor());
     }
 
-    private TorrentSession createSession(Torrent torrent, ITorrentDescriptor descriptor, IDataWorker dataWorker) {
+    private TorrentSession createSession(Torrent torrent, TorrentDescriptor descriptor, DataWorker dataWorker) {
 
         IPeerConnectionPool connectionPool = runtime.service(IPeerConnectionPool.class);
         IMessageDispatcher messageDispatcher = runtime.service(IMessageDispatcher.class);
@@ -195,9 +195,9 @@ public class Bt {
         return session;
     }
 
-    private IPeerWorkerFactory createPeerWorkerFactory(ITorrentDescriptor descriptor,
+    private IPeerWorkerFactory createPeerWorkerFactory(TorrentDescriptor descriptor,
                                                        IPieceManager pieceManager,
-                                                       IDataWorker dataWorker) {
+                                                       DataWorker dataWorker) {
 
         Set<Object> messagingAgents = new HashSet<>();
         messagingAgents.add(GenericConsumer.consumer());

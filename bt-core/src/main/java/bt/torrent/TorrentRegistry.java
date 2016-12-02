@@ -3,7 +3,6 @@ package bt.torrent;
 import bt.data.Storage;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.torrent.ITorrentDescriptor;
 
 import java.util.Optional;
 
@@ -28,7 +27,7 @@ public interface TorrentRegistry {
      * @return {@link Optional#empty()} if torrent descriptor hasn't been created yet.
      * @since 1.0
      */
-    Optional<ITorrentDescriptor> getDescriptor(Torrent torrent);
+    Optional<TorrentDescriptor> getDescriptor(Torrent torrent);
 
     /**
      * Get an existing torrent descriptor for a given torrent
@@ -39,5 +38,5 @@ public interface TorrentRegistry {
      * @return Torrent descriptor
      * @since 1.0
      */
-    ITorrentDescriptor getOrCreateDescriptor(Torrent torrent, Storage storage);
+    TorrentDescriptor getOrCreateDescriptor(Torrent torrent, Storage storage);
 }

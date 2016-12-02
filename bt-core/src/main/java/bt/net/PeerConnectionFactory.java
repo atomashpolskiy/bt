@@ -23,17 +23,17 @@ class PeerConnectionFactory {
         this.maxTransferBlockSize = maxTransferBlockSize;
     }
 
-    public PeerConnection createConnection(SocketChannel channel) throws IOException {
+    public DefaultPeerConnection createConnection(SocketChannel channel) throws IOException {
 
         Peer peer = getPeerForAddress((InetSocketAddress) channel.getRemoteAddress());
-        return new PeerConnection(messageHandler, peer, channel, maxTransferBlockSize);
+        return new DefaultPeerConnection(messageHandler, peer, channel, maxTransferBlockSize);
     }
 
     private Peer getPeerForAddress(InetSocketAddress address) {
         return new InetPeer(address.getAddress(), address.getPort());
     }
 
-    public PeerConnection createConnection(Peer peer) throws IOException {
+    public DefaultPeerConnection createConnection(Peer peer) throws IOException {
 
         if (peer == null) {
             throw new NullPointerException("Peer is null");
@@ -49,6 +49,6 @@ class PeerConnectionFactory {
             throw new IOException("Failed to create peer connection @ " + inetAddress + ":" + port, e);
         }
 
-        return new PeerConnection(messageHandler, peer, channel, maxTransferBlockSize);
+        return new DefaultPeerConnection(messageHandler, peer, channel, maxTransferBlockSize);
     }
 }

@@ -55,7 +55,7 @@ public class BaseBtTest {
         return Swarm.builder(new File(ROOT, this.getClass().getName()), runtimeFactory, features);
     }
 
-    protected static ITorrentFiles getSingleFile() {
-        return TorrentFiles.builder(SINGLE_METAINFO_URL).file(SINGLE_FILE_NAME, SINGLE_FILE_CONTENT).build();
+    protected static TorrentFiles getSingleFile() {
+        return DefaultTorrentFiles.builder(SINGLE_METAINFO_URL).file(SINGLE_FILE_NAME, SINGLE_FILE_CONTENT).build();
     }
 }

@@ -17,5 +17,5 @@ public interface ConnectionHandler {
      *         false if this connection should (is recommended to) be dropped,
      * @since 1.0
      */
-    boolean handleConnection(IPeerConnection connection);
+    boolean handleConnection(PeerConnection connection);
 }

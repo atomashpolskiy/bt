@@ -1,7 +1,7 @@
 package bt.torrent.messaging;
 
 import bt.BtException;
-import bt.data.IChunkDescriptor;
+import bt.data.ChunkDescriptor;
 import bt.net.Peer;
 import bt.protocol.Interested;
 import bt.protocol.InvalidMessageException;
@@ -34,9 +34,9 @@ public class RequestProducer {
     private static final int MAX_PENDING_REQUESTS = 3;
 
     private IPieceManager pieceManager;
-    private List<IChunkDescriptor> chunks;
+    private List<ChunkDescriptor> chunks;
 
-    public RequestProducer(List<IChunkDescriptor> chunks, IPieceManager pieceManager) {
+    public RequestProducer(List<ChunkDescriptor> chunks, IPieceManager pieceManager) {
         this.chunks = chunks;
         this.pieceManager = pieceManager;
     }
@@ -160,7 +160,7 @@ public class RequestProducer {
 
     private Collection<Request> buildRequests(int pieceIndex) {
         List<Request> requests = new ArrayList<>();
-        IChunkDescriptor chunk = chunks.get(pieceIndex);
+        ChunkDescriptor chunk = chunks.get(pieceIndex);
         long chunkSize = chunk.getSize();
         long blockSize = chunk.getBlockSize();
 

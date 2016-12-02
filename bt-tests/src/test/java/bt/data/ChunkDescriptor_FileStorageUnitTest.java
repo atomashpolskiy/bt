@@ -2,7 +2,6 @@ package bt.data;
 
 import bt.data.file.FileSystemStorage;
 import bt.metainfo.Torrent;
-import bt.runtime.Config;
 import bt.service.CryptoUtil;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -21,7 +20,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class ChunkDescriptor_FileStorageUnitTest {
 
@@ -43,7 +41,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
             1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4
     };
 
-    private IDataDescriptor createDataDescriptor_SingleFile(String fileName) {
+    private DataDescriptor createDataDescriptor_SingleFile(String fileName) {
 
         long chunkSize = 16;
         long fileSize = chunkSize * 4;
@@ -57,7 +55,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
                 },
                 mockTorrentFile(fileSize, fileName));
 
-        IDataDescriptor descriptor = new DataDescriptor(storage, torrent, transferBlockSize);
+        DataDescriptor descriptor = new DefaultDataDescriptor(storage, torrent, transferBlockSize);
         assertEquals(4, descriptor.getChunkDescriptors().size());
 
         return descriptor;
@@ -67,8 +65,8 @@ public class ChunkDescriptor_FileStorageUnitTest {
     public void testDescriptors_WriteSingleFile() {
 
         String fileName = "1-single.bin";
-        IDataDescriptor descriptor = createDataDescriptor_SingleFile(fileName);
-        List<IChunkDescriptor> chunks = descriptor.getChunkDescriptors();
+        DataDescriptor descriptor = createDataDescriptor_SingleFile(fileName);
+        List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
         chunks.get(0).writeBlock(sequence(8), 0);
         chunks.get(0).writeBlock(sequence(8), 8);
@@ -102,8 +100,8 @@ public class ChunkDescriptor_FileStorageUnitTest {
         String fileName = "1-single-read.bin";
         writeBytesToFile(new File(rootDirectory, fileName), SINGLE_FILE);
 
-        IDataDescriptor descriptor = createDataDescriptor_SingleFile(fileName);
-        List<IChunkDescriptor> chunks = descriptor.getChunkDescriptors();
+        DataDescriptor descriptor = createDataDescriptor_SingleFile(fileName);
+        List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
         byte[] block;
 
@@ -147,9 +145,9 @@ public class ChunkDescriptor_FileStorageUnitTest {
                                           1
     };
 
-    private IDataDescriptor createDataDescriptor_MultiFile(String fileName1, String fileName2, String fileName3,
-                                                           String fileName4, String fileName5, String fileName6,
-                                                           File parentDirectory) {
+    private DataDescriptor createDataDescriptor_MultiFile(String fileName1, String fileName2, String fileName3,
+                                                          String fileName4, String fileName5, String fileName6,
+                                                          File parentDirectory) {
 
         String torrentName = parentDirectory.getName();
 
@@ -197,7 +195,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
                 mockTorrentFile(fileSize3, fileName3), mockTorrentFile(fileSize4, fileName4),
                 mockTorrentFile(fileSize5, fileName5), mockTorrentFile(fileSize6, fileName6));
 
-        IDataDescriptor descriptor = new DataDescriptor(storage, torrent, transferBlockSize);
+        DataDescriptor descriptor = new DefaultDataDescriptor(storage, torrent, transferBlockSize);
         assertEquals(6, descriptor.getChunkDescriptors().size());
 
         return descriptor;
@@ -217,9 +215,9 @@ public class ChunkDescriptor_FileStorageUnitTest {
                fileName5 = 5 + extension,
                fileName6 = 6 + extension;
 
-        IDataDescriptor descriptor = createDataDescriptor_MultiFile(fileName1, fileName2, fileName3, fileName4,
+        DataDescriptor descriptor = createDataDescriptor_MultiFile(fileName1, fileName2, fileName3, fileName4,
                 fileName5, fileName6, torrentDirectory);
-        List<IChunkDescriptor> chunks = descriptor.getChunkDescriptors();
+        List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
         chunks.get(0).writeBlock(sequence(8), 0);
         chunks.get(0).writeBlock(sequence(8), 8);
@@ -287,9 +285,9 @@ public class ChunkDescriptor_FileStorageUnitTest {
         writeBytesToFile(new File(torrentDirectory, fileName5), MULTI_FILE_5);
         writeBytesToFile(new File(torrentDirectory, fileName6), MULTI_FILE_6);
 
-        IDataDescriptor descriptor = createDataDescriptor_MultiFile(fileName1, fileName2, fileName3, fileName4,
+        DataDescriptor descriptor = createDataDescriptor_MultiFile(fileName1, fileName2, fileName3, fileName4,
                 fileName5, fileName6, torrentDirectory);
-        List<IChunkDescriptor> chunks = descriptor.getChunkDescriptors();
+        List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
         byte[] block;
 

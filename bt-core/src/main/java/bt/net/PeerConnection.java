@@ -2,176 +2,78 @@ package bt.net;
 
 import bt.metainfo.TorrentId;
 import bt.protocol.Message;
-import bt.protocol.DecodingContext;
-import bt.protocol.handler.MessageHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.channels.SocketChannel;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
+import java.io.Closeable;
 
 /**
+ * Connection with a remote peer.
+ *
  * @since 1.0
  */
-class PeerConnection implements IPeerConnection {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnection.class);
-
-    private static final long WAIT_BETWEEN_READS = 100L;
-
-    private TorrentId torrentId;
-    private Peer remotePeer;
-
-    private SocketChannel channel;
-    private PeerConnectionMessageReader messageReader;
-    private PeerConnectionMessageWriter messageWriter;
-
-    private volatile boolean closed;
-    private AtomicLong lastActive;
-
-    private final ReentrantLock readLock;
-    private final Condition condition;
-
-    PeerConnection(MessageHandler<Message> messageHandler, Peer remotePeer,
-                   SocketChannel channel, long maxTransferBlockSize) {
-
-        this.remotePeer = remotePeer;
-        this.channel = channel;
-
-        int bufferSize = getBufferSize(maxTransferBlockSize);
-        messageReader = new PeerConnectionMessageReader(messageHandler, channel,
-                () -> new DecodingContext(remotePeer), bufferSize);
-        messageWriter = new PeerConnectionMessageWriter(messageHandler, channel, bufferSize);
-
-        lastActive = new AtomicLong();
-
-        readLock = new ReentrantLock(true);
-        condition = readLock.newCondition();
-    }
-
-    private static int getBufferSize(long maxTransferBlockSize) {
-        long bufferSize = maxTransferBlockSize * 2;
-        bufferSize = Math.min(Integer.MAX_VALUE - 13, bufferSize);
-        return (int) bufferSize;
-    }
+public interface PeerConnection extends Closeable {
 
     /**
+     * @return Remote peer
      * @since 1.0
      */
-    void setTorrentId(TorrentId torrentId) {
-        this.torrentId = torrentId;
-    }
+    Peer getRemotePeer();
 
-    @Override
-    public TorrentId getTorrentId() {
-        return torrentId;
-    }
+    /**
+     * @return ID of a torrent, that this peer
+     *         is interested in sharing or downloading
+     * @since 1.0
+     */
+    TorrentId getTorrentId();
 
-    @Override
-    public synchronized Message readMessageNow() {
-        Message message = messageReader.readMessage();
-        if (message != null) {
-            updateLastActive();
-            if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Received message from peer: " + remotePeer + " -- " + message);
-            }
-        }
-        return message;
-    }
+    /**
+     * Attempt to read an incoming message.
+     *
+     * Note that implementation may buffer all received data
+     * and try to read next message from the buffer,
+     * so calling this method does not necessarily imply I/O access.
+     *
+     * @return Message, or null if there isn't any
+     * @since 1.0
+     */
+    Message readMessageNow();
 
-    @Override
-    public synchronized Message readMessage(long timeout) {
+    /**
+     * Attempt to read an incoming message within a specified time interval.
+     * Invocation blocks the calling thread until either a message is read
+     * or the limit of waiting time is reached.
+     *
+     * Note that implementation may buffer all received data
+     * and try to read next message from the buffer,
+     * so calling this method does not necessarily imply I/O access.
+     *
+     * @return Message, or null if there isn't any
+     * @since 1.0
+     */
+    Message readMessage(long timeout);
 
-        Message message = readMessageNow();
-        if (message == null) {
+    /**
+     * Send a message to remote peer.
+     *
+     * @since 1.0
+     */
+    void postMessage(Message message);
 
-            long started = System.currentTimeMillis();
-            long remaining = timeout;
+    /**
+     * @return Last time a message was received or sent via this connection
+     * @since 1.0
+     */
+    long getLastActive();
 
-            // ... wait for the incoming message
-            while (!closed) {
-                try {
-                    readLock.lock();
-                    try {
-                        condition.await(timeout < WAIT_BETWEEN_READS? timeout : WAIT_BETWEEN_READS, TimeUnit.MILLISECONDS);
-                    } catch (InterruptedException e) {
-                        // continue..
-                    }
-                    remaining -= WAIT_BETWEEN_READS;
-                    message = readMessageNow();
-                    if (message != null) {
-                        if (LOGGER.isTraceEnabled()) {
-                            LOGGER.trace("Received message from peer: " + remotePeer + " -- " + message +
-                                    " (in " + (System.currentTimeMillis() - started) + " ms)");
-                        }
-                        return message;
-                    } else if (remaining <= 0) {
-                        if (LOGGER.isTraceEnabled()) {
-                            LOGGER.trace("Failed to read message from peer: " + remotePeer +
-                                    " (in " + (System.currentTimeMillis() - started) + " ms)");
-                        }
-                        return null;
-                    }
-                } finally {
-                    readLock.unlock();
-                }
-            }
-        }
-        return message;
-    }
+    /**
+     * Close the connection without throwing an {@link java.io.IOException}.
+     *
+     * @since 1.0
+     */
+    void closeQuietly();
 
-    @Override
-    public synchronized void postMessage(Message message) {
-        updateLastActive();
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("Sending message to peer: " + remotePeer + " -- " + message);
-        }
-        messageWriter.writeMessage(message);
-    }
-
-    private void updateLastActive() {
-        lastActive.set(System.currentTimeMillis());
-    }
-
-    @Override
-    public Peer getRemotePeer() {
-        return remotePeer;
-    }
-
-    @Override
-    public void closeQuietly() {
-        try {
-            close();
-        } catch (IOException e) {
-            LOGGER.warn("Failed to close connection for peer: " + remotePeer, e);
-        }
-    }
-
-    @Override
-    public void close() throws IOException {
-        if (!isClosed()) {
-            if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Closing connection for peer: " + remotePeer);
-            }
-            try {
-                channel.close();
-            } finally {
-                closed = true;
-            }
-        }
-    }
-
-    @Override
-    public boolean isClosed() {
-        return closed;
-    }
-
-    @Override
-    public long getLastActive() {
-        return lastActive.get();
-    }
+    /**
+     * @return true if connection is closed
+     * @since 1.0
+     */
+    boolean isClosed();
 }

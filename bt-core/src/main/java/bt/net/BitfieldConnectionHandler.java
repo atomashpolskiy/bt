@@ -3,7 +3,7 @@ package bt.net;
 import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.torrent.Bitfield;
-import bt.torrent.ITorrentDescriptor;
+import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
@@ -28,13 +28,13 @@ public class BitfieldConnectionHandler implements ConnectionHandler {
     }
 
     @Override
-    public boolean handleConnection(IPeerConnection connection) {
+    public boolean handleConnection(PeerConnection connection) {
         Torrent torrent = torrentRegistry.getTorrent(connection.getTorrentId())
                 // this should not happen, because presence of requested torrent
                 // should have already been tested by other connection handlers
                 .orElseThrow(() -> new BtException("Unknown torrent ID"));
 
-        Optional<ITorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
+        Optional<TorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
         if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {
             Bitfield bitfield = descriptorOptional.get().getDataDescriptor().getBitfield();
 

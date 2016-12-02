@@ -23,7 +23,7 @@ public class RoutingPeerWorker_WithCompilerTest {
 
     private C1 c1;
     private P1 p1;
-    private IPeerWorker peerWorker;
+    private PeerWorker peerWorker;
 
     @Before
     public void setUp() {

@@ -1,7 +1,7 @@
 package bt.torrent;
 
 import bt.data.DataStatus;
-import bt.data.IChunkDescriptor;
+import bt.data.ChunkDescriptor;
 import org.junit.BeforeClass;
 
 import java.util.Arrays;
@@ -12,7 +12,7 @@ public abstract class BaseBitfieldTest {
     protected static long blockSize = 4;
     protected static long chunkSize = blockSize * 4;
 
-    protected static IChunkDescriptor emptyChunk, completeChunk;
+    protected static ChunkDescriptor emptyChunk, completeChunk;
 
     @BeforeClass
     public static void setUp() {
@@ -20,12 +20,12 @@ public abstract class BaseBitfieldTest {
         completeChunk = mockChunk(chunkSize, new byte[]{1,1,1,1}, null);
     }
 
-    protected static IChunkDescriptor mockChunk(long chunkSize, byte[] bitfield,
-                                              Supplier<Boolean> verifier) {
+    protected static ChunkDescriptor mockChunk(long chunkSize, byte[] bitfield,
+                                               Supplier<Boolean> verifier) {
 
         byte[] _bitfield = Arrays.copyOf(bitfield, bitfield.length);
 
-        return new IChunkDescriptor() {
+        return new ChunkDescriptor() {
             @Override
             public DataStatus getStatus() {
                 return (verifier == null) ? statusForBitfield(_bitfield)

@@ -4,8 +4,8 @@ import bt.BtException;
 import bt.runtime.BtRuntime;
 import bt.data.Storage;
 import bt.data.DataStatus;
-import bt.data.IChunkDescriptor;
-import bt.data.IDataDescriptor;
+import bt.data.ChunkDescriptor;
+import bt.data.DataDescriptor;
 import bt.data.IDataDescriptorFactory;
 import bt.metainfo.Torrent;
 import bt.runtime.Config;
@@ -103,7 +103,7 @@ public class Swarm extends ExternalResource {
         private int seedersCount;
         private int leechersCount;
         private int startingPort;
-        private ITorrentFiles files;
+        private TorrentFiles files;
 
         private SwarmBuilder(File root, BtTestRuntimeFactory runtimeFactory) {
             this.root = Objects.requireNonNull(root);
@@ -150,7 +150,7 @@ public class Swarm extends ExternalResource {
             return this;
         }
 
-        public SwarmBuilder files(ITorrentFiles files) {
+        public SwarmBuilder files(TorrentFiles files) {
             this.files = files;
             withoutFiles = false;
             return this;
@@ -184,13 +184,13 @@ public class Swarm extends ExternalResource {
             }
         }
 
-        private SwarmPeer createSeeder(int port, File localRoot, ITorrentFiles files) {
+        private SwarmPeer createSeeder(int port, File localRoot, TorrentFiles files) {
             files.createFiles(localRoot);
             files.createRoot(localRoot);
             return new SwarmPeer(localRoot, files, createPeerRuntime(port));
         }
 
-        private SwarmPeer createLeecher(int port, File localRoot, ITorrentFiles files) {
+        private SwarmPeer createLeecher(int port, File localRoot, TorrentFiles files) {
             files.createRoot(localRoot);
             return new SwarmPeer(localRoot, files, createPeerRuntime(port));
         }
@@ -217,16 +217,16 @@ public class Swarm extends ExternalResource {
             }
         }
 
-        private static ITorrentFiles mockSeederFiles() {
+        private static TorrentFiles mockSeederFiles() {
             return mockFiles(true);
         }
 
-        private static ITorrentFiles mockLeecherFiles() {
+        private static TorrentFiles mockLeecherFiles() {
             return mockFiles(false);
         }
 
-        private static ITorrentFiles mockFiles(boolean seeder) {
-            return new ITorrentFiles() {
+        private static TorrentFiles mockFiles(boolean seeder) {
+            return new TorrentFiles() {
                 @Override
                 public URL getMetainfoUrl() {
                     return NOFILES_METAINFO_URL;
@@ -253,14 +253,14 @@ public class Swarm extends ExternalResource {
     private static class MockDataDescriptorFactory implements IDataDescriptorFactory {
 
         @Override
-        public IDataDescriptor createDescriptor(Torrent torrent, Storage storage) {
-            return new IDataDescriptor() {
+        public DataDescriptor createDescriptor(Torrent torrent, Storage storage) {
+            return new DataDescriptor() {
 
-                private List<IChunkDescriptor> descriptors;
+                private List<ChunkDescriptor> descriptors;
                 private Bitfield bitfield;
 
                 {
-                    descriptors = Collections.singletonList(new IChunkDescriptor() {
+                    descriptors = Collections.singletonList(new ChunkDescriptor() {
                         @Override
                         public DataStatus getStatus() {
                             return DataStatus.VERIFIED;
@@ -306,7 +306,7 @@ public class Swarm extends ExternalResource {
                 }
 
                 @Override
-                public List<IChunkDescriptor> getChunkDescriptors() {
+                public List<ChunkDescriptor> getChunkDescriptors() {
                     return descriptors;
                 }
 

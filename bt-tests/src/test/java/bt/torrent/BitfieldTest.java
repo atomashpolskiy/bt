@@ -1,6 +1,6 @@
 package bt.torrent;
 
-import bt.data.IChunkDescriptor;
+import bt.data.ChunkDescriptor;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -15,7 +15,7 @@ public class BitfieldTest extends BaseBitfieldTest {
     @Test
     public void testBitfield() {
 
-        List<IChunkDescriptor> chunks = Arrays.asList(completeChunk, emptyChunk, emptyChunk, completeChunk,
+        List<ChunkDescriptor> chunks = Arrays.asList(completeChunk, emptyChunk, emptyChunk, completeChunk,
                 emptyChunk, emptyChunk, emptyChunk, completeChunk);
         Bitfield bitfield = new Bitfield(chunks);
 
@@ -29,10 +29,10 @@ public class BitfieldTest extends BaseBitfieldTest {
     @Test
     public void testBitfield_AllEmpty() {
 
-        IChunkDescriptor[] chunkArray = new IChunkDescriptor[12];
+        ChunkDescriptor[] chunkArray = new ChunkDescriptor[12];
         Arrays.fill(chunkArray, emptyChunk);
 
-        List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
+        List<ChunkDescriptor> chunks = Arrays.asList(chunkArray);
         Bitfield bitfield = new Bitfield(chunks);
 
         assertArrayEquals(new byte[]{0,0}, bitfield.getBitmask());

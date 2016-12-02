@@ -9,7 +9,7 @@ import bt.torrent.IPieceManager;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
-import bt.torrent.data.IDataWorker;
+import bt.torrent.data.DataWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,10 +27,10 @@ public class PieceConsumer {
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceConsumer.class);
 
     private IPieceManager pieceManager;
-    private IDataWorker dataWorker;
+    private DataWorker dataWorker;
     private ConcurrentLinkedQueue<BlockWrite> completedBlocks;
 
-    public PieceConsumer(IPieceManager pieceManager, IDataWorker dataWorker) {
+    public PieceConsumer(IPieceManager pieceManager, DataWorker dataWorker) {
         this.pieceManager = pieceManager;
         this.dataWorker = dataWorker;
         this.completedBlocks = new ConcurrentLinkedQueue<>();

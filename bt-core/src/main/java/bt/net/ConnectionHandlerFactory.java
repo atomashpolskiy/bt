@@ -74,7 +74,7 @@ public class ConnectionHandlerFactory implements IConnectionHandlerFactory {
         }
 
         @Override
-        public boolean handleConnection(IPeerConnection connection) {
+        public boolean handleConnection(PeerConnection connection) {
 
             if (!firstHandler.handleConnection(connection)) {
                 return false;

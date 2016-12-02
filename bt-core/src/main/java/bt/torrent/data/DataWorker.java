@@ -1,97 +1,37 @@
 package bt.torrent.data;
 
-import bt.data.IChunkDescriptor;
-import bt.data.IDataDescriptor;
 import bt.net.Peer;
-import bt.service.IRuntimeLifecycleBinder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
 
-class DataWorker implements IDataWorker {
+/**
+ * Data worker is responsible for processing blocks and block requests, received from peers.
+ *
+ * @since 1.0
+ */
+public interface DataWorker {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DataWorker.class);
+    /**
+     * Add a read block request.
+     *
+     * @param peer Requestor
+     * @param pieceIndex Index of the requested piece (0-based)
+     * @param offset Offset in piece to start reading from (0-based)
+     * @param length Amount of bytes to read
+     * @return Future; rejected requests are returned immediately (see {@link BlockRead#isRejected()})
+     * @since 1.0
+     */
+    CompletableFuture<BlockRead> addBlockRequest(Peer peer, int pieceIndex, int offset, int length);
 
-    private List<IChunkDescriptor> chunks;
-
-    private final ExecutorService executor;
-    private final int maxPendingTasks;
-    private final AtomicInteger pendingTasksCount;
-
-    public DataWorker(IRuntimeLifecycleBinder lifecycleBinder, IDataDescriptor dataDescriptor, int maxQueueLength) {
-        this.chunks = dataDescriptor.getChunkDescriptors();
-        this.executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
-
-            private AtomicInteger i = new AtomicInteger();
-
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "bt.torrent.data.worker-" + i.incrementAndGet());
-            }
-        });
-        this.maxPendingTasks = maxQueueLength;
-        this.pendingTasksCount = new AtomicInteger();
-
-        lifecycleBinder.onShutdown(this.getClass().getName() + " - " + dataDescriptor, this.executor::shutdownNow);
-    }
-
-    @Override
-    public CompletableFuture<BlockRead> addBlockRequest(Peer peer, int pieceIndex, int offset, int length) {
-        if (pendingTasksCount.get() >= maxPendingTasks) {
-            LOGGER.warn("Can't accept read block request from peer (" + peer + ") -- queue is full");
-            return CompletableFuture.completedFuture(BlockRead.rejected(peer, pieceIndex, offset));
-        } else {
-            pendingTasksCount.incrementAndGet();
-            return CompletableFuture.supplyAsync(() -> {
-                try {
-                    IChunkDescriptor chunk = chunks.get(pieceIndex);
-                    byte[] block = chunk.readBlock(offset, length);
-                    return BlockRead.complete(peer, pieceIndex, offset, block);
-                } catch (Throwable e) {
-                    return BlockRead.exceptional(peer, e, pieceIndex, offset);
-                } finally {
-                    pendingTasksCount.decrementAndGet();
-                }
-            }, executor);
-        }
-    }
-
-    @Override
-    public CompletableFuture<BlockWrite> addBlock(Peer peer, int pieceIndex, int offset, byte[] block) {
-        if (pendingTasksCount.get() >= maxPendingTasks) {
-            LOGGER.warn("Can't accept write block request -- queue is full");
-            return CompletableFuture.completedFuture(BlockWrite.rejected(peer, pieceIndex, offset, block));
-        } else {
-            pendingTasksCount.incrementAndGet();
-            return CompletableFuture.supplyAsync(() -> {
-                try {
-                    IChunkDescriptor chunk = chunks.get(pieceIndex);
-                    chunk.writeBlock(block, offset);
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Successfully processed block (" + toString() + ") from peer: " + peer);
-                    }
-
-                    CompletableFuture<Boolean> verificationFuture = CompletableFuture.supplyAsync(() -> {
-                        boolean verified = chunk.verify();
-                        if (LOGGER.isTraceEnabled()) {
-                            LOGGER.trace("Successfully verified block (" + toString() + ")");
-                        }
-                        return verified;
-                    }, executor);
-
-                    return BlockWrite.complete(peer, pieceIndex, offset, block, verificationFuture);
-                } catch (Throwable e) {
-                    return BlockWrite.exceptional(peer, e, pieceIndex, offset, block);
-                } finally {
-                    pendingTasksCount.decrementAndGet();
-                }
-            }, executor);
-        }
-    }
+    /**
+     * Add a write block request.
+     *
+     * @param peer Peer, that the data has been received from
+     * @param pieceIndex Index of the piece to write to (0-based)
+     * @param offset Offset in piece to start writing to (0-based)
+     * @param block Data
+     * @return Future; rejected requests are returned immediately (see {@link BlockWrite#isRejected()})
+     * @since 1.0
+     */
+    CompletableFuture<BlockWrite> addBlock(Peer peer, int pieceIndex, int offset, byte[] block);
 }

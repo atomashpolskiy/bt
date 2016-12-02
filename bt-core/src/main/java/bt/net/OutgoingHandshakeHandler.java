@@ -32,7 +32,7 @@ class OutgoingHandshakeHandler implements ConnectionHandler {
     }
 
     @Override
-    public boolean handleConnection(IPeerConnection connection) {
+    public boolean handleConnection(PeerConnection connection) {
 
         Handshake handshake = handshakeFactory.createHandshake(torrentId);
         handshakeHandlers.forEach(handler ->
@@ -45,7 +45,7 @@ class OutgoingHandshakeHandler implements ConnectionHandler {
                 Handshake peerHandshake = (Handshake) firstMessage;
                 TorrentId incomingTorrentId = peerHandshake.getTorrentId();
                 if (torrentId.equals(incomingTorrentId)) {
-                    ((PeerConnection) connection).setTorrentId(torrentId);
+                    ((DefaultPeerConnection) connection).setTorrentId(torrentId);
 
                     handshakeHandlers.forEach(handler ->
                             handler.processIncomingHandshake(connection.getRemotePeer(), peerHandshake));

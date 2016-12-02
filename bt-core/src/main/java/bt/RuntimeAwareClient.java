@@ -13,12 +13,12 @@ import java.util.function.Consumer;
  *
  * @since 1.0
  */
-class RuntimeAwareBtClient implements BtClient {
+class RuntimeAwareClient implements BtClient {
 
     private BtRuntime runtime;
     private BtClient delegate;
 
-    public RuntimeAwareBtClient(BtRuntime runtime, BtClient delegate) {
+    public RuntimeAwareClient(BtRuntime runtime, BtClient delegate) {
         this.runtime = runtime;
         this.delegate = delegate;
     }

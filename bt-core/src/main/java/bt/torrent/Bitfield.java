@@ -2,8 +2,8 @@ package bt.torrent;
 
 import bt.BtException;
 import bt.data.DataStatus;
-import bt.data.IChunkDescriptor;
-import bt.data.IDataDescriptor;
+import bt.data.ChunkDescriptor;
+import bt.data.DataDescriptor;
 import bt.protocol.Protocols;
 
 import java.util.Arrays;
@@ -52,7 +52,7 @@ public class Bitfield {
      * List of torrent's chunk descriptors.
      * Absent when this Bitfield instance is describing data that some peer has.
      */
-    private final Optional<List<IChunkDescriptor>> chunks;
+    private final Optional<List<ChunkDescriptor>> chunks;
 
     /**
      * Creates "local" bitfield from a list of chunk descriptors.
@@ -60,7 +60,7 @@ public class Bitfield {
      * @param chunks List of torrent's chunk descriptors.
      * @since 1.0
      */
-    public Bitfield(List<IChunkDescriptor> chunks) {
+    public Bitfield(List<ChunkDescriptor> chunks) {
 
         int chunkCount = chunks.size();
         byte[] bitfield = new byte[getBitmaskLength(chunkCount)];
@@ -70,7 +70,7 @@ public class Bitfield {
             int b = 0, offset = bitfieldIndex * 8;
             int k = chunkCount < 8? chunkCount : 8;
             for (int i = 0; i < k; i++) {
-                IChunkDescriptor chunk = chunks.get(offset + i);
+                ChunkDescriptor chunk = chunks.get(offset + i);
                 if (chunk.getStatus() == DataStatus.VERIFIED) {
                     b += 0b1 << (7 - i);
                     piecesComplete++;
@@ -167,7 +167,7 @@ public class Bitfield {
     /**
      * @param pieceIndex Piece index (0-based)
      * @return Status of the corresponding piece.
-     * @see IDataDescriptor#getChunkDescriptors()
+     * @see DataDescriptor#getChunkDescriptors()
      * @since 1.0
      */
     public PieceStatus getPieceStatus(int pieceIndex) {
@@ -177,7 +177,7 @@ public class Bitfield {
         PieceStatus status;
 
         if (chunks.isPresent()) {
-            IChunkDescriptor chunk = chunks.get().get(pieceIndex);
+            ChunkDescriptor chunk = chunks.get().get(pieceIndex);
             switch (chunk.getStatus()) {
                 case VERIFIED: {
                     markComplete(pieceIndex);
@@ -207,14 +207,14 @@ public class Bitfield {
      * If the chunk is not in {@link DataStatus#VERIFIED} status, an exception is thrown.
      *
      * @param pieceIndex Piece index (0-based)
-     * @see IDataDescriptor#getChunkDescriptors()
+     * @see DataDescriptor#getChunkDescriptors()
      * @since 1.0
      */
     public void markComplete(int pieceIndex) {
 
         boolean completed;
         if (chunks.isPresent()) {
-            IChunkDescriptor chunk = chunks.get().get(pieceIndex);
+            ChunkDescriptor chunk = chunks.get().get(pieceIndex);
             completed = (chunk.getStatus() == DataStatus.VERIFIED);
         } else {
             completed = true;

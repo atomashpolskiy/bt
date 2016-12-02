@@ -13,12 +13,12 @@ public interface IPeerWorkerFactory {
      *
      * @since 1.0
      */
-    IPeerWorker createPeerWorker(Peer peer);
+    PeerWorker createPeerWorker(Peer peer);
 
     /**
      * Create a torrent-aware peer worker for a given peer.
      *
      * @since 1.0
      */
-    IPeerWorker createPeerWorker(TorrentId torrentId, Peer peer);
+    PeerWorker createPeerWorker(TorrentId torrentId, Peer peer);
 }

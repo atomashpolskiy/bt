@@ -1,8 +1,8 @@
 package bt.torrent;
 
-import bt.data.IChunkDescriptor;
+import bt.data.ChunkDescriptor;
 import bt.metainfo.TorrentId;
-import bt.net.IPeerConnection;
+import bt.net.PeerConnection;
 import bt.net.Peer;
 import bt.protocol.Message;
 import org.junit.Test;
@@ -29,15 +29,15 @@ public class PieceManagerTest extends BaseBitfieldTest {
         Verifier verifier3 = new Verifier(),
                  verifier5 = new Verifier();
 
-        IChunkDescriptor chunk3 = mockChunk(chunkSize, new byte[]{0,0,0,0}, verifier3),
+        ChunkDescriptor chunk3 = mockChunk(chunkSize, new byte[]{0,0,0,0}, verifier3),
                          chunk5 = mockChunk(chunkSize, new byte[]{0,0,0,0}, verifier5);
 
-        IChunkDescriptor[] chunkArray = new IChunkDescriptor[12];
+        ChunkDescriptor[] chunkArray = new ChunkDescriptor[12];
         Arrays.fill(chunkArray, emptyChunk);
         chunkArray[3] = chunk3;
         chunkArray[5] = chunk5;
 
-        List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
+        List<ChunkDescriptor> chunks = Arrays.asList(chunkArray);
         Bitfield bitfield = new Bitfield(chunks);
         IPieceManager pieceManager = new PieceManager(bitfield, RarestFirstSelectionStrategy.rarest());
 
@@ -81,10 +81,10 @@ public class PieceManagerTest extends BaseBitfieldTest {
     @Test
     public void testPieceManager_PeerBitfield_WrongSize() throws Exception {
 
-        IChunkDescriptor[] chunkArray = new IChunkDescriptor[4];
+        ChunkDescriptor[] chunkArray = new ChunkDescriptor[4];
         Arrays.fill(chunkArray, emptyChunk);
 
-        List<IChunkDescriptor> chunks = Arrays.asList(chunkArray);
+        List<ChunkDescriptor> chunks = Arrays.asList(chunkArray);
         Bitfield bitfield = new Bitfield(chunks);
 
         IPieceManager pieceManager = new PieceManager(bitfield, RarestFirstSelectionStrategy.rarest());
@@ -95,9 +95,9 @@ public class PieceManagerTest extends BaseBitfieldTest {
                 "bitfield has wrong size: 16. Expected: 4");
     }
 
-    private static IPeerConnection mockPeer(TorrentId torrentId) {
+    private static PeerConnection mockPeer(TorrentId torrentId) {
 
-        return new IPeerConnection() {
+        return new PeerConnection() {
 
             private boolean closed;
             private Peer peer = mock(Peer.class);

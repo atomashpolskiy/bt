@@ -22,7 +22,7 @@ public interface IPeerConnectionPool {
      * @return Connection for a given peer, if exists; null otherwise
      * @since 1.0
      */
-    IPeerConnection getConnection(Peer peer);
+    PeerConnection getConnection(Peer peer);
 
     /**
      * Request to establish a connection with a remote peer for a given torrent ID.
@@ -30,5 +30,5 @@ public interface IPeerConnectionPool {
      * @return Future connection
      * @since 1.0
      */
-    CompletableFuture<IPeerConnection> requestConnection(TorrentId torrentId, Peer peer);
+    CompletableFuture<PeerConnection> requestConnection(TorrentId torrentId, Peer peer);
 }

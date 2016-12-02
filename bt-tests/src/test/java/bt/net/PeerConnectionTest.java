@@ -48,7 +48,7 @@ public class PeerConnectionTest extends ProtocolTest {
 
     @Test
     public void testConnection() throws InvalidMessageException, IOException {
-        IPeerConnection connection = new PeerConnection(messageHandler, mock(Peer.class), clientChannel, BUFFER_SIZE);
+        PeerConnection connection = new DefaultPeerConnection(messageHandler, mock(Peer.class), clientChannel, BUFFER_SIZE);
 
         Message message;
 

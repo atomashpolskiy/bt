@@ -6,7 +6,7 @@ import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
 import bt.torrent.messaging.ConnectionState;
-import bt.torrent.messaging.IPeerWorker;
+import bt.torrent.messaging.PeerWorker;
 import bt.torrent.messaging.IPeerWorkerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +70,7 @@ class TorrentWorker {
      * @since 1.0
      */
     public void removePeer(Peer peer) {
-        IPeerWorker removed = peerMap.remove(peer);
+        PeerWorker removed = peerMap.remove(peer);
         if (removed != null) {
             Optional<Integer> assignedPiece = pieceManager.getAssignedPiece(peer);
             if (assignedPiece.isPresent()) {
@@ -98,16 +98,16 @@ class TorrentWorker {
      * @since 1.0
      */
     public ConnectionState getConnectionState(Peer peer) {
-        IPeerWorker worker = peerMap.get(peer);
+        PeerWorker worker = peerMap.get(peer);
         return (worker == null) ? null : worker.getConnectionState();
     }
 
-    private class PieceAnnouncingPeerWorker implements IPeerWorker {
+    private class PieceAnnouncingPeerWorker implements PeerWorker {
 
-        private final IPeerWorker delegate;
+        private final PeerWorker delegate;
         private final Queue<Have> pieceAnnouncements;
 
-        PieceAnnouncingPeerWorker(IPeerWorker delegate) {
+        PieceAnnouncingPeerWorker(PeerWorker delegate) {
             this.delegate = delegate;
             this.pieceAnnouncements = new ConcurrentLinkedQueue<>();
         }

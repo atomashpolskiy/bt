@@ -1,7 +1,7 @@
 package bt.net.extended;
 
 import bt.net.ConnectionHandler;
-import bt.net.IPeerConnection;
+import bt.net.PeerConnection;
 import bt.protocol.extended.ExtendedHandshake;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -21,7 +21,7 @@ public class ExtendedProtocolConnectionHandler implements ConnectionHandler {
     }
 
     @Override
-    public boolean handleConnection(IPeerConnection connection) {
+    public boolean handleConnection(PeerConnection connection) {
         ExtendedHandshake extendedHandshake = extendedHandshakeProvider.get();
         // do not send the extended handshake
         // if local client does not have any extensions turned on

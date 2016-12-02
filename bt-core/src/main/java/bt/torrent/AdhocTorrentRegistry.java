@@ -26,7 +26,7 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
     private IRuntimeLifecycleBinder lifecycleBinder;
 
     private ConcurrentMap<TorrentId, Torrent> torrents;
-    private ConcurrentMap<Torrent, ITorrentDescriptor> descriptors;
+    private ConcurrentMap<Torrent, TorrentDescriptor> descriptors;
 
     @Inject
     public AdhocTorrentRegistry(ITrackerService trackerService,
@@ -47,22 +47,22 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
     }
 
     @Override
-    public Optional<ITorrentDescriptor> getDescriptor(Torrent torrent) {
+    public Optional<TorrentDescriptor> getDescriptor(Torrent torrent) {
         return Optional.ofNullable(descriptors.get(torrent));
     }
 
     @Override
-    public ITorrentDescriptor getOrCreateDescriptor(Torrent torrent, Storage storage) {
+    public TorrentDescriptor getOrCreateDescriptor(Torrent torrent, Storage storage) {
 
         return getDescriptor(torrent).orElseGet(() -> {
 
-            ITorrentDescriptor descriptor = new TorrentDescriptor(trackerService, torrent,
+            TorrentDescriptor descriptor = new DefaultTorrentDescriptor(trackerService, torrent,
                     dataDescriptorFactory.createDescriptor(torrent, storage));
-            ITorrentDescriptor existing = descriptors.putIfAbsent(torrent, descriptor);
+            TorrentDescriptor existing = descriptors.putIfAbsent(torrent, descriptor);
             if (existing != null) {
                 descriptor = existing;
             } else {
-                final ITorrentDescriptor tDescriptor = descriptor;
+                final TorrentDescriptor tDescriptor = descriptor;
                 lifecycleBinder.onShutdown(tDescriptor.getDataDescriptor().toString(), () -> {
                     try {
                         tDescriptor.getDataDescriptor().close();

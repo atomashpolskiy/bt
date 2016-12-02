@@ -85,7 +85,7 @@ public class MessageDispatcher implements IMessageDispatcher {
                         Peer peer = entry.getKey();
                         Collection<Consumer<Message>> consumers = entry.getValue();
 
-                        IPeerConnection connection = pool.getConnection(peer);
+                        PeerConnection connection = pool.getConnection(peer);
                         if (connection != null) {
 
                             Message message = null;
@@ -121,7 +121,7 @@ public class MessageDispatcher implements IMessageDispatcher {
                         Peer peer = entry.getKey();
                         Collection<Supplier<Message>> suppliers = entry.getValue();
 
-                        IPeerConnection connection = pool.getConnection(peer);
+                        PeerConnection connection = pool.getConnection(peer);
                         if (connection != null) {
 
                             Iterator<Supplier<Message>> messageSuppliers = suppliers.iterator();

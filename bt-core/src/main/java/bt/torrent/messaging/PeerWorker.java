@@ -11,7 +11,7 @@ import java.util.function.Supplier;
  *
  * @since 1.0
  */
-public interface IPeerWorker extends Consumer<Message>, Supplier<Message> {
+public interface PeerWorker extends Consumer<Message>, Supplier<Message> {
 
     /**
      * @return Current state of the connection

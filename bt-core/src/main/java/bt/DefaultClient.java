@@ -1,7 +1,7 @@
 package bt;
 
 import bt.runtime.BtClient;
-import bt.torrent.ITorrentDescriptor;
+import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
 
@@ -19,9 +19,9 @@ import java.util.function.Consumer;
  *
  * @since 1.0
  */
-class DefaultBtClient implements BtClient {
+class DefaultClient implements BtClient {
 
-    private ITorrentDescriptor delegate;
+    private TorrentDescriptor delegate;
     private TorrentSession session;
     private Optional<CompletableFuture<?>> future;
     private Optional<Consumer<TorrentSessionState>> listener;
@@ -32,7 +32,7 @@ class DefaultBtClient implements BtClient {
     /**
      * @since 1.0
      */
-    public DefaultBtClient(ExecutorService executor, ITorrentDescriptor delegate, TorrentSession session) {
+    public DefaultClient(ExecutorService executor, TorrentDescriptor delegate, TorrentSession session) {
         this.executor = executor;
         this.delegate = delegate;
         this.session = session;

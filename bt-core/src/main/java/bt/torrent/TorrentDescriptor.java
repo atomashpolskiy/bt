@@ -1,93 +1,45 @@
 package bt.torrent;
 
-import bt.BtException;
-import bt.data.IChunkDescriptor;
-import bt.data.IDataDescriptor;
-import bt.metainfo.Torrent;
-import bt.tracker.ITrackerService;
-import bt.tracker.Tracker;
-import bt.tracker.TrackerResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import bt.data.DataDescriptor;
 
-class TorrentDescriptor implements ITorrentDescriptor {
+/**
+ * Provides an interface for controlling
+ * the state of a torrent processing session.
+ *
+ * @since 1.0
+ */
+public interface TorrentDescriptor {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TorrentDescriptor.class);
+    /**
+     * @return true if the torrent is currently being processed
+     * @since 1.0
+     */
+    boolean isActive();
 
-    private Tracker tracker;
-    private Torrent torrent;
-    private IDataDescriptor dataDescriptor;
+    /**
+     * Issue a request to begin torrent processing
+     *
+     * @since 1.0
+     */
+    void start();
 
-    private volatile boolean active;
+    /**
+     * Issue a request to stop torrent processing
+     *
+     * @since 1.0
+     */
+    void stop();
 
-    public TorrentDescriptor(ITrackerService trackerService, Torrent torrent, IDataDescriptor dataDescriptor) {
+    /**
+     * Signal that the torrent has been successfully downloaded and verified
+     *
+     * @since 1.0
+     */
+    void complete();
 
-        this.tracker = trackerService.getTracker(torrent.getAnnounceKey());
-        this.torrent = torrent;
-        this.dataDescriptor = dataDescriptor;
-    }
-
-    @Override
-    public boolean isActive() {
-        return active;
-    }
-
-    @Override
-    public void start() {
-
-        if (active) {
-            return;
-        }
-
-        dataDescriptor.getChunkDescriptors().forEach(IChunkDescriptor::verify);
-
-        TrackerResponse response = tracker.request(torrent).start();
-        if (!response.isSuccess()) {
-            if (response.getError().isPresent()) {
-                throw new BtException("Failed to start torrent -- " +
-                        "unexpected error during interaction with the tracker", response.getError().get());
-            } else {
-                throw new BtException("Failed to start torrent -- " +
-                        "unexpected error during interaction with the tracker; message: " + response.getErrorMessage());
-            }
-        }
-
-        active = true;
-    }
-
-    @Override
-    public void stop() {
-
-        if (!active) {
-            return;
-        }
-
-        active = false;
-
-        processResponse(tracker.request(torrent).stop());
-    }
-
-    @Override
-    public void complete() {
-        // TODO: this should be called by torrent processing session? someone MUST call this
-        processResponse(tracker.request(torrent).complete());
-    }
-
-    private void processResponse(TrackerResponse response) {
-
-        if (response.isSuccess()) {
-            return;
-        }
-
-        if (response.getError().isPresent()) {
-            throw new BtException("Unexpected error during interaction with the tracker", response.getError().get());
-        } else {
-            LOGGER.warn("Unexpected error during interaction with the tracker; message: " + response.getErrorMessage());
-        }
-    }
-
-    @Override
-    public IDataDescriptor getDataDescriptor() {
-        return dataDescriptor;
-    }
+    /**
+     * @return Torrent data descriptor
+     * @since 1.0
+     */
+    DataDescriptor getDataDescriptor();
 }

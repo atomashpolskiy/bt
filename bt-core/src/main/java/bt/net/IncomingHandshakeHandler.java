@@ -6,7 +6,7 @@ import bt.protocol.Handshake;
 import bt.protocol.IHandshakeFactory;
 import bt.protocol.Message;
 import bt.torrent.TorrentRegistry;
-import bt.torrent.ITorrentDescriptor;
+import bt.torrent.TorrentDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +37,7 @@ class IncomingHandshakeHandler implements ConnectionHandler {
     }
 
     @Override
-    public boolean handleConnection(IPeerConnection connection) {
+    public boolean handleConnection(PeerConnection connection) {
 
         Message firstMessage = connection.readMessage(handshakeTimeout.toMillis());
         if (firstMessage != null) {
@@ -47,7 +47,7 @@ class IncomingHandshakeHandler implements ConnectionHandler {
                 Optional<Torrent> torrentOptional = torrentRegistry.getTorrent(peerHandshake.getTorrentId());
                 if (torrentOptional.isPresent()) {
                     Torrent torrent = torrentOptional.get();
-                    Optional<ITorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
+                    Optional<TorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
                     if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {
                         TorrentId torrentId = torrent.getTorrentId();
 
@@ -56,7 +56,7 @@ class IncomingHandshakeHandler implements ConnectionHandler {
                                 handler.processOutgoingHandshake(handshake));
 
                         connection.postMessage(handshake);
-                        ((PeerConnection) connection).setTorrentId(torrentId);
+                        ((DefaultPeerConnection) connection).setTorrentId(torrentId);
 
                         handshakeHandlers.forEach(handler ->
                                 handler.processIncomingHandshake(connection.getRemotePeer(), peerHandshake));

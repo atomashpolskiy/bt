@@ -13,7 +13,7 @@ import java.util.function.Supplier;
  *
  * @since 1.0
  */
-class LazyBtClient implements BtClient {
+class LazyClient implements BtClient {
 
     private Supplier<BtClient> clientSupplier;
     private volatile BtClient delegate;
@@ -21,7 +21,7 @@ class LazyBtClient implements BtClient {
     /**
      * @since 1.0
      */
-    public LazyBtClient(Supplier<BtClient> clientSupplier) {
+    public LazyClient(Supplier<BtClient> clientSupplier) {
         this.clientSupplier = clientSupplier;
     }
 
