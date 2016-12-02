@@ -1,14 +1,17 @@
----
 language: java
 jdk:
-  - oraclejdk8
-
+- oraclejdk8
 branches:
   only:
-    - master
-
+  - master
 os:
-  - linux
-
+- linux
+- osx
 script:
-  - mvn verify
+- mvn -U install
+after_success:
+- mvn site
+- .travis/publish-javadoc.sh
+env:
+  matrix:
+    secure: iJAbDbmUYPGflcuxk6Cv02gh0g7UJs28z8+/UpwkDP58z/ywtRjBfWG9eZv1ZcnnXhOC46y+AhOYZTzgRt07Vbq5QzC+KT2cIYdh/9ErEsHv8jSecxLNVj5dfb4a5eyaTJgDVKeCuUJGeLuQJL0atzM4TbrBtKgXma629fVz9N6nmWarJZzpr1jGg9oQNFJKE23tKt1DrSyKQB+uPiQdd6ibukukoYi7Wou4Jc3ahQmOFrqaI837uVp1iftxJRpXV64lxLP9XbssKK1PzAL556rrzRmkcISP3V7MQLa5e2o/QdFETU6KVAHwmzO15G34a6eYftqyV7Gls2LtqmSR523JlZ3ua63/pxFx0oZgOT3uFxeEKKag/n0h5FGrIq2MqBOgItBcX04pi5ITmMFKYbjsLxOak3Zq/FIbehsYhlL+AxgGINRjwX5vVFX1nc8HN6BsQJZCut6Zu1ZVyEBi7VOr8kJy5n3HvYxdiflXrwriB2Y1CFuNHV2/d/gksHpyp90RK2Ux1+kn8NQz8NTz5xw3hI+ApdbZ7aQBYFgL/1ewjIjSIF0Lcx9Iq2PFA0pGa827Aa5vE7EIhR10LHcDs2hT+2PabtWCIvTEzVjpcDBZIUnKSrFFQupdxta6kzqPDvqeFgi4VbrKAkmLJxs3ekW88mhALfCUZVnlKQMOGko=
