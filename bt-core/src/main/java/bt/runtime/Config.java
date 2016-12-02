@@ -28,8 +28,7 @@ public class Config {
         this.peerHandshakeTimeout = Duration.ofSeconds(3);
         this.peerConnectionInactivityThreshold = Duration.ofMinutes(3);
         this.trackerQueryInterval = Duration.ofMinutes(5);
-
-        this.maxPeerConnections = Integer.MAX_VALUE;
+        this.maxPeerConnections = 500;
         this.maxPeerConnectionsPerTorrent = 20;
         this.transferBlockSize = 2 << 13; // 8 KB
         this.maxTransferBlockSize = 2 << 16; // 128 KB

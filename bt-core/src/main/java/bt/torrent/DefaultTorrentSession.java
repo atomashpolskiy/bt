@@ -10,6 +10,7 @@ import bt.torrent.messaging.IPeerWorkerFactory;
 
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *<p><b>Note that this class implements a service.
@@ -23,6 +24,7 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
     private TorrentSessionState sessionState;
 
     private int maxPeerConnectionsPerTorrent;
+    private final AtomicBoolean condition;
 
     public DefaultTorrentSession(IPeerConnectionPool connectionPool,
                                  IPieceManager pieceManager,
@@ -36,26 +38,41 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
         this.worker = new TorrentWorker(torrent.getTorrentId(), pieceManager, dispatcher, peerWorkerFactory);
         this.sessionState = new DefaultTorrentSessionState(pieceManager.getBitfield());
         this.maxPeerConnectionsPerTorrent = maxPeerConnectionsPerTorrent;
+        this.condition = new AtomicBoolean(false);
     }
 
     @Override
     public void onPeerDiscovered(Peer peer) {
         // TODO: Store discovered peers to use them later,
         // when some of the currently connected peers disconnects
-        if (worker.getPeers().size() >= maxPeerConnectionsPerTorrent || worker.getPeers().contains(peer)) {
-            return;
-        }
-        connectionPool.requestConnection(torrent.getTorrentId(), peer);
+        performSequentially(() -> {
+            if (mightAddPeer(peer)) {
+                connectionPool.requestConnection(torrent.getTorrentId(), peer);
+            }
+        });
     }
 
     @Override
     public void onPeerConnected(TorrentId torrentId, Peer peer) {
-        if (worker.getPeers().size() >= maxPeerConnectionsPerTorrent) {
-            return;
+        performSequentially(() -> {
+            if (mightAddPeer(peer) && torrent.getTorrentId().equals(torrentId)) {
+                worker.addPeer(peer);
+            }
+        });
+    }
+
+    private void performSequentially(Runnable r) {
+        while (!condition.compareAndSet(false, true))
+            ;
+        try {
+            r.run();
+        } finally {
+            condition.set(false);
         }
-        if (torrent.getTorrentId().equals(torrentId)) {
-            worker.addPeer(peer);
-        }
+    }
+
+    private boolean mightAddPeer(Peer peer) {
+        return worker.getPeers().size() < maxPeerConnectionsPerTorrent && !worker.getPeers().contains(peer);
     }
 
     @Override

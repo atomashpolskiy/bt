@@ -4,10 +4,6 @@ import bt.data.DataDescriptorFactory;
 import bt.data.IDataDescriptorFactory;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.MetadataService;
-import bt.net.ConnectionHandler;
-import bt.net.ConnectionHandlerFactory;
-import bt.net.HandshakeHandler;
-import bt.net.IConnectionHandlerFactory;
 import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.net.MessageDispatcher;
@@ -15,8 +11,6 @@ import bt.net.PeerConnectionPool;
 import bt.peer.IPeerRegistry;
 import bt.peer.PeerRegistry;
 import bt.peer.PeerSourceFactory;
-import bt.protocol.HandshakeFactory;
-import bt.protocol.IHandshakeFactory;
 import bt.runtime.Config;
 import bt.service.ApplicationService;
 import bt.service.ClasspathApplicationService;
@@ -108,7 +102,6 @@ public class ServiceModule implements Module {
         binder.bind(TorrentRegistry.class).to(AdhocTorrentRegistry.class).in(Singleton.class);
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).in(Singleton.class);
         binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).in(Singleton.class);
-        binder.bind(IHandshakeFactory.class).to(HandshakeFactory.class).in(Singleton.class);
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
 
         // TODO: register a shutdown hook in the runtime
@@ -122,16 +115,6 @@ public class ServiceModule implements Module {
     @Singleton
     public IDataDescriptorFactory provideDataDescriptorFactory() {
         return new DataDescriptorFactory(config.getTransferBlockSize());
-    }
-
-    @Provides
-    @Singleton
-    public IConnectionHandlerFactory provideConnectionHandlerFactory(IHandshakeFactory handshakeFactory,
-                                                                     TorrentRegistry torrentRegistry,
-                                                                     Set<ConnectionHandler> connectionHandlers,
-                                                                     Set<HandshakeHandler> handshakeHandlers) {
-        return new ConnectionHandlerFactory(handshakeFactory, torrentRegistry, connectionHandlers,
-                handshakeHandlers, config.getPeerHandshakeTimeout());
     }
 
     @Provides

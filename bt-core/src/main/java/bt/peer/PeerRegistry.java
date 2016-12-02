@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -80,14 +79,11 @@ public class PeerRegistry implements IPeerRegistry {
             if (peerSource.update()) {
                 Collection<Peer> discoveredPeers = peerSource.getPeers();
                 for (Peer peer : discoveredPeers) {
-                    Iterator<Consumer<Peer>> iter = peerConsumers.iterator();
-                    while (iter.hasNext()) {
-                        Consumer<Peer> consumer = iter.next();
+                    for (Consumer<Peer> consumer : peerConsumers) {
                         try {
                             consumer.accept(peer);
                         } catch (Exception e) {
                             LOGGER.error("Error in peer consumer", e);
-                            iter.remove();
                         }
                     }
                 }

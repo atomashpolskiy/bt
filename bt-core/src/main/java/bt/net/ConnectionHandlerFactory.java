@@ -5,7 +5,6 @@ import bt.protocol.IHandshakeFactory;
 import bt.torrent.TorrentRegistry;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,13 +26,10 @@ public class ConnectionHandlerFactory implements IConnectionHandlerFactory {
     private Map<TorrentId, ConnectionHandler> outgoingHandlers;
 
     public ConnectionHandlerFactory(IHandshakeFactory handshakeFactory, TorrentRegistry torrentRegistry,
-                                    Set<ConnectionHandler> connectionHandlers, Set<HandshakeHandler> handshakeHandlers,
+                                    List<ConnectionHandler> connectionHandlers, Set<HandshakeHandler> handshakeHandlers,
                                     Duration peerHandshakeTimeout) {
-
         this.handshakeFactory = handshakeFactory;
-
-        this.connectionHandlers = new ArrayList<>();
-        this.connectionHandlers.addAll(connectionHandlers);
+        this.connectionHandlers = connectionHandlers;
         this.incomingHandler = new ConnectionSequence(
                 new IncomingHandshakeHandler(handshakeFactory, torrentRegistry, handshakeHandlers, peerHandshakeTimeout),
                 this.connectionHandlers);

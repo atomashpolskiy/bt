@@ -41,6 +41,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionPool.class);
 
+    private Config config;
     private PeerConnectionFactory connectionFactory;
     private IConnectionHandlerFactory connectionHandlerFactory;
 
@@ -62,6 +63,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                               IRuntimeLifecycleBinder lifecycleBinder,
                               Config config) {
 
+        this.config = config;
+
         SocketChannelFactory socketChannelFactory = new SocketChannelFactory(networkService);
         this.connectionFactory = new PeerConnectionFactory(messageHandler,
                 socketChannelFactory, config.getMaxTransferBlockSize());
@@ -69,21 +72,21 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         this.connectionHandlerFactory = connectionHandlerFactory;
         this.peerConnectionInactivityThreshold = config.getPeerConnectionInactivityThreshold();
 
-        pendingConnections = new ConcurrentHashMap<>();
-        connections = new ConcurrentHashMap<>();
-        connectionListeners = new HashSet<>();
-        listenerLock = new ReentrantReadWriteLock();
-        connectionLock = new ReentrantLock();
+        this.pendingConnections = new ConcurrentHashMap<>();
+        this.connections = new ConcurrentHashMap<>();
+        this.connectionListeners = new HashSet<>();
+        this.listenerLock = new ReentrantReadWriteLock();
+        this.connectionLock = new ReentrantLock();
 
         IncomingAcceptor acceptor = new IncomingAcceptor(socketChannelFactory);
         ExecutorService incomingAcceptor = Executors.newSingleThreadExecutor(
                 runnable -> new Thread(runnable, "bt.net.pool.incoming-acceptor"));
         lifecycleBinder.onStartup(() -> incomingAcceptor.execute(acceptor));
 
-        cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, "bt.net.pool.cleaner"));
+        this.cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, "bt.net.pool.cleaner"));
         lifecycleBinder.onStartup(() -> cleaner.scheduleAtFixedRate(new Cleaner(), 1000, 1000, TimeUnit.MILLISECONDS));
 
-        executor = Executors.newCachedThreadPool(
+        this.executor = Executors.newCachedThreadPool(
                 new ThreadFactory() {
 
                     private AtomicInteger threadCount = new AtomicInteger(1);
@@ -120,10 +123,14 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     @Override
     public CompletableFuture<IPeerConnection> requestConnection(TorrentId torrentId, Peer peer) {
-
         CompletableFuture<IPeerConnection> connection = getExistingOrPendingConnection(peer);
         if (connection != null) {
             return connection;
+        }
+
+        if (connections.size() >= config.getMaxPeerConnections()) {
+            // seems a bit like a hack. just a little bit
+            return CompletableFuture.supplyAsync(() -> {throw new BtException("Connections limit exceeded");}, executor);
         }
 
         synchronized (pendingConnections) {
@@ -190,7 +197,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         @Override
         public void run() {
-
             SocketAddress localAddress;
             try {
                 serverChannel = socketChannelFactory.getIncomingChannel();
@@ -203,10 +209,35 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
             try {
                 while (!shutdown) {
-                    acceptIncomingConnection(serverChannel.accept());
+                    if (connections.size() < config.getMaxPeerConnections()) {
+                        SocketChannel channel = serverChannel.accept();
+                        if (connections.size() < config.getMaxPeerConnections()) {
+                            acceptIncomingConnection(channel);
+                        } else {
+                            rejectIncomingConnection(channel);
+                        }
+                    } else {
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException("Unexpectedly interrupted", e);
+                        }
+                    }
                 }
             } catch (IOException e) {
                 LOGGER.error("Unexpected I/O error when listening to the incoming channel @ " + localAddress, e);
+            }
+        }
+
+        private void rejectIncomingConnection(SocketChannel channel) {
+            try {
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Rejected incoming connection from {} due to exceeding of connections limit",
+                            channel.getRemoteAddress());
+                }
+                channel.close();
+            } catch (IOException e) {
+                LOGGER.warn("Unexpected I/O error when rejecting incoming connection", e);
             }
         }
 
@@ -241,7 +272,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
                     PeerConnection connection = iter.next();
                     if (connection.isClosed()) {
-                        purgeConnection(connection);
+                        purgeConnectionWithPeer(connection.getRemotePeer());
                         iter.remove();
 
                     } else if (System.currentTimeMillis() - connection.getLastActive()
@@ -250,8 +281,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                         if (LOGGER.isDebugEnabled()) {
                             LOGGER.debug("Removing inactive peer connection: " + connection.getRemotePeer());
                         }
-                        connection.closeQuietly();
-                        purgeConnection(connection);
+                        purgeConnectionWithPeer(connection.getRemotePeer());
                         iter.remove();
                     }
                     // can send keep-alives here based on lastActiveTime
@@ -294,12 +324,21 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     private boolean addConnection(PeerConnection newConnection, boolean shouldNotifyListeners) {
 
-        boolean added = true;
+        boolean added = false;
+        PeerConnection existingConnection = null;
 
         connectionLock.lock();
-        PeerConnection existingConnection;
         try {
-            existingConnection = connections.putIfAbsent(newConnection.getRemotePeer(), newConnection);
+            if (connections.size() >= config.getMaxPeerConnections()) {
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Closing newly created connection with {} due to exceeding of connections limit",
+                            newConnection.getRemotePeer());
+                }
+                newConnection.closeQuietly();
+            } else {
+                existingConnection = connections.putIfAbsent(newConnection.getRemotePeer(), newConnection);
+                added = (existingConnection == null);
+            }
         } finally {
             connectionLock.unlock();
         }
@@ -309,7 +348,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             }
             newConnection.closeQuietly();
             newConnection = existingConnection;
-            added = false;
         }
 
         if (added && shouldNotifyListeners) {
@@ -326,11 +364,14 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         return added;
     }
 
-    private void purgeConnection(PeerConnection connection) {
-        PeerConnection purged = connections.remove(connection.getRemotePeer());
+    private void purgeConnectionWithPeer(Peer peer) {
+        PeerConnection purged = connections.remove(peer);
         if (purged != null) {
+            if (!purged.isClosed()) {
+                purged.closeQuietly();
+            }
             for (PeerActivityListener listener : connectionListeners) {
-                listener.onPeerDisconnected(connection.getRemotePeer());
+                listener.onPeerDisconnected(peer);
             }
         }
     }
