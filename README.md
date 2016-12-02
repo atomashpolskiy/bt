@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/atomashpolskiy/bt.svg?branch=master)](https://travis-ci.org/atomashpolskiy/bt)
+[![Build Status](https://travis-ci.org/atomashpolskiy/bt.svg?branch=master)](https://travis-ci.org/atomashpolskiy/bt) [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](http://atomashpolskiy.github.io/bt/javadoc/latest/)
 
 **Bt** is a lightweight framework for P2P-lovers and enthusiastic BitTorrent researchers, perfect choice for light enterprise and home usage and experimentation. It offers good performance, reliability and is highly customizable. With Bt you can create a production-grade BitTorrent client in a matter of minutes. Bt is still in its' early days, but is actively developed and designed with stability and maintainability in mind.
 
