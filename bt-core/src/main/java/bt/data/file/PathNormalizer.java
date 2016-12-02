@@ -52,21 +52,21 @@ class PathNormalizer {
 
     private String normalizePathElement(String pathElement) {
         // truncate leading and trailing whitespaces
-        String normalized = trim(pathElement, ' ', '.');
+        String normalized = pathElement.trim();
         if (normalized.isEmpty()) {
             return "_";
         }
 
-        // truncate trailing dots;
+        // truncate trailing whitespaces and dots;
         // this will also eliminate '.' and '..' relative names
         char[] value = normalized.toCharArray();
-        int to = value.length - 1;
-        while (to >= 0 && value[to] == '.') {
+        int to = value.length;
+        while (to > 0 && (value[to - 1] == '.' || value[to - 1] == ' ')) {
             to--;
         }
-        if (to == -1) {
+        if (to == 0) {
             normalized = "";
-        } else if (to < value.length - 1) {
+        } else if (to < value.length) {
             normalized = normalized.substring(0, to);
         }
 
@@ -95,28 +95,5 @@ class PathNormalizer {
         }
 
         return path;
-    }
-
-    private String trim(String s, char... chars) {
-        char[] value = s.toCharArray();
-        int len = value.length;
-        int st = 0;
-
-        while ((st < len) && isOneOf(value[st], chars)) {
-            st++;
-        }
-        while ((st < len) && isOneOf(value[st], chars)) {
-            len--;
-        }
-        return ((st > 0) || (len < value.length)) ? s.substring(st, len) : s;
-    }
-
-    private static boolean isOneOf(char tested, char... chars) {
-        for (char c : chars) {
-            if (tested == c) {
-                return true;
-            }
-        }
-        return false;
     }
 }

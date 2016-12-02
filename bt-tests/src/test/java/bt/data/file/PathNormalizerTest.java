@@ -181,7 +181,22 @@ public class PathNormalizerTest {
 
     @Test
     public void testNormalizer_302() {
-        verifyNormalization("a", ".. .a ...");
+        verifyNormalization(".. .a", ".. .a ...");
+    }
+
+    @Test
+    public void testNormalizer_303() {
+        verifyNormalization(".a", ".a");
+    }
+
+    @Test
+    public void testNormalizer_304() {
+        verifyNormalization(".a/.b", ".a/.b");
+    }
+
+    @Test
+    public void testNormalizer_305() {
+        verifyNormalization(".a/b", ".a./b.");
     }
 
     @Test
