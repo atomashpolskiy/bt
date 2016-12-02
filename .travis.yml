@@ -6,7 +6,6 @@ branches:
   - master
 os:
 - linux
-- osx
 script:
 - mvn -U install
 after_success:
