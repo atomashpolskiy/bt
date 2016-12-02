@@ -36,11 +36,6 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 
 ### And much more...
 
-* Client's Peer ID customization
-* YAML schemas for all bencoded objects: metainfo files, messages, tracker responses, etc. -- with support for automatic validation
-* Torrent session's state with some useful runtime info, accessible via scheduled listener callbacks
-* IPv6 support
-* ...
 * _**check out [Release Notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.txt) for details!**_
 
 ## List of supported BEPs
