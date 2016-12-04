@@ -3,8 +3,16 @@ package bt.bencoding.model;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Provides utility functions for unchecked conversions.
+ *
+ * @since 1.0
+ */
 public class ClassUtil {
 
+    /**
+     * @since 1.0
+     */
     @SuppressWarnings("rawtypes")
     public static <T> T readNotNull(Map map, Class<T> type, Object key) throws Exception {
         Object value = map.get(key);
@@ -14,6 +22,9 @@ public class ClassUtil {
         return cast(type, key, value);
     }
 
+    /**
+     * @since 1.0
+     */
     @SuppressWarnings({"rawtypes", "unchecked"})
     public static <T> T cast(Class<T> type, Object key, Object value) throws Exception {
         if (value == null) {
@@ -26,6 +37,9 @@ public class ClassUtil {
         return (T) value;
     }
 
+    /**
+     * @since 1.0
+     */
     @SuppressWarnings("unchecked")
     public static <T> List<T> castList(Class<T> elementType, List<?> list) throws Exception {
         if (list == null) {

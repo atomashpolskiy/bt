@@ -16,15 +16,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * BEncoding encoder.
+ *
+ * @since 1.0
+ */
 public class BEEncoder {
 
     private static final Charset defaultCharset = Charset.forName("UTF-8");
     private static final BEEncoder instance = new BEEncoder();
 
+    /**
+     * Get default encoder.
+     *
+     * @since 1.0
+     */
     public static BEEncoder encoder() {
         return instance;
     }
 
+    /**
+     * Write bencoded string to a binary output.
+     *
+     * @since 1.0
+     */
     public void encode(BEString string, OutputStream out) throws IOException {
 
         Objects.requireNonNull(string);
@@ -39,6 +54,11 @@ public class BEEncoder {
         write(out, bytes);
     }
 
+    /**
+     * Write bencoded integer to a binary output.
+     *
+     * @since 1.0
+     */
     public void encode(BEInteger integer, OutputStream out) throws IOException {
 
         Objects.requireNonNull(integer);
@@ -49,6 +69,11 @@ public class BEEncoder {
         write(out, BEParser.EOF);
     }
 
+    /**
+     * Write bencoded list to a binary output.
+     *
+     * @since 1.0
+     */
     public void encode(BEList list, OutputStream out) throws IOException {
 
         Objects.requireNonNull(list);
@@ -63,6 +88,11 @@ public class BEEncoder {
         write(out, BEParser.EOF);
     }
 
+    /**
+     * Write bencoded dictionary to a binary output.
+     *
+     * @since 1.0
+     */
     public void encode(BEMap map, OutputStream out) throws IOException {
 
         Objects.requireNonNull(map);

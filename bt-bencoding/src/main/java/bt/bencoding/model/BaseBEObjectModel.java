@@ -1,23 +1,21 @@
 package bt.bencoding.model;
 
-import bt.bencoding.TypesMapping;
 import bt.bencoding.model.rule.Rule;
-import bt.bencoding.model.rule.RuleProcessor;
 
 import java.util.List;
 
-public abstract class BaseBEObjectModel implements BEObjectModel {
+abstract class BaseBEObjectModel implements BEObjectModel {
 
-    private RuleProcessor rules;
+    private List<Rule> rules;
 
     BaseBEObjectModel(List<Rule> rules) {
-        this.rules = new RuleProcessor(rules);
+        this.rules = rules;
     }
 
     @Override
     public final ValidationResult validate(Object object) {
 
-        ValidationResult result = new ValidationResult();
+        ValidationResult result;
         if (object != null) {
 
             // unwrap BEObjects
@@ -27,16 +25,31 @@ public abstract class BaseBEObjectModel implements BEObjectModel {
 
             Class<?> javaType = TypesMapping.getJavaTypeForBEType(getType());
             if (!javaType.isAssignableFrom(object.getClass())) {
+                result = new ValidationResult();
                 result.addMessage("Wrong type -- expected " + javaType.getName()
                         + ", actual: " + object.getClass().getName());
                 return result;
             }
         }
 
-        rules.process(object).forEach(result::addMessage);
+        result = validateObject(object);
         // fail-fast if any rules failed
-        return result.isSuccess()? doValidate(result, object) : result;
+        return result.isSuccess()? afterValidate(result, object) : result;
     }
 
-    protected abstract ValidationResult doValidate(ValidationResult validationResult, Object object);
+    private ValidationResult validateObject(Object object) {
+        ValidationResult result = new ValidationResult();
+        rules.stream()
+                .filter(rule -> !rule.validate(object))
+                .map(Rule::getDescription)
+                .forEach(result::addMessage);
+        return result;
+    }
+
+    /**
+     * Contribute to the validation result.
+     *
+     * @since 1.0
+     */
+    protected abstract ValidationResult afterValidate(ValidationResult validationResult, Object object);
 }

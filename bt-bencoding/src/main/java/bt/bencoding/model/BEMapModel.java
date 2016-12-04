@@ -21,7 +21,7 @@ class BEMapModel extends BaseBEObjectModel {
     }
 
     @Override
-    protected ValidationResult doValidate(ValidationResult validationResult, Object object) {
+    protected ValidationResult afterValidate(ValidationResult validationResult, Object object) {
 
         if (object != null) {
 

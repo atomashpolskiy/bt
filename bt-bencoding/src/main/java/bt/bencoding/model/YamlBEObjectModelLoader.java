@@ -6,6 +6,11 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Loads model definitions from YAML documents.
+ *
+ * @since 1.0
+ */
 public class YamlBEObjectModelLoader implements BEObjectModelLoader {
 
     private static final String MODEL_DEFINITION_KEY = "model";
@@ -14,6 +19,9 @@ public class YamlBEObjectModelLoader implements BEObjectModelLoader {
 
     private Yaml yaml;
 
+    /**
+     * @since 1.0
+     */
     public YamlBEObjectModelLoader() {
         yaml = new Yaml();
         modelBuilderFactory = new DefaultModelBuilderFactory();
@@ -21,7 +29,6 @@ public class YamlBEObjectModelLoader implements BEObjectModelLoader {
 
     @Override
     public BEObjectModel load(InputStream source) {
-
         if (source == null) {
             throw new NullPointerException("Missing source -- null");
         }

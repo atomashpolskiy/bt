@@ -1,7 +1,7 @@
 package bt.bencoding;
 
 /**
- * BEncoding parsing exception.
+ * BEncoded document parse exception.
  *
  * @since 1.0
  */

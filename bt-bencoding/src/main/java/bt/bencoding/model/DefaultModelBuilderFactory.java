@@ -2,7 +2,7 @@ package bt.bencoding.model;
 
 import java.util.Map;
 
-public class DefaultModelBuilderFactory implements BEObjectModelBuilderFactory {
+class DefaultModelBuilderFactory implements BEObjectModelBuilderFactory {
 
     @SuppressWarnings("unchecked")
     @Override

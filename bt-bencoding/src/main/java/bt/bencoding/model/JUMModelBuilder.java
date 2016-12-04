@@ -18,6 +18,11 @@ import static bt.bencoding.model.ClassUtil.cast;
 import static bt.bencoding.model.ClassUtil.castList;
 import static bt.bencoding.model.ClassUtil.readNotNull;
 
+/**
+ * Builds an object model from a {@link java.util.Map}-based definition.
+ *
+ * @since 1.0
+ */
 public class JUMModelBuilder implements BEObjectModelBuilder<Map> {
 
     private static final String TYPE_KEY = "type";

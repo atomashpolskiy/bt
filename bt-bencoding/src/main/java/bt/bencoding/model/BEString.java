@@ -8,11 +8,21 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
+/**
+ * BEncoded string.
+ *
+ * @since 1.0
+ */
 public class BEString implements BEObject<byte[]> {
 
     private byte[] content;
     private BEEncoder encoder;
 
+    /**
+     * @param content Binary representation of this string, as read from source.
+     *                It is also the value of this string, being a UTF-8 encoded byte array.
+     * @since 1.0
+     */
     public BEString(byte[] content) {
         this.content = content;
         encoder = BEEncoder.encoder();

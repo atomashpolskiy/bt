@@ -1,10 +1,12 @@
-package bt.bencoding;
+package bt.bencoding.model;
+
+import bt.bencoding.BEType;
 
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 
-public class TypesMapping {
+class TypesMapping {
 
     public static Class<?> getJavaTypeForBEType(BEType type) {
 

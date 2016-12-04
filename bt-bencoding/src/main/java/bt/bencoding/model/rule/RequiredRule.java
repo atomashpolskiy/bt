@@ -6,6 +6,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Used to mark some attribute of an object model as required.
+ *
+ * @since 1.0
+ */
 public class RequiredRule implements Rule {
 
     private List<String> requiredKeys;

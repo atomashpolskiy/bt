@@ -10,6 +10,39 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Used to mark a subset of the model's attributes as mutually exclusive.
+ *
+ * <p>Exclusive attributes can also be marked as required via {@link RequiredRule}.
+ * In such case exclusiveness is checked first.
+ * The exclusiveness condition is satisfied when either one of the following applies:
+ * <ul>
+ *     <li>the object has only one of the mutually exclusive attributes</li>
+ *     <li>the object has neither of the mutually exclusive attributes</li>
+ * </ul>
+ * In the latter case an additional check is performed whether any of the mutually exclusive attributes is also
+ * marked as required.
+ *
+ * <p>E.g. if:
+ * <ul>
+ *     <li>a model M defines attributes A, B and C,</li>
+ *     <li>and attributes {B, C} are mutually exclusive,</li>
+ *     <li>and attributes {A, C} are required,</li>
+ * </ul>
+ * then only the following types of objects will be allowed by model M:
+ * <ul>
+ *     <li>having attributes A and C</li>
+ *     <li>having attributes A and B</li>
+ * </ul>
+ * The following types of objects will be disallowed by model M:
+ * <ul>
+ *     <li>having only a single attribute (any of {A, B, C})</li>
+ *     <li>having all attributes A, B and C</li>
+ *     <li>having only attibutes B and C (failing by exclusiveness rule, because it's applied first)</li>
+ * </ul>
+ *
+ * @since 1.0
+ */
 public class ExclusiveRule implements Rule {
 
     boolean shouldCheckRequired;
@@ -19,7 +52,7 @@ public class ExclusiveRule implements Rule {
 
     public ExclusiveRule(Collection<Set<String>> exclusives, List<String> required) {
 
-        shouldCheckRequired = true;
+        this.shouldCheckRequired = true;
 
         List<String> allExclusives = exclusives.stream().flatMap(Collection::stream).collect(Collectors.toList());
 

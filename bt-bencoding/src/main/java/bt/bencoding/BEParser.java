@@ -11,6 +11,11 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Objects;
 
+/**
+ * BEncoding parser. Should be closed when the source is processed.
+ *
+ * @since 1.0
+ */
 public class BEParser implements AutoCloseable {
 
     static final char EOF = 'e';
@@ -23,6 +28,12 @@ public class BEParser implements AutoCloseable {
     private final BEType type;
     private Object parsedObject;
 
+    /**
+     * Create a parser for the provided URL's content.
+     *
+     * @param url URL's content must be a well-formed bencoded document.
+     * @since 1.0
+     */
     public BEParser(URL url) {
         Objects.requireNonNull(url, "Missing URL");
         try {
@@ -33,12 +44,24 @@ public class BEParser implements AutoCloseable {
         this.type = getTypeForPrefix((char) scanner.peek());
     }
 
+    /**
+     * Create a parser for the provided binary input.
+     *
+     * @param in Input's content must be a well-formed bencoded document.
+     * @since 1.0
+     */
     public BEParser(InputStream in) {
         Objects.requireNonNull(in, "Input stream is null");
         this.scanner = new Scanner(in);
         this.type = getTypeForPrefix((char) scanner.peek());
     }
 
+    /**
+     * Create a parser for the provided bencoded document.
+     *
+     * @param bs Bencoded document.
+     * @since 1.0
+     */
     public BEParser(byte[] bs) {
 
         if (bs == null || bs.length == 0) {
@@ -48,6 +71,11 @@ public class BEParser implements AutoCloseable {
         this.type = getTypeForPrefix((char) scanner.peek());
     }
 
+    /**
+     * Read type of the root object of the bencoded document that this parser was created for.
+     *
+     * @since 1.0
+     */
     public BEType readType() {
         return type;
     }
@@ -110,18 +138,42 @@ public class BEParser implements AutoCloseable {
         }
     }
 
+    /**
+     * Try to read the document's root object as a bencoded string.
+     *
+     * @see #readType()
+     * @since 1.0
+     */
     public BEString readString() {
         return readObject(BEType.STRING, BEStringBuilder.class);
     }
 
+    /**
+     * Try to read the document's root object as a bencoded integer.
+     *
+     * @see #readType()
+     * @since 1.0
+     */
     public BEInteger readInteger() {
         return readObject(BEType.INTEGER, BEIntegerBuilder.class);
     }
 
+    /**
+     * Try to read the document's root object as a bencoded list.
+     *
+     * @see #readType()
+     * @since 1.0
+     */
     public BEList readList() {
         return readObject(BEType.LIST, BEListBuilder.class);
     }
 
+    /**
+     * Try to read the document's root object as a bencoded dictionary.
+     *
+     * @see #readType()
+     * @since 1.0
+     */
     public BEMap readMap() {
         return readObject(BEType.MAP, BEMapBuilder.class);
     }

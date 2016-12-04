@@ -6,14 +6,26 @@ import bt.bencoding.BEType;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
-import java.util.Arrays;
 
+/**
+ * BEncoded integer.
+ *
+ * <p>«BEP-3: The BitTorrent Protocol Specification» defines integers
+ * as unsigned numeric values with an arbitrary number of digits.
+ *
+ * @since 1.0
+ */
 public class BEInteger implements BEObject<BigInteger> {
 
     private byte[] content;
     private BigInteger value;
     private BEEncoder encoder;
 
+    /**
+     * @param content Binary representation of this integer, as read from source.
+     * @param value Parsed value
+     * @since 1.0
+     */
     public BEInteger(byte[] content, BigInteger value) {
         this.content = content;
         this.value = value;
