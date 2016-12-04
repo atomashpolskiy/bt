@@ -1,11 +1,13 @@
-package bt.torrent;
+package bt.torrent.messaging.core;
 
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
-import bt.net.PeerActivityListener;
+import bt.torrent.Bitfield;
+import bt.torrent.TorrentSession;
+import bt.torrent.TorrentSessionState;
 import bt.torrent.messaging.IPeerWorkerFactory;
 
 import java.util.Collections;
@@ -16,7 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *<p><b>Note that this class implements a service.
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
-public class DefaultTorrentSession implements PeerActivityListener, TorrentSession {
+class DefaultTorrentSession implements TorrentSession {
 
     private IPeerConnectionPool connectionPool;
     private Torrent torrent;
@@ -27,7 +29,7 @@ public class DefaultTorrentSession implements PeerActivityListener, TorrentSessi
     private final AtomicBoolean condition;
 
     public DefaultTorrentSession(IPeerConnectionPool connectionPool,
-                                 IPieceManager pieceManager,
+                                 PieceManager pieceManager,
                                  IMessageDispatcher dispatcher,
                                  IPeerWorkerFactory peerWorkerFactory,
                                  Torrent torrent,

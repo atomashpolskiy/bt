@@ -22,7 +22,9 @@ import bt.service.NetworkService;
 import bt.service.RuntimeLifecycleBinder;
 import bt.service.VersionAwareIdentityService;
 import bt.torrent.AdhocTorrentRegistry;
+import bt.torrent.ITorrentSessionFactory;
 import bt.torrent.TorrentRegistry;
+import bt.torrent.messaging.core.TorrentSessionFactory;
 import bt.torrent.data.DataWorkerFactory;
 import bt.torrent.data.IDataWorkerFactory;
 import bt.tracker.ITrackerService;
@@ -62,7 +64,7 @@ public class ServiceModule implements Module {
      * @since 1.0
      */
     public static Multibinder<Object> contributeMessagingAgent(Binder binder) {
-        return Multibinder.newSetBinder(binder, Object.class, MessagingAgent.class);
+        return Multibinder.newSetBinder(binder, Object.class, MessagingAgents.class);
     }
 
     /**
@@ -103,6 +105,7 @@ public class ServiceModule implements Module {
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).in(Singleton.class);
         binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).in(Singleton.class);
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
+        binder.bind(ITorrentSessionFactory.class).to(TorrentSessionFactory.class).in(Singleton.class);
 
         // TODO: register a shutdown hook in the runtime
         binder.bind(ExecutorService.class).annotatedWith(ClientExecutor.class)

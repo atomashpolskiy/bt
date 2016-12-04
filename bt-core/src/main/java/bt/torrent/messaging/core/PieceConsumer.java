@@ -1,15 +1,17 @@
-package bt.torrent.messaging;
+package bt.torrent.messaging.core;
 
 import bt.BtException;
 import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
 import bt.protocol.Piece;
-import bt.torrent.IPieceManager;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
 import bt.torrent.data.DataWorker;
+import bt.torrent.messaging.ConnectionState;
+import bt.torrent.messaging.Mapper;
+import bt.torrent.messaging.MessageContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,11 +28,11 @@ public class PieceConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceConsumer.class);
 
-    private IPieceManager pieceManager;
+    private PieceManager pieceManager;
     private DataWorker dataWorker;
     private ConcurrentLinkedQueue<BlockWrite> completedBlocks;
 
-    public PieceConsumer(IPieceManager pieceManager, DataWorker dataWorker) {
+    PieceConsumer(PieceManager pieceManager, DataWorker dataWorker) {
         this.pieceManager = pieceManager;
         this.dataWorker = dataWorker;
         this.completedBlocks = new ConcurrentLinkedQueue<>();

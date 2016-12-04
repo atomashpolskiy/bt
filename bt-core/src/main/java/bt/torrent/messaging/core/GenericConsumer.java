@@ -1,4 +1,4 @@
-package bt.torrent.messaging;
+package bt.torrent.messaging.core;
 
 import bt.protocol.Cancel;
 import bt.protocol.Choke;
@@ -7,6 +7,7 @@ import bt.protocol.KeepAlive;
 import bt.protocol.NotInterested;
 import bt.protocol.Unchoke;
 import bt.torrent.annotation.Consumes;
+import bt.torrent.messaging.MessageContext;
 
 /**
  * Consumer that is responsible for processing
@@ -18,7 +19,7 @@ public class GenericConsumer {
 
     private static final GenericConsumer instance = new GenericConsumer();
 
-    public static GenericConsumer consumer() {
+    static GenericConsumer consumer() {
         return instance;
     }
 

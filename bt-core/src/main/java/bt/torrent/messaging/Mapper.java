@@ -7,11 +7,11 @@ import java.util.Arrays;
  *
  * @since 1.0
  */
-class Mapper {
+public class Mapper {
 
     private static final Mapper instance = new Mapper();
 
-    static Mapper mapper() {
+    public static Mapper mapper() {
         return instance;
     }
 
@@ -22,7 +22,7 @@ class Mapper {
      *
      * @since 1.0
      */
-    Object buildKey(int pieceIndex, int offset, int length) {
+    public Object buildKey(int pieceIndex, int offset, int length) {
         return new Key(pieceIndex, offset, length);
     }
 

@@ -1,4 +1,4 @@
-package bt.torrent.messaging;
+package bt.torrent.messaging.core;
 
 import bt.BtException;
 import bt.data.ChunkDescriptor;
@@ -8,9 +8,11 @@ import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.NotInterested;
 import bt.protocol.Request;
-import bt.torrent.IPieceManager;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
+import bt.torrent.messaging.ConnectionState;
+import bt.torrent.messaging.Mapper;
+import bt.torrent.messaging.MessageContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,10 +35,10 @@ public class RequestProducer {
 
     private static final int MAX_PENDING_REQUESTS = 3;
 
-    private IPieceManager pieceManager;
+    private PieceManager pieceManager;
     private List<ChunkDescriptor> chunks;
 
-    public RequestProducer(List<ChunkDescriptor> chunks, IPieceManager pieceManager) {
+    RequestProducer(List<ChunkDescriptor> chunks, PieceManager pieceManager) {
         this.chunks = chunks;
         this.pieceManager = pieceManager;
     }

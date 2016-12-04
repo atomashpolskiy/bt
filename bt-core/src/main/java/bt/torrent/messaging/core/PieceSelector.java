@@ -1,7 +1,10 @@
-package bt.torrent;
+package bt.torrent.messaging.core;
 
 import bt.net.Peer;
+import bt.torrent.Bitfield;
 import bt.torrent.Bitfield.PieceStatus;
+import bt.torrent.BitfieldBasedStatistics;
+import bt.torrent.PieceSelectionStrategy;
 
 import java.util.HashMap;
 import java.util.Map;

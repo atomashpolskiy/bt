@@ -4,37 +4,19 @@ import bt.data.Storage;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
 import bt.module.ClientExecutor;
-import bt.module.MessagingAgent;
-import bt.net.IMessageDispatcher;
-import bt.net.IPeerConnectionPool;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
-import bt.peer.IPeerRegistry;
-import bt.torrent.TorrentRegistry;
-import bt.torrent.DefaultTorrentSession;
-import bt.torrent.IPieceManager;
-import bt.torrent.TorrentDescriptor;
-import bt.torrent.PieceManager;
+import bt.torrent.ITorrentSessionFactory;
 import bt.torrent.PieceSelectionStrategy;
 import bt.torrent.RarestFirstSelectionStrategy;
+import bt.torrent.TorrentSessionParams;
+import bt.torrent.TorrentDescriptor;
+import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentSession;
-import bt.torrent.data.DataWorker;
-import bt.torrent.data.IDataWorkerFactory;
-import bt.torrent.messaging.BitfieldConsumer;
-import bt.torrent.messaging.GenericConsumer;
-import bt.torrent.messaging.IPeerWorkerFactory;
-import bt.torrent.messaging.PeerWorkerFactory;
-import bt.torrent.messaging.PieceConsumer;
-import bt.torrent.messaging.PeerRequestProcessor;
-import bt.torrent.messaging.RequestProducer;
-import com.google.inject.Binding;
 import com.google.inject.Key;
-import com.google.inject.TypeLiteral;
 
 import java.net.URL;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 
@@ -150,12 +132,11 @@ public class Bt {
     }
 
     private BtClient createClient() {
-
         Torrent torrent = torrentSupplier.get();
         TorrentDescriptor descriptor = getTorrentDescriptor(torrent);
-        DataWorker dataWorker = createDataWorker(descriptor);
 
-        TorrentSession session = createSession(torrent, descriptor, dataWorker);
+        ITorrentSessionFactory torrentSessionFactory = runtime.service(ITorrentSessionFactory.class);
+        TorrentSession session = torrentSessionFactory.createSession(torrent, getSessionParams());
 
         return new RuntimeAwareClient(runtime,
                 new DefaultClient(getExecutor(), descriptor, session));
@@ -171,48 +152,10 @@ public class Bt {
         return torrentRegistry.getOrCreateDescriptor(torrent, storage);
     }
 
-    private DataWorker createDataWorker(TorrentDescriptor descriptor) {
-        IDataWorkerFactory dataWorkerFactory = runtime.service(IDataWorkerFactory.class);
-        return dataWorkerFactory.createWorker(descriptor.getDataDescriptor());
-    }
-
-    private TorrentSession createSession(Torrent torrent, TorrentDescriptor descriptor, DataWorker dataWorker) {
-
-        IPeerConnectionPool connectionPool = runtime.service(IPeerConnectionPool.class);
-        IMessageDispatcher messageDispatcher = runtime.service(IMessageDispatcher.class);
-
-        PieceManager pieceManager = new PieceManager(descriptor.getDataDescriptor().getBitfield(), pieceSelectionStrategy);
-        IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceManager, dataWorker);
-
-        DefaultTorrentSession session = new DefaultTorrentSession(connectionPool, pieceManager,
-                messageDispatcher, peerWorkerFactory, torrent, runtime.getConfig().getMaxPeerConnectionsPerTorrent());
-
-        IPeerRegistry peerRegistry = runtime.service(IPeerRegistry.class);
-        peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);
-
-        connectionPool.addConnectionListener(session);
-
-        return session;
-    }
-
-    private IPeerWorkerFactory createPeerWorkerFactory(TorrentDescriptor descriptor,
-                                                       IPieceManager pieceManager,
-                                                       DataWorker dataWorker) {
-
-        Set<Object> messagingAgents = new HashSet<>();
-        messagingAgents.add(GenericConsumer.consumer());
-        messagingAgents.add(new BitfieldConsumer(pieceManager));
-        messagingAgents.add(new PeerRequestProcessor(dataWorker));
-        messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor().getChunkDescriptors(), pieceManager));
-        messagingAgents.add(new PieceConsumer(pieceManager, dataWorker));
-
-        Binding<Set<Object>> extraMessagingAgents = runtime.getInjector()
-                .getExistingBinding(Key.get(new TypeLiteral<Set<Object>>(){}, MessagingAgent.class));
-        if (extraMessagingAgents != null) {
-            messagingAgents.addAll(extraMessagingAgents.getProvider().get());
-        }
-
-        return new PeerWorkerFactory(messagingAgents);
+    private TorrentSessionParams getSessionParams() {
+        TorrentSessionParams params = new TorrentSessionParams();
+        params.setSelectionStrategy(pieceSelectionStrategy);
+        return params;
     }
 
     private ExecutorService getExecutor() {

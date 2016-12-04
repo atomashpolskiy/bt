@@ -7,15 +7,15 @@ import bt.torrent.Bitfield.PieceStatus;
  *
  * @since 1.0
  */
-class BitfieldBasedStatistics implements PieceStatistics {
+public class BitfieldBasedStatistics implements PieceStatistics {
 
     private int[] pieceTotals;
 
-    BitfieldBasedStatistics(int piecesTotal) {
+    public BitfieldBasedStatistics(int piecesTotal) {
         this.pieceTotals = new int[piecesTotal];
     }
 
-    void addBitfield(Bitfield bitfield) {
+    public void addBitfield(Bitfield bitfield) {
         validateBitfieldLength(bitfield);
 
         for (int i = 0; i < pieceTotals.length; i++) {
@@ -25,7 +25,7 @@ class BitfieldBasedStatistics implements PieceStatistics {
         }
     }
 
-    void removeBitfield(Bitfield bitfield) {
+    public void removeBitfield(Bitfield bitfield) {
         validateBitfieldLength(bitfield);
 
         for (int i = 0; i < pieceTotals.length; i++) {
@@ -42,7 +42,7 @@ class BitfieldBasedStatistics implements PieceStatistics {
         }
     }
 
-    void addPiece(Integer pieceIndex) {
+    public void addPiece(Integer pieceIndex) {
         pieceTotals[pieceIndex]++;
     }
 

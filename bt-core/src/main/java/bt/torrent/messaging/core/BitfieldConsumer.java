@@ -1,14 +1,14 @@
-package bt.torrent.messaging;
+package bt.torrent.messaging.core;
 
 import bt.protocol.Bitfield;
 import bt.protocol.Have;
-import bt.torrent.IPieceManager;
 import bt.torrent.annotation.Consumes;
+import bt.torrent.messaging.MessageContext;
 
 /**
  * Consumes peer bitfield.
  *
- * Note that the local bitfield is sent to a remote peer
+ * <p>Note that the local bitfield is sent to a remote peer
  * during the connection initialization sequence.
  *
  * @see bt.net.BitfieldConnectionHandler
@@ -16,9 +16,9 @@ import bt.torrent.annotation.Consumes;
  */
 public class BitfieldConsumer {
 
-    private IPieceManager pieceManager;
+    private PieceManager pieceManager;
 
-    public BitfieldConsumer(IPieceManager pieceManager) {
+    BitfieldConsumer(PieceManager pieceManager) {
         this.pieceManager = pieceManager;
     }
 

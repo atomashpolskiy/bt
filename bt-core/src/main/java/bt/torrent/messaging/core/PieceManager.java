@@ -1,8 +1,10 @@
-package bt.torrent;
+package bt.torrent.messaging.core;
 
 import bt.BtException;
 import bt.net.Peer;
+import bt.torrent.Bitfield;
 import bt.torrent.Bitfield.PieceStatus;
+import bt.torrent.PieceSelectionStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +15,7 @@ import java.util.function.Predicate;
  *<p><b>Note that this class implements a service.
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
-public class PieceManager implements IPieceManager {
+class PieceManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceManager.class);
 
@@ -32,14 +34,12 @@ public class PieceManager implements IPieceManager {
         this.selectionValidator = pieceIndex -> !assignments.getAssignee(pieceIndex).isPresent();
     }
 
-    @Override
     public Bitfield getBitfield() {
         return localBitfield;
     }
 
     // TODO: Check if peer has everything (i.e. is a seeder) and store him separately
     // this should help to improve performance of the next piece selection algorithm
-    @Override
     public void peerHasBitfield(Peer peer, Bitfield peerBitfield) {
         if (peerBitfield.getPiecesTotal() == localBitfield.getPiecesTotal()) {
             selector.addPeerBitfield(peer, peerBitfield);
@@ -49,18 +49,15 @@ public class PieceManager implements IPieceManager {
         }
     }
 
-    @Override
     public void peerHasPiece(Peer peer, Integer pieceIndex) {
         validatePieceIndex(pieceIndex);
         selector.addPeerPiece(peer, pieceIndex);
     }
 
-    @Override
     public boolean checkPieceCompleted(Integer pieceIndex) {
         return checkPieceCompleted(pieceIndex, false);
     }
 
-    @Override
     public boolean checkPieceVerified(Integer pieceIndex) {
         return checkPieceCompleted(pieceIndex, true);
     }
@@ -93,7 +90,6 @@ public class PieceManager implements IPieceManager {
         return completed;
     }
 
-    @Override
     public boolean mightSelectPieceForPeer(Peer peer) {
         if (assignments.getAssignedPiece(peer).isPresent()) {
             return false;
@@ -102,13 +98,11 @@ public class PieceManager implements IPieceManager {
         return piece.isPresent() && !assignments.getAssignee(piece.get()).isPresent();
     }
 
-    @Override
     public Optional<Integer> selectPieceForPeer(Peer peer) {
         Optional<Integer> assignedPiece = assignments.getAssignedPiece(peer);
         return assignedPiece.isPresent()? assignedPiece : selectAndAssignPiece(peer);
     }
 
-    @Override
     public void unselectPieceForPeer(Peer peer, Integer pieceIndex) {
         Integer assignedPieceIndex = assignments.getAssignedPiece(peer)
                 .orElseThrow(() -> new BtException("Peer " + peer + " is not assigned to any piece"));
@@ -119,7 +113,6 @@ public class PieceManager implements IPieceManager {
         selector.removePeerBitfield(peer);
     }
 
-    @Override
     public Optional<Integer> getAssignedPiece(Peer peer) {
         return assignments.getAssignedPiece(peer);
     }

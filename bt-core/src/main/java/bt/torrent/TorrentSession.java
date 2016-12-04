@@ -1,13 +1,14 @@
 package bt.torrent;
 
 import bt.metainfo.Torrent;
+import bt.net.PeerActivityListener;
 
 /**
  * Torrent processing session.
  *
  * @since 1.0
  */
-public interface TorrentSession {
+public interface TorrentSession extends PeerActivityListener {
 
     /**
      * @return Torrent, that this session is processing

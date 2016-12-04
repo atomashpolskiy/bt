@@ -1,4 +1,4 @@
-package bt.torrent;
+package bt.torrent.messaging.core;
 
 import bt.metainfo.TorrentId;
 import bt.net.IMessageDispatcher;
@@ -28,13 +28,13 @@ class TorrentWorker {
     private static final Logger LOGGER = LoggerFactory.getLogger(TorrentWorker.class);
 
     private TorrentId torrentId;
-    private IPieceManager pieceManager;
+    private PieceManager pieceManager;
     private IMessageDispatcher dispatcher;
 
     private IPeerWorkerFactory peerWorkerFactory;
     private ConcurrentMap<Peer, PieceAnnouncingPeerWorker> peerMap;
 
-    public TorrentWorker(TorrentId torrentId, IPieceManager pieceManager, IMessageDispatcher dispatcher,
+    public TorrentWorker(TorrentId torrentId, PieceManager pieceManager, IMessageDispatcher dispatcher,
                          IPeerWorkerFactory peerWorkerFactory) {
         this.torrentId = torrentId;
         this.pieceManager = pieceManager;

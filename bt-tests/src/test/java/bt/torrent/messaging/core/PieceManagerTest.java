@@ -1,10 +1,13 @@
-package bt.torrent;
+package bt.torrent.messaging.core;
 
 import bt.data.ChunkDescriptor;
 import bt.metainfo.TorrentId;
-import bt.net.PeerConnection;
 import bt.net.Peer;
+import bt.net.PeerConnection;
 import bt.protocol.Message;
+import bt.torrent.BaseBitfieldTest;
+import bt.torrent.Bitfield;
+import bt.torrent.RarestFirstSelectionStrategy;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -39,7 +42,7 @@ public class PieceManagerTest extends BaseBitfieldTest {
 
         List<ChunkDescriptor> chunks = Arrays.asList(chunkArray);
         Bitfield bitfield = new Bitfield(chunks);
-        IPieceManager pieceManager = new PieceManager(bitfield, RarestFirstSelectionStrategy.rarest());
+        PieceManager pieceManager = new PieceManager(bitfield, RarestFirstSelectionStrategy.rarest());
 
         // peer has piece #3
         Peer peer1 = mock(Peer.class);
@@ -87,7 +90,7 @@ public class PieceManagerTest extends BaseBitfieldTest {
         List<ChunkDescriptor> chunks = Arrays.asList(chunkArray);
         Bitfield bitfield = new Bitfield(chunks);
 
-        IPieceManager pieceManager = new PieceManager(bitfield, RarestFirstSelectionStrategy.rarest());
+        PieceManager pieceManager = new PieceManager(bitfield, RarestFirstSelectionStrategy.rarest());
         Peer peer = mock(Peer.class);
         assertExceptionWithMessage(
                 it -> {

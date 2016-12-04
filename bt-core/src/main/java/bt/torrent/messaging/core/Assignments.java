@@ -1,4 +1,4 @@
-package bt.torrent;
+package bt.torrent.messaging.core;
 
 import bt.net.Peer;
 
