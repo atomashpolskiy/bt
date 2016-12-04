@@ -50,6 +50,11 @@ public class ExclusiveRule implements Rule {
     private RequiredRule otherRequired;
     private Collection<Set<String>> exclusives;
 
+    /**
+     * @param exclusives Collection of sets of mutually exclusive attributes.
+     * @param required List of required attributes (in the order in which attributes should be checked).
+     * @since 1.0
+     */
     public ExclusiveRule(Collection<Set<String>> exclusives, List<String> required) {
 
         this.shouldCheckRequired = true;
@@ -69,6 +74,10 @@ public class ExclusiveRule implements Rule {
         this.exclusives = exclusives;
     }
 
+    /**
+     * @param exclusives Collection of sets of mutually exclusive attributes.
+     * @since 1.0
+     */
     public ExclusiveRule(Collection<Set<String>> exclusives) {
         this.exclusives = exclusives;
     }

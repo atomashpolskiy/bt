@@ -15,6 +15,10 @@ public class RequiredRule implements Rule {
 
     private List<String> requiredKeys;
 
+    /**
+     * @param requiredKeys List of required attributes (in the order in which attributes should be checked).
+     * @since 1.0
+     */
     public RequiredRule(List<String> requiredKeys) {
         this.requiredKeys = requiredKeys;
     }
