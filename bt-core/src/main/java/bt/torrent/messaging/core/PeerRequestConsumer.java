@@ -1,4 +1,4 @@
-package bt.torrent.messaging;
+package bt.torrent.messaging.core;
 
 import bt.BtException;
 import bt.net.Peer;
@@ -10,6 +10,8 @@ import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockRead;
 import bt.torrent.data.DataWorker;
+import bt.torrent.messaging.ConnectionState;
+import bt.torrent.messaging.MessageContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,14 +27,14 @@ import java.util.function.Consumer;
  *
  * @since 1.0
  */
-public class PeerRequestProcessor {
+public class PeerRequestConsumer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PeerRequestProcessor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PeerRequestConsumer.class);
 
     private DataWorker dataWorker;
     private Map<Peer, Queue<BlockRead>> completedRequests;
 
-    public PeerRequestProcessor(DataWorker dataWorker) {
+    PeerRequestConsumer(DataWorker dataWorker) {
         this.dataWorker = dataWorker;
         this.completedRequests = new ConcurrentHashMap<>();
     }

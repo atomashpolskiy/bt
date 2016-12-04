@@ -16,7 +16,6 @@ import bt.torrent.TorrentSessionParams;
 import bt.torrent.data.DataWorker;
 import bt.torrent.data.IDataWorkerFactory;
 import bt.torrent.messaging.IPeerWorkerFactory;
-import bt.torrent.messaging.PeerRequestProcessor;
 import bt.torrent.messaging.PeerWorkerFactory;
 import com.google.inject.Inject;
 
@@ -92,7 +91,7 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
         Set<Object> messagingAgents = new HashSet<>();
         messagingAgents.add(GenericConsumer.consumer());
         messagingAgents.add(new BitfieldConsumer(pieceManager));
-        messagingAgents.add(new PeerRequestProcessor(dataWorker));
+        messagingAgents.add(new PeerRequestConsumer(dataWorker));
         messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor().getChunkDescriptors(), pieceManager));
         messagingAgents.add(new PieceConsumer(pieceManager, dataWorker));
 
