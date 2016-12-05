@@ -6,6 +6,10 @@
 
 [Website](http://atomashpolskiy.github.io/bt/)
 
+[Introduction](http://atomashpolskiy.github.io/bt/intro/) (contains a brief overview of Bt design and components)
+
+[JavaDoc](http://atomashpolskiy.github.io/bt/javadoc/latest/) (based on the latest commit in _**master**_)
+
 [CLI Launcher](https://github.com/atomashpolskiy/bt/tree/master/bt-cli)
 
 ## What makes Bt stand out from the crowd
