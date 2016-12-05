@@ -166,7 +166,7 @@ By default the runtime is configured to startup and shutdown synchronously with 
 
 This is not always the desired behaviour. E.g. when implementing a "pause" button, the client should be stopped and then started again after a user event. In such case starting a new runtime each time the user clicks "resume" would be inefficient due to the time needed to parse the torrent file, verify the data that has been downloaded so far, announce to tracker, initialize peer connections, etc. That's why there is a dedicated method for turning this feature off:
 
-- [BtRuntimeBuilder#disableAutomaticShutdown](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtRuntimeBuilder.html#disableAutomaticShutdown--).
+- [BtRuntimeBuilder#disableAutomaticShutdown()](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtRuntimeBuilder.html#disableAutomaticShutdown--).
 
 Manual runtime shutdown is performed by calling [BtRuntime#shutdown()](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtRuntime.html#shutdown--). Behaviour is completely identical to the automatic mode: stopping all clients (if any of them are still executing), performing registered shutdown hooks, releasing resources, done.
 
