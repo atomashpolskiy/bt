@@ -32,6 +32,7 @@ class DefaultClient implements BtClient {
     private Optional<ScheduledFuture<?>> listenerFuture;
 
     private ExecutorService executor;
+    private ScheduledExecutorService listenerExecutor;
 
     /**
      * @since 1.0
@@ -43,6 +44,7 @@ class DefaultClient implements BtClient {
         this.future = Optional.empty();
         this.listener = Optional.empty();
         this.listenerFuture = Optional.empty();
+        this.listenerExecutor = Executors.newSingleThreadScheduledExecutor();
     }
 
     @Override
@@ -51,10 +53,8 @@ class DefaultClient implements BtClient {
             throw new BtException("Can't start -- already running");
         }
 
-        ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
-
         this.listener = Optional.of(listener);
-        this.listenerFuture = Optional.of(scheduledExecutor.scheduleAtFixedRate(
+        this.listenerFuture = Optional.of(listenerExecutor.scheduleAtFixedRate(
                 () -> listener.accept(session.getState()),
                 period, period, TimeUnit.MILLISECONDS));
 
@@ -90,8 +90,9 @@ class DefaultClient implements BtClient {
             }
         }, executor);
 
-        future.thenRun(() -> listener.ifPresent(listener -> listener.accept(session.getState())))
-                .thenRun(() -> listenerFuture.ifPresent(listener -> listener.cancel(true)));
+        future.whenComplete((r, t) -> listener.ifPresent(listener -> listener.accept(session.getState())))
+                .whenComplete((r, t) -> listenerFuture.ifPresent(listener -> listener.cancel(true)))
+                .whenComplete((r, t) -> listenerExecutor.shutdownNow());
 
         return future;
     }

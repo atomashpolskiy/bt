@@ -53,7 +53,7 @@ public class CliClient  {
                 if (!options.shouldSeedAfterDownloaded() && state.getPiecesRemaining() == 0) {
                     client.stop();
                 }
-            }, 1000).thenRun(runtime::shutdown).join();
+            }, 1000).join();
 
         } catch (Exception e) {
             // in case the start request to the tracker fails

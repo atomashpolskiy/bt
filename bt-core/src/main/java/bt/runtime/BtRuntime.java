@@ -1,8 +1,10 @@
 package bt.runtime;
 
+import bt.module.ClientExecutor;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IRuntimeLifecycleBinder.LifecycleEvent;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +62,7 @@ public class BtRuntime {
     private Injector injector;
     private Config config;
     private Set<BtClient> knownClients;
+    private ExecutorService clientExecutor;
     private AtomicBoolean started;
     private final Object lock;
 
@@ -74,6 +77,8 @@ public class BtRuntime {
         this.injector = injector;
         this.config = config;
         this.knownClients = ConcurrentHashMap.newKeySet();
+        this.clientExecutor = injector.getBinding(Key.get(ExecutorService.class, ClientExecutor.class))
+                .getProvider().get();
         this.started = new AtomicBoolean(false);
         this.lock = new Object();
     }
@@ -130,8 +135,23 @@ public class BtRuntime {
      *
      * @since 1.0
      */
-    public void registerClient(BtClient client) {
+    public void attachClient(BtClient client) {
         knownClients.add(client);
+    }
+
+    /**
+     * Detach the client from this runtime.
+     *
+     * @since 1.0
+     */
+    public void detachClient(BtClient client) {
+        if (knownClients.remove(client)) {
+            if (knownClients.isEmpty()) {
+                shutdown();
+            }
+        } else {
+            throw new IllegalArgumentException("Unknown client: " + client);
+        }
     }
 
     private void runHooks(LifecycleEvent event, Consumer<Throwable> errorConsumer) {
@@ -186,16 +206,19 @@ public class BtRuntime {
                             onShutdownHookError(description, e);
                         }
                     });
-                shutdownExecutor.shutdown();
-                try {
-                    shutdownExecutor.awaitTermination(config.getShutdownHookTimeout().toMillis(), TimeUnit.MILLISECONDS);
-                } catch (InterruptedException e) {
-                    // ignore
-                    shutdownExecutor.shutdownNow();
-                }
-                // TODO: replace this with @ClientExecutor shutdown call
-                // clientExecutor.shutdown();
+                shutdownExecutorService(shutdownExecutor);
+                shutdownExecutorService(clientExecutor);
             }
+        }
+    }
+
+    private void shutdownExecutorService(ExecutorService executor) {
+        executor.shutdown();
+        try {
+            executor.awaitTermination(config.getShutdownHookTimeout().toMillis(), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            // ignore
+            executor.shutdownNow();
         }
     }
 

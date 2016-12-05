@@ -44,12 +44,20 @@ class RuntimeAwareClient implements BtClient {
     }
 
     private void attachToRuntime() {
-        runtime.registerClient(this);
+        runtime.attachClient(this);
     }
 
     @Override
     public void stop() {
-        delegate.stop();
+        try {
+            delegate.stop();
+        } finally {
+            detachFromRuntime();
+        }
+    }
+
+    private void detachFromRuntime() {
+        runtime.detachClient(this);
     }
 
     @Override
