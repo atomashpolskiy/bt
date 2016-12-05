@@ -4,6 +4,8 @@ import bt.runtime.BtClient;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -20,6 +22,8 @@ import java.util.function.Consumer;
  * @since 1.0
  */
 class DefaultClient implements BtClient {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultClient.class);
 
     private TorrentDescriptor delegate;
     private TorrentSession session;
@@ -75,8 +79,13 @@ class DefaultClient implements BtClient {
             while (delegate.isActive()) {
                 try {
                     Thread.sleep(1000);
+                    if (session.getState().getPiecesRemaining() == 0) {
+                        delegate.complete();
+                    }
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
+                } catch (Throwable e) {
+                    LOGGER.warn("Unexpected error", e);
                 }
             }
         }, executor);
