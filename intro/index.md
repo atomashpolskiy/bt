@@ -59,21 +59,25 @@ Hence, there are two ways to create a Bt client:
 **1) Client with a private runtime**
 
 ```java
-Storage storage = new FileSystemStorage(getRootDirectory());
+Storage storage = new FileSystemStorage(/* target directory */);
 
-BtClient client = Bt.client(storage).url(getTorrentUrl()).standalone();
+BtClient client = Bt.client(storage).url(/* torrent file URL */).standalone();
+
 client.startAsync().join();
 ```
 
 **2) Client, attached to a shared runtime**
 
 ```java
-Storage storage = new FileSystemStorage(getRootDirectory());
+Storage storage = new FileSystemStorage(/* target directory */);
 
 BtRuntime sharedRuntime = BtRuntime.defaultRuntime();
 
-BtClient client1 = createClient(storage, getTorrentUrl1(), sharedRuntime);
-BtClient client2 = createClient(storage, getTorrentUrl2(), sharedRuntime);
+URL url1 = /* torrent file URL #1 */,
+    url2 = /* torrent file URL #2 */;
+
+BtClient client1 = Bt.client(storage).url(url1).attachToRuntime(sharedRuntime);
+BtClient client2 = Bt.client(storage).url(url2).attachToRuntime(sharedRuntime);
 
 CompletableFuture.allOf(client1.startAsync(), client2.startAsync()).join();
 ```
@@ -114,3 +118,18 @@ BtRuntime runtime = BtRuntime.builder().module(new HttpTrackerModule()).build();
 ```
 
 Peer exchange service is also turned off by default. Contribute _**bt.peerexchange.PeerExchangeModule**_ into runtime to enable peer sharing.
+
+# **Configuration**
+
+When it comes to configuration, Bt runtime provides reasonable defaults for most cases. However, you might still need to tweak some parameters, e.g. which network link to use, on which port to listen for incoming peer connections, etc. For such cases the runtime builder provides a handy method:
+
+```java
+Config config = new Config();
+config.setAcceptorAddress(/* network address */);
+config.setAcceptorPort(/* network port */);
+// tweak other parameters
+
+BtRuntime runtime = BtRuntime.builder(config).build();
+```
+
+See full list of configuration parameters on [Config](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/Config.html) page in the JavaDoc.
