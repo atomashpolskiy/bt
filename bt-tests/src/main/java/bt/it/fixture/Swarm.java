@@ -1,13 +1,13 @@
 package bt.it.fixture;
 
 import bt.BtException;
-import bt.runtime.BtRuntime;
-import bt.data.Storage;
-import bt.data.DataStatus;
 import bt.data.ChunkDescriptor;
 import bt.data.DataDescriptor;
+import bt.data.DataStatus;
 import bt.data.IDataDescriptorFactory;
+import bt.data.Storage;
 import bt.metainfo.Torrent;
+import bt.runtime.BtRuntime;
 import bt.runtime.Config;
 import bt.torrent.Bitfield;
 import org.junit.rules.ExternalResource;
@@ -196,8 +196,11 @@ public class Swarm extends ExternalResource {
         }
 
         private BtRuntime createPeerRuntime(int port) {
+            Config config = cloneConfig(this.config);
+            config.setAcceptorAddress(localhostAddress());
+            config.setAcceptorPort(port);
 
-            BtTestRuntimeBuilder runtimeBuilder = runtimeFactory.buildRuntime(config, localhostAddress(), port);
+            BtTestRuntimeBuilder runtimeBuilder = runtimeFactory.buildRuntime(config);
             features.forEach(runtimeBuilder::feature);
 
             if (withoutFiles) {
@@ -206,6 +209,10 @@ public class Swarm extends ExternalResource {
                                 binder.bind(IDataDescriptorFactory.class).to(MockDataDescriptorFactory.class)));
             }
             return runtimeBuilder.build();
+        }
+
+        private Config cloneConfig(Config config) {
+            return new Config(config);
         }
 
         protected static InetAddress localhostAddress() {

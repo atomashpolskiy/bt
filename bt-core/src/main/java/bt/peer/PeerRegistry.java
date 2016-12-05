@@ -3,13 +3,13 @@ package bt.peer;
 import bt.metainfo.Torrent;
 import bt.net.InetPeer;
 import bt.net.Peer;
-import bt.service.INetworkService;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdentityService;
 import bt.tracker.ITrackerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,15 +38,16 @@ public class PeerRegistry implements IPeerRegistry {
     private ConcurrentMap<Torrent, List<Consumer<Peer>>> peerConsumers;
 
     public PeerRegistry(IRuntimeLifecycleBinder lifecycleBinder,
-                        INetworkService networkService,
                         IdentityService idService,
                         ITrackerService trackerService,
                         Set<PeerSourceFactory> extraPeerSourceFactories,
+                        InetAddress localPeerAddress,
+                        int localPeerPort,
                         Duration peerDiscoveryInterval,
                         Duration trackerQueryInterval) {
 
         this.peerConsumers = new ConcurrentHashMap<>();
-        this.localPeer = new InetPeer(networkService.getInetAddress(), networkService.getPort(), idService.getLocalPeerId());
+        this.localPeer = new InetPeer(localPeerAddress, localPeerPort, idService.getLocalPeerId());
 
         this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, trackerQueryInterval);
         this.extraPeerSourceFactories = extraPeerSourceFactories;

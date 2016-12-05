@@ -4,7 +4,6 @@ import bt.runtime.BtRuntime;
 import bt.runtime.Config;
 import org.junit.rules.ExternalResource;
 
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,8 +15,8 @@ public class BtTestRuntimeFactory extends ExternalResource {
         knownRuntimes = new ArrayList<>();
     }
 
-    public BtTestRuntimeBuilder buildRuntime(Config config, InetAddress address, int port) {
-        return new BtTestRuntimeBuilder(config, address, port) {
+    public BtTestRuntimeBuilder buildRuntime(Config config) {
+        return new BtTestRuntimeBuilder(config) {
             @Override
             public BtRuntime build() {
                 BtRuntime runtime = super.build();

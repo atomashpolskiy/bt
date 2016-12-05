@@ -6,7 +6,6 @@ import bt.module.BitTorrentProtocol;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 import bt.runtime.Config;
-import bt.service.INetworkService;
 import bt.service.IRuntimeLifecycleBinder;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
@@ -57,15 +56,15 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private Duration peerConnectionInactivityThreshold;
 
     @Inject
-    public PeerConnectionPool(INetworkService networkService,
-                              @BitTorrentProtocol MessageHandler<Message> messageHandler,
+    public PeerConnectionPool(@BitTorrentProtocol MessageHandler<Message> messageHandler,
                               IConnectionHandlerFactory connectionHandlerFactory,
                               IRuntimeLifecycleBinder lifecycleBinder,
                               Config config) {
 
         this.config = config;
 
-        SocketChannelFactory socketChannelFactory = new SocketChannelFactory(networkService);
+        SocketChannelFactory socketChannelFactory =
+                new SocketChannelFactory(config.getAcceptorAddress(), config.getAcceptorPort());
         this.connectionFactory = new PeerConnectionFactory(messageHandler,
                 socketChannelFactory, config.getMaxTransferBlockSize());
 

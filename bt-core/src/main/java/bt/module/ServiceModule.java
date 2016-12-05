@@ -15,18 +15,16 @@ import bt.runtime.Config;
 import bt.service.ApplicationService;
 import bt.service.ClasspathApplicationService;
 import bt.service.ExecutorServiceProvider;
-import bt.service.INetworkService;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdentityService;
-import bt.service.NetworkService;
 import bt.service.RuntimeLifecycleBinder;
 import bt.service.VersionAwareIdentityService;
 import bt.torrent.AdhocTorrentRegistry;
 import bt.torrent.ITorrentSessionFactory;
 import bt.torrent.TorrentRegistry;
-import bt.torrent.messaging.core.TorrentSessionFactory;
 import bt.torrent.data.DataWorkerFactory;
 import bt.torrent.data.IDataWorkerFactory;
+import bt.torrent.messaging.core.TorrentSessionFactory;
 import bt.tracker.ITrackerService;
 import bt.tracker.TrackerFactory;
 import bt.tracker.TrackerService;
@@ -94,10 +92,9 @@ public class ServiceModule implements Module {
         ServiceModule.contributePeerSourceFactory(binder);
         ServiceModule.contributeTrackerFactory(binder);
 
-        binder.bind(Config.class).in(Singleton.class);
+        binder.bind(Config.class).toInstance(config);
 
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
-        binder.bind(INetworkService.class).to(NetworkService.class).in(Singleton.class);
         binder.bind(ApplicationService.class).to(ClasspathApplicationService.class).in(Singleton.class);
         binder.bind(IdentityService.class).to(VersionAwareIdentityService.class).in(Singleton.class);
         binder.bind(ITrackerService.class).to(TrackerService.class).in(Singleton.class);
@@ -129,11 +126,12 @@ public class ServiceModule implements Module {
     @Provides
     @Singleton
     public IPeerRegistry providePeerRegistry(IRuntimeLifecycleBinder lifecycleBinder,
-                                             INetworkService networkService,
                                              IdentityService idService,
                                              ITrackerService trackerService,
                                              Set<PeerSourceFactory> peerSourceFactories) {
-        return new PeerRegistry(lifecycleBinder, networkService, idService, trackerService,
-                peerSourceFactories, config.getPeerDiscoveryInterval(), config.getTrackerQueryInterval());
+        return new PeerRegistry(
+                lifecycleBinder, idService, trackerService, peerSourceFactories,
+                config.getAcceptorAddress(), config.getAcceptorPort(),
+                config.getPeerDiscoveryInterval(), config.getTrackerQueryInterval());
     }
 }

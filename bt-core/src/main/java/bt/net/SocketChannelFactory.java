@@ -1,7 +1,5 @@
 package bt.net;
 
-import bt.service.INetworkService;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -16,7 +14,9 @@ import java.nio.channels.spi.SelectorProvider;
  */
 class SocketChannelFactory {
 
-    private INetworkService networkService;
+    private InetAddress localAddress;
+    private int localPort;
+
     private SelectorProvider selector;
     private volatile ServerSocketChannel incomingChannel;
     private final Object lock;
@@ -24,8 +24,9 @@ class SocketChannelFactory {
     /**
      * @since 1.0
      */
-    public SocketChannelFactory(INetworkService networkService) {
-        this.networkService = networkService;
+    public SocketChannelFactory(InetAddress localAddress, int localPort) {
+        this.localAddress = localAddress;
+        this.localPort = localPort;
         this.selector = SelectorProvider.provider();
         this.lock = new Object();
     }
@@ -55,8 +56,7 @@ class SocketChannelFactory {
         if (incomingChannel == null) {
             synchronized (lock) {
                 if (incomingChannel == null) {
-                    SocketAddress localAddress = new InetSocketAddress(
-                            networkService.getInetAddress(), networkService.getPort());
+                    SocketAddress localAddress = new InetSocketAddress(this.localAddress, localPort);
                     ServerSocketChannel serverSocketChannel = selector.openServerSocketChannel();
                     serverSocketChannel.bind(localAddress);
                     this.incomingChannel = serverSocketChannel;

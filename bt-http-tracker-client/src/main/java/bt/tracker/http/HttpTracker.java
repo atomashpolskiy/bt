@@ -2,9 +2,9 @@ package bt.tracker.http;
 
 import bt.BtException;
 import bt.metainfo.Torrent;
+import bt.net.Peer;
+import bt.peer.IPeerRegistry;
 import bt.service.IdentityService;
-import bt.service.INetworkService;
-import bt.service.NetworkService;
 import bt.tracker.SecretKey;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
@@ -40,7 +40,7 @@ public class HttpTracker implements Tracker {
 
     private URI baseUri;
     private IdentityService idService;
-    private INetworkService networkService;
+    private IPeerRegistry peerRegistry;
     private HttpClient httpClient;
     private CommonsHttpResponseHandler httpResponseHandler;
 
@@ -51,7 +51,7 @@ public class HttpTracker implements Tracker {
      * @param idService Identity service
      * @since 1.0
      */
-    public HttpTracker(String trackerUrl, IdentityService idService) {
+    public HttpTracker(String trackerUrl, IdentityService idService, IPeerRegistry peerRegistry) {
         try {
             this.baseUri = new URI(trackerUrl);
         } catch (URISyntaxException e) {
@@ -59,7 +59,7 @@ public class HttpTracker implements Tracker {
         }
 
         this.idService = idService;
-        this.networkService = new NetworkService();
+        this.peerRegistry = peerRegistry;
         this.httpClient = HttpClients.createMinimal();
         this.httpResponseHandler = new CommonsHttpResponseHandler(new bt.tracker.http.HttpResponseHandler());
 
@@ -130,13 +130,14 @@ public class HttpTracker implements Tracker {
         buf.append("&peer_id=");
         buf.append(urlEncode(idService.getLocalPeerId().getBytes()));
 
-        InetAddress inetAddress = networkService.getInetAddress();
+        Peer peer = peerRegistry.getLocalPeer();
+        InetAddress inetAddress = peer.getInetAddress();
         if (inetAddress != null) {
             buf.append("&ip=");
             buf.append(inetAddress.getHostAddress());
         }
 
-        int port = networkService.getPort();
+        int port = peer.getPort();
         buf.append("&port=");
         buf.append(port);
 

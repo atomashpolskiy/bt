@@ -1,5 +1,8 @@
 package bt.runtime;
 
+import bt.service.NetworkUtil;
+
+import java.net.InetAddress;
 import java.time.Duration;
 
 /**
@@ -9,10 +12,12 @@ import java.time.Duration;
  */
 public class Config {
 
+    private InetAddress acceptorAddress;
+    private int acceptorPort;
     private Duration peerDiscoveryInterval;
     private Duration peerHandshakeTimeout;
     private Duration peerConnectionRetryInterval;
-    private Duration peerConnectionRetryCount;
+    private int peerConnectionRetryCount;
     private Duration peerConnectionTimeout;
     private Duration peerConnectionInactivityThreshold;
     private Duration trackerQueryInterval;
@@ -23,8 +28,18 @@ public class Config {
     private int maxIOQueueSize;
     private Duration shutdownHookTimeout;
 
+    /**
+     * Create a config with default parameters.
+     *
+     * @since 1.0
+     */
     public Config() {
+        this.acceptorAddress = NetworkUtil.getInetAddressFromNetworkInterfaces();
+        this.acceptorPort = 6891;
         this.peerDiscoveryInterval = Duration.ofSeconds(5);
+        this.peerConnectionRetryInterval = Duration.ofMinutes(5);
+        this.peerConnectionRetryCount = 3;
+        this.peerConnectionTimeout = Duration.ofSeconds(30);
         this.peerHandshakeTimeout = Duration.ofSeconds(3);
         this.peerConnectionInactivityThreshold = Duration.ofMinutes(3);
         this.trackerQueryInterval = Duration.ofMinutes(5);
@@ -34,6 +49,60 @@ public class Config {
         this.maxTransferBlockSize = 2 << 16; // 128 KB
         this.maxIOQueueSize = 1000;
         this.shutdownHookTimeout = Duration.ofSeconds(5);
+    }
+
+    /**
+     * Clone the provided config.
+     *
+     * @param config Config to take parameters from.
+     * @since 1.0
+     */
+    public Config(Config config) {
+        this.acceptorAddress = config.getAcceptorAddress();
+        this.acceptorPort = config.getAcceptorPort();
+        this.peerDiscoveryInterval = config.getPeerDiscoveryInterval();
+        this.peerConnectionRetryInterval = config.getPeerConnectionRetryInterval();
+        this.peerConnectionRetryCount = config.getPeerConnectionRetryCount();
+        this.peerConnectionTimeout = config.getPeerConnectionTimeout();
+        this.peerHandshakeTimeout = config.getPeerHandshakeTimeout();
+        this.peerConnectionInactivityThreshold = config.getPeerConnectionInactivityThreshold();
+        this.trackerQueryInterval = config.getTrackerQueryInterval();
+        this.maxPeerConnections = config.getMaxPeerConnections();
+        this.maxPeerConnectionsPerTorrent = config.getMaxPeerConnectionsPerTorrent();
+        this.transferBlockSize = config.getTransferBlockSize();
+        this.maxTransferBlockSize = config.getMaxTransferBlockSize();
+        this.maxIOQueueSize = config.getMaxIOQueueSize();
+        this.shutdownHookTimeout = config.getShutdownHookTimeout();
+    }
+
+    /**
+     * @param acceptorAddress Local link that will be used by the incoming connection acceptor.
+     * @since 1.0
+     */
+    public void setAcceptorAddress(InetAddress acceptorAddress) {
+        this.acceptorAddress = acceptorAddress;
+    }
+
+    /**
+     * @since 1.0
+     */
+    public InetAddress getAcceptorAddress() {
+        return acceptorAddress;
+    }
+
+    /**
+     * @param acceptorPort Local port that will be used by the incoming connection acceptor.
+     * @since 1.0
+     */
+    public void setAcceptorPort(int acceptorPort) {
+        this.acceptorPort = acceptorPort;
+    }
+
+    /**
+     * @since 1.0
+     */
+    public int getAcceptorPort() {
+        return acceptorPort;
     }
 
     /**
@@ -85,14 +154,14 @@ public class Config {
      * @param peerConnectionRetryCount Max number of attempts to connect to a peer
      * @since 1.0
      */
-    public void setPeerConnectionRetryCount(Duration peerConnectionRetryCount) {
+    public void setPeerConnectionRetryCount(int peerConnectionRetryCount) {
         this.peerConnectionRetryCount = peerConnectionRetryCount;
     }
 
     /**
      * @since 1.0
      */
-    public Duration getPeerConnectionRetryCount() {
+    public int getPeerConnectionRetryCount() {
         return peerConnectionRetryCount;
     }
 
