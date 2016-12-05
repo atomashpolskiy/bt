@@ -6,7 +6,7 @@
 
 [Website](http://atomashpolskiy.github.io/bt/)
 
-[Introduction](http://atomashpolskiy.github.io/bt/intro/) (contains a brief overview of Bt design and components)
+[Introduction](http://atomashpolskiy.github.io/bt/intro/) (contains a brief overview of **Bt** design and components)
 
 [JavaDoc](http://atomashpolskiy.github.io/bt/javadoc/latest/) (based on the latest commit in _**master**_)
 
