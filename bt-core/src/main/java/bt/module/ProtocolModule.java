@@ -89,16 +89,6 @@ public class ProtocolModule implements Module {
         return Multibinder.newSetBinder(binder, HandshakeHandler.class);
     }
 
-    private Config config;
-
-    public ProtocolModule() {
-        this.config = new Config();
-    }
-
-    public ProtocolModule(Config config) {
-        this.config = config;
-    }
-
     @Override
     public void configure(Binder binder) {
 
@@ -130,7 +120,8 @@ public class ProtocolModule implements Module {
                                                                      TorrentRegistry torrentRegistry,
                                                                      Set<ConnectionHandler> connectionHandlers,
                                                                      Set<HandshakeHandler> handshakeHandlers,
-                                                                     ExtendedHandshakeProvider extendedHandshakeProvider) {
+                                                                     ExtendedHandshakeProvider extendedHandshakeProvider,
+                                                                     Config config) {
 
         List<ConnectionHandler> connectionHandlerList = new ArrayList<>(connectionHandlers);
         // add default connection handlers to the end of the connection handling chain

@@ -30,7 +30,7 @@ public class BtRuntimeBuilder {
         this.modules = new HashMap<>();
         // default modules
         this.modules.put(ServiceModule.class, new ServiceModule(config));
-        this.modules.put(ProtocolModule.class, new ProtocolModule(config));
+        this.modules.put(ProtocolModule.class, new ProtocolModule());
     }
 
     /**
