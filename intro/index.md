@@ -133,3 +133,41 @@ BtRuntime runtime = BtRuntime.builder(config).build();
 ```
 
 See full list of configuration parameters on [Config](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/Config.html) page in the JavaDoc.
+
+# **Client lifecycle**
+
+## _**Startup**_
+
+There are two methods for starting the torrent session in [BtClient](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtClient.html):
+
+- [BtClient#startAsync()](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtClient.html#startAsync--)
+
+- [BtClient#startAsync(Consumer<TorrentSessionState>, long)](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtClient.html#startAsync-java.util.function.Consumer-long-)
+
+The no-argument method will just begin the torrent processing. The overloaded version will also launch a scheduled future, that will be calling the provided listener with current session state at a given interval. [Session state](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/torrent/TorrentSessionState.html) contains some useful information, e.g. a list of connected peers, download progress and such, so it might be a good idea to inspect it from time to time. E.g. the [CLI client](https://github.com/atomashpolskiy/bt/tree/master/bt-cli) uses session state to determine whether it should stop:
+
+```java
+client.startAsync(state -> {
+    if (!options.shouldSeedAfterDownloaded() && state.getPiecesRemaining() == 0) {
+        client.stop();
+    }
+}, 1000).join();
+```
+
+Both methods return a [CompletableFuture<Void>](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html), which provides the most natural way for co-ordinating multiple torrent sessions. Run in parallel? Sequentially? Custom processing chain? All is possible via standard Java API.
+
+## _**Shutdown**_
+
+Stopping the client is as easy as calling [BtClient#stop()](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtClient.html#stop--).
+
+## _**Interconnection between runtime and its' clients**_
+
+By default the runtime is configured to startup and shutdown synchronously with the client. 
+
+This is not always the desired behaviour. E.g. when implementing a "pause" button, the client should be stopped and then started again after a user event. In such case starting a new runtime each time the user clicks "resume" would be inefficient due to the time needed to parse the torrent file, verify the data that has been downloaded so far, announce to tracker, initialize peer connections, etc. That's why there is a dedicated method for turning this feature off:
+
+- [BtRuntimeBuilder#disableAutomaticShutdown()](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtRuntimeBuilder.html#disableAutomaticShutdown--).
+
+Manual runtime shutdown is performed by calling [BtRuntime#shutdown()](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtRuntime.html#shutdown--). Behaviour is completely identical to the automatic mode: stopping all clients (if any of them are still executing), performing registered shutdown hooks, releasing resources, done.
+
+Everything stated above also applies when the runtime is shared among several clients (multiple simultaneous torrent sessions). With the only difference that this time runtime fires up when _any_ of the clients is started and shutdowns when _all_ of the clients are finished (unless automatic shutdown is disabled like in the single client case).
