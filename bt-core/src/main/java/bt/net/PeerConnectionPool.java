@@ -355,7 +355,11 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             listenerLock.readLock().lock();
             try {
                 for (PeerActivityListener listener : connectionListeners) {
-                    listener.onPeerConnected(newConnection.getTorrentId(), newConnection.getRemotePeer());
+                    try {
+                        listener.onPeerConnected(newConnection.getTorrentId(), newConnection.getRemotePeer());
+                    } catch (Exception e) {
+                        // ignore
+                    }
                 }
             } finally {
                 listenerLock.readLock().unlock();
@@ -371,7 +375,11 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 purged.closeQuietly();
             }
             for (PeerActivityListener listener : connectionListeners) {
-                listener.onPeerDisconnected(peer);
+                try {
+                    listener.onPeerDisconnected(purged.getTorrentId(), peer);
+                } catch (Exception e) {
+                    // ignore
+                }
             }
         }
     }

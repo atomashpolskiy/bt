@@ -84,7 +84,7 @@ class DefaultTorrentSession implements TorrentSession {
     }
 
     @Override
-    public void onPeerDisconnected(Peer peer) {
+    public void onPeerDisconnected(TorrentId torrentId, Peer peer) {
         worker.removePeer(peer);
     }
 

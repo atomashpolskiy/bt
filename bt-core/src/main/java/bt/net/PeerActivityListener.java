@@ -32,8 +32,10 @@ public interface PeerActivityListener {
     /**
      * Invoked when a peer connection is dropped.
      *
+     * @param torrentId ID of a torrent, that this peer
+     *                  was interested in sharing or downloading
      * @param peer Remote peer
      * @since 1.0
      */
-    void onPeerDisconnected(Peer peer);
+    void onPeerDisconnected(TorrentId torrentId, Peer peer);
 }

@@ -6,11 +6,11 @@ import bt.metainfo.TorrentId;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
 import bt.net.PeerActivityListener;
+import bt.peer.PeerSource;
+import bt.peer.PeerSourceFactory;
 import bt.protocol.Message;
 import bt.protocol.extended.ExtendedHandshake;
 import bt.service.IRuntimeLifecycleBinder;
-import bt.peer.PeerSource;
-import bt.peer.PeerSourceFactory;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.messaging.MessageContext;
@@ -23,8 +23,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -45,7 +45,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
 
     private Map<TorrentId, PeerExchangePeerSource> peerSources;
 
-    private BlockingQueue<PeerEvent> peerEvents;
+    private Map<TorrentId, Queue<PeerEvent>> peerEvents;
     private ReentrantReadWriteLock rwLock;
 
     private Set<Peer> peers;
@@ -60,7 +60,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
                                          IRuntimeLifecycleBinder lifecycleBinder,
                                          PeerExchangeConfig config) {
         this.peerSources = new ConcurrentHashMap<>();
-        this.peerEvents = new PriorityBlockingQueue<>();
+        this.peerEvents = new ConcurrentHashMap<>();
         this.rwLock = new ReentrantReadWriteLock();
         this.peers = ConcurrentHashMap.newKeySet();
         this.lastSentPEXMessage = new ConcurrentHashMap<>();
@@ -86,16 +86,28 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
 
             @Override
             public void onPeerConnected(TorrentId torrentId, Peer peer) {
-                peerEvents.add(PeerEvent.added(peer));
+                getPeerEvents(torrentId).add(PeerEvent.added(peer));
             }
 
             @Override
-            public void onPeerDisconnected(Peer peer) {
-                peerEvents.add(PeerEvent.dropped(peer));
+            public void onPeerDisconnected(TorrentId torrentId, Peer peer) {
+                getPeerEvents(torrentId).add(PeerEvent.dropped(peer));
                 peers.remove(peer);
                 lastSentPEXMessage.remove(peer);
             }
         };
+    }
+
+    private Queue<PeerEvent> getPeerEvents(TorrentId torrentId) {
+        Queue<PeerEvent> events = peerEvents.get(torrentId);
+        if (events == null) {
+            events = new PriorityBlockingQueue<>();
+            Queue<PeerEvent> existing = peerEvents.putIfAbsent(torrentId, events);
+            if (existing != null) {
+                events = existing;
+            }
+        }
+        return events;
     }
 
     @Override
@@ -142,7 +154,8 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
 
             rwLock.readLock().lock();
             try {
-                for (PeerEvent event : peerEvents) {
+                Queue<PeerEvent> torrentPeerEvents = getPeerEvents(messageContext.getTorrentId().get());
+                for (PeerEvent event : torrentPeerEvents) {
                     if (event.getInstant() - lastSentPEXMessageToPeer >= 0) {
                         events.add(event);
                     }
@@ -191,8 +204,10 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
                 }
 
                 PeerEvent event;
-                while ((event = peerEvents.peek()) != null && event.getInstant() <= lruEventTime) {
-                    peerEvents.poll();
+                for (Queue<PeerEvent> events : peerEvents.values()) {
+                    while ((event = events.peek()) != null && event.getInstant() <= lruEventTime) {
+                        events.poll();
+                    }
                 }
 
                 if (LOGGER.isTraceEnabled()) {
