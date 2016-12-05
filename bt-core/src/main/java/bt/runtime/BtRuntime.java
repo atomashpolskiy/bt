@@ -66,6 +66,8 @@ public class BtRuntime {
     private AtomicBoolean started;
     private final Object lock;
 
+    private boolean manualShutdownOnly;
+
     BtRuntime(Injector injector, Config config) {
         Runtime.getRuntime().addShutdownHook(new Thread("bt.runtime.shutdown-manager") {
             @Override
@@ -81,6 +83,15 @@ public class BtRuntime {
                 .getProvider().get();
         this.started = new AtomicBoolean(false);
         this.lock = new Object();
+    }
+
+    /**
+     * Disable automatic runtime shutdown, when all clients have been stopped.
+     *
+     * @since 1.0
+     */
+    void disableAutomaticShutdown() {
+        this.manualShutdownOnly = true;
     }
 
     /**
@@ -146,7 +157,7 @@ public class BtRuntime {
      */
     public void detachClient(BtClient client) {
         if (knownClients.remove(client)) {
-            if (knownClients.isEmpty()) {
+            if (!manualShutdownOnly && knownClients.isEmpty()) {
                 shutdown();
             }
         } else {

@@ -25,6 +25,8 @@ public class BtRuntimeBuilder {
     private Map<Class<? extends Module>, Module> modules;
     private List<Module> adapters;
 
+    private boolean shouldDisableAutomaticShutdown;
+
     BtRuntimeBuilder(Config config) {
         this.config = config;
         this.modules = new HashMap<>();
@@ -48,10 +50,24 @@ public class BtRuntimeBuilder {
     }
 
     /**
+     * Disable automatic runtime shutdown, when all clients have been stopped.
+     *
+     * @since 1.0
+     */
+    public BtRuntimeBuilder disableAutomaticShutdown() {
+        this.shouldDisableAutomaticShutdown = true;
+        return this;
+    }
+
+    /**
      * @since 1.0
      */
     public BtRuntime build() {
-        return new BtRuntime(createInjector(), config);
+        BtRuntime runtime = new BtRuntime(createInjector(), config);
+        if (shouldDisableAutomaticShutdown) {
+            runtime.disableAutomaticShutdown();
+        }
+        return runtime;
     }
 
     private Injector createInjector() {
