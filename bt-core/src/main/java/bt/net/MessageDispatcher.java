@@ -98,14 +98,11 @@ public class MessageDispatcher implements IMessageDispatcher {
                             }
 
                             if (message != null) {
-                                Iterator<Consumer<Message>> messageConsumers = consumers.iterator();
-                                while (messageConsumers.hasNext()) {
-                                    Consumer<Message> messageConsumer = messageConsumers.next();
+                                for (Consumer<Message> messageConsumer : consumers) {
                                     try {
                                         messageConsumer.accept(message);
                                     } catch (Exception e) {
                                         LOGGER.warn("Error in message consumer", e);
-                                        messageConsumers.remove();
                                     }
                                 }
                             }
@@ -124,15 +121,12 @@ public class MessageDispatcher implements IMessageDispatcher {
                         PeerConnection connection = pool.getConnection(peer);
                         if (connection != null) {
 
-                            Iterator<Supplier<Message>> messageSuppliers = suppliers.iterator();
-                            while (messageSuppliers.hasNext()) {
-                                Supplier<Message> messageSupplier = messageSuppliers.next();
+                            for (Supplier<Message> messageSupplier : suppliers) {
                                 Message message = null;
                                 try {
                                     message = messageSupplier.get();
                                 } catch (Exception e) {
                                     LOGGER.warn("Error in message supplier", e);
-                                    messageSuppliers.remove();
                                 }
 
                                 if (message != null) {
