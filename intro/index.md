@@ -35,7 +35,7 @@ This will package Bt artifacts and install them to your local .m2 repository. Th
  
 Bt CLI client is a very simple program for downloading/seeding a single torrent. It illustrates the most basic use case of Bt library.
 
-See [usage notes](https://github.com/atomashpolskiy/bt/tree/master/bt-cli) and explore the [CliClient#runWithOptions()](https://github.com/atomashpolskiy/bt/blob/master/bt-cli/src/main/java/bt/cli/CliClient.java) method for an example of assembling a basic Bt client.
+See [usage notes](https://github.com/atomashpolskiy/bt/tree/master/bt-cli) and explore the [CliClient](https://github.com/atomashpolskiy/bt/blob/master/bt-cli/src/main/java/bt/cli/CliClient.java) class for an example of assembling a basic Bt client.
 
 # **Overall design**
 
@@ -164,7 +164,7 @@ Stopping the client is as easy as calling [BtClient#stop()](http://atomashpolski
 
 By default the runtime is configured to startup and shutdown synchronously with the client. 
 
-This is not always the desired behaviour. E.g. when implementing a "pause" button, the client should be stopped and then started again after a user event. In such case starting a new runtime each time the user clicks "resume" would be inefficient due to the time needed to parse the torrent file, verify the data that has been downloaded so far, announce to tracker, initialize peer connections, etc. That's why there is a dedicated method for turning this feature off:
+This is not always the desired behaviour. E.g. when implementing a "pause" button, the client should be stopped and then started again after a user event. In such case creating and starting a new runtime each time the user clicks "resume" would be inefficient. That's why there is a dedicated method for turning this feature off:
 
 - [BtRuntimeBuilder#disableAutomaticShutdown()](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtRuntimeBuilder.html#disableAutomaticShutdown--).
 
