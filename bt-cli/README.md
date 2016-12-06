@@ -30,4 +30,5 @@ $ java -jar target/bt-launcher.jar --file /path/to/torrent --dir /save/to/here -
 ### Key bindings
 
 `Press 'p' to pause/resume` _(GUI will "freeze" when paused)_
+
 `Ctrl-C to quit`
