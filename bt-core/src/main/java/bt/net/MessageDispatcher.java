@@ -1,7 +1,10 @@
 package bt.net;
 
+import bt.metainfo.Torrent;
 import bt.protocol.Message;
 import bt.service.IRuntimeLifecycleBinder;
+import bt.torrent.TorrentDescriptor;
+import bt.torrent.TorrentRegistry;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,11 +12,10 @@ import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Queue;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -33,15 +35,16 @@ public class MessageDispatcher implements IMessageDispatcher {
     private final Map<Peer, Collection<Consumer<Message>>> consumers;
     private final Map<Peer, Collection<Supplier<Message>>> suppliers;
 
-    private Queue<Peer> disconnectedPeers;
+    private TorrentRegistry torrentRegistry;
 
     @Inject
-    public MessageDispatcher(IRuntimeLifecycleBinder lifecycleBinder, IPeerConnectionPool pool) {
+    public MessageDispatcher(IRuntimeLifecycleBinder lifecycleBinder,
+                             IPeerConnectionPool pool,
+                             TorrentRegistry torrentRegistry) {
 
-        consumers = new ConcurrentHashMap<>();
-        suppliers = new ConcurrentHashMap<>();
-
-        disconnectedPeers = new LinkedBlockingQueue<>();
+        this.consumers = new ConcurrentHashMap<>();
+        this.suppliers = new ConcurrentHashMap<>();
+        this.torrentRegistry = torrentRegistry;
 
         ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.net.message-dispatcher"));
         Worker worker = new Worker(pool);
@@ -69,14 +72,7 @@ public class MessageDispatcher implements IMessageDispatcher {
 
         @Override
         public void run() {
-
             while (!shutdown) {
-
-                Peer disconnectedPeer;
-                while ((disconnectedPeer = disconnectedPeers.poll()) != null) {
-                    removePeer(disconnectedPeer);
-                }
-
                 if (!consumers.isEmpty()) {
                     Iterator<Map.Entry<Peer, Collection<Consumer<Message>>>> iter = consumers.entrySet().iterator();
                     while (iter.hasNext()) {
@@ -86,7 +82,15 @@ public class MessageDispatcher implements IMessageDispatcher {
                         Collection<Consumer<Message>> consumers = entry.getValue();
 
                         PeerConnection connection = pool.getConnection(peer);
-                        if (connection != null) {
+                        if (connection != null && !connection.isClosed()) {
+
+                            Optional<Torrent> torrent = torrentRegistry.getTorrent(connection.getTorrentId());
+                            if (torrent.isPresent()) {
+                                Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrent.get());
+                                if (descriptor.isPresent() && !descriptor.get().isActive()) {
+                                    continue;
+                                }
+                            }
 
                             Message message = null;
                             try {
@@ -106,6 +110,9 @@ public class MessageDispatcher implements IMessageDispatcher {
                                     }
                                 }
                             }
+                        } else {
+                            iter.remove();
+                            suppliers.remove(peer);
                         }
                     }
                 }
@@ -119,7 +126,15 @@ public class MessageDispatcher implements IMessageDispatcher {
                         Collection<Supplier<Message>> suppliers = entry.getValue();
 
                         PeerConnection connection = pool.getConnection(peer);
-                        if (connection != null) {
+                        if (connection != null && !connection.isClosed()) {
+
+                            Optional<Torrent> torrent = torrentRegistry.getTorrent(connection.getTorrentId());
+                            if (torrent.isPresent()) {
+                                Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrent.get());
+                                if (descriptor.isPresent() && !descriptor.get().isActive()) {
+                                    continue;
+                                }
+                            }
 
                             for (Supplier<Message> messageSupplier : suppliers) {
                                 Message message = null;
@@ -139,6 +154,9 @@ public class MessageDispatcher implements IMessageDispatcher {
                                     }
                                 }
                             }
+                        } else {
+                            iter.remove();
+                            consumers.remove(peer);
                         }
                     }
                 }
@@ -157,11 +175,6 @@ public class MessageDispatcher implements IMessageDispatcher {
         public void shutdown() {
             shutdown = true;
         }
-    }
-
-    private void removePeer(Peer peer) {
-        consumers.remove(peer);
-        suppliers.remove(peer);
     }
 
     @Override

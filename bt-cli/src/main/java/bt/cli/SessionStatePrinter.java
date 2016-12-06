@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Set;
 
 public class SessionStatePrinter {
@@ -29,10 +30,9 @@ public class SessionStatePrinter {
 
     private static final String WHITESPACES = "\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020";
 
-    public static SessionStatePrinter createKeyInputAwarePrinter(Torrent torrent) {
-
+    public static SessionStatePrinter createKeyInputAwarePrinter(Torrent torrent,
+                                                                 Collection<KeyStrokeBinding> bindings) {
         return new SessionStatePrinter(torrent) {
-
             private Thread t;
 
             {
@@ -44,6 +44,12 @@ public class SessionStatePrinter {
                                     && keyStroke.getCharacter().equals('c')) {
                                 shutdown();
                                 System.exit(0);
+                            } else {
+                                bindings.forEach(binding -> {
+                                    if (keyStroke.equals(binding.getKeyStroke())) {
+                                        binding.getBinding().run();
+                                    }
+                                });
                             }
                         } catch (Throwable e) {
                             LOGGER.error("Unexpected error when reading user input", e);

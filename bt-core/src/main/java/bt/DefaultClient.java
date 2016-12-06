@@ -44,7 +44,6 @@ class DefaultClient implements BtClient {
         this.future = Optional.empty();
         this.listener = Optional.empty();
         this.listenerFuture = Optional.empty();
-        this.listenerExecutor = Executors.newSingleThreadScheduledExecutor();
     }
 
     @Override
@@ -53,6 +52,7 @@ class DefaultClient implements BtClient {
             throw new BtException("Can't start -- already running");
         }
 
+        this.listenerExecutor = Executors.newSingleThreadScheduledExecutor();
         this.listener = Optional.of(listener);
         this.listenerFuture = Optional.of(listenerExecutor.scheduleAtFixedRate(
                 () -> listener.accept(session.getState()),
@@ -97,6 +97,8 @@ class DefaultClient implements BtClient {
         return future;
     }
 
+    // TODO: as long as this can be used for pausing the client without shutting down the runtime,
+    // it would be nice to send CHOKE/NOT_INTERESTED to all connections instead of silently cutting out
     @Override
     public void stop() {
         try {

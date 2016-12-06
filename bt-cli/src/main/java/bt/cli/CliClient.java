@@ -7,6 +7,7 @@ import bt.peerexchange.PeerExchangeModule;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 import bt.tracker.http.HttpTrackerModule;
+import com.googlecode.lanterna.input.KeyStroke;
 import joptsimple.OptionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collection;
+import java.util.Collections;
 
 public class CliClient  {
 
@@ -30,35 +33,69 @@ public class CliClient  {
             return;
         }
 
-        new CliClient().runWithOptions(options);
+        new CliClient(options).resume();
     }
 
-    void runWithOptions(Options options) {
+    private Options options;
 
-        Storage storage = new FileSystemStorage(options.getTargetDirectory());
+    private BtClient client;
+    private SessionStatePrinter printer;
+
+    private boolean running;
+
+    private CliClient(Options options) {
+        this.options = options;
+
+        Collection<KeyStrokeBinding> keyBindings = Collections.singletonList(
+                new KeyStrokeBinding(KeyStroke.fromString("p"), this::togglePause));
 
         BtRuntime runtime = BtRuntime.builder()
                 .module(new PeerExchangeModule())
                 .module(new HttpTrackerModule())
+                .disableAutomaticShutdown()
                 .build();
 
-        BtClient client = Bt.client(storage)
+        Storage storage = new FileSystemStorage(options.getTargetDirectory());
+
+        this.client = Bt.client(storage)
                 .url(toUrl(options.getMetainfoFile()))
                 .attachToRuntime(runtime);
 
-        SessionStatePrinter printer = SessionStatePrinter.createKeyInputAwarePrinter(client.getSession().getTorrent());
+        this.printer = SessionStatePrinter.createKeyInputAwarePrinter(
+                client.getSession().getTorrent(), keyBindings);
+    }
+
+    void resume() {
+        if (running) {
+            return;
+        }
+
+        running = true;
         try {
             client.startAsync(state -> {
                 printer.print(state);
                 if (!options.shouldSeedAfterDownloaded() && state.getPiecesRemaining() == 0) {
                     client.stop();
                 }
-            }, 1000).join();
-
-        } catch (Exception e) {
+            }, 1000);
+        } catch (Throwable e) {
             // in case the start request to the tracker fails
             printer.shutdown();
             printAndShutdown(e);
+        }
+    }
+
+    void pause() {
+        if (!running) {
+            return;
+        }
+
+        try {
+            client.stop();
+        } catch (Throwable e) {
+            LOGGER.warn("Unexpected error when stopping client", e);
+        } finally {
+            running = false;
         }
     }
 
@@ -67,6 +104,14 @@ public class CliClient  {
             return file.toURI().toURL();
         } catch (MalformedURLException e) {
             throw new IllegalArgumentException("Unexpected error", e);
+        }
+    }
+
+    private void togglePause() {
+        if (running) {
+            pause();
+        } else {
+            resume();
         }
     }
 
