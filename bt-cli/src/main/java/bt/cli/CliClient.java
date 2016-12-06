@@ -9,6 +9,9 @@ import bt.runtime.BtRuntime;
 import bt.tracker.http.HttpTrackerModule;
 import com.googlecode.lanterna.input.KeyStroke;
 import joptsimple.OptionException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +25,10 @@ import java.util.Collections;
 public class CliClient  {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CliClient.class);
+
+    static {
+        registerLog4jShutdownHook();
+    }
 
     public static void main(String[] args) throws IOException {
 
@@ -38,6 +45,7 @@ public class CliClient  {
 
     private Options options;
 
+    private BtRuntime runtime;
     private BtClient client;
     private SessionStatePrinter printer;
 
@@ -49,7 +57,7 @@ public class CliClient  {
         Collection<KeyStrokeBinding> keyBindings = Collections.singletonList(
                 new KeyStrokeBinding(KeyStroke.fromString("p"), this::togglePause));
 
-        BtRuntime runtime = BtRuntime.builder()
+        this.runtime = BtRuntime.builder()
                 .module(new PeerExchangeModule())
                 .module(new HttpTrackerModule())
                 .disableAutomaticShutdown()
@@ -75,7 +83,7 @@ public class CliClient  {
             client.startAsync(state -> {
                 printer.print(state);
                 if (!options.shouldSeedAfterDownloaded() && state.getPiecesRemaining() == 0) {
-                    client.stop();
+                    runtime.shutdown();
                 }
             }, 1000);
         } catch (Throwable e) {
@@ -116,7 +124,21 @@ public class CliClient  {
     }
 
     private static void printAndShutdown(Throwable e) {
-        LOGGER.error("Unexpected error, exiting...", e);
+        // ignore interruptions on shutdown
+        if (!(e instanceof InterruptedException)) {
+            LOGGER.error("Unexpected error, exiting...", e);
+        }
         System.exit(1);
+    }
+
+    private static void registerLog4jShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                if( LogManager.getContext() instanceof LoggerContext) {
+                    Configurator.shutdown((LoggerContext)LogManager.getContext());
+                }
+            }
+        });
     }
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration status="warn">
+<configuration status="warn" shutdownHook="disable">
     <appenders>
         <File name="A2" append="false" fileName="out.log">
             <PatternLayout pattern="[%d{dd/MMM/yyyy:HH:mm:ss,SSS}] %-5p %c{1}: %m%n%ex"/>
