@@ -1,6 +1,5 @@
 package bt.it.fixture;
 
-import bt.runtime.BtRuntimeBuilder;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
@@ -10,7 +9,10 @@ import bt.tracker.ITrackerService;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
 import bt.tracker.TrackerResponse;
+import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Module;
+import com.google.inject.Provides;
 import com.google.inject.Singleton;
 
 import java.net.MalformedURLException;
@@ -23,31 +25,62 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class SharedTrackerFeature implements BtTestRuntimeFeature {
+/**
+ * Provides tracker, that is shared among all peers in the swarm.
+ *
+ * @since 1.0
+ */
+public class SharedTrackerModule implements Module {
+
+    /**
+     * Allows to filter the list of peers, that is returned by shared tracker to any given peer.
+     *
+     * @since 1.0
+     */
+    public interface PeerFilter {
+
+        /**
+         * Filter the list of peers, that will be returned to any given peer.
+         *
+         * @param self Some of the peers in the swarm
+         * @param peers All peers in the swarm, that are known to the shared tracker
+         * @return Filtered list of peers
+         * @since 1.0
+         */
+        Collection<Peer> filterPeers(Peer self, Set<Peer> peers);
+    }
 
     private PeerFilter peerFilter;
 
-    public SharedTrackerFeature() {
+    /**
+     * Create a shared tracker with default peer filter
+     * (return the list of all peers except for the requesting peer).
+     *
+     * @since 1.0
+     */
+    public SharedTrackerModule() {
         this(new DefaultPeerFilter());
     }
 
-    public SharedTrackerFeature(PeerFilter peerFilter) {
+    /**
+     * Create a shared tracker with custom peer filter.
+     *
+     * @param peerFilter Custom peer filter
+     * @since 1.0
+     */
+    public SharedTrackerModule(PeerFilter peerFilter) {
         this.peerFilter = peerFilter;
     }
 
     @Override
-    public void contributeToRuntime(BtTestRuntimeConfiguration configuration, BtRuntimeBuilder runtimeBuilder) {
-
-        runtimeBuilder.module(binder -> {
-            binder.bind(PeerFilter.class).toInstance(peerFilter);
-        });
-
-        runtimeBuilder.module(binder ->
-                binder.bind(ITrackerService.class).to(PeerTrackerService.class).in(Singleton.class));
+    public void configure(Binder binder) {
+        binder.bind(ITrackerService.class).to(PeerTrackerService.class).in(Singleton.class);
     }
 
-    public interface PeerFilter {
-        Collection<Peer> filterPeers(Peer self, Set<Peer> peers);
+    @Provides
+    @Singleton
+    public PeerFilter providePeerFilter() {
+        return peerFilter;
     }
 
     private static class DefaultPeerFilter implements PeerFilter {

@@ -1,31 +1,35 @@
 package bt.it.fixture;
 
+import bt.metainfo.MetadataService;
+import org.junit.After;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Objects;
 
+/**
+ * Base class for Bt integration tests.
+ *
+ * @since 1.0
+ */
 public class BaseBtTest {
 
     private static final File ROOT = new File("target/it");
 
-    private static final String SINGLE_FILE_NAME = "file.txt";
-    private static final URL SINGLE_METAINFO_URL = BaseBtTest.class.getResource(SINGLE_FILE_NAME + ".torrent");
-    private static final URL SINGLE_FILE_URL = BaseBtTest.class.getResource(SINGLE_FILE_NAME);
+    private static final String FILE_NAME = "file.txt";
+    private static final URL FILE_URL = BaseBtTest.class.getResource(FILE_NAME);
+    private static final URL METAINFO_URL = BaseBtTest.class.getResource(FILE_NAME + ".torrent");
 
     private static byte[] SINGLE_FILE_CONTENT;
 
     @BeforeClass
     public static void setUpClass() {
         try {
-            File singleFile = new File(SINGLE_FILE_URL.toURI());
+            File singleFile = new File(FILE_URL.toURI());
             byte[] content = new byte[(int) singleFile.length()];
             try (FileInputStream fin = new FileInputStream(singleFile)) {
                 fin.read(content);
@@ -38,24 +42,46 @@ public class BaseBtTest {
         }
     }
 
-    @Rule
-    public BtTestRuntimeFactory runtimeFactory = new BtTestRuntimeFactory();
-
-    private Collection<BtTestRuntimeFeature> features;
-
-    protected BaseBtTest() {
-        this.features = Collections.emptyList();
+    @After
+    public void tearDown() {
+        deleteRecursive(getTestRoot());
     }
 
-    protected BaseBtTest(Collection<BtTestRuntimeFeature> features) {
-        this.features = Objects.requireNonNull(features);
+    private void deleteRecursive(File file) {
+        if (file.exists()) {
+            if (file.isDirectory()) {
+                File[] children = file.listFiles();
+                if (children != null) {
+                    for (File child : children) {
+                        deleteRecursive(child);
+                    }
+                }
+            }
+
+            if (!file.delete()) {
+                throw new RuntimeException("Failed to delete file: " + file.getPath());
+            }
+        }
     }
 
-    protected Swarm.SwarmBuilder buildSwarm() {
-        return Swarm.builder(new File(ROOT, this.getClass().getName()), runtimeFactory, features);
+    /**
+     * Create a swarm builder.
+     *
+     * @return Swarm builder
+     * @since 1.0
+     */
+    protected SwarmBuilder buildSwarm() {
+        SwarmBuilder builder = new SwarmBuilder(getTestRoot(), getSingleFile());
+        builder.module(new TestExecutorModule());
+        builder.torrentSupplier(() -> new MetadataService().fromUrl(METAINFO_URL));
+        return builder;
     }
 
-    protected static TorrentFiles getSingleFile() {
-        return DefaultTorrentFiles.builder(SINGLE_METAINFO_URL).file(SINGLE_FILE_NAME, SINGLE_FILE_CONTENT).build();
+    private File getTestRoot() {
+        return new File(ROOT, this.getClass().getName());
+    }
+
+    private static TorrentFiles getSingleFile() {
+        return new TorrentFiles(Collections.singletonMap(FILE_NAME, SINGLE_FILE_CONTENT));
     }
 }

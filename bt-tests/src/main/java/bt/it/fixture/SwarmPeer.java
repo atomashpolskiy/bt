@@ -1,49 +1,60 @@
 package bt.it.fixture;
 
-import bt.Bt;
-import bt.runtime.BtRuntime;
-import bt.data.file.FileSystemStorage;
-import bt.runtime.BtClient;
 import bt.net.Peer;
 import bt.peer.IPeerRegistry;
+import bt.runtime.BtClient;
+import bt.runtime.BtRuntime;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
-import java.util.Objects;
 
-public class SwarmPeer implements Closeable {
+/**
+ * Swarm participant.
+ *
+ * <p>All instances of this class are closed by the containing swarm,
+ * so it's not necessary to call {@link #close()} in tests.
+ *
+ * @since 1.0
+ */
+public abstract class SwarmPeer implements Closeable {
 
-    private File localRoot;
-    private TorrentFiles files;
-    private BtRuntime runtime;
+    protected BtRuntime runtime;
 
-    private BtClient handle;
-
-    SwarmPeer(File localRoot, TorrentFiles files, BtRuntime runtime) {
-
-        this.localRoot = Objects.requireNonNull(localRoot);
-        this.files = Objects.requireNonNull(files);
+    /**
+     * Create a swarm participant with the provided runtime.
+     * The created instance should be the exclusive user of this runtime
+     * (i.e. no other swarm participants should be created with the same runtime).
+     *
+     * @param runtime Bt runtime, that this peer will attach to
+     * @since 1.0
+     */
+    protected SwarmPeer(BtRuntime runtime) {
         this.runtime = runtime;
-
-        handle = Bt.client(new FileSystemStorage(localRoot))
-                .url(files.getMetainfoUrl())
-                .attachToRuntime(runtime);
     }
 
-    public BtClient getHandle() {
-        return handle;
-    }
-
+    /**
+     * Get standard Bt peer, representing this swarm participant.
+     *
+     * @return Unique peer instance, representing this swarm participant
+     * @since 1.0
+     */
     public Peer getPeer() {
         return runtime.service(IPeerRegistry.class).getLocalPeer();
     }
 
-    public boolean hasFiles() {
-        // intentionally do not cache the result because
-        // leecher may become seeder eventually
-        return files.verifyFiles(localRoot);
-    }
+    /**
+     * Get Bt client instance for controlling this swarm participant.
+     *
+     * @return Bt client instance for controlling this swarm participant.
+     * @since 1.0
+     */
+    public abstract BtClient getHandle();
+
+    /**
+     * @return true if this swarm participant is a seeder.
+     * @since 1.0
+     */
+    public abstract boolean isSeeding();
 
     @Override
     public void close() throws IOException {

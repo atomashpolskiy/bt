@@ -1,15 +1,13 @@
 package bt.it;
 
 import bt.it.fixture.BaseBtTest;
-import bt.it.fixture.PersonalizedThreadNamesFeature;
-import bt.it.fixture.SharedTrackerFeature;
+import bt.it.fixture.SharedTrackerModule;
 import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
 import bt.runtime.BtClient;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,11 +20,7 @@ import static org.junit.Assert.assertEquals;
 public class Swarm_IT extends BaseBtTest {
 
     @Rule
-    public Swarm swarm = buildSwarm().files(getSingleFile()).seeders(10).leechers(10).startingPort(6891).build();
-
-    public Swarm_IT() {
-        super(Arrays.asList(new SharedTrackerFeature(), new PersonalizedThreadNamesFeature()));
-    }
+    public Swarm swarm = buildSwarm().seeders(10).leechers(10).module(new SharedTrackerModule()).build();
 
     @Test
     public void testSwarm_OneSeederOneLeecher() {

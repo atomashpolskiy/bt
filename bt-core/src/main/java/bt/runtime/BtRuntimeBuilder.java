@@ -27,12 +27,28 @@ public class BtRuntimeBuilder {
 
     private boolean shouldDisableAutomaticShutdown;
 
-    BtRuntimeBuilder(Config config) {
+    /**
+     * Create runtime builder with provided config.
+     *
+     * @param config Runtime config
+     * @since 1.0
+     */
+    public BtRuntimeBuilder(Config config) {
         this.config = config;
         this.modules = new HashMap<>();
         // default modules
         this.modules.put(ServiceModule.class, new ServiceModule(config));
         this.modules.put(ProtocolModule.class, new ProtocolModule());
+    }
+
+    /**
+     * Get this builder's config.
+     *
+     * @return Runtime config
+     * @since 1.0
+     */
+    public Config getConfig() {
+        return config;
     }
 
     /**

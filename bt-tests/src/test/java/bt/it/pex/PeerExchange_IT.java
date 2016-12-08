@@ -1,9 +1,8 @@
 package bt.it.pex;
 
 import bt.it.fixture.BaseBtTest;
-import bt.it.fixture.PersonalizedThreadNamesFeature;
-import bt.it.fixture.SharedTrackerFeature;
-import bt.it.fixture.SharedTrackerFeature.PeerFilter;
+import bt.it.fixture.SharedTrackerModule;
+import bt.it.fixture.SharedTrackerModule.PeerFilter;
 import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
 import bt.peerexchange.PeerExchangeConfig;
@@ -16,7 +15,6 @@ import org.junit.Test;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -30,44 +28,35 @@ import static org.junit.Assert.assertTrue;
 
 public class PeerExchange_IT extends BaseBtTest {
 
-    private static final int SEEDERS_COUNT = 3;
-    private static final int LEECHERS_COUNT = 3;
+    private static final int PEER_COUNT = 6;
 
     @Rule
-    public Swarm swarm = buildSwarm().withoutFiles()
+    public Swarm swarm = buildSwarm()
+            .seeders(PEER_COUNT)
             .config(new Config() {
                 @Override
                 public Duration getPeerDiscoveryInterval() {
                     return Duration.ofSeconds(1);
                 }
             })
-            .seeders(SEEDERS_COUNT).leechers(LEECHERS_COUNT).startingPort(6891).build();
+            .module(new PeerExchangeModule(new PeerExchangeConfig() {
+                @Override
+                public Duration getMinMessageInterval() {
+                    return Duration.ofSeconds(1);
+                }
 
-    public PeerExchange_IT() {
-        super(Arrays.asList(
-                (configuration, runtimeBuilder) ->
-                        runtimeBuilder.module(new PeerExchangeModule(new PeerExchangeConfig() {
-                            @Override
-                            public Duration getMinMessageInterval() {
-                                return Duration.ofSeconds(1);
-                            }
-
-                            @Override
-                            public int getMinEventsPerMessage() {
-                                return 1;
-                            }
-                        })),
-                new PersonalizedThreadNamesFeature(),
-                new SharedTrackerFeature(new PEXPeerFilter(SEEDERS_COUNT + LEECHERS_COUNT, 1))));
-    }
+                @Override
+                public int getMinEventsPerMessage() {
+                    return 1;
+                }
+            }))
+            .module(new SharedTrackerModule(new PEXPeerFilter(PEER_COUNT, 1)))
+            .build();
 
     @Test
     public void testPeerExchange() {
 
         ConcurrentMap<Peer, Set<Peer>> discoveredPeers = new ConcurrentHashMap<>();
-
-        swarm.getLeechers().forEach(leecher ->
-                leecher.getHandle().startAsync(state -> discoveredPeers.put(leecher.getPeer(), state.getConnectedPeers()), 1000));
 
         swarm.getSeeders().forEach(seeder ->
                 seeder.getHandle().startAsync(state -> discoveredPeers.put(seeder.getPeer(), state.getConnectedPeers()), 1000));
@@ -79,7 +68,6 @@ public class PeerExchange_IT extends BaseBtTest {
         }
 
         Set<Peer> swarmPeers = new HashSet<>();
-        swarmPeers.addAll(swarm.getLeechers().stream().map(SwarmPeer::getPeer).collect(Collectors.toSet()));
         swarmPeers.addAll(swarm.getSeeders().stream().map(SwarmPeer::getPeer).collect(Collectors.toSet()));
 
         assertTrue(discoveredPeers.keySet().containsAll(swarmPeers));
