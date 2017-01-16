@@ -1,6 +1,26 @@
-[![Build Status](https://travis-ci.org/atomashpolskiy/bt.svg?branch=master)](https://travis-ci.org/atomashpolskiy/bt) [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](http://atomashpolskiy.github.io/bt/javadoc/latest/)
+[![Build Status](https://travis-ci.org/atomashpolskiy/bt.svg?branch=master)](https://travis-ci.org/atomashpolskiy/bt) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/) [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](http://atomashpolskiy.github.io/bt/javadoc/latest/)
 
 **Bt** is a lightweight framework for P2P-lovers and enthusiastic BitTorrent researchers, perfect choice for light enterprise and home usage and experimentation. It offers good performance, reliability and is highly customizable. With Bt you can create a production-grade BitTorrent client in a matter of minutes. Bt is still in its' early days, but is actively developed and designed with stability and maintainability in mind.
+
+## Usage
+
+Declare the following dependencies in your project’s **pom.xml**:
+
+```xml
+<dependency>
+    <groupId>com.github.atomashpolskiy</groupId>
+    <artifactId>bt-core</artifactId>
+    <version>1.0</version>
+</dependency>
+<!-- for the sake of keeping the core with minimum number of 3-rd party 
+     dependencies HTTP tracker support is shipped as a separate module;
+     you may omit this dependency if only UDP trackers are going to be used -->
+<dependency>
+    <groupId>com.github.atomashpolskiy</groupId>
+    <artifactId>bt-http-tracker-client</artifactId>
+    <version>1.0</version>
+</dependency>
+```
 
 ## Quick Links
 
