@@ -8,26 +8,21 @@ permalink: /intro/
 
 ## _**Maven**_
 
-Bt 1.0 is going to be released and published to Maven Central in the nearest time. In the meanwhile you may download and build it manually from github:
-
-```bash
-git clone https://github.com/atomashpolskiy/bt.git
-cd bt
-mvn -DskipTests=true clean install
-```
-
-This will package Bt artifacts and install them to your local .m2 repository. Then declare the following dependencies in your project's **pom.xml**:
+Declare the following dependencies in your project's **pom.xml**:
 
 ```xml
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-core</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
 </dependency>
+<!-- for the sake of keeping the core with minimum number of 3-rd party 
+     dependencies HTTP tracker support is shipped as a separate module;
+     you may omit this dependency if only UDP trackers are going to be used -->
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-http-tracker-client</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
 </dependency>
 ```
 
