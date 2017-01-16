@@ -22,7 +22,6 @@ bt.torrent.annotation
 bt.torrent.compiler
 bt.torrent.data
 bt.torrent.messaging
-bt.torrent.messaging.core
 bt.tracker
 bt.tracker.http
 bt.tracker.udp
