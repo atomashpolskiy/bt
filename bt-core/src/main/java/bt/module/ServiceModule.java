@@ -24,7 +24,7 @@ import bt.torrent.ITorrentSessionFactory;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.data.DataWorkerFactory;
 import bt.torrent.data.IDataWorkerFactory;
-import bt.torrent.messaging.core.TorrentSessionFactory;
+import bt.torrent.messaging.TorrentSessionFactory;
 import bt.tracker.ITrackerService;
 import bt.tracker.TrackerFactory;
 import bt.tracker.TrackerService;

@@ -1,4 +1,4 @@
-package bt.torrent.messaging.core;
+package bt.torrent.messaging;
 
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
@@ -8,8 +8,6 @@ import bt.net.Peer;
 import bt.torrent.Bitfield;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
-import bt.torrent.messaging.ConnectionState;
-import bt.torrent.messaging.IPeerWorkerFactory;
 
 import java.util.Collections;
 import java.util.HashMap;

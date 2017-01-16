@@ -1,4 +1,4 @@
-package bt.torrent.messaging.core;
+package bt.torrent.messaging;
 
 import bt.BtException;
 import bt.data.ChunkDescriptor;
@@ -10,9 +10,6 @@ import bt.protocol.NotInterested;
 import bt.protocol.Request;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
-import bt.torrent.messaging.ConnectionState;
-import bt.torrent.messaging.Mapper;
-import bt.torrent.messaging.MessageContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

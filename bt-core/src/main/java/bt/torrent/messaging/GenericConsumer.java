@@ -1,4 +1,4 @@
-package bt.torrent.messaging.core;
+package bt.torrent.messaging;
 
 import bt.protocol.Cancel;
 import bt.protocol.Choke;
@@ -7,7 +7,6 @@ import bt.protocol.KeepAlive;
 import bt.protocol.NotInterested;
 import bt.protocol.Unchoke;
 import bt.torrent.annotation.Consumes;
-import bt.torrent.messaging.MessageContext;
 
 /**
  * Consumer that is responsible for processing

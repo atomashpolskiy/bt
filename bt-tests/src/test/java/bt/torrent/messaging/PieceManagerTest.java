@@ -1,4 +1,4 @@
-package bt.torrent.messaging.core;
+package bt.torrent.messaging;
 
 import bt.data.ChunkDescriptor;
 import bt.metainfo.TorrentId;
@@ -8,6 +8,7 @@ import bt.protocol.Message;
 import bt.torrent.BaseBitfieldTest;
 import bt.torrent.Bitfield;
 import bt.torrent.RarestFirstSelectionStrategy;
+import bt.torrent.messaging.PieceManager;
 import org.junit.Test;
 
 import java.io.IOException;

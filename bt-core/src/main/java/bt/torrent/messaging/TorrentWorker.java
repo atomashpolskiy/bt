@@ -1,13 +1,10 @@
-package bt.torrent.messaging.core;
+package bt.torrent.messaging;
 
 import bt.metainfo.TorrentId;
 import bt.net.IMessageDispatcher;
 import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
-import bt.torrent.messaging.ConnectionState;
-import bt.torrent.messaging.PeerWorker;
-import bt.torrent.messaging.IPeerWorkerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

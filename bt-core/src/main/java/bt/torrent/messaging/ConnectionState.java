@@ -14,7 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * Contains basic information about the state of a connection.
+ * Contains basic information about a connection's state.
  *
  * @since 1.0
  */
@@ -32,12 +32,11 @@ public class ConnectionState {
     private long lastChoked;
 
     private Set<Object> cancelledPeerRequests;
-
-    // TODO: remove these
-    private Optional<Boolean> mightSelectPieceForPeer;
-    private Queue<Request> requestQueue;
     private Set<Object> pendingRequests;
     private Map<Object, CompletableFuture<BlockWrite>> pendingWrites;
+
+    private Optional<Boolean> mightSelectPieceForPeer;
+    private Queue<Request> requestQueue;
     private long lastCheckedAvailablePiecesForPeer;
     private long lastBuiltRequests;
 
@@ -46,12 +45,11 @@ public class ConnectionState {
         this.peerChoking = true;
         this.shouldChoke = Optional.empty();
         this.cancelledPeerRequests = new HashSet<>();
-
-        // TODO: remove these
-        this.mightSelectPieceForPeer = Optional.empty();
-        this.requestQueue = new LinkedBlockingQueue<>();
         this.pendingRequests = new HashSet<>();
         this.pendingWrites = new HashMap<>();
+
+        this.mightSelectPieceForPeer = Optional.empty();
+        this.requestQueue = new LinkedBlockingQueue<>();
     }
 
     /**
@@ -186,7 +184,7 @@ public class ConnectionState {
     }
 
     /**
-     * Get keys of block requests, that have been cancelled by remote peer
+     * Get keys of block requests, that have been cancelled by remote peer.
      *
      * @see Mapper#buildKey(int, int, int)
      * @return Set of block request keys
@@ -206,41 +204,57 @@ public class ConnectionState {
                 cancel.getPieceIndex(), cancel.getOffset(), cancel.getLength()));
     }
 
-    // TODO: Remove these
-    public Optional<Boolean> getMightSelectPieceForPeer() {
-        return mightSelectPieceForPeer;
-    }
-    public void setMightSelectPieceForPeer(Optional<Boolean> mightSelectPieceForPeer) {
-        this.mightSelectPieceForPeer = mightSelectPieceForPeer;
-    }
-    public Queue<Request> getRequestQueue() {
-        return requestQueue;
-    }
-    public void setRequestQueue(Queue<Request> requestQueue) {
-        this.requestQueue = requestQueue;
-    }
+    /**
+     * Get keys of block requests, that have been sent to the remote peer.
+     *
+     * @see Mapper#buildKey(int, int, int)
+     * @return Set of block request keys
+     * @since 1.0
+     */
     public Set<Object> getPendingRequests() {
         return pendingRequests;
     }
-    public void setPendingRequests(Set<Object> pendingRequests) {
-        this.pendingRequests = pendingRequests;
-    }
+
+    /**
+     * Get pending block writes, mapped by keys of corresponding requests.
+     *
+     * @see Mapper#buildKey(int, int, int)
+     * @return Pending block writes, mapped by keys of corresponding requests.
+     * @since 1.0
+     */
     public Map<Object, CompletableFuture<BlockWrite>> getPendingWrites() {
         return pendingWrites;
     }
-    public void setPendingWrites(Map<Object, CompletableFuture<BlockWrite>> pendingWrites) {
-        this.pendingWrites = pendingWrites;
+
+    /**************************************************/
+    // Methods below are not a part of the public API //
+    /**************************************************/
+
+    Optional<Boolean> getMightSelectPieceForPeer() {
+        return mightSelectPieceForPeer;
     }
-    public long getLastCheckedAvailablePiecesForPeer() {
+
+    void setMightSelectPieceForPeer(Optional<Boolean> mightSelectPieceForPeer) {
+        this.mightSelectPieceForPeer = mightSelectPieceForPeer;
+    }
+
+    Queue<Request> getRequestQueue() {
+        return requestQueue;
+    }
+
+    long getLastCheckedAvailablePiecesForPeer() {
         return lastCheckedAvailablePiecesForPeer;
     }
-    public void setLastCheckedAvailablePiecesForPeer(long lastCheckedAvailablePiecesForPeer) {
+
+    void setLastCheckedAvailablePiecesForPeer(long lastCheckedAvailablePiecesForPeer) {
         this.lastCheckedAvailablePiecesForPeer = lastCheckedAvailablePiecesForPeer;
     }
-    public long getLastBuiltRequests() {
+
+    long getLastBuiltRequests() {
         return lastBuiltRequests;
     }
-    public void setLastBuiltRequests(long lastBuiltRequests) {
+
+    void setLastBuiltRequests(long lastBuiltRequests) {
         this.lastBuiltRequests = lastBuiltRequests;
     }
 }

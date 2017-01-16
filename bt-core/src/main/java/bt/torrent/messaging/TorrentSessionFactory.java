@@ -1,4 +1,4 @@
-package bt.torrent.messaging.core;
+package bt.torrent.messaging;
 
 import bt.metainfo.Torrent;
 import bt.module.MessagingAgents;
@@ -15,8 +15,6 @@ import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionParams;
 import bt.torrent.data.DataWorker;
 import bt.torrent.data.IDataWorkerFactory;
-import bt.torrent.messaging.IPeerWorkerFactory;
-import bt.torrent.messaging.PeerWorkerFactory;
 import com.google.inject.Inject;
 
 import java.util.HashSet;

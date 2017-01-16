@@ -1,9 +1,8 @@
-package bt.torrent.messaging.core;
+package bt.torrent.messaging;
 
 import bt.protocol.Bitfield;
 import bt.protocol.Have;
 import bt.torrent.annotation.Consumes;
-import bt.torrent.messaging.MessageContext;
 
 /**
  * Consumes peer bitfield.
