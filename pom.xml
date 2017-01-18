@@ -14,6 +14,7 @@
         <module>bt-bencoding</module>
         <module>bt-core</module>
         <module>bt-http-tracker-client</module>
+        <module>bt-dht</module>
         <module>bt-tests</module>
         <module>bt-cli</module>
     </modules>
