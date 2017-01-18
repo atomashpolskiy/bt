@@ -2,9 +2,12 @@ package bt.protocol;
 
 import bt.metainfo.TorrentId;
 import bt.net.PeerId;
+import bt.test.protocol.ProtocolTest;
 import org.junit.Test;
 
-public class Protocol_CorrectDataTest extends ProtocolTest {
+public class Protocol_CorrectDataTest {
+    
+    private static final ProtocolTest TEST = ProtocolTest.forBittorrentProtocol().build();
 
     //--- handshake comes first ---//
 
@@ -28,8 +31,7 @@ public class Protocol_CorrectDataTest extends ProtocolTest {
                 PeerId.fromBytes(new byte[]{20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39})
         );
 
-        assertDecodedAndHasAttributes(
-                Handshake.class, HANDSHAKE.length, expected, HANDSHAKE);
+        TEST.assertDecoded(HANDSHAKE.length, expected, HANDSHAKE);
     }
 
     @Test
@@ -41,8 +43,7 @@ public class Protocol_CorrectDataTest extends ProtocolTest {
                 PeerId.fromBytes(new byte[]{20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39})
         );
 
-        assertDecodedAndHasAttributes(
-                Handshake.class, HANDSHAKE.length, expected, HANDSHAKE_TRAILING_DATA);
+        TEST.assertDecoded(HANDSHAKE.length, expected, HANDSHAKE_TRAILING_DATA);
     }
 
     //--- fixed-size messages without payload ---//
@@ -64,62 +65,52 @@ public class Protocol_CorrectDataTest extends ProtocolTest {
 
     @Test
     public void testProtocol_KeepAlive_ExactBytes() throws Exception {
-        assertDecodedAndHasAttributes(
-                KeepAlive.class, KEEPALIVE.length, KeepAlive.instance(), KEEPALIVE);
+        TEST.assertDecoded(KEEPALIVE.length, KeepAlive.instance(), KEEPALIVE);
     }
 
     @Test
     public void testProtocol_KeepAlive_TrailingBytes() throws Exception {
-        assertDecodedAndHasAttributes(
-                KeepAlive.class, KEEPALIVE.length, KeepAlive.instance(), KEEPALIVE_TRAILING_DATA);
+        TEST.assertDecoded(KEEPALIVE.length, KeepAlive.instance(), KEEPALIVE_TRAILING_DATA);
     }
 
     @Test
     public void testProtocol_Choke_ExactBytes() throws Exception {
-        assertDecodedAndHasAttributes(
-                Choke.class, CHOKE.length, Choke.instance(), CHOKE);
+        TEST.assertDecoded(CHOKE.length, Choke.instance(), CHOKE);
     }
 
     @Test
     public void testProtocol_Choke_TrailingBytes() throws Exception {
-        assertDecodedAndHasAttributes(
-                Choke.class, CHOKE.length, Choke.instance(), CHOKE_TRAILING_DATA);
+        TEST.assertDecoded(CHOKE.length, Choke.instance(), CHOKE_TRAILING_DATA);
     }
 
     @Test
     public void testProtocol_Unchoke_ExactBytes() throws Exception {
-        assertDecodedAndHasAttributes(
-                Unchoke.class, UNCHOKE.length, Unchoke.instance(), UNCHOKE);
+        TEST.assertDecoded(UNCHOKE.length, Unchoke.instance(), UNCHOKE);
     }
 
     @Test
     public void testProtocol_Unchoke_TrailingBytes() throws Exception {
-        assertDecodedAndHasAttributes(
-                Unchoke.class, UNCHOKE.length, Unchoke.instance(), UNCHOKE_TRAILING_DATA);
+        TEST.assertDecoded(UNCHOKE.length, Unchoke.instance(), UNCHOKE_TRAILING_DATA);
     }
 
     @Test
     public void testProtocol_Interested_ExactBytes() throws Exception {
-        assertDecodedAndHasAttributes(
-                Interested.class, INTERESTED.length, Interested.instance(), INTERESTED);
+        TEST.assertDecoded(INTERESTED.length, Interested.instance(), INTERESTED);
     }
 
     @Test
     public void testProtocol_Interested_TrailingBytes() throws Exception {
-        assertDecodedAndHasAttributes(
-                Interested.class, INTERESTED.length, Interested.instance(), INTERESTED_TRAILING_DATA);
+        TEST.assertDecoded(INTERESTED.length, Interested.instance(), INTERESTED_TRAILING_DATA);
     }
 
     @Test
     public void testProtocol_NotInterested_ExactBytes() throws Exception {
-        assertDecodedAndHasAttributes(
-                NotInterested.class, NOT_INTERESTED.length, NotInterested.instance(), NOT_INTERESTED);
+        TEST.assertDecoded(NOT_INTERESTED.length, NotInterested.instance(), NOT_INTERESTED);
     }
 
     @Test
     public void testProtocol_NotInterested_TrailingBytes() throws Exception {
-        assertDecodedAndHasAttributes(
-                NotInterested.class, NOT_INTERESTED.length, NotInterested.instance(), NOT_INTERESTED_TRAILING_DATA);
+        TEST.assertDecoded(NOT_INTERESTED.length, NotInterested.instance(), NOT_INTERESTED_TRAILING_DATA);
     }
 
     //--- fixed- and variable-size messages with payload ---//
@@ -146,79 +137,69 @@ public class Protocol_CorrectDataTest extends ProtocolTest {
     public void testProtocol_Have_ExactBytes() throws Exception {
 
         Have expected = new Have(16 * (2 << 7) + 127);
-        assertDecodedAndHasAttributes(
-                Have.class, HAVE.length, expected, HAVE);
+        TEST.assertDecoded(HAVE.length, expected, HAVE);
     }
 
     @Test
     public void testProtocol_Have_TrailingBytes() throws Exception {
 
         Have expected = new Have(16 * (2 << 7) + 127);
-        assertDecodedAndHasAttributes(
-                Have.class, HAVE.length, expected, HAVE_TRAILING_DATA);
+        TEST.assertDecoded(HAVE.length, expected, HAVE_TRAILING_DATA);
     }
 
     @Test
     public void testProtocol_Bitfield_ExactBytes() throws Exception {
 
         Bitfield expected = new Bitfield(new byte[]{-1,-1});
-        assertDecodedAndHasAttributes(
-                Bitfield.class, BITFIELD.length, expected, BITFIELD);
+        TEST.assertDecoded(BITFIELD.length, expected, BITFIELD);
     }
 
     @Test
     public void testProtocol_Bitfield_TrailingBytes() throws Exception {
 
         Bitfield expected = new Bitfield(new byte[]{-1,-1});
-        assertDecodedAndHasAttributes(
-                Bitfield.class, BITFIELD.length, expected, BITFIELD_TRAILING_DATA);
+        TEST.assertDecoded(BITFIELD.length, expected, BITFIELD_TRAILING_DATA);
     }
 
     @Test
     public void testProtocol_Request_ExactBytes() throws Exception {
 
         Request expected = new Request(1, (2 << 15), 64 * (2 << 7));
-        assertDecodedAndHasAttributes(
-                Request.class, REQUEST.length, expected, REQUEST);
+        TEST.assertDecoded(REQUEST.length, expected, REQUEST);
     }
 
     @Test
     public void testProtocol_Request_TrailingBytes() throws Exception {
 
         Request expected = new Request(1, (2 << 15), 64 * (2 << 7));
-        assertDecodedAndHasAttributes(
-                Request.class, REQUEST.length, expected, REQUEST_TRAILING_DATA);
+        TEST.assertDecoded(REQUEST.length, expected, REQUEST_TRAILING_DATA);
     }
 
     @Test
     public void testProtocol_Piece_ExactBytes() throws Exception {
 
         Piece expected = new Piece(1, (2 << 15), new byte[]{1,0,1,0,1,0,1,0});
-        assertDecodedAndHasAttributes(
-                Piece.class, PIECE.length, expected, PIECE);
+        TEST.assertDecoded(PIECE.length, expected, PIECE);
     }
 
     @Test
     public void testProtocol_Piece_TrailingBytes() throws Exception {
 
         Piece expected = new Piece(1, (2 << 15), new byte[]{1,0,1,0,1,0,1,0});
-        assertDecodedAndHasAttributes(
-                Piece.class, PIECE.length, expected, PIECE_TRAILING_DATA);
+        TEST.assertDecoded(PIECE.length, expected, PIECE_TRAILING_DATA);
     }
 
     @Test
     public void testProtocol_Cancel_ExactBytes() throws Exception {
 
         Cancel expected = new Cancel(1, (2 << 15), 64 * (2 << 7));
-        assertDecodedAndHasAttributes(
-                Cancel.class, CANCEL.length, expected, CANCEL);
+        TEST.assertDecoded(CANCEL.length, expected, CANCEL);
     }
 
     @Test
     public void testProtocol_Cancel_TrailingBytes() throws Exception {
 
         Cancel expected = new Cancel(1, (2 << 15), 64 * (2 << 7));
-        assertDecodedAndHasAttributes(
-                Cancel.class, CANCEL.length, expected, CANCEL_TRAILING_DATA);
+        TEST.assertDecoded(CANCEL.length, expected, CANCEL_TRAILING_DATA);
     }
 }

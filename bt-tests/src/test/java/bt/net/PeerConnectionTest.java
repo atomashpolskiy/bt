@@ -5,8 +5,8 @@ import bt.protocol.Bitfield;
 import bt.protocol.Handshake;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
-import bt.protocol.ProtocolTest;
 import bt.protocol.Request;
+import bt.test.protocol.ProtocolTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,7 +25,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
-public class PeerConnectionTest extends ProtocolTest {
+public class PeerConnectionTest {
+
+    private static final ProtocolTest TEST = ProtocolTest.forBittorrentProtocol().build();
 
     private static final int BUFFER_SIZE = 2 << 6;
 
@@ -48,7 +50,7 @@ public class PeerConnectionTest extends ProtocolTest {
 
     @Test
     public void testConnection() throws InvalidMessageException, IOException {
-        PeerConnection connection = new DefaultPeerConnection(messageHandler, mock(Peer.class), clientChannel, BUFFER_SIZE);
+        PeerConnection connection = new DefaultPeerConnection(TEST.getProtocol(), mock(Peer.class), clientChannel, BUFFER_SIZE);
 
         Message message;
 
@@ -110,7 +112,7 @@ public class PeerConnectionTest extends ProtocolTest {
 
         public void writeMessage(Message message) throws InvalidMessageException, IOException {
             ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-            assertTrue("Protocol failed to serialize message", messageHandler.encode(message, buffer));
+            assertTrue("Protocol failed to serialize message", TEST.getProtocol().encode(message, buffer));
             buffer.flip();
             synchronized (lock) {
                 clientSocket.write(buffer);

@@ -1,8 +1,16 @@
 package bt.protocol;
 
+import bt.test.protocol.ProtocolTest;
 import org.junit.Test;
 
-public class Protocol_InvalidDeclaredLengthTest extends ProtocolTest {
+import java.nio.ByteBuffer;
+
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+public class Protocol_InvalidDeclaredLengthTest {
+
+    private static final ProtocolTest TEST = ProtocolTest.forBittorrentProtocol().build();
 
     private byte[] CHOKE_INVALID_DATA = new byte[]{0,0,0,3, StandardBittorrentProtocol.CHOKE_ID,1,2};
 
@@ -14,22 +22,22 @@ public class Protocol_InvalidDeclaredLengthTest extends ProtocolTest {
 
     @Test
     public void testProtocol_Choke_InvalidLength() throws Exception {
-        testProtocol_InvalidLength(Choke.class, 3, 0, CHOKE_INVALID_DATA);
+        assertHasInvalidLength(Choke.class, 3, 0, CHOKE_INVALID_DATA);
     }
 
     @Test
     public void testProtocol_Unchoke_InvalidLength() throws Exception {
-        testProtocol_InvalidLength(Unchoke.class, 2, 0, UNCHOKE_INVALID_DATA);
+        assertHasInvalidLength(Unchoke.class, 2, 0, UNCHOKE_INVALID_DATA);
     }
 
     @Test
     public void testProtocol_Interested_InvalidLength() throws Exception {
-        testProtocol_InvalidLength(Interested.class, 4, 0, INTERESTED_INVALID_DATA);
+        assertHasInvalidLength(Interested.class, 4, 0, INTERESTED_INVALID_DATA);
     }
 
     @Test
     public void testProtocol_NotInterested_InvalidLength() throws Exception {
-        testProtocol_InvalidLength(NotInterested.class, 9, 0, NOT_INTERESTED_INVALID_DATA);
+        assertHasInvalidLength(NotInterested.class, 9, 0, NOT_INTERESTED_INVALID_DATA);
     }
 
     private byte[] HAVE_INVALID_DATA = new byte[]{0,0,0,1,4,/*--piece-index*/0,0,16,127};
@@ -42,17 +50,42 @@ public class Protocol_InvalidDeclaredLengthTest extends ProtocolTest {
 
     @Test
     public void testProtocol_Have_InvalidLength() throws Exception {
-        testProtocol_InvalidLength(Have.class, 1, 4, HAVE_INVALID_DATA);
+        assertHasInvalidLength(Have.class, 1, 4, HAVE_INVALID_DATA);
     }
 
     @Test
     public void testProtocol_Request_InvalidLength() throws Exception {
-        testProtocol_InvalidLength(Request.class, 12, 12, REQUEST_INVALID_DATA);
+        assertHasInvalidLength(Request.class, 12, 12, REQUEST_INVALID_DATA);
     }
 
     @Test
     public void testProtocol_Cancel_InvalidLength() throws Exception {
-        testProtocol_InvalidLength(Cancel.class, 3, 12, CANCEL_INVALID_DATA);
+        assertHasInvalidLength(Cancel.class, 3, 12, CANCEL_INVALID_DATA);
     }
 
+    private static void assertHasInvalidLength(Class<? extends Message> type,
+                                               int declaredLength,
+                                               int expectedLength,
+                                               byte[] data) throws Exception {
+
+        ByteBuffer buffer = ByteBuffer.wrap(data).asReadOnlyBuffer();
+        buffer.mark();
+
+        int payloadLength = declaredLength - 1;
+
+        String expectedMessage = "Unexpected payload length for " + type.getSimpleName() + ": " + payloadLength +
+                " (expected " + expectedLength + ")";
+
+        InvalidMessageException e = null;
+        try {
+            TEST.getProtocol().decode(TEST.createDecodingContext(), buffer);
+        } catch (InvalidMessageException e1) {
+            e = e1;
+        }
+        buffer.reset();
+
+        assertNotNull(e);
+        assertTrue("Expected message: {" + expectedMessage + "}, actual was: {" + e.getMessage() + "}",
+                e.getMessage().startsWith(expectedMessage));
+    }
 }

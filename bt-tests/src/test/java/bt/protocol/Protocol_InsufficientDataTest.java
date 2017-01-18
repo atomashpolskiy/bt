@@ -1,8 +1,11 @@
 package bt.protocol;
 
+import bt.test.protocol.ProtocolTest;
 import org.junit.Test;
 
-public class Protocol_InsufficientDataTest extends ProtocolTest {
+public class Protocol_InsufficientDataTest {
+    
+    private static final ProtocolTest TEST = ProtocolTest.forBittorrentProtocol().build();
 
     private byte[] HANDSHAKE_INSUFFICIENT_DATA = new byte[]{
             19,/*--protocol-name*/66,105,116,84,111,114,114,101,110,116,32,112,114,111,116,111,99,111,108,
@@ -10,7 +13,7 @@ public class Protocol_InsufficientDataTest extends ProtocolTest {
 
     @Test
     public void testProtocol_Handshake_InsufficientBytes() throws Exception {
-        assertInsufficientDataAndNothingConsumed(
+        TEST.assertInsufficientDataAndNothingConsumed(
                 Handshake.class, HANDSHAKE_INSUFFICIENT_DATA);
     }
 
@@ -22,11 +25,11 @@ public class Protocol_InsufficientDataTest extends ProtocolTest {
 
     @Test
     public void testProtocol_UnknownType_InsufficientBytes() throws Exception {
-        assertInsufficientDataAndNothingConsumed(INSUFFICIENT_DATA_1);
-        assertInsufficientDataAndNothingConsumed(INSUFFICIENT_DATA_2);
-        assertInsufficientDataAndNothingConsumed(INSUFFICIENT_DATA_3);
-        assertInsufficientDataAndNothingConsumed(INSUFFICIENT_DATA_4);
-        assertInsufficientDataAndNothingConsumed(INSUFFICIENT_DATA_5);
+        TEST.assertInsufficientDataAndNothingConsumed(INSUFFICIENT_DATA_1);
+        TEST.assertInsufficientDataAndNothingConsumed(INSUFFICIENT_DATA_2);
+        TEST.assertInsufficientDataAndNothingConsumed(INSUFFICIENT_DATA_3);
+        TEST.assertInsufficientDataAndNothingConsumed(INSUFFICIENT_DATA_4);
+        TEST.assertInsufficientDataAndNothingConsumed(INSUFFICIENT_DATA_5);
     }
 
     private byte[] HAVE_INSUFFICIENT_DATA = new byte[]{0,0,0,5,4,/*--piece-index*/0,0,16/*--pending-data...*/};
@@ -44,31 +47,31 @@ public class Protocol_InsufficientDataTest extends ProtocolTest {
 
     @Test
     public void testProtocol_Have_InsufficientBytes() throws Exception {
-        assertInsufficientDataAndNothingConsumed(
+        TEST.assertInsufficientDataAndNothingConsumed(
                 Have.class, HAVE_INSUFFICIENT_DATA);
     }
 
     @Test
     public void testProtocol_Bitfield_InsufficientBytes() throws Exception {
-        assertInsufficientDataAndNothingConsumed(
+        TEST.assertInsufficientDataAndNothingConsumed(
                 Bitfield.class, BITFIELD_INSUFFICIENT_DATA);
     }
 
     @Test
     public void testProtocol_Request_InsufficientBytes() throws Exception {
-        assertInsufficientDataAndNothingConsumed(
+        TEST.assertInsufficientDataAndNothingConsumed(
                 Request.class, REQUEST_INSUFFICIENT_DATA);
     }
 
     @Test
     public void testProtocol_Piece_InsufficientBytes() throws Exception {
-        assertInsufficientDataAndNothingConsumed(
+        TEST.assertInsufficientDataAndNothingConsumed(
                 Piece.class, PIECE_INSUFFICIENT_DATA);
     }
 
     @Test
     public void testProtocol_Cancel_InsufficientBytes() throws Exception {
-        assertInsufficientDataAndNothingConsumed(
+        TEST.assertInsufficientDataAndNothingConsumed(
                 Cancel.class, CANCEL_INSUFFICIENT_DATA);
     }
 }

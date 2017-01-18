@@ -1,5 +1,6 @@
 package bt.protocol;
 
+import bt.test.protocol.ProtocolTest;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -8,7 +9,9 @@ import java.nio.charset.Charset;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class Protocol_InvalidDataTest extends ProtocolTest {
+public class Protocol_InvalidDataTest {
+    
+    private static final ProtocolTest TEST = ProtocolTest.forBittorrentProtocol().build();
 
     private byte[] HANDSHAKE_INVALID_DATA = new byte[]{
             19,/*--protocol-name (wrong-first-byte)*/-1,105,116,84,111,114,114,101,110,116,32,112,114,111,116,111,99,111,108,
@@ -24,7 +27,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
 
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(HANDSHAKE_INVALID_DATA));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(HANDSHAKE_INVALID_DATA));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
@@ -41,7 +44,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
         String expectedMessage = "Illegal argument: piece index (-1)";
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(HAVE_INVALID_DATA_NEGATIVE_PIECE_INDEX));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(HAVE_INVALID_DATA_NEGATIVE_PIECE_INDEX));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
@@ -68,7 +71,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
         String expectedMessage = "Illegal arguments: piece index (-1), offset (65536), length (16384)";
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(REQUEST_INVALID_DATA_NEGATIVE_PIECE_INDEX));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(REQUEST_INVALID_DATA_NEGATIVE_PIECE_INDEX));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
@@ -83,7 +86,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
         String expectedMessage = "Illegal arguments: piece index (1), offset (-1), length (16384)";
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(REQUEST_INVALID_DATA_NEGATIVE_OFFSET));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(REQUEST_INVALID_DATA_NEGATIVE_OFFSET));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
@@ -98,7 +101,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
         String expectedMessage = "Illegal arguments: piece index (1), offset (65536), length (-1)";
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(REQUEST_INVALID_DATA_NEGATIVE_LENGTH));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(REQUEST_INVALID_DATA_NEGATIVE_LENGTH));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
@@ -113,7 +116,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
         String expectedMessage = "Illegal arguments: piece index (1), offset (65536), length (0)";
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(REQUEST_INVALID_DATA_ZERO_LENGTH));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(REQUEST_INVALID_DATA_ZERO_LENGTH));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
@@ -137,7 +140,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
         String expectedMessage = "Invalid arguments: piece index (-1), offset (65536), block length (8)";
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(PIECE_INVALID_DATA_NEGATIVE_PIECE_INDEX));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(PIECE_INVALID_DATA_NEGATIVE_PIECE_INDEX));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
@@ -152,7 +155,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
         String expectedMessage = "Invalid arguments: piece index (1), offset (-1), block length (8)";
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(PIECE_INVALID_DATA_NEGATIVE_OFFSET));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(PIECE_INVALID_DATA_NEGATIVE_OFFSET));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
@@ -167,7 +170,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
         String expectedMessage = "Invalid arguments: piece index (1), offset (65536), block length (0)";
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(PIECE_INVALID_DATA_EMPTY_BLOCK));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(PIECE_INVALID_DATA_EMPTY_BLOCK));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
@@ -194,7 +197,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
         String expectedMessage = "Illegal arguments: piece index (-1), offset (65536), length (16384)";
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(CANCEL_INVALID_DATA_NEGATIVE_PIECE_INDEX));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(CANCEL_INVALID_DATA_NEGATIVE_PIECE_INDEX));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
@@ -209,7 +212,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
         String expectedMessage = "Illegal arguments: piece index (1), offset (-1), length (16384)";
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(CANCEL_INVALID_DATA_NEGATIVE_OFFSET));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(CANCEL_INVALID_DATA_NEGATIVE_OFFSET));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
@@ -224,7 +227,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
         String expectedMessage = "Illegal arguments: piece index (1), offset (65536), length (-1)";
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(CANCEL_INVALID_DATA_NEGATIVE_LENGTH));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(CANCEL_INVALID_DATA_NEGATIVE_LENGTH));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
@@ -239,7 +242,7 @@ public class Protocol_InvalidDataTest extends ProtocolTest {
         String expectedMessage = "Illegal arguments: piece index (1), offset (65536), length (0)";
         InvalidMessageException e = null;
         try {
-            messageHandler.decode(createContext(), ByteBuffer.wrap(CANCEL_INVALID_DATA_ZERO_LENGTH));
+            TEST.getProtocol().decode(TEST.createDecodingContext(), ByteBuffer.wrap(CANCEL_INVALID_DATA_ZERO_LENGTH));
         } catch (InvalidMessageException e1) {
             e = e1;
         }
