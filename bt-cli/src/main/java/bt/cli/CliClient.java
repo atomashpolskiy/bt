@@ -3,6 +3,8 @@ package bt.cli;
 import bt.Bt;
 import bt.data.Storage;
 import bt.data.file.FileSystemStorage;
+import bt.dht.DHTConfig;
+import bt.dht.DHTModule;
 import bt.peerexchange.PeerExchangeModule;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
@@ -60,6 +62,7 @@ public class CliClient  {
         this.runtime = BtRuntime.builder()
                 .module(new PeerExchangeModule())
                 .module(new HttpTrackerModule())
+                .module(new DHTModule())
                 .disableAutomaticShutdown()
                 .build();
 
