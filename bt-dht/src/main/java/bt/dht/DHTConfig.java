@@ -7,7 +7,7 @@ public class DHTConfig {
     private boolean useIPv6;
 
     public DHTConfig() {
-        this.listeningPort = 43117;
+        this.listeningPort = 49001;
         this.useRouterBootstrap = false;
         this.useIPv6 = false;
     }

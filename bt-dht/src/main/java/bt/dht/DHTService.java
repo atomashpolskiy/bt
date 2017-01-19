@@ -3,7 +3,7 @@ package bt.dht;
 import bt.metainfo.Torrent;
 import bt.net.Peer;
 
-import java.util.Collection;
+import java.util.stream.Stream;
 
 interface DHTService {
 
@@ -11,5 +11,5 @@ interface DHTService {
 
     void shutdown();
 
-    Collection<Peer> getPeers(Torrent torrent);
+    Stream<Peer> getPeers(Torrent torrent);
 }

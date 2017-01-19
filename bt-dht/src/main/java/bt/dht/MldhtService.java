@@ -5,6 +5,7 @@ import bt.metainfo.Torrent;
 import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.service.IRuntimeLifecycleBinder;
+import com.google.common.io.Files;
 import lbms.plugins.mldht.DHTConfiguration;
 import lbms.plugins.mldht.kad.DHT;
 import lbms.plugins.mldht.kad.DHT.DHTtype;
@@ -16,9 +17,13 @@ import org.slf4j.LoggerFactory;
 
 import java.net.SocketException;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Iterator;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 class MldhtService implements DHTService {
 
@@ -33,26 +38,11 @@ class MldhtService implements DHTService {
     }
 
     private static DHTLogger createLogger() {
-
         return new DHTLogger() {
             @Override
             public void log(String message, LogLevel level) {
-                switch (level) {
-                    case Verbose: {
-                        LOGGER.trace(message);
-                    }
-                    case Debug: {
-                        LOGGER.debug(message);
-                    }
-                    case Info: {
-                        LOGGER.info(message);
-                    }
-                    case Error: {
-                        LOGGER.error(message);
-                    }
-                    case Fatal: {
-                        LOGGER.error("<Fatal> " + message);
-                    }
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("<" + level.name().toUpperCase() + "> " + message);
                 }
             }
 
@@ -70,6 +60,7 @@ class MldhtService implements DHTService {
         this.dht = new DHT(config.shouldUseIPv6()? DHTtype.IPV6_DHT : DHTtype.IPV4_DHT);
         this.config = toMldhtConfig(config);
 
+        lifecycleBinder.onStartup(this::start);
         lifecycleBinder.onShutdown(this::shutdown);
     }
 
@@ -82,7 +73,7 @@ class MldhtService implements DHTService {
 
             @Override
             public Path getStoragePath() {
-                return null;
+                return Files.createTempDir().toPath();
             }
 
             @Override
@@ -119,21 +110,34 @@ class MldhtService implements DHTService {
     }
 
     @Override
-    public Collection<Peer> getPeers(Torrent torrent) {
+    public Stream<Peer> getPeers(Torrent torrent) {
+        if (!dht.isRunning()) {
+            throw new IllegalStateException("DHT is not running");
+        }
+
         PeerLookupTask lookup = dht.createPeerLookup(torrent.getTorrentId().getBytes());
-        Set<Peer> peers = ConcurrentHashMap.newKeySet();
+        BlockingQueue<Peer> peers = new LinkedBlockingQueue<>();
         lookup.setResultHandler((k, p) -> {
-            peers.add(new InetPeer(p.getInetAddress(), p.getPort()));
+            Peer peer = new InetPeer(p.getInetAddress(), p.getPort());
+            peers.add(peer);
         });
         dht.getTaskManager().addTask(lookup);
 
-        while (!lookup.isFinished()) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+        int characteristics = Spliterator.NONNULL;
+        return StreamSupport.stream(() -> Spliterators.spliteratorUnknownSize(new Iterator<Peer>() {
+            @Override
+            public boolean hasNext() {
+                return !lookup.isFinished();
             }
-        }
-        return peers;
+
+            @Override
+            public Peer next() {
+                try {
+                    return peers.take();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException("Unexpectedly interrupted while waiting for next element", e);
+                }
+            }
+        }, characteristics), characteristics, false);
     }
 }
