@@ -106,6 +106,11 @@ public class SharedTrackerModule implements Module {
         }
 
         @Override
+        public boolean isSupportedProtocol(String trackerUrl) {
+            return true;
+        }
+
+        @Override
         public Tracker getTracker(String url) {
 
             URL trackerUrl;

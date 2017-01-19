@@ -71,7 +71,7 @@ public class ServiceModule implements Module {
      * @since 1.0
      */
     public static MapBinder<String, TrackerFactory> contributeTrackerFactory(Binder binder) {
-        return MapBinder.newMapBinder(binder, String.class, TrackerFactory.class);
+        return MapBinder.newMapBinder(binder, String.class, TrackerFactory.class, TrackerFactories.class);
     }
 
     private Config config;

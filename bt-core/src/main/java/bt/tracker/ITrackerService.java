@@ -8,9 +8,19 @@ package bt.tracker;
 public interface ITrackerService {
 
     /**
+     * Check if the protocol specified in the tracker's URL is supported.
+     *
+     * @param trackerUrl Tracker URL
+     * @return true if the protocol is supported
+     * @since 1.1
+     */
+    boolean isSupportedProtocol(String trackerUrl);
+
+    /**
      * Get a single tracker by its' URL
      *
      * @return Single tracker
+     * @throws bt.BtException if the protocol specified in the tracker's URL is not supported
      * @since 1.0
      */
     Tracker getTracker(String trackerUrl);
