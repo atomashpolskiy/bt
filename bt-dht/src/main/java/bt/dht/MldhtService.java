@@ -15,6 +15,8 @@ import lbms.plugins.mldht.kad.tasks.PeerLookupTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.SocketException;
 import java.nio.file.Path;
 import java.util.Iterator;
@@ -111,17 +113,21 @@ class MldhtService implements DHTService {
 
     @Override
     public Stream<Peer> getPeers(Torrent torrent) {
-        if (!dht.isRunning()) {
-            throw new IllegalStateException("DHT is not running");
+        PeerLookupTask lookup;
+        BlockingQueue<Peer> peers;
+        try {
+            lookup = dht.createPeerLookup(torrent.getTorrentId().getBytes());
+            peers = new LinkedBlockingQueue<>();
+            lookup.setResultHandler((k, p) -> {
+                Peer peer = new InetPeer(p.getInetAddress(), p.getPort());
+                peers.add(peer);
+            });
+            dht.getTaskManager().addTask(lookup);
+        } catch (Throwable e) {
+            LOGGER.error(String.format("Unexpected error in peer lookup: %s. Diagnostics:\n%s",
+                    e.getMessage(), getDiagnostics()), e);
+            throw e;
         }
-
-        PeerLookupTask lookup = dht.createPeerLookup(torrent.getTorrentId().getBytes());
-        BlockingQueue<Peer> peers = new LinkedBlockingQueue<>();
-        lookup.setResultHandler((k, p) -> {
-            Peer peer = new InetPeer(p.getInetAddress(), p.getPort());
-            peers.add(peer);
-        });
-        dht.getTaskManager().addTask(lookup);
 
         int characteristics = Spliterator.NONNULL;
         return StreamSupport.stream(() -> Spliterators.spliteratorUnknownSize(new Iterator<Peer>() {
@@ -139,5 +145,11 @@ class MldhtService implements DHTService {
                 }
             }
         }, characteristics), characteristics, false);
+    }
+
+    private String getDiagnostics() {
+        StringWriter sw = new StringWriter();
+        dht.printDiagnostics(new PrintWriter(sw));
+        return sw.toString();
     }
 }
