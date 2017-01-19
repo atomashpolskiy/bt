@@ -5,6 +5,7 @@ import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdentityService;
+import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,7 @@ public class PeerRegistry implements IPeerRegistry {
 
     private final Peer localPeer;
 
+    private ITrackerService trackerService;
     private TrackerPeerSourceFactory trackerPeerSourceFactory;
     private Set<PeerSourceFactory> extraPeerSourceFactories;
 
@@ -49,6 +51,7 @@ public class PeerRegistry implements IPeerRegistry {
         this.peerConsumers = new ConcurrentHashMap<>();
         this.localPeer = new InetPeer(localPeerAddress, localPeerPort, idService.getLocalPeerId());
 
+        this.trackerService = trackerService;
         this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, trackerQueryInterval);
         this.extraPeerSourceFactories = extraPeerSourceFactories;
 
@@ -65,7 +68,7 @@ public class PeerRegistry implements IPeerRegistry {
 
     private void collectAndVisitPeers() {
         peerConsumers.forEach((torrent, consumers) -> {
-            queryPeerSource(trackerPeerSourceFactory.getPeerSource(torrent), consumers);
+            queryTracker(torrent, consumers);
 
             // disallow querying peer sources other than tracker for private torrents
             if (!torrent.isPrivate() && !extraPeerSourceFactories.isEmpty()) {
@@ -73,6 +76,28 @@ public class PeerRegistry implements IPeerRegistry {
                         queryPeerSource(factory.getPeerSource(torrent), consumers));
             }
         });
+    }
+
+    private void queryTracker(Torrent torrent, List<Consumer<Peer>> consumers) {
+        if (mightCreateTracker(torrent.getAnnounceKey())) {
+            queryPeerSource(trackerPeerSourceFactory.getPeerSource(torrent), consumers);
+        }
+    }
+
+    private boolean mightCreateTracker(AnnounceKey announceKey) {
+        if (announceKey.isMultiKey()) {
+            // TODO: need some more sophisticated solution because some of the trackers might be supported
+            for (List<String> tier : announceKey.getTrackerUrls()) {
+                for (String trackerUrl : tier) {
+                    if (!trackerService.isSupportedProtocol(trackerUrl)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        } else {
+            return trackerService.isSupportedProtocol(announceKey.getTrackerUrl());
+        }
     }
 
     private void queryPeerSource(PeerSource peerSource, List<Consumer<Peer>> peerConsumers) {

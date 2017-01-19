@@ -1,6 +1,7 @@
 package bt.tracker;
 
 import bt.BtException;
+import bt.module.TrackerFactories;
 import com.google.inject.Inject;
 
 import java.util.Map;
@@ -17,9 +18,14 @@ public class TrackerService implements ITrackerService {
     private ConcurrentMap<String, Tracker> knownTrackers;
 
     @Inject
-    public TrackerService(Map<String, TrackerFactory> trackerFactories) {
+    public TrackerService(@TrackerFactories Map<String, TrackerFactory> trackerFactories) {
         this.trackerFactories = trackerFactories;
         this.knownTrackers = new ConcurrentHashMap<>();
+    }
+
+    @Override
+    public boolean isSupportedProtocol(String trackerUrl) {
+        return trackerFactories.containsKey(getProtocol(trackerUrl));
     }
 
     @Override
@@ -57,7 +63,7 @@ public class TrackerService implements ITrackerService {
         return factory.getTracker(trackerUrl);
     }
 
-    private String getProtocol(String url) {
+    private static String getProtocol(String url) {
         int schemaDelimiterIndex = url.indexOf("://");
         if (schemaDelimiterIndex < 1) {
             throw new IllegalArgumentException("Invalid URL: " + url);
