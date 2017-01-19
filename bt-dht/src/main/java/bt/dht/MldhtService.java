@@ -95,8 +95,7 @@ class MldhtService implements DHTService {
         };
     }
 
-    @Override
-    public synchronized void start() {
+    private void start() {
         if (!dht.isRunning()) {
             try {
                 dht.start(config);
@@ -106,8 +105,7 @@ class MldhtService implements DHTService {
         }
     }
 
-    @Override
-    public synchronized void shutdown() {
+    private void shutdown() {
         dht.stop();
     }
 

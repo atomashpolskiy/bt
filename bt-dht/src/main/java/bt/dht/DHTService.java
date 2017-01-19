@@ -5,11 +5,7 @@ import bt.net.Peer;
 
 import java.util.stream.Stream;
 
-interface DHTService {
-
-    void start();
-
-    void shutdown();
+public interface DHTService {
 
     Stream<Peer> getPeers(Torrent torrent);
 }
