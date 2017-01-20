@@ -80,10 +80,11 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         IncomingAcceptor acceptor = new IncomingAcceptor(socketChannelFactory);
         ExecutorService incomingAcceptor = Executors.newSingleThreadExecutor(
                 runnable -> new Thread(runnable, "bt.net.pool.incoming-acceptor"));
-        lifecycleBinder.onStartup(() -> incomingAcceptor.execute(acceptor));
+        lifecycleBinder.onStartup("Initialize incoming connection acceptor", () -> incomingAcceptor.execute(acceptor));
 
         this.cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, "bt.net.pool.cleaner"));
-        lifecycleBinder.onStartup(() -> cleaner.scheduleAtFixedRate(new Cleaner(), 1000, 1000, TimeUnit.MILLISECONDS));
+        lifecycleBinder.onStartup("Schedule periodic cleanup of stale peer connections",
+                () -> cleaner.scheduleAtFixedRate(new Cleaner(), 1000, 1000, TimeUnit.MILLISECONDS));
 
         this.executor = Executors.newCachedThreadPool(
                 new ThreadFactory() {
@@ -99,10 +100,15 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 }
         );
 
-        lifecycleBinder.onShutdown(this.getClass().getName(), acceptor::shutdown);
-        lifecycleBinder.onShutdown(this.getClass().getName(), incomingAcceptor::shutdownNow);
-        lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
-        lifecycleBinder.onShutdown(this.getClass().getName(), this::shutdown);
+        lifecycleBinder.onShutdown("Shutdown incoming connection acceptor", () -> {
+            try {
+                acceptor.shutdown();
+            } finally {
+                incomingAcceptor.shutdownNow();
+            }
+        });
+        lifecycleBinder.onShutdown("Shutdown outgoing connection request processor", executor::shutdownNow);
+        lifecycleBinder.onShutdown("Shutdown connection pool", this::shutdown);
     }
 
     @Override

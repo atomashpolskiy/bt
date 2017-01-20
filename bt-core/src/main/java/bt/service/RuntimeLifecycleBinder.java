@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  *<p><b>Note that this class implements a service.
@@ -13,7 +14,7 @@ import java.util.function.BiConsumer;
  */
 public class RuntimeLifecycleBinder implements IRuntimeLifecycleBinder {
 
-    private Map<LifecycleEvent, List<Binding>> bindings;
+    private Map<LifecycleEvent, List<LifecycleBinding>> bindings;
 
     public RuntimeLifecycleBinder() {
         bindings = new HashMap<>();
@@ -24,22 +25,38 @@ public class RuntimeLifecycleBinder implements IRuntimeLifecycleBinder {
 
     @Override
     public void onStartup(Runnable r) {
-        bindings.get(LifecycleEvent.STARTUP).add(new Binding(r));
+        bindings.get(LifecycleEvent.STARTUP).add(LifecycleBinding.bindRunnable(r).build());
     }
 
     @Override
     public void onStartup(String description, Runnable r) {
-        bindings.get(LifecycleEvent.STARTUP).add(new Binding(description, r));
+        bindings.get(LifecycleEvent.STARTUP).add(LifecycleBinding.bindRunnable(r).description(description).build());
+    }
+
+    @Override
+    public void onStartup(LifecycleBinding binding) {
+        bindings.get(LifecycleEvent.STARTUP).add(binding);
     }
 
     @Override
     public void onShutdown(Runnable r) {
-        bindings.get(LifecycleEvent.SHUTDOWN).add(new Binding(r));
+        bindings.get(LifecycleEvent.SHUTDOWN).add(LifecycleBinding.bindRunnable(r).async().build());
     }
 
     @Override
     public void onShutdown(String description, Runnable r) {
-        bindings.get(LifecycleEvent.SHUTDOWN).add(new Binding(description, r));
+        bindings.get(LifecycleEvent.SHUTDOWN).add(
+                LifecycleBinding.bindRunnable(r).description(description).async().build());
+    }
+
+    @Override
+    public void onShutdown(LifecycleBinding binding) {
+        bindings.get(LifecycleEvent.SHUTDOWN).add(binding);
+    }
+
+    @Override
+    public void addBinding(LifecycleEvent event, LifecycleBinding binding) {
+        bindings.get(event).add(binding);
     }
 
     @Override
@@ -47,26 +64,8 @@ public class RuntimeLifecycleBinder implements IRuntimeLifecycleBinder {
         bindings.get(event).forEach(binding -> consumer.accept(binding.getDescription(), binding.getRunnable()));
     }
 
-    private static class Binding {
-
-        private Optional<String> description;
-        private Runnable r;
-
-        Binding(Runnable r) {
-            this(null, r);
-        }
-
-        Binding(String description, Runnable r) {
-            this.description = Optional.ofNullable(description);
-            this.r = r;
-        }
-
-        public Optional<String> getDescription() {
-            return description;
-        }
-
-        public Runnable getRunnable() {
-            return r;
-        }
+    @Override
+    public void visitBindings(LifecycleEvent event, Consumer<LifecycleBinding> consumer) {
+        bindings.get(event).forEach(consumer::accept);
     }
 }

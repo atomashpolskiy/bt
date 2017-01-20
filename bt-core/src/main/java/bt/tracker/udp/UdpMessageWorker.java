@@ -48,8 +48,13 @@ class UdpMessageWorker {
         this.lock = new Object();
 
         this.executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.tracker.udp.message-worker"));
-        lifecycleBinder.onShutdown(this::shutdown);
-        lifecycleBinder.onShutdown(this.executor::shutdownNow);
+        lifecycleBinder.onShutdown("Shutdown UDP message worker", () -> {
+            try {
+                this.shutdown();
+            } finally {
+                this.executor.shutdownNow();
+            }
+        });
     }
 
     public synchronized <T> T sendMessage(UdpTrackerMessage message, UdpTrackerResponseHandler<T> responseHandler) {

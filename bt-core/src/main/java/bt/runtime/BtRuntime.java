@@ -1,13 +1,19 @@
 package bt.runtime;
 
+import bt.BtException;
 import bt.module.ClientExecutor;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IRuntimeLifecycleBinder.LifecycleEvent;
+import bt.service.LifecycleBinding;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -165,21 +171,6 @@ public class BtRuntime {
         }
     }
 
-    private void runHooks(LifecycleEvent event, Consumer<Throwable> errorConsumer) {
-        service(IRuntimeLifecycleBinder.class).visitBindings(
-                event,
-                (description, r) -> {
-                    try {
-                        if (description.isPresent()) {
-                            LOGGER.info("Running " + event.name().toLowerCase() + " hook: " + description.get());
-                        }
-                        r.run();
-                    } catch (Exception e) {
-                        errorConsumer.accept(e);
-                    }
-                });
-    }
-
     /**
      * Manually initiate the runtime shutdown procedure, which includes:
      * - stopping all attached clients
@@ -199,31 +190,69 @@ public class BtRuntime {
                     }
                 });
 
-                AtomicInteger threadCount = new AtomicInteger();
-                ExecutorService shutdownExecutor = Executors.newCachedThreadPool(r -> {
-                    Thread t = new Thread(r, "bt.runtime.shutdown-worker-" + threadCount.incrementAndGet());
-                    t.setDaemon(true);
-                    return t;
-                });
-                service(IRuntimeLifecycleBinder.class).visitBindings(
-                    LifecycleEvent.SHUTDOWN,
-                    (descriptionOptional, r) -> {
-                        Future<Optional<Throwable>> future = shutdownExecutor.submit(toCallable(r));
-                        String description = descriptionOptional.orElse(r.toString());
-                        try {
-                            future.get(config.getShutdownHookTimeout().toMillis(), TimeUnit.MILLISECONDS)
-                                    .ifPresent(throwable -> onShutdownHookError(description, throwable));
-                        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                            onShutdownHookError(description, e);
-                        }
-                    });
-                shutdownExecutorService(shutdownExecutor);
-                shutdownExecutorService(clientExecutor);
+                runHooks(LifecycleEvent.SHUTDOWN, this::onShutdownHookError);
+                shutdownExecutor(clientExecutor);
             }
         }
     }
 
-    private void shutdownExecutorService(ExecutorService executor) {
+    private void runHooks(LifecycleEvent event, Consumer<Throwable> errorConsumer) {
+        ExecutorService executor = createLifecycleExecutor(event);
+
+        Map<LifecycleBinding, Future<Optional<Throwable>>> futures = new HashMap<>();
+        List<LifecycleBinding> syncBindings = new ArrayList<>();
+
+        service(IRuntimeLifecycleBinder.class).visitBindings(
+                event,
+                binding -> {
+                    if (binding.isAsync()) {
+                        futures.put(binding, executor.submit(toCallable(event, binding)));
+                    } else {
+                        syncBindings.add(binding);
+                    }
+                });
+
+        syncBindings.forEach(binding -> {
+            String errorMessage = createErrorMessage(event, binding);
+            try {
+                toCallable(event, binding).call().ifPresent(e ->
+                        errorConsumer.accept(new BtException(errorMessage, e)));
+            } catch (Throwable e) {
+                errorConsumer.accept(new BtException(errorMessage, e));
+            }
+        });
+
+        futures.forEach((binding, future) -> {
+            String errorMessage = createErrorMessage(event, binding);
+            try {
+                // TODO: re-using existing config option here, need to think about it
+                future.get(config.getShutdownHookTimeout().toMillis(), TimeUnit.MILLISECONDS)
+                        .ifPresent(e -> errorConsumer.accept(new BtException(errorMessage, e)));
+            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                errorConsumer.accept(new BtException(errorMessage, e));
+            }
+        });
+
+        shutdownExecutor(executor);
+    }
+
+    private String createErrorMessage(LifecycleEvent event, LifecycleBinding binding) {
+        Optional<String> descriptionOptional = binding.getDescription();
+        String errorMessage = "Failed to execute " + event.name().toLowerCase() + " hook: ";
+        errorMessage += ": " + (descriptionOptional.isPresent()? descriptionOptional.get() : binding.getRunnable().toString());
+        return errorMessage;
+    }
+
+    private ExecutorService createLifecycleExecutor(LifecycleEvent event) {
+        AtomicInteger threadCount = new AtomicInteger();
+        return Executors.newCachedThreadPool(r -> {
+            Thread t = new Thread(r, "bt.runtime." + event.name().toLowerCase() + "-worker-" + threadCount.incrementAndGet());
+            t.setDaemon(true);
+            return t;
+        });
+    }
+
+    private void shutdownExecutor(ExecutorService executor) {
         executor.shutdown();
         try {
             executor.awaitTermination(config.getShutdownHookTimeout().toMillis(), TimeUnit.MILLISECONDS);
@@ -233,8 +262,14 @@ public class BtRuntime {
         }
     }
 
-    private Callable<Optional<Throwable>> toCallable(Runnable r) {
+    private Callable<Optional<Throwable>> toCallable(LifecycleEvent event, LifecycleBinding binding) {
         return () -> {
+            Runnable r = binding.getRunnable();
+
+            Optional<String> descriptionOptional = binding.getDescription();
+            String description = descriptionOptional.isPresent() ? descriptionOptional.get() : r.toString();
+            LOGGER.debug("Running " + event.name().toLowerCase() + " hook: " + description);
+
             try {
                 r.run();
                 return Optional.empty();
@@ -244,8 +279,9 @@ public class BtRuntime {
         };
     }
 
-    private void onShutdownHookError(String description, Throwable e) {
-        System.err.println("Shutdown hook failed: " + description + ". Reason:");
+    private void onShutdownHookError(Throwable e) {
+        // logging facilities might be unavailable at this moment,
+        // so using standard output
         e.printStackTrace(System.err);
         System.err.flush();
     }

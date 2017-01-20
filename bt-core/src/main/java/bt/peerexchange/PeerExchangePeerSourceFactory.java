@@ -68,13 +68,14 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         this.minEventsPerMessage = config.getMinEventsPerMessage();
         this.maxEventsPerMessage = config.getMaxEventsPerMessage();
 
+        lifecycleBinder.onStartup("Register PEX peer activity listener", () -> connectionPoolProvider.get()
+                .addConnectionListener(createPeerActivityListener()));
+
         ScheduledExecutorService executor =
                 Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "bt.peerexchange.cleaner"));
-        lifecycleBinder.onStartup(() -> connectionPoolProvider.get()
-                .addConnectionListener(createPeerActivityListener()));
-        lifecycleBinder.onStartup(() -> executor.scheduleAtFixedRate(
+        lifecycleBinder.onStartup("Schedule periodic cleanup of PEX messages", () -> executor.scheduleAtFixedRate(
                 new Cleaner(), CLEANER_INTERVAL.toMillis(), CLEANER_INTERVAL.toMillis(), TimeUnit.MILLISECONDS));
-        lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
+        lifecycleBinder.onShutdown("Shutdown PEX cleanup scheduler", executor::shutdownNow);
     }
 
     private PeerActivityListener createPeerActivityListener() {
