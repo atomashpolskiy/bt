@@ -17,12 +17,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -199,14 +198,14 @@ public class BtRuntime {
     private void runHooks(LifecycleEvent event, Consumer<Throwable> errorConsumer) {
         ExecutorService executor = createLifecycleExecutor(event);
 
-        Map<LifecycleBinding, Future<Optional<Throwable>>> futures = new HashMap<>();
+        Map<LifecycleBinding, CompletableFuture<Void>> futures = new HashMap<>();
         List<LifecycleBinding> syncBindings = new ArrayList<>();
 
         service(IRuntimeLifecycleBinder.class).visitBindings(
                 event,
                 binding -> {
                     if (binding.isAsync()) {
-                        futures.put(binding, executor.submit(toCallable(event, binding)));
+                        futures.put(binding, CompletableFuture.runAsync(toRunnable(event, binding), executor));
                     } else {
                         syncBindings.add(binding);
                     }
@@ -215,23 +214,23 @@ public class BtRuntime {
         syncBindings.forEach(binding -> {
             String errorMessage = createErrorMessage(event, binding);
             try {
-                toCallable(event, binding).call().ifPresent(e ->
-                        errorConsumer.accept(new BtException(errorMessage, e)));
+                toRunnable(event, binding).run();
             } catch (Throwable e) {
                 errorConsumer.accept(new BtException(errorMessage, e));
             }
         });
 
-        futures.forEach((binding, future) -> {
-            String errorMessage = createErrorMessage(event, binding);
-            try {
-                // TODO: re-using existing config option here, need to think about it
-                future.get(config.getShutdownHookTimeout().toMillis(), TimeUnit.MILLISECONDS)
-                        .ifPresent(e -> errorConsumer.accept(new BtException(errorMessage, e)));
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                errorConsumer.accept(new BtException(errorMessage, e));
-            }
-        });
+        // if the app is shutting down, then we must wait for the futures to complete
+        if (event == LifecycleEvent.SHUTDOWN) {
+            futures.forEach((binding, future) -> {
+                String errorMessage = createErrorMessage(event, binding);
+                try {
+                    future.get(config.getShutdownHookTimeout().toMillis(), TimeUnit.MILLISECONDS);
+                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                    errorConsumer.accept(new BtException(errorMessage, e));
+                }
+            });
+        }
 
         shutdownExecutor(executor);
     }
@@ -262,7 +261,7 @@ public class BtRuntime {
         }
     }
 
-    private Callable<Optional<Throwable>> toCallable(LifecycleEvent event, LifecycleBinding binding) {
+    private Runnable toRunnable(LifecycleEvent event, LifecycleBinding binding) {
         return () -> {
             Runnable r = binding.getRunnable();
 
@@ -270,12 +269,7 @@ public class BtRuntime {
             String description = descriptionOptional.isPresent() ? descriptionOptional.get() : r.toString();
             LOGGER.debug("Running " + event.name().toLowerCase() + " hook: " + description);
 
-            try {
-                r.run();
-                return Optional.empty();
-            } catch (Throwable e) {
-                return Optional.of(e);
-            }
+            r.run();
         };
     }
 

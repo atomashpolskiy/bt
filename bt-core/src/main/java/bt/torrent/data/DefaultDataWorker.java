@@ -38,7 +38,7 @@ class DefaultDataWorker implements DataWorker {
         this.maxPendingTasks = maxQueueLength;
         this.pendingTasksCount = new AtomicInteger();
 
-        lifecycleBinder.onShutdown(this.getClass().getName() + " - " + dataDescriptor, this.executor::shutdownNow);
+        lifecycleBinder.onShutdown("Shutdown data worker for descriptor: " + dataDescriptor, this.executor::shutdownNow);
     }
 
     @Override

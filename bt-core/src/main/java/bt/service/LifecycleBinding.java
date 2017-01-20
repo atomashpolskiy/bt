@@ -1,5 +1,8 @@
 package bt.service;
 
+import bt.runtime.Config;
+
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -8,7 +11,10 @@ import java.util.Optional;
  */
 public class LifecycleBinding {
 
-    static Builder bindRunnable(Runnable r) {
+    /**
+     * @since 1.1
+     */
+    public static Builder bind(Runnable r) {
         return new Builder(r);
     }
 
@@ -43,7 +49,10 @@ public class LifecycleBinding {
         return async;
     }
 
-    static class Builder {
+    /**
+     * @since 1.1
+     */
+    public static class Builder {
 
         private Runnable r;
         private String description;
@@ -53,17 +62,30 @@ public class LifecycleBinding {
             this.r = Objects.requireNonNull(r);
         }
 
-        Builder description(String description) {
+        /**
+         * @param description Human-readable description
+         * @since 1.1
+         */
+        public Builder description(String description) {
             this.description = Objects.requireNonNull(description);
             return this;
         }
 
-        Builder async() {
+        /**
+         * Mark this binding for asynchronous execution
+         *
+         * @see Config#setShutdownHookTimeout(Duration)
+         * @since 1.1
+         */
+        public Builder async() {
             this.async = true;
             return this;
         }
 
-        LifecycleBinding build() {
+        /**
+         * @since 1.1
+         */
+        public LifecycleBinding build() {
             return new LifecycleBinding(description, r, async);
         }
     }

@@ -25,12 +25,12 @@ public class RuntimeLifecycleBinder implements IRuntimeLifecycleBinder {
 
     @Override
     public void onStartup(Runnable r) {
-        bindings.get(LifecycleEvent.STARTUP).add(LifecycleBinding.bindRunnable(r).build());
+        bindings.get(LifecycleEvent.STARTUP).add(LifecycleBinding.bind(r).build());
     }
 
     @Override
     public void onStartup(String description, Runnable r) {
-        bindings.get(LifecycleEvent.STARTUP).add(LifecycleBinding.bindRunnable(r).description(description).build());
+        bindings.get(LifecycleEvent.STARTUP).add(LifecycleBinding.bind(r).description(description).build());
     }
 
     @Override
@@ -40,13 +40,13 @@ public class RuntimeLifecycleBinder implements IRuntimeLifecycleBinder {
 
     @Override
     public void onShutdown(Runnable r) {
-        bindings.get(LifecycleEvent.SHUTDOWN).add(LifecycleBinding.bindRunnable(r).async().build());
+        bindings.get(LifecycleEvent.SHUTDOWN).add(LifecycleBinding.bind(r).async().build());
     }
 
     @Override
     public void onShutdown(String description, Runnable r) {
         bindings.get(LifecycleEvent.SHUTDOWN).add(
-                LifecycleBinding.bindRunnable(r).description(description).async().build());
+                LifecycleBinding.bind(r).description(description).async().build());
     }
 
     @Override
