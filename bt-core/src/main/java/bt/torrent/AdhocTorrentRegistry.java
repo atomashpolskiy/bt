@@ -63,7 +63,7 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
                 descriptor = existing;
             } else {
                 final TorrentDescriptor tDescriptor = descriptor;
-                lifecycleBinder.onShutdown(tDescriptor.getDataDescriptor().toString(), () -> {
+                lifecycleBinder.onShutdown("Closing torrent data descriptor: " + tDescriptor.getDataDescriptor().toString(), () -> {
                     try {
                         tDescriptor.getDataDescriptor().close();
                     } catch (IOException e) {

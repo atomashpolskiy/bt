@@ -48,9 +48,14 @@ public class MessageDispatcher implements IMessageDispatcher {
 
         ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.net.message-dispatcher"));
         Worker worker = new Worker(pool);
-        lifecycleBinder.onStartup(() -> executor.execute(worker));
-        lifecycleBinder.onShutdown(this.getClass().getName(), worker::shutdown);
-        lifecycleBinder.onShutdown(this.getClass().getName(), executor::shutdownNow);
+        lifecycleBinder.onStartup("Initialize message dispatcher", () -> executor.execute(worker));
+        lifecycleBinder.onShutdown("Shutdown message dispatcher worker", () -> {
+            try {
+                worker.shutdown();
+            } finally {
+                executor.shutdownNow();
+            }
+        });
     }
 
     private class Worker implements Runnable {
