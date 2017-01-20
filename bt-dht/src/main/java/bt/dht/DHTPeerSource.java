@@ -18,6 +18,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
+/**
+ * @since 1.1
+ */
 public class DHTPeerSource implements PeerSource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DHTPeerSource.class);

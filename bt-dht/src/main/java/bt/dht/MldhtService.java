@@ -5,6 +5,7 @@ import bt.metainfo.Torrent;
 import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.service.IRuntimeLifecycleBinder;
+import bt.service.LifecycleBinding;
 import com.google.common.io.Files;
 import lbms.plugins.mldht.DHTConfiguration;
 import lbms.plugins.mldht.kad.DHT;
@@ -30,10 +31,11 @@ import java.util.stream.StreamSupport;
 class MldhtService implements DHTService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MldhtService.class);
+    private static final DHTLogger DHT_LOGGER = createLogger();
 
     static {
         try {
-            DHT.setLogger(createLogger());
+            DHT.setLogger(DHT_LOGGER);
         } catch (Throwable e) {
             e.printStackTrace();
         }
@@ -62,8 +64,8 @@ class MldhtService implements DHTService {
         this.dht = new DHT(config.shouldUseIPv6()? DHTtype.IPV6_DHT : DHTtype.IPV4_DHT);
         this.config = toMldhtConfig(config);
 
-        lifecycleBinder.onStartup(this::start);
-        lifecycleBinder.onShutdown(this::shutdown);
+        lifecycleBinder.onStartup(LifecycleBinding.bind(this::start).description("Initialize DHT facilities").async().build());
+        lifecycleBinder.onShutdown("Shutdown DHT facilities", this::shutdown);
     }
 
     private DHTConfiguration toMldhtConfig(DHTConfig config) {
@@ -114,6 +116,7 @@ class MldhtService implements DHTService {
         PeerLookupTask lookup;
         BlockingQueue<Peer> peers;
         try {
+            dht.getServerManager().awaitActiveServer().get();
             lookup = dht.createPeerLookup(torrent.getTorrentId().getBytes());
             peers = new LinkedBlockingQueue<>();
             lookup.setResultHandler((k, p) -> {
@@ -122,9 +125,12 @@ class MldhtService implements DHTService {
             });
             dht.getTaskManager().addTask(lookup);
         } catch (Throwable e) {
-            LOGGER.error(String.format("Unexpected error in peer lookup: %s. Diagnostics:\n%s",
+            LOGGER.error(String.format("Unexpected error in peer lookup: %s. See DHT log file for diagnostic information.",
+                    e.getMessage()), e);
+            BtException btex = new BtException(String.format("Unexpected error in peer lookup: %s. Diagnostics:\n%s",
                     e.getMessage(), getDiagnostics()), e);
-            throw e;
+            DHT_LOGGER.log(btex, LogLevel.Error);
+            throw btex;
         }
 
         int characteristics = Spliterator.NONNULL;

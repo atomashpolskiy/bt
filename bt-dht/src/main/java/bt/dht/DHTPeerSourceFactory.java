@@ -11,6 +11,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Factory of DHT peer sources
+ *
+ * @since 1.1
+ */
 public class DHTPeerSourceFactory implements PeerSourceFactory {
 
     private DHTService dhtService;
@@ -23,7 +28,7 @@ public class DHTPeerSourceFactory implements PeerSourceFactory {
                                 DHTService dhtService) {
         this.dhtService = dhtService;
         this.executor = Executors.newCachedThreadPool(r -> new Thread(r, "bt.dht.executor"));
-        lifecycleBinder.onShutdown(executor::shutdownNow);
+        lifecycleBinder.onShutdown("Shutdown DHT peer sources", executor::shutdownNow);
 
         this.peerSources = new ConcurrentHashMap<>();
     }

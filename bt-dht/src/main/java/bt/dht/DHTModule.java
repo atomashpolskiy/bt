@@ -7,15 +7,23 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 
-
+/**
+ * @since 1.1
+ */
 public class DHTModule implements Module {
 
     private DHTConfig config;
 
+    /**
+     * @since 1.1
+     */
     public DHTModule() {
         this.config = new DHTConfig();
     }
 
+    /**
+     * @since 1.1
+     */
     public DHTModule(DHTConfig config) {
         this.config = config;
     }
