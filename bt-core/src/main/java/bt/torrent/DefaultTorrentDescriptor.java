@@ -30,15 +30,18 @@ class DefaultTorrentDescriptor implements TorrentDescriptor {
     }
 
     private Tracker createTracker(ITrackerService trackerService, Torrent torrent) {
-        try {
-            String trackerUrl = getTrackerUrl(torrent.getAnnounceKey());
-            if (trackerService.isSupportedProtocol(trackerUrl)) {
-                return trackerService.getTracker(torrent.getAnnounceKey());
-            } else {
-                LOGGER.warn("Tracker URL protocol is not supported: " + trackerUrl);
+        Optional<AnnounceKey> announceKey = torrent.getAnnounceKeyOptional();
+        if (announceKey.isPresent()) {
+            try {
+                String trackerUrl = getTrackerUrl(announceKey.get());
+                if (trackerService.isSupportedProtocol(trackerUrl)) {
+                    return trackerService.getTracker(announceKey.get());
+                } else {
+                    LOGGER.warn("Tracker URL protocol is not supported: " + trackerUrl);
+                }
+            } catch (Exception e) {
+                LOGGER.error("Failed to create tracker for announce key: " + announceKey.get());
             }
-        } catch (Exception e) {
-            LOGGER.error("Failed to create tracker for announce key: " + torrent.getAnnounceKey());
         }
         return null;
     }

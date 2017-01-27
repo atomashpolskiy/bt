@@ -11,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Optional;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.mockito.Mockito.mock;
@@ -32,7 +33,7 @@ public class ChunkDescriptorTestUtil {
         when(torrent.getChunkSize()).thenReturn(chunkSize);
         when(torrent.getSize()).thenReturn(size);
         when(torrent.getFiles()).thenReturn(Arrays.asList(files));
-        when(torrent.getAnnounceKey()).thenReturn(new AnnounceKey("http://tracker.org/ann"));
+        when(torrent.getAnnounceKeyOptional()).thenReturn(Optional.of(new AnnounceKey("http://tracker.org/ann")));
 
         return torrent;
     }

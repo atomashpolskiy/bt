@@ -97,6 +97,7 @@ public interface IRuntimeLifecycleBinder {
      * @param event Lifecycle event
      * @param consumer First parameter is hook's optional description,
      *                 second parameter is the hook itself.
+     * @see #visitBindings(LifecycleEvent, Consumer)
      * @since 1.0
      * @deprecated As of release 1.1, replaced by {@link #visitBindings(LifecycleEvent, Consumer)}
      */

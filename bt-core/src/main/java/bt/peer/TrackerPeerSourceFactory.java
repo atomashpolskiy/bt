@@ -1,10 +1,12 @@
 package bt.peer;
 
 import bt.metainfo.Torrent;
+import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 class TrackerPeerSourceFactory implements PeerSourceFactory {
@@ -23,7 +25,11 @@ class TrackerPeerSourceFactory implements PeerSourceFactory {
     public PeerSource getPeerSource(Torrent torrent) {
         TrackerPeerSource peerSource = peerSources.get(torrent);
         if (peerSource == null) {
-            peerSource = new TrackerPeerSource(trackerService.getTracker(torrent.getAnnounceKey()),
+            Optional<AnnounceKey> announceKey = torrent.getAnnounceKeyOptional();
+            if (!announceKey.isPresent()) {
+                throw new IllegalStateException("Torrent does not have an announce key");
+            }
+            peerSource = new TrackerPeerSource(trackerService.getTracker(announceKey.get()),
                     torrent, trackerQueryInterval);
             TrackerPeerSource existing = peerSources.putIfAbsent(torrent, peerSource);
             if (existing != null) {

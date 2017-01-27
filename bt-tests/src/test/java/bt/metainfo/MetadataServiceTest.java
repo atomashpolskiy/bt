@@ -13,6 +13,7 @@ import java.util.Collections;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class MetadataServiceTest {
 
@@ -61,7 +62,8 @@ public class MetadataServiceTest {
     private void assertHasAttributes(Torrent torrent, AnnounceKey announceKey, String name, long chunkSize,
                                      int chunkHashesCount, long size) throws MalformedURLException {
 
-        assertEquals(announceKey, torrent.getAnnounceKey());
+        assertTrue(torrent.getAnnounceKeyOptional().isPresent());
+        assertEquals(announceKey, torrent.getAnnounceKeyOptional().get());
         assertEquals(name, torrent.getName());
         assertEquals(chunkSize, torrent.getChunkSize());
 

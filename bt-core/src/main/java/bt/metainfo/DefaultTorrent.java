@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 class DefaultTorrent implements Torrent {
 
@@ -25,6 +26,11 @@ class DefaultTorrent implements Torrent {
     @Override
     public AnnounceKey getAnnounceKey() {
         return announceKey;
+    }
+
+    @Override
+    public Optional<AnnounceKey> getAnnounceKeyOptional() {
+        return Optional.ofNullable(announceKey);
     }
 
     @Override

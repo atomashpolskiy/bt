@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -70,7 +71,7 @@ public class PeerRegistry implements IPeerRegistry {
         peerConsumers.forEach((torrent, consumers) -> {
             queryTracker(torrent, consumers);
 
-            // disallow querying peer sources other than tracker for private torrents
+            // disallow querying peer sources other than the tracker for private torrents
             if (!torrent.isPrivate() && !extraPeerSourceFactories.isEmpty()) {
                 extraPeerSourceFactories.forEach(factory ->
                         queryPeerSource(factory.getPeerSource(torrent), consumers));
@@ -79,7 +80,8 @@ public class PeerRegistry implements IPeerRegistry {
     }
 
     private void queryTracker(Torrent torrent, List<Consumer<Peer>> consumers) {
-        if (mightCreateTracker(torrent.getAnnounceKey())) {
+        Optional<AnnounceKey> announceKey = torrent.getAnnounceKeyOptional();
+        if (announceKey.isPresent() && mightCreateTracker(announceKey.get())) {
             queryPeerSource(trackerPeerSourceFactory.getPeerSource(torrent), consumers);
         }
     }
