@@ -151,7 +151,7 @@ public class MetadataService implements IMetadataService {
                 }
             }
 
-            AnnounceKey announceKey;
+            AnnounceKey announceKey = null;
             // TODO: support for private torrents with multiple trackers
             if (!isPrivate && root.containsKey(ANNOUNCE_LIST_KEY)) {
 
@@ -174,12 +174,14 @@ public class MetadataService implements IMetadataService {
 
                 announceKey = new AnnounceKey(trackerUrls);
 
-            } else {
+            } else if (root.containsKey(ANNOUNCE_KEY)) {
                 byte[] trackerUrl = (byte[]) root.get(ANNOUNCE_KEY).getValue();
                 announceKey = new AnnounceKey(new String(trackerUrl, defaultCharset));
             }
 
-            torrent.setAnnounceKey(announceKey);
+            if (announceKey != null) {
+                torrent.setAnnounceKey(announceKey);
+            }
 
         } catch (Exception e) {
             throw new BtException("Invalid metainfo format", e);
