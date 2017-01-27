@@ -22,4 +22,12 @@ public interface DHTService {
      * @since 1.1
      */
     Stream<Peer> getPeers(Torrent torrent);
+
+    /**
+     * Add a DHT node.
+     *
+     * @param node DHT node
+     * @since 1.1
+     */
+    void addNode(Peer node);
 }

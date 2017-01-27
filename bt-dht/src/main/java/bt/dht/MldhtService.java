@@ -151,6 +151,11 @@ class MldhtService implements DHTService {
         }, characteristics), characteristics, false);
     }
 
+    @Override
+    public void addNode(Peer node) {
+        dht.addDHTNode(node.getInetAddress().getHostAddress(), node.getPort());
+    }
+
     private String getDiagnostics() {
         StringWriter sw = new StringWriter();
         dht.printDiagnostics(new PrintWriter(sw));
