@@ -52,8 +52,9 @@ public final class PortMessageHandler extends UniqueMessageHandler<Port> {
         int consumed = 0;
         int length = Short.BYTES;
 
-        Short port;
-        if ((port = Protocols.readShort(buffer)) != null) {
+        Short s;
+        if ((s = Protocols.readShort(buffer)) != null) {
+            int port = s & 0x0000FFFF;
             context.setMessage(new Port(port));
             consumed = length;
         }
