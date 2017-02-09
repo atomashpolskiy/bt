@@ -7,8 +7,10 @@ import bt.net.IPeerConnectionPool;
 import bt.peer.IPeerRegistry;
 import bt.runtime.Config;
 import bt.torrent.Bitfield;
+import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.ITorrentSessionFactory;
 import bt.torrent.PieceSelectionStrategy;
+import bt.torrent.PieceSelector;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentSession;
@@ -19,6 +21,7 @@ import com.google.inject.Inject;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Default torrent session factory implementation.
@@ -76,7 +79,12 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
     }
 
     private PieceManager createPieceManager(Bitfield bitfield, PieceSelectionStrategy selectionStrategy) {
-        return new PieceManager(bitfield, selectionStrategy);
+        Assignments assignments = new Assignments();
+        BitfieldBasedStatistics pieceStatistics = new BitfieldBasedStatistics(bitfield.getPiecesTotal());
+        Predicate<Integer> validator = new IncompleteUnassignedPieceValidator(bitfield, assignments);
+
+        PieceSelector selector = new SelectorAdapter(selectionStrategy, pieceStatistics, validator);
+        return new PieceManager(bitfield, selector, assignments, pieceStatistics);
     }
 
     private DataWorker createDataWorker(TorrentDescriptor descriptor) {

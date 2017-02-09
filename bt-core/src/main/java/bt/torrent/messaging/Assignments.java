@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-class Assignments {
+public class Assignments {
 
     private Map<Peer, Integer> assignedPieces;
     private Map<Integer, Peer> assignedPeers;
@@ -21,11 +21,11 @@ class Assignments {
         assignedPeers.put(pieceIndex, peer);
     }
 
-    Optional<Integer> getAssignedPiece(Peer peer) {
+    public Optional<Integer> getAssignedPiece(Peer peer) {
         return Optional.ofNullable(assignedPieces.get(peer));
     }
 
-    Optional<Peer> getAssignee(Integer pieceIndex) {
+    public Optional<Peer> getAssignee(Integer pieceIndex) {
         return Optional.ofNullable(assignedPeers.get(pieceIndex));
     }
 

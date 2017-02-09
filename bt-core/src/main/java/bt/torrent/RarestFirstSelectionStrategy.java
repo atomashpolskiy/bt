@@ -101,21 +101,4 @@ public class RarestFirstSelectionStrategy implements PieceSelectionStrategy {
             return collectedIndices;
         }
     }
-
-    /**
-     * Compares only the first 32 bits of Long values
-     */
-    private static class PackedIntComparator implements Comparator<Long> {
-
-        @Override
-        public int compare(Long o1, Long o2) {
-            if (o1.intValue() > o2.intValue()) {
-                return 1;
-            } else if (o1.intValue() < o2.intValue()) {
-                return -1;
-            } else {
-                return 0;
-            }
-        }
-    }
 }

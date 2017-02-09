@@ -4,12 +4,12 @@ import bt.BtException;
 import bt.net.Peer;
 import bt.torrent.Bitfield;
 import bt.torrent.Bitfield.PieceStatus;
-import bt.torrent.PieceSelectionStrategy;
+import bt.torrent.BitfieldBasedStatistics;
+import bt.torrent.PieceSelector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
-import java.util.function.Predicate;
 
 /**
  *<p><b>Note that this class implements a service.
@@ -20,18 +20,14 @@ class PieceManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceManager.class);
 
     private Bitfield localBitfield;
-    private PieceSelector selector;
+    private PeerPieceSelector selector;
     private Assignments assignments;
-    private Predicate<Integer> selectionValidator;
 
-    public PieceManager(Bitfield localBitfield, PieceSelectionStrategy pieceSelectionStrategy) {
+    public PieceManager(Bitfield localBitfield, PieceSelector selector, Assignments assignments,
+                        BitfieldBasedStatistics pieceStatistics) {
         this.localBitfield = localBitfield;
-
-        this.selector = new PieceSelector(localBitfield, pieceSelectionStrategy,
-                pieceIndex -> !checkPieceCompleted(pieceIndex));
-
-        this.assignments = new Assignments();
-        this.selectionValidator = pieceIndex -> !assignments.getAssignee(pieceIndex).isPresent();
+        this.selector = new PeerPieceSelector(localBitfield, pieceStatistics, selector);
+        this.assignments = assignments;
     }
 
     public Bitfield getBitfield() {
@@ -91,11 +87,7 @@ class PieceManager {
     }
 
     public boolean mightSelectPieceForPeer(Peer peer) {
-        if (assignments.getAssignedPiece(peer).isPresent()) {
-            return false;
-        }
-        Optional<Integer> piece = selector.selectPieceForPeer(peer, selectionValidator);
-        return piece.isPresent() && !assignments.getAssignee(piece.get()).isPresent();
+        return !assignments.getAssignedPiece(peer).isPresent() && selector.selectPieceForPeer(peer).isPresent();
     }
 
     public Optional<Integer> selectPieceForPeer(Peer peer) {
@@ -118,7 +110,7 @@ class PieceManager {
     }
 
     private Optional<Integer> selectAndAssignPiece(Peer peer) {
-        Optional<Integer> piece = selector.selectPieceForPeer(peer, selectionValidator);
+        Optional<Integer> piece = selector.selectPieceForPeer(peer);
         if (piece.isPresent()) {
             assignments.assignPiece(peer, piece.get());
         }
