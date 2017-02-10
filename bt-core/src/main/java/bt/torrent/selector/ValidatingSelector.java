@@ -1,5 +1,7 @@
 package bt.torrent.selector;
 
+import bt.torrent.PieceStatistics;
+
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -26,7 +28,7 @@ public class ValidatingSelector implements PieceSelector {
     }
 
     @Override
-    public Stream<Integer> getNextPieces() {
-        return delegate.getNextPieces().filter(validator::test);
+    public Stream<Integer> getNextPieces(PieceStatistics pieceStatistics) {
+        return delegate.getNextPieces(pieceStatistics).filter(validator::test);
     }
 }

@@ -8,11 +8,13 @@ import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 import bt.torrent.ITorrentSessionFactory;
 import bt.torrent.PieceSelectionStrategy;
-import bt.torrent.RarestFirstSelectionStrategy;
-import bt.torrent.TorrentSessionParams;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentSession;
+import bt.torrent.TorrentSessionParams;
+import bt.torrent.selector.PieceSelector;
+import bt.torrent.selector.RarestFirstSelector;
+import bt.torrent.selector.SequentialSelector;
 import com.google.inject.Key;
 
 import java.net.URL;
@@ -42,13 +44,14 @@ public class Bt {
 
     private Supplier<Torrent> torrentSupplier;
     private PieceSelectionStrategy pieceSelectionStrategy;
+    private PieceSelector pieceSelector;
     private boolean shouldInitEagerly;
     private Storage storage;
 
     private Bt(Storage storage) {
         this.storage = Objects.requireNonNull(storage, "Missing data storage");
         // set default piece selector
-        this.pieceSelectionStrategy = RarestFirstSelectionStrategy.randomizedRarest();
+        this.pieceSelector = RarestFirstSelector.randomizedRarest();
     }
 
     /**
@@ -80,8 +83,47 @@ public class Bt {
      * @since 1.0
      */
     public Bt selector(PieceSelectionStrategy pieceSelectionStrategy) {
+        this.pieceSelector = null;
         this.pieceSelectionStrategy = pieceSelectionStrategy;
         return this;
+    }
+
+    /**
+     * Set piece selection strategy
+     *
+     * @since 1.1
+     */
+    public Bt selector(PieceSelector pieceSelector) {
+        this.pieceSelectionStrategy = null;
+        this.pieceSelector = pieceSelector;
+        return this;
+    }
+
+    /**
+     * Use sequential piece selection strategy
+     *
+     * @since 1.1
+     */
+    public Bt sequentialSelector() {
+       return selector(SequentialSelector.sequential());
+    }
+
+    /**
+     * Use rarest first piece selection strategy
+     *
+     * @since 1.1
+     */
+    public Bt rarestSelector() {
+       return selector(RarestFirstSelector.rarest());
+    }
+
+    /**
+     * Use rarest first piece selection strategy
+     *
+     * @since 1.1
+     */
+    public Bt randomizedRarestSelector() {
+       return selector(RarestFirstSelector.randomizedRarest());
     }
 
     /**
@@ -126,7 +168,9 @@ public class Bt {
     private BtClient doBuild() {
 
         Objects.requireNonNull(torrentSupplier, "Missing torrent supplier");
-        Objects.requireNonNull(pieceSelectionStrategy, "Missing piece selection strategy");
+        if (pieceSelectionStrategy == null && pieceSelector == null) {
+            throw new IllegalStateException("Missing piece selection strategy");
+        }
 
         return shouldInitEagerly ? createClient() : new LazyClient(this::createClient);
     }
@@ -154,7 +198,11 @@ public class Bt {
 
     private TorrentSessionParams getSessionParams() {
         TorrentSessionParams params = new TorrentSessionParams();
-        params.setSelectionStrategy(pieceSelectionStrategy);
+        if (pieceSelector != null) {
+            params.setPieceSelector(pieceSelector);
+        } else {
+            params.setSelectionStrategy(pieceSelectionStrategy);
+        }
         return params;
     }
 

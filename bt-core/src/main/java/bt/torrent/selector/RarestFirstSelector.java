@@ -37,8 +37,8 @@ public class RarestFirstSelector extends BaseStreamSelector {
      *
      * @since 1.1
      */
-    public static RarestFirstSelector rarest(PieceStatistics pieceStatistics) {
-        return new RarestFirstSelector(pieceStatistics, false);
+    public static RarestFirstSelector rarest() {
+        return new RarestFirstSelector(false);
     }
 
     /**
@@ -49,21 +49,19 @@ public class RarestFirstSelector extends BaseStreamSelector {
      *
      * @since 1.1
      */
-    public static RarestFirstSelector randomizedRarest(PieceStatistics pieceStatistics) {
-        return new RarestFirstSelector(pieceStatistics, true);
+    public static RarestFirstSelector randomizedRarest() {
+        return new RarestFirstSelector(true);
     }
 
-    private PieceStatistics pieceStatistics;
     private Optional<Random> random;
 
-    private RarestFirstSelector(PieceStatistics pieceStatistics, boolean randomized) {
-        this.pieceStatistics = pieceStatistics;
+    private RarestFirstSelector(boolean randomized) {
         this.random = randomized ? Optional.of(new Random(System.currentTimeMillis())) : Optional.empty();
     }
 
     @Override
-    protected PrimitiveIterator.OfInt createIterator() {
-        LinkedList<Integer> queue = orderedQueue();
+    protected PrimitiveIterator.OfInt createIterator(PieceStatistics pieceStatistics) {
+        LinkedList<Integer> queue = orderedQueue(pieceStatistics);
         return new PrimitiveIterator.OfInt() {
             @Override
             public int nextInt() {
@@ -84,7 +82,7 @@ public class RarestFirstSelector extends BaseStreamSelector {
 
     // TODO: this is very inefficient when only a few pieces are needed,
     // and this for sure can be moved to PieceStatistics (that will be responsible for maintaining an up-to-date list)
-    private LinkedList<Integer> orderedQueue() {
+    private LinkedList<Integer> orderedQueue(PieceStatistics pieceStatistics) {
         PriorityQueue<Long> rarestFirst = new PriorityQueue<>(comparator);
         int piecesTotal = pieceStatistics.getPiecesTotal();
         for (int pieceIndex = 0; pieceIndex < piecesTotal; pieceIndex++) {

@@ -17,25 +17,22 @@ import java.util.stream.Stream;
 public class SelectorAdapter implements PieceSelector {
 
     private PieceSelectionStrategy strategy;
-    private PieceStatistics pieceStatistics;
     private Predicate<Integer> validator;
 
     /**
      * Wraps the provided selection strategy as a selector.
      *
      * @param strategy Piece selection strategy
-     * @param pieceStatistics Piece statistics
      * @param validator Selection validator
      * @since 1.1
      */
-    public SelectorAdapter(PieceSelectionStrategy strategy, PieceStatistics pieceStatistics, Predicate<Integer> validator) {
+    public SelectorAdapter(PieceSelectionStrategy strategy, Predicate<Integer> validator) {
         this.strategy = strategy;
-        this.pieceStatistics = pieceStatistics;
         this.validator = validator;
     }
 
     @Override
-    public Stream<Integer> getNextPieces() {
+    public Stream<Integer> getNextPieces(PieceStatistics pieceStatistics) {
         return Arrays.asList(strategy.getNextPieces(pieceStatistics, pieceStatistics.getPiecesTotal(), validator)).stream();
     }
 }

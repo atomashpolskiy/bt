@@ -14,18 +14,12 @@ public class SequentialSelector extends BaseStreamSelector {
     /**
      * @since 1.1
      */
-    public static SequentialSelector sequential(PieceStatistics pieceStatistics) {
-        return new SequentialSelector(pieceStatistics);
-    }
-
-    private PieceStatistics pieceStatistics;
-
-    private SequentialSelector(PieceStatistics pieceStatistics) {
-        this.pieceStatistics = pieceStatistics;
+    public static SequentialSelector sequential() {
+        return new SequentialSelector();
     }
 
     @Override
-    protected PrimitiveIterator.OfInt createIterator() {
+    protected PrimitiveIterator.OfInt createIterator(PieceStatistics pieceStatistics) {
         return new PrimitiveIterator.OfInt() {
             int i = 0;
 

@@ -9,7 +9,6 @@ import bt.runtime.Config;
 import bt.torrent.Bitfield;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.ITorrentSessionFactory;
-import bt.torrent.PieceStatistics;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentSession;
@@ -64,13 +63,16 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
         Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();
         BitfieldBasedStatistics pieceStatistics = new BitfieldBasedStatistics(bitfield);
         Assignments assignments = new Assignments();
-        PieceSelector selector = createSelector(params, bitfield, pieceStatistics, assignments);
+        PieceSelector selector = createSelector(params, bitfield, assignments);
 
         DataWorker dataWorker = createDataWorker(descriptor);
-        IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceStatistics, assignments, selector, dataWorker);
+        IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceStatistics,
+                assignments, selector, dataWorker);
 
-        TorrentWorker torrentWorker = new TorrentWorker(torrent.getTorrentId(), assignments, pieceStatistics, messageDispatcher, peerWorkerFactory);
-        TorrentSession session = new DefaultTorrentSession(connectionPool, torrentWorker, torrent, bitfield, config.getMaxPeerConnectionsPerTorrent());
+        TorrentWorker torrentWorker = new TorrentWorker(torrent.getTorrentId(), assignments,
+                pieceStatistics, messageDispatcher, peerWorkerFactory);
+        TorrentSession session = new DefaultTorrentSession(connectionPool, torrentWorker,
+                torrent, bitfield, config.getMaxPeerConnectionsPerTorrent());
 
         peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);
         connectionPool.addConnectionListener(session);
@@ -80,12 +82,11 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
 
     private PieceSelector createSelector(TorrentSessionParams params,
                                          Bitfield bitfield,
-                                         PieceStatistics pieceStatistics,
                                          Assignments assignments) {
         Predicate<Integer> validator = new IncompleteUnassignedPieceValidator(bitfield, assignments);
         PieceSelector selector = params.getPieceSelector();
         if (selector == null) {
-            selector = new SelectorAdapter(params.getSelectionStrategy(), pieceStatistics, validator);
+            selector = new SelectorAdapter(params.getSelectionStrategy(), validator);
         } else {
             selector = new ValidatingSelector(validator, selector);
         }

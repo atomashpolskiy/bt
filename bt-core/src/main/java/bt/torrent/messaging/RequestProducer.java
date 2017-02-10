@@ -195,7 +195,7 @@ public class RequestProducer {
     private Optional<Integer> selectPieceForPeer(Peer peer) {
         Optional<Bitfield> peerBitfield = pieceStatistics.getPeerBitfield(peer);
         if (peerBitfield.isPresent()) {
-            List<Integer> pieces = selector.getNextPieces()
+            List<Integer> pieces = selector.getNextPieces(pieceStatistics)
                     .filter(piece -> peerBitfield.get().getPieceStatus(piece) == Bitfield.PieceStatus.COMPLETE_VERIFIED)
                     .limit(1)
                     .collect(Collectors.toList());

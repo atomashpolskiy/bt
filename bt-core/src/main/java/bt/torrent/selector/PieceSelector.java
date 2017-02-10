@@ -1,5 +1,7 @@
 package bt.torrent.selector;
 
+import bt.torrent.PieceStatistics;
+
 import java.util.stream.Stream;
 
 /**
@@ -11,8 +13,10 @@ import java.util.stream.Stream;
 public interface PieceSelector {
 
     /**
+     * Select pieces based on the provided statistics.
+     *
      * @return Stream of selected piece indices
      * @since 1.1
      */
-    Stream<Integer> getNextPieces();
+    Stream<Integer> getNextPieces(PieceStatistics pieceStatistics);
 }
