@@ -5,6 +5,7 @@ import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
 import bt.protocol.Piece;
+import bt.torrent.Bitfield;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
@@ -25,12 +26,14 @@ public class PieceConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceConsumer.class);
 
-    private PieceManager pieceManager;
+    private Bitfield bitfield;
+    private Assignments assignments;
     private DataWorker dataWorker;
     private ConcurrentLinkedQueue<BlockWrite> completedBlocks;
 
-    PieceConsumer(PieceManager pieceManager, DataWorker dataWorker) {
-        this.pieceManager = pieceManager;
+    PieceConsumer(Bitfield bitfield, Assignments assignments, DataWorker dataWorker) {
+        this.bitfield = bitfield;
+        this.assignments = assignments;
         this.dataWorker = dataWorker;
         this.completedBlocks = new ConcurrentLinkedQueue<>();
     }
@@ -90,7 +93,8 @@ public class PieceConsumer {
         BlockWrite block;
         while ((block = completedBlocks.poll()) != null) {
             int pieceIndex = block.getPieceIndex();
-            if (pieceManager.checkPieceVerified(pieceIndex)) {
+            if (bitfield.getPieceStatus(pieceIndex) == Bitfield.PieceStatus.COMPLETE_VERIFIED) {
+                assignments.removeAssignee(pieceIndex);
                 messageConsumer.accept(new Have(pieceIndex));
             }
         }

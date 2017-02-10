@@ -1,7 +1,6 @@
 package bt.torrent.messaging;
 
 import bt.torrent.Bitfield;
-import bt.torrent.messaging.Assignments;
 
 import java.util.function.Predicate;
 
@@ -17,7 +16,7 @@ class IncompleteUnassignedPieceValidator implements Predicate<Integer> {
 
     @Override
     public boolean test(Integer pieceIndex) {
-        return ! (assignments.getAssignee(pieceIndex).isPresent() || isComplete(pieceIndex));
+        return ! (assignments.isAssigned(pieceIndex) || isComplete(pieceIndex));
     }
 
     private boolean isComplete(Integer pieceIndex) {

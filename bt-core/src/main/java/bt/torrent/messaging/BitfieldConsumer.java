@@ -2,6 +2,7 @@ package bt.torrent.messaging;
 
 import bt.protocol.Bitfield;
 import bt.protocol.Have;
+import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.annotation.Consumes;
 
 /**
@@ -15,20 +16,22 @@ import bt.torrent.annotation.Consumes;
  */
 public class BitfieldConsumer {
 
-    private PieceManager pieceManager;
+    private bt.torrent.Bitfield bitfield;
+    private BitfieldBasedStatistics pieceStatistics;
 
-    BitfieldConsumer(PieceManager pieceManager) {
-        this.pieceManager = pieceManager;
+    BitfieldConsumer(bt.torrent.Bitfield bitfield, BitfieldBasedStatistics pieceStatistics) {
+        this.bitfield = bitfield;
+        this.pieceStatistics = pieceStatistics;
     }
 
     @Consumes
-    public void consume(Bitfield bitfield, MessageContext context) {
-        pieceManager.peerHasBitfield(context.getPeer(),
-                new bt.torrent.Bitfield(bitfield.getBitfield(), pieceManager.getBitfield().getPiecesTotal()));
+    public void consume(Bitfield bitfieldMessage, MessageContext context) {
+        bt.torrent.Bitfield peerBitfield = new bt.torrent.Bitfield(bitfieldMessage.getBitfield(), bitfield.getPiecesTotal());
+        pieceStatistics.addBitfield(context.getPeer(), peerBitfield);
     }
 
     @Consumes
     public void consume(Have have, MessageContext context) {
-        pieceManager.peerHasPiece(context.getPeer(), have.getPieceIndex());
+        pieceStatistics.addPiece(context.getPeer(), have.getPieceIndex());
     }
 }

@@ -5,10 +5,10 @@ import bt.net.IMessageDispatcher;
 import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
+import bt.torrent.BitfieldBasedStatistics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,16 +25,19 @@ class TorrentWorker {
     private static final Logger LOGGER = LoggerFactory.getLogger(TorrentWorker.class);
 
     private TorrentId torrentId;
-    private PieceManager pieceManager;
+    private Assignments assignments;
+    private BitfieldBasedStatistics pieceStatistics;
     private IMessageDispatcher dispatcher;
 
     private IPeerWorkerFactory peerWorkerFactory;
     private ConcurrentMap<Peer, PieceAnnouncingPeerWorker> peerMap;
 
-    public TorrentWorker(TorrentId torrentId, PieceManager pieceManager, IMessageDispatcher dispatcher,
+    public TorrentWorker(TorrentId torrentId, Assignments assignments,
+                         BitfieldBasedStatistics pieceStatistics, IMessageDispatcher dispatcher,
                          IPeerWorkerFactory peerWorkerFactory) {
         this.torrentId = torrentId;
-        this.pieceManager = pieceManager;
+        this.assignments = assignments;
+        this.pieceStatistics = pieceStatistics;
         this.dispatcher = dispatcher;
         this.peerWorkerFactory = peerWorkerFactory;
         this.peerMap = new ConcurrentHashMap<>();
@@ -69,10 +72,8 @@ class TorrentWorker {
     public void removePeer(Peer peer) {
         PeerWorker removed = peerMap.remove(peer);
         if (removed != null) {
-            Optional<Integer> assignedPiece = pieceManager.getAssignedPiece(peer);
-            if (assignedPiece.isPresent()) {
-                pieceManager.unselectPieceForPeer(peer, assignedPiece.get());
-            }
+            pieceStatistics.removeBitfield(peer);
+            assignments.removeAssignment(peer);
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Removed connection for peer: " + peer);
             }

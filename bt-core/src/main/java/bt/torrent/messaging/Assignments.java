@@ -2,18 +2,18 @@ package bt.torrent.messaging;
 
 import bt.net.Peer;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class Assignments {
+class Assignments {
 
     private Map<Peer, Integer> assignedPieces;
     private Map<Integer, Peer> assignedPeers;
 
     Assignments() {
-        assignedPieces = new HashMap<>();
-        assignedPeers = new HashMap<>();
+        assignedPieces = new ConcurrentHashMap<>();
+        assignedPeers = new ConcurrentHashMap<>();
     }
 
     void assignPiece(Peer peer, Integer pieceIndex) {
@@ -21,12 +21,20 @@ public class Assignments {
         assignedPeers.put(pieceIndex, peer);
     }
 
-    public Optional<Integer> getAssignedPiece(Peer peer) {
+    Optional<Integer> getAssignedPiece(Peer peer) {
         return Optional.ofNullable(assignedPieces.get(peer));
     }
 
-    public Optional<Peer> getAssignee(Integer pieceIndex) {
+    Optional<Peer> getAssignee(Integer pieceIndex) {
         return Optional.ofNullable(assignedPeers.get(pieceIndex));
+    }
+
+    boolean hasAssignedPiece(Peer peer) {
+        return assignedPieces.containsKey(peer);
+    }
+
+    boolean isAssigned(Integer pieceIndex) {
+        return assignedPeers.containsKey(pieceIndex);
     }
 
     void removeAssignee(Integer pieceIndex) {

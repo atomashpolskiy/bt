@@ -2,12 +2,16 @@ package bt.torrent.messaging;
 
 import bt.BtException;
 import bt.data.ChunkDescriptor;
+import bt.data.DataDescriptor;
 import bt.net.Peer;
 import bt.protocol.Interested;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.NotInterested;
 import bt.protocol.Request;
+import bt.torrent.Bitfield;
+import bt.torrent.BitfieldBasedStatistics;
+import bt.torrent.selector.PieceSelector;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
 import org.slf4j.Logger;
@@ -32,12 +36,21 @@ public class RequestProducer {
 
     private static final int MAX_PENDING_REQUESTS = 3;
 
-    private PieceManager pieceManager;
+    private Bitfield bitfield;
+    private Assignments assignments;
+    private BitfieldBasedStatistics pieceStatistics;
+    private PieceSelector selector;
     private List<ChunkDescriptor> chunks;
 
-    RequestProducer(List<ChunkDescriptor> chunks, PieceManager pieceManager) {
-        this.chunks = chunks;
-        this.pieceManager = pieceManager;
+    RequestProducer(DataDescriptor dataDescriptor,
+                    BitfieldBasedStatistics pieceStatistics,
+                    PieceSelector selector,
+                    Assignments assignments) {
+        this.bitfield = dataDescriptor.getBitfield();
+        this.chunks = dataDescriptor.getChunkDescriptors();
+        this.pieceStatistics = pieceStatistics;
+        this.selector = selector;
+        this.assignments = assignments;
     }
 
     @Produces
@@ -46,10 +59,10 @@ public class RequestProducer {
         Peer peer = context.getPeer();
         ConnectionState connectionState = context.getConnectionState();
 
-        Optional<Integer> currentPiece = pieceManager.getAssignedPiece(peer);
+        Optional<Integer> currentPiece = assignments.getAssignedPiece(peer);
         if (connectionState.getRequestQueue().isEmpty()) {
             if (currentPiece.isPresent()) {
-                if (pieceManager.checkPieceCompleted(currentPiece.get())) {
+                if (checkPieceCompleted(currentPiece.get())) {
                     if (LOGGER.isDebugEnabled()) {
                         LOGGER.debug("Finished downloading piece #" + currentPiece.get() +
                                 "; peer: " + peer);
@@ -60,7 +73,7 @@ public class RequestProducer {
                 // being overly optimistical here, need to add some fallback strategy to restart piece
                 // (prob. with another peer, i.e. in another conn worker)
                 if (connectionState.isPeerChoking()) {
-                    pieceManager.unselectPieceForPeer(peer, currentPiece.get());
+                    assignments.removeAssignment(peer);
                     connectionState.getRequestQueue().clear();
                     connectionState.getPendingRequests().clear();
                 }
@@ -70,11 +83,11 @@ public class RequestProducer {
                         // as a bonus this also relieves us from clearing
                         // this flag manually after the current piece (if there is any) has been downloaded
                         (System.currentTimeMillis() - connectionState.getLastCheckedAvailablePiecesForPeer()) >= 3000) {
-                    connectionState.setMightSelectPieceForPeer(Optional.of(pieceManager.mightSelectPieceForPeer(peer)));
+                    connectionState.setMightSelectPieceForPeer(Optional.of(mightSelectPieceForPeer(peer)));
                     connectionState.setLastCheckedAvailablePiecesForPeer(System.currentTimeMillis());
                 }
                 if (connectionState.getMightSelectPieceForPeer().isPresent() && connectionState.getMightSelectPieceForPeer().get()
-                        && pieceManager.getBitfield().getPiecesRemaining() > 0) {
+                        && bitfield.getPiecesRemaining() > 0) {
                     if (!connectionState.isInterested()) {
                         messageConsumer.accept(Interested.instance());
                     }
@@ -87,10 +100,10 @@ public class RequestProducer {
         if (!connectionState.isPeerChoking()) {
             if (!currentPiece.isPresent()) {
                 // some time might have passed since the last check, need to refresh
-                connectionState.setMightSelectPieceForPeer(Optional.of(pieceManager.mightSelectPieceForPeer(peer)));
+                connectionState.setMightSelectPieceForPeer(Optional.of(mightSelectPieceForPeer(peer)));
                 connectionState.setLastCheckedAvailablePiecesForPeer(System.currentTimeMillis());
                 if (connectionState.getMightSelectPieceForPeer().get()) {
-                    Optional<Integer> nextPiece = pieceManager.selectPieceForPeer(peer);
+                    Optional<Integer> nextPiece = selectAndAssignPieceForPeer(peer);
                     if (nextPiece.isPresent()) {
                         if (LOGGER.isDebugEnabled()) {
                             LOGGER.debug("Begin downloading piece #" + nextPiece.get() +
@@ -155,6 +168,43 @@ public class RequestProducer {
                 }
             }
         }
+    }
+
+    private synchronized boolean checkPieceCompleted(Integer pieceIndex) {
+        Bitfield.PieceStatus pieceStatus = bitfield.getPieceStatus(pieceIndex);
+        boolean completed = (pieceStatus == Bitfield.PieceStatus.COMPLETE || pieceStatus == Bitfield.PieceStatus.COMPLETE_VERIFIED);
+
+        if (completed && assignments.getAssignee(pieceIndex).isPresent()) {
+            assignments.removeAssignee(pieceIndex);
+        }
+        return completed;
+    }
+
+    public boolean mightSelectPieceForPeer(Peer peer) {
+        return !assignments.hasAssignedPiece(peer) && selectPieceForPeer(peer).isPresent();
+    }
+
+    private Optional<Integer> selectAndAssignPieceForPeer(Peer peer) {
+        Optional<Integer> selectedPiece = selectPieceForPeer(peer);
+        if (selectedPiece.isPresent()) {
+            assignments.assignPiece(peer, selectedPiece.get());
+        }
+        return selectedPiece;
+    }
+
+    private Optional<Integer> selectPieceForPeer(Peer peer) {
+        Optional<Bitfield> peerBitfield = pieceStatistics.getPeerBitfield(peer);
+        if (peerBitfield.isPresent()) {
+            List<Integer> pieces = selector.getNextPieces()
+                    .filter(piece -> peerBitfield.get().getPieceStatus(piece) == Bitfield.PieceStatus.COMPLETE_VERIFIED)
+                    .limit(1)
+                    .collect(Collectors.toList());
+            if (pieces.size() > 0) {
+                Integer pieceIndex = pieces.get(0);
+                return Optional.of(pieceIndex);
+            }
+        }
+        return Optional.empty();
     }
 
     private Collection<Request> buildRequests(int pieceIndex) {

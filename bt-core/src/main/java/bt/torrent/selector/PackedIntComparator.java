@@ -1,12 +1,14 @@
-package bt.torrent;
+package bt.torrent.selector;
 
 import java.util.Comparator;
 
 /**
  * First compares the least significant 32 bits of Long values,
  * and if they are equal compares the most significant 32 bits.
+ *
+ * @since 1.1
  */
-class PackedIntComparator implements Comparator<Long> {
+public class PackedIntComparator implements Comparator<Long> {
 
     @Override
     public int compare(Long o1, Long o2) {

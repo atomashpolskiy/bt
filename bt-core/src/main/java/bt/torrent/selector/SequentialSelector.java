@@ -1,12 +1,26 @@
-package bt.torrent;
+package bt.torrent.selector;
+
+import bt.torrent.PieceStatistics;
 
 import java.util.PrimitiveIterator;
 
-class SequentialSelector extends StreamSelector {
+/**
+ * Selects pieces sequentially in the order of their availability.
+ *
+ * @since 1.1
+ **/
+public class SequentialSelector extends BaseStreamSelector {
+
+    /**
+     * @since 1.1
+     */
+    public static SequentialSelector sequential(PieceStatistics pieceStatistics) {
+        return new SequentialSelector(pieceStatistics);
+    }
 
     private PieceStatistics pieceStatistics;
 
-    SequentialSelector(PieceStatistics pieceStatistics) {
+    private SequentialSelector(PieceStatistics pieceStatistics) {
         this.pieceStatistics = pieceStatistics;
     }
 

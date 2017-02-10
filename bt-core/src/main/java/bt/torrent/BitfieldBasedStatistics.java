@@ -1,6 +1,11 @@
 package bt.torrent;
 
+import bt.net.Peer;
 import bt.torrent.Bitfield.PieceStatus;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Provides piece statistics based on peer bitfields
@@ -9,14 +14,19 @@ import bt.torrent.Bitfield.PieceStatus;
  */
 public class BitfieldBasedStatistics implements PieceStatistics {
 
+    private Bitfield localBitfield;
+    private Map<Peer, Bitfield> peerBitfields;
     private int[] pieceTotals;
 
-    public BitfieldBasedStatistics(int piecesTotal) {
-        this.pieceTotals = new int[piecesTotal];
+    public BitfieldBasedStatistics(Bitfield localBitfield) {
+        this.localBitfield = localBitfield;
+        this.peerBitfields = new ConcurrentHashMap<>();
+        this.pieceTotals = new int[localBitfield.getPiecesTotal()];
     }
 
-    public void addBitfield(Bitfield bitfield) {
+    public void addBitfield(Peer peer, Bitfield bitfield) {
         validateBitfieldLength(bitfield);
+        peerBitfields.put(peer, bitfield);
 
         for (int i = 0; i < pieceTotals.length; i++) {
             if (bitfield.getPieceStatus(i) == PieceStatus.COMPLETE_VERIFIED) {
@@ -25,8 +35,11 @@ public class BitfieldBasedStatistics implements PieceStatistics {
         }
     }
 
-    public void removeBitfield(Bitfield bitfield) {
-        validateBitfieldLength(bitfield);
+    public void removeBitfield(Peer peer) {
+        Bitfield bitfield = peerBitfields.remove(peer);
+        if (bitfield == null) {
+            return;
+        }
 
         for (int i = 0; i < pieceTotals.length; i++) {
             if (bitfield.getPieceStatus(i) == PieceStatus.COMPLETE_VERIFIED) {
@@ -42,8 +55,22 @@ public class BitfieldBasedStatistics implements PieceStatistics {
         }
     }
 
-    public void addPiece(Integer pieceIndex) {
+    public void addPiece(Peer peer, Integer pieceIndex) {
+        Bitfield bitfield = peerBitfields.get(peer);
+        if (bitfield == null) {
+            bitfield = new Bitfield(localBitfield.getPiecesTotal());
+            Bitfield existing = peerBitfields.putIfAbsent(peer, bitfield);
+            if (existing != null) {
+                bitfield = existing;
+            }
+        }
+
+        bitfield.markComplete(pieceIndex);
         pieceTotals[pieceIndex]++;
+    }
+
+    public Optional<Bitfield> getPeerBitfield(Peer peer) {
+        return Optional.ofNullable(peerBitfields.get(peer));
     }
 
     @Override

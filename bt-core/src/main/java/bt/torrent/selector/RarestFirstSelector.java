@@ -1,4 +1,6 @@
-package bt.torrent;
+package bt.torrent.selector;
+
+import bt.torrent.PieceStatistics;
 
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -7,15 +9,54 @@ import java.util.PrimitiveIterator;
 import java.util.PriorityQueue;
 import java.util.Random;
 
-public class RarestFirstSelector extends StreamSelector {
+/**
+ * Implements the "rarest-first" piece selection algorithm.
+ * As the name implies, pieces that appear less frequently
+ * and are generally less available are selected in the first place.
+ *
+ * There are two "flavours" of the "rarest-first" strategy: regular and randomized.
+
+ * Regular rarest-first selects whichever pieces that are the least available
+ * (strictly following the order of increasing availability).
+ *
+ * Randomized rarest-first selects one of the least available pieces randomly
+ * (which means that it does not always select THE least available piece, but rather looks at
+ * some number N of the least available pieces and then randomly picks one of them).
+ *
+ * @since 1.1
+ **/
+public class RarestFirstSelector extends BaseStreamSelector {
 
     private static final Comparator<Long> comparator = new PackedIntComparator();
     private static final int RANDOMIZED_SELECTION_SIZE = 10;
 
+    /**
+     * Regular rarest-first selector.
+     * Selects whichever pieces that are the least available
+     * (strictly following the order of increasing availability).
+     *
+     * @since 1.1
+     */
+    public static RarestFirstSelector rarest(PieceStatistics pieceStatistics) {
+        return new RarestFirstSelector(pieceStatistics, false);
+    }
+
+    /**
+     * Randomized rarest-first selector.
+     * Selects one of the least available pieces randomly
+     * (which means that it does not always select THE least available piece, but rather looks at
+     * some number N of the least available pieces and then randomly picks one of them).
+     *
+     * @since 1.1
+     */
+    public static RarestFirstSelector randomizedRarest(PieceStatistics pieceStatistics) {
+        return new RarestFirstSelector(pieceStatistics, true);
+    }
+
     private PieceStatistics pieceStatistics;
     private Optional<Random> random;
 
-    public RarestFirstSelector(PieceStatistics pieceStatistics, boolean randomized) {
+    private RarestFirstSelector(PieceStatistics pieceStatistics, boolean randomized) {
         this.pieceStatistics = pieceStatistics;
         this.random = randomized ? Optional.of(new Random(System.currentTimeMillis())) : Optional.empty();
     }

@@ -1,20 +1,8 @@
 package bt.torrent.messaging;
 
-import bt.data.ChunkDescriptor;
-import bt.net.Peer;
 import bt.torrent.BaseBitfieldTest;
-import bt.torrent.Bitfield;
-import bt.torrent.BitfieldBasedStatistics;
-import bt.torrent.PieceSelector;
-import bt.torrent.RarestFirstSelectionStrategy;
-import bt.torrent.RarestFirstSelector;
-import bt.torrent.ValidatingSelector;
-import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
@@ -23,7 +11,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 public class PieceManagerTest extends BaseBitfieldTest {
-
+/*
     @Test
     public void testPieceManager_SelectPieces_RarestSelectionStrategy() {
         Verifier verifier3 = new Verifier(),
@@ -113,6 +101,7 @@ public class PieceManagerTest extends BaseBitfieldTest {
         verifier3.setVerified();
         assertFalse(pieceManager.mightSelectPieceForPeer(peer2));
     }
+*/
 
     private static <T> void assertPresentAndHasValue(T expected, Optional<T> actualOptional) {
         assertTrue("missing value", actualOptional.isPresent());

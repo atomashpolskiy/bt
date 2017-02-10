@@ -1,5 +1,7 @@
 package bt.torrent;
 
+import bt.torrent.selector.PackedIntComparator;
+
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -23,7 +25,9 @@ import java.util.function.Predicate;
  * some number N of the least available pieces and then randomly picks one of them).
  *
  * @since 1.0
+ * @deprecated Since 1.1 replaced by {@link bt.torrent.selector.RarestFirstSelector}
  */
+@Deprecated
 public class RarestFirstSelectionStrategy implements PieceSelectionStrategy {
 
     private static final Comparator<Long> comparator = new PackedIntComparator();
