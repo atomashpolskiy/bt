@@ -201,6 +201,18 @@ public class Bitfield {
     }
 
     /**
+     * Shortcut method to find out if the piece download is complete.
+     *
+     * @param pieceIndex Piece index (0-based)
+     * @return true if the piece download is complete
+     * @since 1.1
+     */
+    public boolean isComplete(int pieceIndex) {
+        PieceStatus pieceStatus = getPieceStatus(pieceIndex);
+        return (pieceStatus == PieceStatus.COMPLETE || pieceStatus == PieceStatus.COMPLETE_VERIFIED);
+    }
+
+    /**
      * Signal that a piece has been completed and verified.
      * In case with "local" bitfield an additional check
      * of the corresponding chunk descriptor's status is performed.
