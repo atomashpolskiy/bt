@@ -31,10 +31,13 @@ public class PieceConsumer {
     private DataWorker dataWorker;
     private ConcurrentLinkedQueue<BlockWrite> completedBlocks;
 
-    PieceConsumer(Bitfield bitfield, Assignments assignments, DataWorker dataWorker) {
+    private boolean shouldFailOnUnexpectedBlocks;
+
+    PieceConsumer(Bitfield bitfield, Assignments assignments, DataWorker dataWorker, boolean shouldFailOnUnexpectedBlocks) {
         this.bitfield = bitfield;
         this.assignments = assignments;
         this.dataWorker = dataWorker;
+        this.shouldFailOnUnexpectedBlocks = shouldFailOnUnexpectedBlocks;
         this.completedBlocks = new ConcurrentLinkedQueue<>();
     }
 
@@ -70,7 +73,11 @@ public class PieceConsumer {
     private void assertBlockIsExpected(Peer peer, ConnectionState connectionState, Piece piece) {
         Object key = Mapper.mapper().buildKey(piece.getPieceIndex(), piece.getOffset(), piece.getBlock().length);
         if (!connectionState.getPendingRequests().remove(key)) {
-            throw new BtException("Received unexpected block " + piece + " from peer: " + peer);
+            if (shouldFailOnUnexpectedBlocks) {
+                throw new BtException("Received unexpected block " + piece + " from peer: " + peer);
+            } else {
+                LOGGER.warn("Received unexpected block {} from peer: {}", piece, peer);
+            }
         }
     }
 

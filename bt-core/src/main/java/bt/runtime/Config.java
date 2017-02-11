@@ -27,6 +27,7 @@ public class Config {
     private int maxTransferBlockSize;
     private int maxIOQueueSize;
     private Duration shutdownHookTimeout;
+    private boolean shouldFailOnUnexpectedBlocks;
 
     /**
      * Create a config with default parameters.
@@ -49,6 +50,7 @@ public class Config {
         this.maxTransferBlockSize = 2 << 16; // 128 KB
         this.maxIOQueueSize = 1000;
         this.shutdownHookTimeout = Duration.ofSeconds(5);
+        this.shouldFailOnUnexpectedBlocks = false;
     }
 
     /**
@@ -73,6 +75,7 @@ public class Config {
         this.maxTransferBlockSize = config.getMaxTransferBlockSize();
         this.maxIOQueueSize = config.getMaxIOQueueSize();
         this.shutdownHookTimeout = config.getShutdownHookTimeout();
+        this.shouldFailOnUnexpectedBlocks = config.shouldFailOnUnexpectedBlocks();
     }
 
     /**
@@ -299,5 +302,21 @@ public class Config {
      */
     public Duration getShutdownHookTimeout() {
         return shutdownHookTimeout;
+    }
+
+    /**
+     * @param shouldFailOnUnexpectedBlocks true if the peer connection should be terminated
+     *                                     when an unexpected (not requested) block is received
+     * @since 1.1
+     */
+    public void setShouldFailOnUnexpectedBlocks(boolean shouldFailOnUnexpectedBlocks) {
+        this.shouldFailOnUnexpectedBlocks = shouldFailOnUnexpectedBlocks;
+    }
+
+    /**
+     * @since 1.1
+     */
+    public boolean shouldFailOnUnexpectedBlocks() {
+        return shouldFailOnUnexpectedBlocks;
     }
 }

@@ -114,7 +114,7 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
         messagingAgents.add(new BitfieldConsumer(bitfield, pieceStatistics));
         messagingAgents.add(new PeerRequestConsumer(dataWorker));
         messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor(), pieceStatistics, selector, assignments));
-        messagingAgents.add(new PieceConsumer(bitfield, assignments, dataWorker));
+        messagingAgents.add(new PieceConsumer(bitfield, assignments, dataWorker, config.shouldFailOnUnexpectedBlocks()));
 
         messagingAgents.addAll(this.messagingAgents);
 
