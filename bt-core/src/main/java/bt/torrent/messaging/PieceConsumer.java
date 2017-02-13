@@ -49,6 +49,8 @@ public class PieceConsumer {
         // check that this block was requested in the first place
         assertBlockIsExpected(peer, connectionState, piece);
 
+        connectionState.setLastReceivedBlock(System.currentTimeMillis());
+
         addBlock(peer, connectionState, piece).whenComplete((block, error) -> {
             if (error != null) {
                 throw new RuntimeException("Failed to perform request to write block", error);

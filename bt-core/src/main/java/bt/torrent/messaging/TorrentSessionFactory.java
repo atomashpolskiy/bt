@@ -69,8 +69,8 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
         IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceStatistics,
                 assignments, selector, dataWorker);
 
-        TorrentWorker torrentWorker = new TorrentWorker(torrent.getTorrentId(), assignments,
-                pieceStatistics, messageDispatcher, peerWorkerFactory);
+        TorrentWorker torrentWorker = new TorrentWorker(torrent.getTorrentId(), bitfield, assignments,
+                selector, pieceStatistics, messageDispatcher, peerWorkerFactory);
         TorrentSession session = new DefaultTorrentSession(connectionPool, torrentWorker,
                 torrent, bitfield, config.getMaxPeerConnectionsPerTorrent());
 
@@ -113,7 +113,7 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
         messagingAgents.add(GenericConsumer.consumer());
         messagingAgents.add(new BitfieldConsumer(bitfield, pieceStatistics));
         messagingAgents.add(new PeerRequestConsumer(dataWorker));
-        messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor(), pieceStatistics, selector, assignments));
+        messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor(), assignments));
         messagingAgents.add(new PieceConsumer(bitfield, assignments, dataWorker, config.shouldFailOnUnexpectedBlocks()));
 
         messagingAgents.addAll(this.messagingAgents);

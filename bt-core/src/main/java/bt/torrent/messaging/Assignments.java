@@ -4,6 +4,7 @@ import bt.net.Peer;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 class Assignments {
@@ -49,5 +50,9 @@ class Assignments {
         if (assignedPiece != null) {
             assignedPeers.remove(assignedPiece);
         }
+    }
+
+    Set<Peer> getAssignees() {
+        return assignedPieces.keySet();
     }
 }

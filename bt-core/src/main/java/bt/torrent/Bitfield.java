@@ -201,15 +201,27 @@ public class Bitfield {
     }
 
     /**
-     * Shortcut method to find out if the piece download is complete.
+     * Shortcut method to find out if the piece has been downloaded.
      *
      * @param pieceIndex Piece index (0-based)
-     * @return true if the piece download is complete
+     * @return true if the piece has been downloaded
      * @since 1.1
      */
     public boolean isComplete(int pieceIndex) {
         PieceStatus pieceStatus = getPieceStatus(pieceIndex);
         return (pieceStatus == PieceStatus.COMPLETE || pieceStatus == PieceStatus.COMPLETE_VERIFIED);
+    }
+
+    /**
+     * Shortcut method to find out if the piece has been downloaded and verified.
+     *
+     * @param pieceIndex Piece index (0-based)
+     * @return true if the piece has been downloaded and verified
+     * @since 1.1
+     */
+    public boolean isVerified(int pieceIndex) {
+        PieceStatus pieceStatus = getPieceStatus(pieceIndex);
+        return pieceStatus == PieceStatus.COMPLETE_VERIFIED;
     }
 
     /**
