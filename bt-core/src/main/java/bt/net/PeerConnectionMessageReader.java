@@ -1,8 +1,8 @@
 package bt.net;
 
 import bt.BtException;
-import bt.protocol.Message;
 import bt.protocol.DecodingContext;
+import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 
 import java.io.IOException;
@@ -21,25 +21,28 @@ class PeerConnectionMessageReader {
     private Supplier<DecodingContext> newContextSupplier;
     private DecodingContext context;
 
-    PeerConnectionMessageReader(MessageHandler<Message> messageHandler, ReadableByteChannel channel,
-                                Supplier<DecodingContext> newContextSupplier, int bufferSize) {
-
+    PeerConnectionMessageReader(MessageHandler<Message> messageHandler,
+                                ReadableByteChannel channel,
+                                Supplier<DecodingContext> newContextSupplier,
+                                int bufferSize) {
         this.messageHandler = messageHandler;
         this.channel = channel;
 
-        buffer = ByteBuffer.allocateDirect(bufferSize);
-        readOnlyBuffer = buffer.asReadOnlyBuffer();
-        dataStartsAtIndex = buffer.position();
+        this.buffer = ByteBuffer.allocateDirect(bufferSize);
+        this.readOnlyBuffer = buffer.asReadOnlyBuffer();
+        this.dataStartsAtIndex = buffer.position();
 
         this.newContextSupplier = newContextSupplier;
-        context = newContextSupplier.get();
-
+        this.context = newContextSupplier.get();
     }
 
     Message readMessage() {
 
         Message message = readMessageFromBuffer();
         if (message == null) {
+            if (!buffer.hasRemaining()) {
+                compactBuffer();
+            }
             int read;
             try {
                 read = channel.read(buffer);
@@ -49,13 +52,19 @@ class PeerConnectionMessageReader {
             if (read > 0) {
                 message = readMessageFromBuffer();
                 if (message == null && !buffer.hasRemaining()) {
-                    buffer.position(dataStartsAtIndex);
-                    buffer.compact();
-                    dataStartsAtIndex = 0;
+                    compactBuffer();
                 }
             }
         }
         return message;
+    }
+
+    private void compactBuffer() {
+        int dataEndsAtIndex = buffer.position();
+        buffer.position(dataStartsAtIndex);
+        buffer.compact();
+        buffer.position(dataEndsAtIndex - dataStartsAtIndex);
+        dataStartsAtIndex = 0;
     }
 
     private Message readMessageFromBuffer() {
