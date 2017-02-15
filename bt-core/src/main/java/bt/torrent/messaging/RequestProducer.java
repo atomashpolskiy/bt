@@ -68,7 +68,7 @@ public class RequestProducer {
         if (currentAssignment.isPresent()) {
             int currentPiece = currentAssignment.get();
             if (bitfield.isComplete(currentPiece)) {
-                resetConnection(connectionState);
+                resetConnection(connectionState, Optional.empty());
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Finished downloading piece #{}", currentPiece);
                 }
@@ -84,7 +84,7 @@ public class RequestProducer {
                 // consider this to be a kind of tradeoff between memory consumption
                 // (internal capacity of the data worker) and additional network overhead from the duplicate requests
                 // while ensuring that the piece WILL be downloaded eventually
-                resetConnection(connectionState);
+                resetConnection(connectionState, currentAssignment);
                 initializeRequestQueue(connectionState, currentPiece);
             }
         }
@@ -100,8 +100,11 @@ public class RequestProducer {
         }
     }
 
-    private void resetConnection(ConnectionState connectionState) {
+    private void resetConnection(ConnectionState connectionState, Optional<Integer> currentPiece) {
         connectionState.onUnassign();
+        if (currentPiece.isPresent()) {
+            connectionState.setCurrentAssignment(currentPiece.get());
+        }
     }
 
     private void initializeRequestQueue(ConnectionState connectionState, int pieceIndex) {

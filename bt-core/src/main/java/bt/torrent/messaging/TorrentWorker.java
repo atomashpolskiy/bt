@@ -34,7 +34,8 @@ class TorrentWorker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TorrentWorker.class);
 
-    private static final Duration UPDATE_ASSIGNMENTS_INTERVAL = Duration.ofSeconds(1);
+    private static final Duration UPDATE_ASSIGNMENTS_OPTIONAL_INTERVAL = Duration.ofSeconds(1);
+    private static final Duration UPDATE_ASSIGNMENTS_MANDATORY_INTERVAL = Duration.ofSeconds(5);
     private static final int MAX_CONCURRENT_ACTIVE_CONNECTIONS = 20;
     private static final int MAX_ASSIGNED_PIECES_PER_PEER = 50;
 
@@ -77,10 +78,8 @@ class TorrentWorker {
                         return Status.WAITING;
                     }
                 }
-                return Status.ACTIVE;
-            } else {
-                return Status.READY;
             }
+            return Status.ACTIVE;
         }
     }
 
@@ -158,9 +157,10 @@ class TorrentWorker {
     }
 
     private boolean mightUpdateAssignments() {
-        return (bitfield.getPiecesRemaining() > 0)
-                && (timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_INTERVAL.toMillis())
-                && (assignments.getAssigneesCount() < MAX_CONCURRENT_ACTIVE_CONNECTIONS);
+        return ((bitfield.getPiecesRemaining() > 0)
+                    && (timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_OPTIONAL_INTERVAL.toMillis())
+                    && (assignments.getAssigneesCount() < MAX_CONCURRENT_ACTIVE_CONNECTIONS))
+            || timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_MANDATORY_INTERVAL.toMillis();
     }
 
     private long timeSinceLastUpdated() {
