@@ -16,7 +16,7 @@ class IncompleteUnassignedPieceValidator implements Predicate<Integer> {
 
     @Override
     public boolean test(Integer pieceIndex) {
-        return ! (assignments.isAssigned(pieceIndex) || isComplete(pieceIndex));
+        return ! (assignments.hasAssignees(pieceIndex) || isComplete(pieceIndex));
     }
 
     private boolean isComplete(Integer pieceIndex) {

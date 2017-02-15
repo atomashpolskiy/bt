@@ -39,7 +39,8 @@ public class ConnectionState {
     private long lastReceivedBlock;
 
     private boolean initializedRequestQueue;
-    private long timeInitializedRequestQueue;
+
+    private Optional<Integer> currentAssignment;
 
     ConnectionState() {
         this.choking = true;
@@ -50,6 +51,8 @@ public class ConnectionState {
         this.pendingWrites = new HashMap<>();
 
         this.requestQueue = new LinkedBlockingQueue<>();
+
+        this.currentAssignment = Optional.empty();
     }
 
     /**
@@ -234,10 +237,6 @@ public class ConnectionState {
         return requestQueue;
     }
 
-    long getTimeInitializedRequestQueue() {
-        return timeInitializedRequestQueue;
-    }
-
     long getLastReceivedBlock() {
         return lastReceivedBlock;
     }
@@ -252,14 +251,21 @@ public class ConnectionState {
 
     void setInitializedRequestQueue(boolean initializedRequestQueue) {
         this.initializedRequestQueue = initializedRequestQueue;
-        this.timeInitializedRequestQueue = System.currentTimeMillis();
+    }
+
+    Optional<Integer> getCurrentAssignment() {
+        return currentAssignment;
+    }
+
+    void setCurrentAssignment(Integer currentAssignment) {
+        this.currentAssignment = Optional.of(currentAssignment);
     }
 
     void onUnassign() {
         requestQueue.clear();
         pendingRequests.clear();
         initializedRequestQueue = false;
-        timeInitializedRequestQueue = 0;
         lastReceivedBlock = 0;
+        currentAssignment = Optional.empty();
     }
 }

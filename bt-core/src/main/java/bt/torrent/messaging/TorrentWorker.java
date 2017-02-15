@@ -36,11 +36,12 @@ class TorrentWorker {
 
     private static final Duration UPDATE_ASSIGNMENTS_INTERVAL = Duration.ofSeconds(1);
     private static final int MAX_CONCURRENT_ACTIVE_CONNECTIONS = 20;
+    private static final int MAX_ASSIGNED_PIECES_PER_PEER = 50;
 
     private static class PeerStatus {
 
-        private static final Duration MAX_PIECE_RECEIVING_TIME = Duration.ofMinutes(1);
-        private static final Duration MAX_BLOCK_RECEIVING_INTERVAL = Duration.ofSeconds(5);
+        private static final Duration MAX_PIECE_RECEIVING_TIME = Duration.ofSeconds(30);
+        private static final Duration MAX_EXPECTED_BLOCK_RECEIVING_INTERVAL = Duration.ofSeconds(3);
 
         enum Status { CHOKING, READY, WAITING, ACTIVE, TIMEOUT };
 
@@ -48,7 +49,6 @@ class TorrentWorker {
         private ConnectionState connectionState;
         private Assignments assignments;
         private Status status;
-        private long timeAssignedPiece;
 
         PeerStatus(Peer peer, ConnectionState connectionState, Assignments assignments) {
             this.peer = peer;
@@ -62,25 +62,25 @@ class TorrentWorker {
         }
 
         private Status determineStatus() {
-            if (!assignments.hasAssignedPiece(peer)) {
-                return connectionState.isPeerChoking() ? Status.CHOKING : Status.READY;
+            if (connectionState.isPeerChoking()) {
+                return Status.CHOKING;
+            } else if (!assignments.hasAssignments(peer)) {
+                return Status.READY;
             }
 
-            long timeSinceAssignedPiece = System.currentTimeMillis() - timeAssignedPiece;
-            if (timeSinceAssignedPiece > MAX_PIECE_RECEIVING_TIME.toMillis()) {
-                return Status.TIMEOUT;
+            if (connectionState.getCurrentAssignment().isPresent()) {
+                if (connectionState.getLastReceivedBlock() > 0) {
+                    long timeSinceLastReceivedBlock = System.currentTimeMillis() - connectionState.getLastReceivedBlock();
+                    if (timeSinceLastReceivedBlock > MAX_PIECE_RECEIVING_TIME.toMillis()) {
+                        return Status.TIMEOUT;
+                    } else if (timeSinceLastReceivedBlock > MAX_EXPECTED_BLOCK_RECEIVING_INTERVAL.toMillis()) {
+                        return Status.WAITING;
+                    }
+                }
+                return Status.ACTIVE;
+            } else {
+                return Status.READY;
             }
-
-            long timeSinceLastReceivedBlock = System.currentTimeMillis() - connectionState.getLastReceivedBlock();
-            if (timeSinceLastReceivedBlock > MAX_BLOCK_RECEIVING_INTERVAL.toMillis()) {
-                return Status.WAITING;
-            }
-
-            return Status.ACTIVE;
-        }
-
-        void markAssignedPiece() {
-            this.timeAssignedPiece = System.currentTimeMillis();
         }
     }
 
@@ -145,7 +145,7 @@ class TorrentWorker {
 
     public Message produce(Peer peer) {
         PieceAnnouncingPeerWorker worker = getWorker(peer);
-        if (!assignments.hasAssignedPiece(peer) && mightUpdateAssignments()) {
+        if (mightUpdateAssignments()) {
             updateAssignments();
             lastUpdated = System.currentTimeMillis();
         }
@@ -160,7 +160,7 @@ class TorrentWorker {
     private boolean mightUpdateAssignments() {
         return (bitfield.getPiecesRemaining() > 0)
                 && (timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_INTERVAL.toMillis())
-                && (assignments.getAssignees().size() < MAX_CONCURRENT_ACTIVE_CONNECTIONS);
+                && (assignments.getAssigneesCount() < MAX_CONCURRENT_ACTIVE_CONNECTIONS);
     }
 
     private long timeSinceLastUpdated() {
@@ -169,6 +169,7 @@ class TorrentWorker {
 
     private void updateAssignments() {
         Set<Peer> readyPeers = new HashSet<>();
+        Set<Peer> chokingPeers = new HashSet<>();
 
         Iterator<Map.Entry<Peer, PeerStatus>> iter = interestingPeers.entrySet().iterator();
         while (iter.hasNext()) {
@@ -179,24 +180,44 @@ class TorrentWorker {
             switch (status.getStatus()) {
                 case TIMEOUT: {
                     iter.remove();
-                    timeoutedPeers.add(peer);
-                    assignments.removeAssignment(peer);
+                    if (assignments.hasAssignments(peer)) {
+                        timeoutedPeers.add(peer);
+                        assignments.removeAssignments(peer);
+                        getWorker(peer).getConnectionState().onUnassign();
+                        if (LOGGER.isTraceEnabled()) {
+                            LOGGER.trace("Peer assignment removed due to TIMEOUT: peer {" + peer + "}");
+                        }
+                    }
                     continue;
                 }
                 case READY: {
                     readyPeers.add(peer);
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Peer is READY for next assignment: peer {" + peer + "}");
+                    }
                     continue;
                 }
                 case CHOKING: {
-                    assignments.removeAssignment(peer);
-                    ConnectionState connectionState = getWorker(peer).getConnectionState();
-                    connectionState.onUnassign();
+                    chokingPeers.add(peer);
+                    if (assignments.hasAssignments(peer)) {
+                        assignments.removeAssignments(peer);
+                        getWorker(peer).getConnectionState().onUnassign();
+                        if (LOGGER.isTraceEnabled()) {
+                            LOGGER.trace("Peer assignment removed due to CHOKING: peer {" + peer + "}");
+                        }
+                    }
                     continue;
                 }
                 case WAITING: {
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Peer assignment is WAITING: peer {" + peer + "}");
+                    }
                     continue;
                 }
                 case ACTIVE: {
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Peer assignment is ACTIVE: peer {" + peer + "}");
+                    }
                     continue;
                 }
                 default: {
@@ -209,32 +230,49 @@ class TorrentWorker {
         inactivePeers.removeAll(interestingPeers.keySet());
         inactivePeers.removeAll(timeoutedPeers);
 
+        Set<Peer> stillInterestingPeers = new HashSet<>();
+
         Iterator<Integer> suggestedPieces = pieceSelector.getNextPieces(pieceStatistics).iterator();
         while (suggestedPieces.hasNext()
                 && (readyPeers.size() > 0 || inactivePeers.size() > 0)
-                && assignments.getAssignees().size() < MAX_CONCURRENT_ACTIVE_CONNECTIONS) {
+                && assignments.getAssigneesCount() < MAX_CONCURRENT_ACTIVE_CONNECTIONS) {
 
             Integer suggestedPiece = suggestedPieces.next();
 
+            boolean assigned = false;
             for (Peer readyPeer : readyPeers) {
                 if (hasPiece(readyPeer, suggestedPiece)) {
+                    stillInterestingPeers.add(readyPeer);
                     assignments.assignPiece(readyPeer, suggestedPiece);
-                    interestingPeers.get(readyPeer).markAssignedPiece();
-                    readyPeers.remove(readyPeer);
+                    if (assignments.getAssignmentCount(readyPeer) >= MAX_ASSIGNED_PIECES_PER_PEER) {
+                        readyPeers.remove(readyPeer);
+                    }
+                    assigned = true;
                     break;
                 }
             }
 
-            for (Peer inactivePeer : inactivePeers) {
-                if (hasPiece(inactivePeer, suggestedPiece)) {
-                    ConnectionState connectionState = getWorker(inactivePeer).getConnectionState();
-                    if (!connectionState.isInterested()) {
-                        interestUpdates.put(inactivePeer, Interested.instance());
-                        connectionState.setInterested(true);
+            if (!assigned) {
+                for (Peer inactivePeer : inactivePeers) {
+                    if (hasPiece(inactivePeer, suggestedPiece)) {
+                        ConnectionState connectionState = getWorker(inactivePeer).getConnectionState();
+                        if (!connectionState.isInterested()) {
+                            interestUpdates.put(inactivePeer, Interested.instance());
+                            connectionState.setInterested(true);
+                        }
+                        interestingPeers.put(inactivePeer, new PeerStatus(inactivePeer, connectionState, assignments));
+                        inactivePeers.remove(inactivePeer);
+                        break;
                     }
-                    interestingPeers.put(inactivePeer, new PeerStatus(inactivePeer, connectionState, assignments));
-                    inactivePeers.remove(inactivePeer);
-                    break;
+                }
+                for (Peer chokingPeer : chokingPeers) {
+                    if (hasPiece(chokingPeer, suggestedPiece)) {
+                        ConnectionState connectionState = getWorker(chokingPeer).getConnectionState();
+                        if (!connectionState.isInterested()) {
+                            interestUpdates.put(chokingPeer, Interested.instance());
+                            connectionState.setInterested(true);
+                        }
+                    }
                 }
             }
         }
@@ -246,6 +284,11 @@ class TorrentWorker {
                 connectionState.setInterested(false);
             }
         }
+
+        // these peers do not have required pieces and are not interesting anymore
+        readyPeers.removeAll(stillInterestingPeers);
+        readyPeers.forEach(p -> interestingPeers.remove(p));
+        inactivePeers.addAll(readyPeers);
     }
 
     private boolean hasPiece(Peer peer, Integer pieceIndex) {
@@ -266,7 +309,10 @@ class TorrentWorker {
         PeerWorker removed = peerMap.remove(peer);
         if (removed != null) {
             pieceStatistics.removeBitfield(peer);
-            assignments.removeAssignment(peer);
+            assignments.removeAssignments(peer);
+            interestingPeers.remove(peer);
+            interestUpdates.remove(peer);
+            timeoutedPeers.remove(peer);
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Removed connection for peer: " + peer);
             }

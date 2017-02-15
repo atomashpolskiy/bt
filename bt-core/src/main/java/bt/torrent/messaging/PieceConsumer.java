@@ -49,8 +49,6 @@ public class PieceConsumer {
         // check that this block was requested in the first place
         assertBlockIsExpected(peer, connectionState, piece);
 
-        connectionState.setLastReceivedBlock(System.currentTimeMillis());
-
         addBlock(peer, connectionState, piece).whenComplete((block, error) -> {
             if (error != null) {
                 throw new RuntimeException("Failed to perform request to write block", error);
@@ -90,6 +88,7 @@ public class PieceConsumer {
         byte[] block = piece.getBlock();
 
         connectionState.incrementDownloaded(block.length);
+        connectionState.setLastReceivedBlock(System.currentTimeMillis());
 
         CompletableFuture<BlockWrite> future = dataWorker.addBlock(peer, pieceIndex, offset, block);
         connectionState.getPendingWrites().put(
@@ -103,7 +102,7 @@ public class PieceConsumer {
         while ((block = completedBlocks.poll()) != null) {
             int pieceIndex = block.getPieceIndex();
             if (bitfield.getPieceStatus(pieceIndex) == Bitfield.PieceStatus.COMPLETE_VERIFIED) {
-                assignments.removeAssignee(pieceIndex);
+                assignments.removeAssignees(pieceIndex);
                 messageConsumer.accept(new Have(pieceIndex));
             }
         }

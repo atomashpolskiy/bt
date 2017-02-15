@@ -74,16 +74,11 @@ class DefaultDataWorker implements DataWorker {
                     ChunkDescriptor chunk = chunks.get(pieceIndex);
                     chunk.writeBlock(block, offset);
                     if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Successfully processed block (" + toString() + ") from peer: " + peer);
+                        LOGGER.trace("Successfully processed block: " +
+                                "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + block.length + "}");
                     }
 
-                    CompletableFuture<Boolean> verificationFuture = CompletableFuture.supplyAsync(() -> {
-                        boolean verified = chunk.verify();
-                        if (LOGGER.isTraceEnabled()) {
-                            LOGGER.trace("Successfully verified block (" + toString() + ")");
-                        }
-                        return verified;
-                    }, executor);
+                    CompletableFuture<Boolean> verificationFuture = CompletableFuture.supplyAsync(chunk::verify, executor);
 
                     return BlockWrite.complete(peer, pieceIndex, offset, block, verificationFuture);
                 } catch (Throwable e) {

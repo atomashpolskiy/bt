@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -57,28 +58,34 @@ public class RequestProducer {
             return;
         }
 
-        if (assignments.hasAssignedPiece(peer)) {
-            int currentPiece = assignments.getAssignedPiece(peer).get();
+        Optional<Integer> currentAssignment = connectionState.getCurrentAssignment();
+        if (!currentAssignment.isPresent()) {
+            currentAssignment = assignments.pollNextAssignment(peer);
+            if (currentAssignment.isPresent()) {
+                connectionState.setCurrentAssignment(currentAssignment.get());
+            }
+        }
+        if (currentAssignment.isPresent()) {
+            int currentPiece = currentAssignment.get();
             if (bitfield.isComplete(currentPiece)) {
-                resetConnection(peer, connectionState);
+                resetConnection(connectionState);
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Finished downloading piece #{}", currentPiece);
                 }
             } else if (!connectionState.initializedRequestQueue()) {
                 initializeRequestQueue(connectionState, currentPiece);
                 if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Begin downloading piece #{}", currentPiece);
+                    LOGGER.debug("Begin downloading piece #{} from peer: {}", currentPiece, peer);
                 }
-            } else if (connectionState.getRequestQueue().isEmpty()) {
-                if (System.currentTimeMillis() - connectionState.getTimeInitializedRequestQueue() >= 30000) {
-                    // this may happen when some of the received blocks were discarded by the data worker
-                    // or some of the requests/responses were lost on the network;
-                    // here we again create requests for the missing blocks;
-                    // consider this to be a kind of tradeoff between memory consumption
-                    // (internal capacity of the data worker) and additional network overhead from the duplicate requests
-                    // while ensuring that the piece WILL be downloaded eventually
-                    initializeRequestQueue(connectionState, currentPiece);
-                }
+            } else if (System.currentTimeMillis() - connectionState.getLastReceivedBlock() >= 10000) {
+                // this may happen when some of the received blocks were discarded by the data worker
+                // or some of the requests/responses were lost on the network;
+                // here we again create requests for the missing blocks;
+                // consider this to be a kind of tradeoff between memory consumption
+                // (internal capacity of the data worker) and additional network overhead from the duplicate requests
+                // while ensuring that the piece WILL be downloaded eventually
+                resetConnection(connectionState);
+                initializeRequestQueue(connectionState, currentPiece);
             }
         }
 
@@ -93,13 +100,11 @@ public class RequestProducer {
         }
     }
 
-    private void resetConnection(Peer peer, ConnectionState connectionState) {
-        assignments.removeAssignment(peer);
+    private void resetConnection(ConnectionState connectionState) {
         connectionState.onUnassign();
     }
 
     private void initializeRequestQueue(ConnectionState connectionState, int pieceIndex) {
-        connectionState.getRequestQueue().clear();
         connectionState.getRequestQueue().addAll(
                 buildRequests(pieceIndex).stream()
                     .filter(request -> {
