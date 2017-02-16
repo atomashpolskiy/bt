@@ -13,6 +13,7 @@ import bt.torrent.data.DataWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
@@ -60,12 +61,15 @@ public class PieceConsumer {
                     LOGGER.trace("Request to write block could not be completed: " + piece);
                 }
             } else {
-                block.getVerificationFuture().get().whenComplete((verified, error1) -> {
-                    if (error1 != null) {
-                        throw new RuntimeException("Failed to verify block", error1);
-                    }
-                    completedBlocks.add(block);
-                });
+                Optional<CompletableFuture<Boolean>> verificationFuture = block.getVerificationFuture();
+                if (verificationFuture.isPresent()) {
+                    verificationFuture.get().whenComplete((verified, error1) -> {
+                        if (error1 != null) {
+                            throw new RuntimeException("Failed to verify block", error1);
+                        }
+                        completedBlocks.add(block);
+                    });
+                }
             }
         });
     }
