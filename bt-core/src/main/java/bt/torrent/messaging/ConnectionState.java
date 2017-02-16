@@ -237,8 +237,8 @@ public class ConnectionState {
         return requestQueue;
     }
 
-    long getLastReceivedBlock() {
-        return lastReceivedBlock;
+    Optional<Long> getLastReceivedBlock() {
+        return lastReceivedBlock == 0 ? Optional.empty() : Optional.of(lastReceivedBlock);
     }
 
     void setLastReceivedBlock(long lastReceivedBlock) {

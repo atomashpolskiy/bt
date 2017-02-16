@@ -77,7 +77,8 @@ public class RequestProducer {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Begin downloading piece #{} from peer: {}", currentPiece, peer);
                 }
-            } else if (System.currentTimeMillis() - connectionState.getLastReceivedBlock() >= 10000) {
+            } else if (connectionState.getLastReceivedBlock().isPresent()
+                    && (System.currentTimeMillis() - connectionState.getLastReceivedBlock().get() >= 10000)) {
                 // this may happen when some of the received blocks were discarded by the data worker
                 // or some of the requests/responses were lost on the network;
                 // here we again create requests for the missing blocks;

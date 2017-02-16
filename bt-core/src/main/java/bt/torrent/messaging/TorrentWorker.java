@@ -70,8 +70,8 @@ class TorrentWorker {
             }
 
             if (connectionState.getCurrentAssignment().isPresent()) {
-                if (connectionState.getLastReceivedBlock() > 0) {
-                    long timeSinceLastReceivedBlock = System.currentTimeMillis() - connectionState.getLastReceivedBlock();
+                if (connectionState.getLastReceivedBlock().isPresent()) {
+                    long timeSinceLastReceivedBlock = System.currentTimeMillis() - connectionState.getLastReceivedBlock().get();
                     if (timeSinceLastReceivedBlock > MAX_PIECE_RECEIVING_TIME.toMillis()) {
                         return Status.TIMEOUT;
                     } else if (timeSinceLastReceivedBlock > MAX_EXPECTED_BLOCK_RECEIVING_INTERVAL.toMillis()) {
