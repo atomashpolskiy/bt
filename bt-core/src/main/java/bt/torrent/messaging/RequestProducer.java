@@ -103,6 +103,7 @@ public class RequestProducer {
 
     private void resetConnection(ConnectionState connectionState, Optional<Integer> currentPiece) {
         connectionState.onUnassign();
+        connectionState.getPendingWrites().clear();
         if (currentPiece.isPresent()) {
             connectionState.setCurrentAssignment(currentPiece.get());
         }
