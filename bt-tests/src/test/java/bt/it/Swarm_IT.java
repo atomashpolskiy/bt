@@ -22,6 +22,12 @@ public class Swarm_IT extends BaseBtTest {
 
     private static final Config CONFIG = new Config() {
         @Override
+        public int getMaxTransferBlockSize() {
+            // use smaller buffer size to trigger buffer compaction
+            return 10000;
+        }
+
+        @Override
         public boolean shouldFailOnUnexpectedBlocks() {
             return true;
         }

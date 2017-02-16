@@ -27,8 +27,8 @@ class PeerConnectionMessageWriter {
         int begin = buffer.position();
         if (!messageHandler.encode(message, buffer)) {
             buffer.position(begin);
-            buffer.compact();
-            begin = 0;
+            buffer.clear();
+            begin = buffer.position();
             if (!messageHandler.encode(message, buffer)) {
                 throw new BtException("Insufficient space in buffer for message: " + message);
             }

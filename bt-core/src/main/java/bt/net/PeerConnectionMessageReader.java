@@ -60,10 +60,10 @@ class PeerConnectionMessageReader {
     }
 
     private void compactBuffer() {
-        int dataEndsAtIndex = buffer.position();
+        buffer.limit(buffer.position());
         buffer.position(dataStartsAtIndex);
         buffer.compact();
-        buffer.position(dataEndsAtIndex - dataStartsAtIndex);
+        buffer.limit(buffer.capacity());
         dataStartsAtIndex = 0;
     }
 
@@ -76,12 +76,13 @@ class PeerConnectionMessageReader {
 
         Message message = null;
 
+        readOnlyBuffer.limit(readOnlyBuffer.capacity());
         readOnlyBuffer.position(dataStartsAtIndex);
         readOnlyBuffer.limit(dataEndsAtIndex);
 
         int consumed = messageHandler.decode(context, readOnlyBuffer);
         if (consumed > 0) {
-            if (dataEndsAtIndex - consumed < dataStartsAtIndex) {
+            if (consumed > dataEndsAtIndex - dataStartsAtIndex) {
                 throw new BtException("Unexpected amount of bytes consumed: " + consumed);
             }
             dataStartsAtIndex += consumed;
