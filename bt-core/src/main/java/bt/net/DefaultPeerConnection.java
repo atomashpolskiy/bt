@@ -1,8 +1,8 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
-import bt.protocol.Message;
 import bt.protocol.DecodingContext;
+import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,9 +54,10 @@ class DefaultPeerConnection implements PeerConnection {
     }
 
     private static int getBufferSize(long maxTransferBlockSize) {
-        long bufferSize = maxTransferBlockSize * 2;
-        bufferSize = Math.min(Integer.MAX_VALUE - 13, bufferSize);
-        return (int) bufferSize;
+        if (maxTransferBlockSize > ((Integer.MAX_VALUE - 13) / 2)) {
+            throw new IllegalArgumentException("Transfer block size is too large: " + maxTransferBlockSize);
+        }
+        return (int) (maxTransferBlockSize) * 2;
     }
 
     /**

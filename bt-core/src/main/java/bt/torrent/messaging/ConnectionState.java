@@ -35,10 +35,12 @@ public class ConnectionState {
     private Set<Object> pendingRequests;
     private Map<Object, CompletableFuture<BlockWrite>> pendingWrites;
 
-    private Optional<Boolean> mightSelectPieceForPeer;
     private Queue<Request> requestQueue;
-    private long lastCheckedAvailablePiecesForPeer;
-    private long lastBuiltRequests;
+    private long lastReceivedBlock;
+
+    private boolean initializedRequestQueue;
+
+    private Optional<Integer> currentAssignment;
 
     ConnectionState() {
         this.choking = true;
@@ -48,8 +50,9 @@ public class ConnectionState {
         this.pendingRequests = new HashSet<>();
         this.pendingWrites = new HashMap<>();
 
-        this.mightSelectPieceForPeer = Optional.empty();
         this.requestQueue = new LinkedBlockingQueue<>();
+
+        this.currentAssignment = Optional.empty();
     }
 
     /**
@@ -230,31 +233,39 @@ public class ConnectionState {
     // Methods below are not a part of the public API //
     /**************************************************/
 
-    Optional<Boolean> getMightSelectPieceForPeer() {
-        return mightSelectPieceForPeer;
-    }
-
-    void setMightSelectPieceForPeer(Optional<Boolean> mightSelectPieceForPeer) {
-        this.mightSelectPieceForPeer = mightSelectPieceForPeer;
-    }
-
     Queue<Request> getRequestQueue() {
         return requestQueue;
     }
 
-    long getLastCheckedAvailablePiecesForPeer() {
-        return lastCheckedAvailablePiecesForPeer;
+    Optional<Long> getLastReceivedBlock() {
+        return lastReceivedBlock == 0 ? Optional.empty() : Optional.of(lastReceivedBlock);
     }
 
-    void setLastCheckedAvailablePiecesForPeer(long lastCheckedAvailablePiecesForPeer) {
-        this.lastCheckedAvailablePiecesForPeer = lastCheckedAvailablePiecesForPeer;
+    void setLastReceivedBlock(long lastReceivedBlock) {
+        this.lastReceivedBlock = lastReceivedBlock;
     }
 
-    long getLastBuiltRequests() {
-        return lastBuiltRequests;
+    boolean initializedRequestQueue() {
+        return initializedRequestQueue;
     }
 
-    void setLastBuiltRequests(long lastBuiltRequests) {
-        this.lastBuiltRequests = lastBuiltRequests;
+    void setInitializedRequestQueue(boolean initializedRequestQueue) {
+        this.initializedRequestQueue = initializedRequestQueue;
+    }
+
+    Optional<Integer> getCurrentAssignment() {
+        return currentAssignment;
+    }
+
+    void setCurrentAssignment(Integer currentAssignment) {
+        this.currentAssignment = Optional.of(currentAssignment);
+    }
+
+    void onUnassign() {
+        requestQueue.clear();
+        pendingRequests.clear();
+        initializedRequestQueue = false;
+        lastReceivedBlock = 0;
+        currentAssignment = Optional.empty();
     }
 }

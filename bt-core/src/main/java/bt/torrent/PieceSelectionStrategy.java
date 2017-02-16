@@ -5,6 +5,7 @@ import java.util.function.Predicate;
 /**
  * Implements a particular piece selection algorithm.
  *
+ * @see bt.torrent.selector.PieceSelector
  * @since 1.0
  */
 public interface PieceSelectionStrategy {

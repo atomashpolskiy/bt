@@ -2,7 +2,6 @@ package bt.torrent.messaging;
 
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
 import bt.torrent.Bitfield;
@@ -33,16 +32,14 @@ class DefaultTorrentSession implements TorrentSession {
     private final AtomicBoolean condition;
 
     public DefaultTorrentSession(IPeerConnectionPool connectionPool,
-                                 PieceManager pieceManager,
-                                 IMessageDispatcher dispatcher,
-                                 IPeerWorkerFactory peerWorkerFactory,
+                                 TorrentWorker worker,
                                  Torrent torrent,
+                                 Bitfield bitfield,
                                  int maxPeerConnectionsPerTorrent) {
-
         this.connectionPool = connectionPool;
         this.torrent = torrent;
-        this.worker = new TorrentWorker(torrent.getTorrentId(), pieceManager, dispatcher, peerWorkerFactory);
-        this.sessionState = new DefaultTorrentSessionState(pieceManager.getBitfield());
+        this.worker = worker;
+        this.sessionState = new DefaultTorrentSessionState(bitfield);
         this.maxPeerConnectionsPerTorrent = maxPeerConnectionsPerTorrent;
         this.condition = new AtomicBoolean(false);
     }

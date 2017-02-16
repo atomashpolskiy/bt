@@ -105,11 +105,12 @@ class RoutingPeerWorker implements PeerWorker {
     }
 
     private void postMessage(Message message) {
-        if (isUrgent(message)) {
-            addUrgent(message);
-        } else {
+        // TODO: not sure if this is really important
+//        if (isUrgent(message)) {
+//            addUrgent(message);
+//        } else {
             add(message);
-        }
+//        }
     }
 
     private boolean isUrgent(Message message) {

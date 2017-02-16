@@ -2,6 +2,7 @@ package bt.torrent.data;
 
 import bt.data.ChunkDescriptor;
 import bt.data.DataDescriptor;
+import bt.data.DataStatus;
 import bt.net.Peer;
 import bt.service.IRuntimeLifecycleBinder;
 import org.slf4j.Logger;
@@ -74,16 +75,14 @@ class DefaultDataWorker implements DataWorker {
                     ChunkDescriptor chunk = chunks.get(pieceIndex);
                     chunk.writeBlock(block, offset);
                     if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Successfully processed block (" + toString() + ") from peer: " + peer);
+                        LOGGER.trace("Successfully processed block: " +
+                                "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + block.length + "}");
                     }
 
-                    CompletableFuture<Boolean> verificationFuture = CompletableFuture.supplyAsync(() -> {
-                        boolean verified = chunk.verify();
-                        if (LOGGER.isTraceEnabled()) {
-                            LOGGER.trace("Successfully verified block (" + toString() + ")");
-                        }
-                        return verified;
-                    }, executor);
+                    CompletableFuture<Boolean> verificationFuture = null;
+                    if (chunk.getStatus() == DataStatus.COMPLETE) {
+                        verificationFuture = CompletableFuture.supplyAsync(chunk::verify, executor);
+                    }
 
                     return BlockWrite.complete(peer, pieceIndex, offset, block, verificationFuture);
                 } catch (Throwable e) {

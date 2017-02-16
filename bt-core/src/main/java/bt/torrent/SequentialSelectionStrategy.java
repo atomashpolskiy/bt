@@ -8,7 +8,9 @@ import java.util.function.Predicate;
  * Selects pieces sequentially in the order of their availability.
  *
  * @since 1.0
+ * @deprecated Since 1.1 replaced by {@link bt.torrent.selector.SequentialSelector}
  */
+@Deprecated
 public class SequentialSelectionStrategy implements PieceSelectionStrategy {
 
     private static final SequentialSelectionStrategy instance = new SequentialSelectionStrategy();

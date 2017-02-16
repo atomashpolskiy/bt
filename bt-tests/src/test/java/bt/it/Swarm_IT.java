@@ -5,6 +5,7 @@ import bt.it.fixture.SharedTrackerModule;
 import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
 import bt.runtime.BtClient;
+import bt.runtime.Config;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -19,8 +20,21 @@ import static org.junit.Assert.assertEquals;
 
 public class Swarm_IT extends BaseBtTest {
 
+    private static final Config CONFIG = new Config() {
+        @Override
+        public int getMaxTransferBlockSize() {
+            // use smaller buffer size to trigger buffer compaction
+            return 10000;
+        }
+
+        @Override
+        public boolean shouldFailOnUnexpectedBlocks() {
+            return true;
+        }
+    };
+
     @Rule
-    public Swarm swarm = buildSwarm().seeders(10).leechers(10).module(new SharedTrackerModule()).build();
+    public Swarm swarm = buildSwarm().config(CONFIG).seeders(10).leechers(10).module(new SharedTrackerModule()).build();
 
     @Test
     public void testSwarm_OneSeederOneLeecher() {

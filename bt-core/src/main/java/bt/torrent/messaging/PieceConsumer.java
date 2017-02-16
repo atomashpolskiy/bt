@@ -5,6 +5,7 @@ import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
 import bt.protocol.Piece;
+import bt.torrent.Bitfield;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
@@ -12,6 +13,7 @@ import bt.torrent.data.DataWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
@@ -25,13 +27,18 @@ public class PieceConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceConsumer.class);
 
-    private PieceManager pieceManager;
+    private Bitfield bitfield;
+    private Assignments assignments;
     private DataWorker dataWorker;
     private ConcurrentLinkedQueue<BlockWrite> completedBlocks;
 
-    PieceConsumer(PieceManager pieceManager, DataWorker dataWorker) {
-        this.pieceManager = pieceManager;
+    private boolean shouldFailOnUnexpectedBlocks;
+
+    PieceConsumer(Bitfield bitfield, Assignments assignments, DataWorker dataWorker, boolean shouldFailOnUnexpectedBlocks) {
+        this.bitfield = bitfield;
+        this.assignments = assignments;
         this.dataWorker = dataWorker;
+        this.shouldFailOnUnexpectedBlocks = shouldFailOnUnexpectedBlocks;
         this.completedBlocks = new ConcurrentLinkedQueue<>();
     }
 
@@ -54,12 +61,15 @@ public class PieceConsumer {
                     LOGGER.trace("Request to write block could not be completed: " + piece);
                 }
             } else {
-                block.getVerificationFuture().get().whenComplete((verified, error1) -> {
-                    if (error1 != null) {
-                        throw new RuntimeException("Failed to verify block", error1);
-                    }
-                    completedBlocks.add(block);
-                });
+                Optional<CompletableFuture<Boolean>> verificationFuture = block.getVerificationFuture();
+                if (verificationFuture.isPresent()) {
+                    verificationFuture.get().whenComplete((verified, error1) -> {
+                        if (error1 != null) {
+                            throw new RuntimeException("Failed to verify block", error1);
+                        }
+                        completedBlocks.add(block);
+                    });
+                }
             }
         });
     }
@@ -67,7 +77,11 @@ public class PieceConsumer {
     private void assertBlockIsExpected(Peer peer, ConnectionState connectionState, Piece piece) {
         Object key = Mapper.mapper().buildKey(piece.getPieceIndex(), piece.getOffset(), piece.getBlock().length);
         if (!connectionState.getPendingRequests().remove(key)) {
-            throw new BtException("Received unexpected block " + piece + " from peer: " + peer);
+            if (shouldFailOnUnexpectedBlocks) {
+                throw new BtException("Received unexpected block " + piece + " from peer: " + peer);
+            } else {
+                LOGGER.warn("Received unexpected block {} from peer: {}", piece, peer);
+            }
         }
     }
 
@@ -78,6 +92,7 @@ public class PieceConsumer {
         byte[] block = piece.getBlock();
 
         connectionState.incrementDownloaded(block.length);
+        connectionState.setLastReceivedBlock(System.currentTimeMillis());
 
         CompletableFuture<BlockWrite> future = dataWorker.addBlock(peer, pieceIndex, offset, block);
         connectionState.getPendingWrites().put(
@@ -90,7 +105,8 @@ public class PieceConsumer {
         BlockWrite block;
         while ((block = completedBlocks.poll()) != null) {
             int pieceIndex = block.getPieceIndex();
-            if (pieceManager.checkPieceVerified(pieceIndex)) {
+            if (bitfield.getPieceStatus(pieceIndex) == Bitfield.PieceStatus.COMPLETE_VERIFIED) {
+                assignments.removeAssignees(pieceIndex);
                 messageConsumer.accept(new Have(pieceIndex));
             }
         }
