@@ -1,25 +1,15 @@
 package bt;
 
 import bt.data.Storage;
-import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
-import bt.module.ClientExecutor;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
-import bt.torrent.ITorrentSessionFactory;
 import bt.torrent.PieceSelectionStrategy;
-import bt.torrent.TorrentDescriptor;
-import bt.torrent.TorrentRegistry;
-import bt.torrent.TorrentSession;
-import bt.torrent.TorrentSessionParams;
 import bt.torrent.selector.PieceSelector;
 import bt.torrent.selector.RarestFirstSelector;
-import bt.torrent.selector.SequentialSelector;
-import com.google.inject.Key;
 
 import java.net.URL;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 
 /**
@@ -35,18 +25,39 @@ public class Bt {
      * @param storage Storage, that will be used as the data back-end
      * @return Client builder
      * @since 1.0
+     * @deprecated since 1.1 in favor of {@link #client()} and {@link #client(BtRuntime)} builder methods
      */
     public static Bt client(Storage storage) {
         return new Bt(storage);
     }
 
-    private BtRuntime runtime;
+    /**
+     * Create a standalone client builder with a private runtime
+     *
+     * @since 1.1
+     */
+    public static StandaloneClientBuilder client() {
+        return StandaloneClientBuilder.standalone();
+    }
 
-    private Supplier<Torrent> torrentSupplier;
-    private PieceSelectionStrategy pieceSelectionStrategy;
-    private PieceSelector pieceSelector;
-    private boolean shouldInitEagerly;
+    /**
+     * Create a standard client builder with the provided runtime
+     *
+     * @since 1.1
+     */
+    public static BtClientBuilder client(BtRuntime runtime) {
+        return BtClientBuilder.runtime(runtime);
+    }
+
     private Storage storage;
+
+    private URL torrentUrl;
+    private Supplier<Torrent> torrentSupplier;
+
+    private PieceSelector pieceSelector;
+    private PieceSelectionStrategy pieceSelectionStrategy;
+
+    private boolean shouldInitEagerly;
 
     private Bt(Storage storage) {
         this.storage = Objects.requireNonNull(storage, "Missing data storage");
@@ -59,10 +70,11 @@ public class Bt {
      *
      * @see #torrentSupplier(Supplier)
      * @since 1.0
+     * @deprecated since 1.1 in favor of {@link #client()} and {@link #client(BtRuntime)} builder methods
      */
     public Bt url(URL metainfoUrl) {
-        Objects.requireNonNull(metainfoUrl, "Missing metainfo file URL");
-        this.torrentSupplier = () -> fetchTorrentFromUrl(metainfoUrl);
+        this.torrentUrl = Objects.requireNonNull(metainfoUrl, "Missing metainfo file URL");
+        this.torrentSupplier = null;
         return this;
     }
 
@@ -71,9 +83,11 @@ public class Bt {
      *
      * @see #url(URL)
      * @since 1.0
+     * @deprecated since 1.1 in favor of {@link #client()} and {@link #client(BtRuntime)} builder methods
      */
     public Bt torrentSupplier(Supplier<Torrent> torrentSupplier) {
         this.torrentSupplier = torrentSupplier;
+        this.torrentUrl = null;
         return this;
     }
 
@@ -81,49 +95,12 @@ public class Bt {
      * Set piece selection strategy
      *
      * @since 1.0
+     * @deprecated since 1.1 in favor of {@link #client()} and {@link #client(BtRuntime)} builder methods
      */
     public Bt selector(PieceSelectionStrategy pieceSelectionStrategy) {
+        this.pieceSelectionStrategy = Objects.requireNonNull(pieceSelectionStrategy, "Missing piece selection strategy");
         this.pieceSelector = null;
-        this.pieceSelectionStrategy = pieceSelectionStrategy;
         return this;
-    }
-
-    /**
-     * Set piece selection strategy
-     *
-     * @since 1.1
-     */
-    public Bt selector(PieceSelector pieceSelector) {
-        this.pieceSelectionStrategy = null;
-        this.pieceSelector = pieceSelector;
-        return this;
-    }
-
-    /**
-     * Use sequential piece selection strategy
-     *
-     * @since 1.1
-     */
-    public Bt sequentialSelector() {
-       return selector(SequentialSelector.sequential());
-    }
-
-    /**
-     * Use rarest first piece selection strategy
-     *
-     * @since 1.1
-     */
-    public Bt rarestSelector() {
-       return selector(RarestFirstSelector.rarest());
-    }
-
-    /**
-     * Use rarest first piece selection strategy
-     *
-     * @since 1.1
-     */
-    public Bt randomizedRarestSelector() {
-       return selector(RarestFirstSelector.randomizedRarest());
     }
 
     /**
@@ -137,6 +114,7 @@ public class Bt {
      * instantiating client-specific services, triggering DI injection, etc.
      *
      * @since 1.0
+     * @deprecated since 1.1 in favor of {@link #client()} and {@link #client(BtRuntime)} builder methods
      */
     public Bt initEagerly() {
         shouldInitEagerly = true;
@@ -148,10 +126,11 @@ public class Bt {
      *
      * @return Torrent client
      * @since 1.0
+     * @deprecated since 1.1 in favor of {@link #client()} and {@link #client(BtRuntime)} builder methods
      */
     public BtClient attachToRuntime(BtRuntime runtime) {
-        this.runtime = Objects.requireNonNull(runtime);
-        return doBuild();
+        Objects.requireNonNull(runtime);
+        return doBuild(runtime);
     }
 
     /**
@@ -159,55 +138,37 @@ public class Bt {
      *
      * @return Torrent client
      * @since 1.0
+     * @deprecated since 1.1 in favor of {@link #client()} and {@link #client(BtRuntime)} builder methods
      */
     public BtClient standalone() {
-        this.runtime = BtRuntime.defaultRuntime();
-        return doBuild();
+        return doBuild(BtRuntime.defaultRuntime());
     }
 
-    private BtClient doBuild() {
+    private BtClient doBuild(BtRuntime runtime) {
+        BtClientBuilder clientBuilder = BtClientBuilder.runtime(runtime);
 
-        Objects.requireNonNull(torrentSupplier, "Missing torrent supplier");
-        if (pieceSelectionStrategy == null && pieceSelector == null) {
+        clientBuilder.storage(storage);
+
+        if (torrentUrl != null) {
+            clientBuilder.torrent(torrentUrl);
+        } else if (torrentSupplier != null) {
+            clientBuilder.torrent(torrentSupplier);
+        } else {
+            throw new IllegalStateException("Missing torrent supplier or torrent URL");
+        }
+
+        if (pieceSelector != null) {
+            clientBuilder.selector(pieceSelector);
+        } else if (pieceSelectionStrategy != null) {
+            clientBuilder.selector(pieceSelectionStrategy);
+        } else {
             throw new IllegalStateException("Missing piece selection strategy");
         }
 
-        return shouldInitEagerly ? createClient() : new LazyClient(this::createClient);
-    }
-
-    private BtClient createClient() {
-        Torrent torrent = torrentSupplier.get();
-        TorrentDescriptor descriptor = getTorrentDescriptor(torrent);
-
-        ITorrentSessionFactory torrentSessionFactory = runtime.service(ITorrentSessionFactory.class);
-        TorrentSession session = torrentSessionFactory.createSession(torrent, getSessionParams());
-
-        return new RuntimeAwareClient(runtime,
-                new DefaultClient(getExecutor(), descriptor, session));
-    }
-
-    private Torrent fetchTorrentFromUrl(URL metainfoUrl) {
-        IMetadataService metadataService = runtime.service(IMetadataService.class);
-        return metadataService.fromUrl(metainfoUrl);
-    }
-
-    private TorrentDescriptor getTorrentDescriptor(Torrent torrent) {
-        TorrentRegistry torrentRegistry = runtime.service(TorrentRegistry.class);
-        return torrentRegistry.getOrCreateDescriptor(torrent, storage);
-    }
-
-    private TorrentSessionParams getSessionParams() {
-        TorrentSessionParams params = new TorrentSessionParams();
-        if (pieceSelector != null) {
-            params.setPieceSelector(pieceSelector);
-        } else {
-            params.setSelectionStrategy(pieceSelectionStrategy);
+        if (shouldInitEagerly) {
+            clientBuilder.initEagerly();
         }
-        return params;
-    }
 
-    private ExecutorService getExecutor() {
-        return runtime.getInjector().getExistingBinding(Key.get(ExecutorService.class, ClientExecutor.class))
-                .getProvider().get();
+        return clientBuilder.build();
     }
 }
