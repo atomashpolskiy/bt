@@ -174,6 +174,9 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
         return shouldInitEagerly ? clientSupplier.get() : new LazyClient(clientSupplier);
     }
 
+    /**
+     * @since 1.1
+     */
     protected abstract BtRuntime getRuntime();
 
     private BtClient buildClient(BtRuntime runtime, Supplier<Torrent> torrentSupplier) {
