@@ -285,6 +285,14 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
             return false;
         }
 
+        // if any of this chunk's storage units doesn't exist,
+        // then it's neither complete nor verified
+        for (StorageUnit unit : units) {
+            if (!unit.hasData()) {
+                return false;
+            }
+        }
+
         Range allData = getRange(0, size);
         MessageDigest digest;
         try {
