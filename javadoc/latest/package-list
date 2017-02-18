@@ -18,6 +18,7 @@ bt.protocol.handler
 bt.runtime
 bt.service
 bt.test.protocol
+bt.test.torrent.selector
 bt.torrent
 bt.torrent.annotation
 bt.torrent.compiler
