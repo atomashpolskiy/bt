@@ -288,7 +288,7 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
         // if any of this chunk's storage units doesn't exist,
         // then it's neither complete nor verified
         for (StorageUnit unit : units) {
-            if (!unit.hasData()) {
+            if (unit.size() == 0) {
                 return false;
             }
         }

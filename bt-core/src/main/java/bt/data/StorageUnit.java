@@ -82,11 +82,10 @@ public interface StorageUnit extends Closeable {
     long capacity();
 
     /**
-     * Checks if this storage has any data.
-     * E.g. a file storage might check if the underlying file exists and is not empty.
+     * Get current amount of data in this storage.
      *
-     * @return true if this storage has any data
+     * @return Current amount of data in this storage
      * @since 1.1
      */
-    boolean hasData();
+    long size();
 }

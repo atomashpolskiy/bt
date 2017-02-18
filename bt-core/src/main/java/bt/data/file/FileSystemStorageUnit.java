@@ -174,8 +174,8 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
-    public boolean hasData() {
-        return file.exists() && file.length() > 0;
+    public long size() {
+        return file.length();
     }
 
     @Override
