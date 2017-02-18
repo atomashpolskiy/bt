@@ -5,6 +5,7 @@ import bt.data.Storage;
 import bt.data.file.FileSystemStorage;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
+import bt.runtime.Config;
 import com.googlecode.lanterna.input.KeyStroke;
 import joptsimple.OptionException;
 import org.apache.logging.log4j.LogManager;
@@ -55,7 +56,14 @@ public class CliClient  {
         Collection<KeyStrokeBinding> keyBindings = Collections.singletonList(
                 new KeyStrokeBinding(KeyStroke.fromString("p"), this::togglePause));
 
-        this.runtime = BtRuntime.builder()
+        Config config = new Config() {
+            @Override
+            public int getNumOfHashingThreads() {
+                return 8;
+            }
+        };
+
+        this.runtime = BtRuntime.builder(config)
                 .autoLoadModules()
                 .disableAutomaticShutdown()
                 .build();

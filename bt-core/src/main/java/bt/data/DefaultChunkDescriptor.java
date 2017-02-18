@@ -311,7 +311,7 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
 
             allData.visitFiles((unit, off, lim) -> {
 
-                int step = 2 << 12;
+                int step = 2 << 22; // 8 MB
                 long remaining = lim - off;
                 if (remaining > Integer.MAX_VALUE) {
                     throw new BtException("Too much data -- can't read to buffer");
