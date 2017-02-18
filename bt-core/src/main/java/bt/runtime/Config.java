@@ -52,7 +52,7 @@ public class Config {
         this.maxIOQueueSize = 1000;
         this.shutdownHookTimeout = Duration.ofSeconds(5);
         this.shouldFailOnUnexpectedBlocks = false;
-        this.numOfHashingThreads = 8;
+        this.numOfHashingThreads = 1; // do not parallelize by default
     }
 
     /**
