@@ -7,6 +7,8 @@ import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
 import bt.tracker.TrackerResponse;
 import bt.tracker.udp.AnnounceRequest.EventType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -21,6 +23,8 @@ import java.util.Optional;
  * @since 1.0
  */
 class UdpTracker implements Tracker {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(UdpTracker.class);
 
     private IdentityService idService;
     private InetSocketAddress localAddress;
@@ -106,6 +110,9 @@ class UdpTracker implements Tracker {
                 request.setEventType(eventType);
                 request.setListeningPort((short) localAddress.getPort());
                 getRequestString(trackerUrl).ifPresent(request::setRequestString);
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Executing tracker UDP request of type {}: {}", eventType.name(), request);
+                }
                 return worker.sendMessage(request, AnnounceResponseHandler.handler());
             }
         };
