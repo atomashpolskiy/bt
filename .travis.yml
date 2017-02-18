@@ -6,6 +6,8 @@ branches:
   - master
 os:
 - linux
+before_script:
+- export MAVEN_OPTS="-Xmx256m"
 script:
 - mvn -U install
 after_success:
