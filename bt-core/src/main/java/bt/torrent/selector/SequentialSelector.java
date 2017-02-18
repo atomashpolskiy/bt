@@ -25,14 +25,14 @@ public class SequentialSelector extends BaseStreamSelector {
 
             @Override
             public int nextInt() {
-                while (pieceStatistics.getCount(i) == 0) {
-                    i++;
-                }
-                return i;
+                return i++;
             }
 
             @Override
             public boolean hasNext() {
+                while (i < pieceStatistics.getPiecesTotal() && pieceStatistics.getCount(i) == 0) {
+                    i++;
+                }
                 return i < pieceStatistics.getPiecesTotal();
             }
         };
