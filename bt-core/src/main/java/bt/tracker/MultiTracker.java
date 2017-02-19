@@ -5,7 +5,6 @@ import bt.metainfo.Torrent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -118,17 +117,11 @@ class MultiTracker implements Tracker {
                             }
                             return response;
                         } else if (response.getError().isPresent()) {
-
                             Throwable e = response.getError().get();
-                            if (e instanceof IOException) {
-                                LOGGER.warn("I/O error during interaction with the tracker", e);
-                                // consider current tracker to be unreachable; continue with remaining trackers
-                            } else {
-                                throw new BtException("Unexpected error during interaction with the tracker", e);
-                            }
+                            LOGGER.warn("Unexpected error during interaction with the tracker: " + currentTracker, e);
                         } else {
-                            throw new BtException("Unexpected error during interaction with the tracker; " +
-                                    "message: " + response.getErrorMessage());
+                            LOGGER.warn("Unexpected error during interaction with the tracker: " + currentTracker +
+                                    "; message: " + response.getErrorMessage());
                         }
                     }
                 }
@@ -165,5 +158,17 @@ class MultiTracker implements Tracker {
             }
             return delegate;
         }
+
+        @Override
+        public String toString() {
+            return getDelegate().toString();
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "MultiTracker{" +
+                "trackerTiers=" + trackerTiers +
+                '}';
     }
 }
