@@ -12,6 +12,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 /**
  * @since 1.1
@@ -61,7 +62,7 @@ public abstract class ScheduledPeerSource implements PeerSource {
                 }
 
                 if (futureOptional.get() == null) {
-                    futureOptional.set(executor.submit(() -> peers.addAll(collectPeers())));
+                    futureOptional.set(executor.submit(() -> collectPeers(peers::add)));
                 }
             } finally {
                 lock.unlock();
@@ -72,5 +73,5 @@ public abstract class ScheduledPeerSource implements PeerSource {
     /**
      * @since 1.1
      */
-    protected abstract Collection<Peer> collectPeers();
+    protected abstract void collectPeers(Consumer<Peer> peerConsumer);
 }

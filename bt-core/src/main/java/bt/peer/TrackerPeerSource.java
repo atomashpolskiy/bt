@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Consumer;
 
 class TrackerPeerSource extends ScheduledPeerSource {
 
@@ -32,13 +33,16 @@ class TrackerPeerSource extends ScheduledPeerSource {
     }
 
     @Override
-    protected Collection<Peer> collectPeers() {
-        Collection<Peer> peers = null;
+    protected void collectPeers(Consumer<Peer> peerConsumer) {
         if (System.currentTimeMillis() - lastRefreshed >= trackerQueryInterval.toMillis()) {
-            TrackerResponse response = tracker.request(torrent).query();
+            TrackerResponse response;
+            try {
+                response = tracker.request(torrent).query();
+            } finally {
+                lastRefreshed = System.currentTimeMillis();
+            }
             if (response.isSuccess()) {
-                peers = new HashSet<>();
-                response.getPeers().forEach(peers::add);
+                response.getPeers().forEach(peerConsumer::accept);
             } else {
                 if (response.getError().isPresent()) {
                     throw new BtException("Failed to get peers for torrent", response.getError().get());
@@ -48,8 +52,6 @@ class TrackerPeerSource extends ScheduledPeerSource {
                 }
             }
         }
-        lastRefreshed = System.currentTimeMillis();
-        return peers == null ? Collections.emptySet() : peers;
     }
 
     @Override
