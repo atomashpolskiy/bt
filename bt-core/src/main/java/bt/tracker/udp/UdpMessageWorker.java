@@ -74,7 +74,7 @@ class UdpMessageWorker {
 
     private <T> T sendMessage(UdpTrackerMessage message, Session session,
                               UdpTrackerResponseHandler<T> responseHandler, boolean retry) {
-        int timeToWait = retry ? 60 : 15;
+        int timeToWait = retry ? 5 : 10;
         try {
             return CompletableFuture.supplyAsync(() ->
                     doSend(message, session, responseHandler), executor).get(timeToWait, TimeUnit.SECONDS);
