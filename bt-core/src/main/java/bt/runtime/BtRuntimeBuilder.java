@@ -15,9 +15,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.ServiceLoader;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -123,13 +124,30 @@ public class BtRuntimeBuilder {
 
     @SuppressWarnings("unchecked")
     private Injector createInjector() {
-        Collection<Module> standardModules = collectModules(this::standardProviders);
+        Collection<Module> standardModules = collectModules(standardProviders());
 
         Collection<Module> customModules;
         if (shouldAutoLoadModules) {
-            customModules = collectModules(this::customProviders, this::autoLoadedProviders);
+            Map<Class<? extends Module>, Module> autoLoadedProviders = mapByClass(collectModules(autoLoadedProviders()));
+            Map<Class<? extends Module>, Module> customProviders = mapByClass(collectModules(customProviders()));
+
+            autoLoadedProviders.forEach((k, v) -> {
+                if (!customProviders.containsKey(k)) {
+                    LOGGER.info("Auto-loading module {} with default configuration", k.getName());
+                }
+            });
+
+            customProviders.forEach((k, v) -> {
+                if (autoLoadedProviders.containsKey(k)) {
+                    LOGGER.info("Overriding auto-loaded module {}", k.getName());
+                } else {
+                    LOGGER.info("Loading module {}", k.getName());
+                }
+            });
+            autoLoadedProviders.putAll(customProviders);
+            customModules = autoLoadedProviders.values();
         } else {
-            customModules = collectModules(this::customProviders);
+            customModules = collectModules(customProviders());
         }
 
         Injector injector;
@@ -143,12 +161,16 @@ public class BtRuntimeBuilder {
     }
 
     @SuppressWarnings("unchecked")
-    private Collection<Module> collectModules(Supplier<Collection<BtModuleProvider>>... providers) {
+    private Collection<Module> collectModules(Collection<BtModuleProvider>... providers) {
         return Arrays.asList(providers).stream()
-                .map(Supplier::get)
                 .flatMap(Collection::stream)
                 .map(BtModuleProvider::module)
                 .collect(Collectors.toList());
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> Map<Class<? extends T>, T> mapByClass(Collection<T> collection) {
+        return collection.stream().collect(HashMap::new, (m, o) -> m.put((Class<T>)o.getClass(), o), Map::putAll);
     }
 
     private Collection<BtModuleProvider> standardProviders() {
@@ -162,23 +184,21 @@ public class BtRuntimeBuilder {
         if (customProviders == null) {
             return Collections.emptyList();
         } else {
-            return customProviders.stream().map(p -> (BtModuleProvider) () -> {
-                Module m = Objects.requireNonNull(p.module(), "Missing module");
-                LOGGER.info("Loading module {}", m.getClass().getName());
-                return m;
-            }).collect(Collectors.toList());
+            return customProviders.stream()
+                    .map(BtRuntimeBuilder::nullCheckingProvider)
+                    .collect(Collectors.toList());
         }
     }
 
     private Collection<BtModuleProvider> autoLoadedProviders() {
         Collection<BtModuleProvider> autoLoadedProviders = new ArrayList<>();
         ServiceLoader.load(BtModuleProvider.class).forEach(p -> {
-            autoLoadedProviders.add(() -> {
-                Module m = Objects.requireNonNull(p.module(), "Missing module");
-                LOGGER.info("Auto-loading module {} with default configuration", m.getClass().getName());
-                return m;
-            });
+            autoLoadedProviders.add(nullCheckingProvider(p));
         });
         return autoLoadedProviders;
+    }
+
+    private static BtModuleProvider nullCheckingProvider(BtModuleProvider provider) {
+        return () -> Objects.requireNonNull(provider.module(), "Missing module in provider:" + provider.getClass().getName());
     }
 }
