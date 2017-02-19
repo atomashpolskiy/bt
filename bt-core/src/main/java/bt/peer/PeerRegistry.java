@@ -53,7 +53,7 @@ public class PeerRegistry implements IPeerRegistry {
         this.localPeer = new InetPeer(localPeerAddress, localPeerPort, idService.getLocalPeerId());
 
         this.trackerService = trackerService;
-        this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, trackerQueryInterval);
+        this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, lifecycleBinder, trackerQueryInterval);
         this.extraPeerSourceFactories = extraPeerSourceFactories;
 
         createExecutor(lifecycleBinder, peerDiscoveryInterval);

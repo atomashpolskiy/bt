@@ -125,4 +125,11 @@ class UdpTracker implements Tracker {
         }
         return result.isEmpty() ? Optional.empty() : Optional.of(result);
     }
+
+    @Override
+    public String toString() {
+        return "UdpTracker{" +
+                "trackerUrl=" + trackerUrl +
+                '}';
+    }
 }

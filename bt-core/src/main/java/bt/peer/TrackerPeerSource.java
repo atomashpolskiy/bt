@@ -9,12 +9,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
+import java.util.HashSet;
+import java.util.concurrent.ExecutorService;
 
-class TrackerPeerSource implements PeerSource {
+class TrackerPeerSource extends ScheduledPeerSource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TrackerPeerSource.class);
 
@@ -22,51 +22,38 @@ class TrackerPeerSource implements PeerSource {
     private Torrent torrent;
     private Duration trackerQueryInterval;
 
-    private volatile Collection<Peer> peers;
     private volatile long lastRefreshed;
-    private final Object lock;
 
-    TrackerPeerSource(Tracker tracker, Torrent torrent, Duration trackerQueryInterval) {
+    TrackerPeerSource(ExecutorService executor, Tracker tracker, Torrent torrent, Duration trackerQueryInterval) {
+        super(executor);
         this.tracker = tracker;
         this.torrent = torrent;
         this.trackerQueryInterval = trackerQueryInterval;
-        this.peers = Collections.emptyList();
-        this.lock = new Object();
     }
 
     @Override
-    public boolean update() {
-
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastRefreshed >= trackerQueryInterval.toMillis()) {
-
-            synchronized (lock) {
-                if (currentTime - lastRefreshed >= trackerQueryInterval.toMillis()) {
-
-                    TrackerResponse response = tracker.request(torrent).query();
-                    lastRefreshed = System.currentTimeMillis();
-
-                    if (response.isSuccess()) {
-                        List<Peer> peers = new ArrayList<>();
-                        response.getPeers().forEach(peers::add);
-                        this.peers = peers;
-                        return true;
-                    } else {
-                        if (response.getError().isPresent()) {
-                            throw new BtException("Failed to get peers for torrent", response.getError().get());
-                        } else {
-                            LOGGER.error("Failed to get peers for torrent -- " +
-                                    "unexpected error during interaction with the tracker; message: " + response.getErrorMessage());
-                        }
-                    }
+    protected Collection<Peer> collectPeers() {
+        Collection<Peer> peers = null;
+        if (System.currentTimeMillis() - lastRefreshed >= trackerQueryInterval.toMillis()) {
+            TrackerResponse response = tracker.request(torrent).query();
+            if (response.isSuccess()) {
+                peers = new HashSet<>();
+                response.getPeers().forEach(peers::add);
+            } else {
+                if (response.getError().isPresent()) {
+                    throw new BtException("Failed to get peers for torrent", response.getError().get());
+                } else {
+                    LOGGER.error("Failed to get peers for torrent -- " +
+                            "unexpected error during interaction with the tracker; message: " + response.getErrorMessage());
                 }
             }
         }
-        return false;
+        lastRefreshed = System.currentTimeMillis();
+        return peers == null ? Collections.emptySet() : peers;
     }
 
     @Override
-    public Collection<Peer> getPeers() {
-        return peers;
+    public String toString() {
+        return "TrackerPeerSource {" + tracker + "}";
     }
 }
