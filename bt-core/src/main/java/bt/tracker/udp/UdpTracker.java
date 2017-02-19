@@ -113,7 +113,11 @@ class UdpTracker implements Tracker {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Executing tracker UDP request of type {}: {}", eventType.name(), request);
                 }
-                return worker.sendMessage(request, AnnounceResponseHandler.handler());
+                try {
+                    return worker.sendMessage(request, AnnounceResponseHandler.handler());
+                } catch (Exception e) {
+                    return TrackerResponse.exceptional(e);
+                }
             }
         };
     }
