@@ -62,7 +62,7 @@ public class PeerExchange_IT extends BaseBtTest {
                 seeder.getHandle().startAsync(state -> discoveredPeers.put(seeder.getPeer(), state.getConnectedPeers()), 1000));
 
         try {
-            Thread.sleep(5000L);
+            Thread.sleep(10000L);
         } catch (InterruptedException e) {
             throw new RuntimeException("Test unexpectedly interrupted", e);
         }

@@ -218,4 +218,10 @@ public class HttpTracker implements Tracker {
         return buf.toString();
     }
 
+    @Override
+    public String toString() {
+        return "HttpTracker{" +
+                "baseUri=" + baseUri +
+                '}';
+    }
 }

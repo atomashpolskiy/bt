@@ -27,6 +27,7 @@ Bug Fixes:
 * Verification tasks should be submitted only for complete pieces
 * Calculate total size for multi-file torrents
 * NPE on UDP message worker shutdown
+* Multi-tracker does not announce to next trackers in tier if an exception was thrown
 
 ----------------------------------
 Release: 1.0

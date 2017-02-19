@@ -113,7 +113,11 @@ class UdpTracker implements Tracker {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Executing tracker UDP request of type {}: {}", eventType.name(), request);
                 }
-                return worker.sendMessage(request, AnnounceResponseHandler.handler());
+                try {
+                    return worker.sendMessage(request, AnnounceResponseHandler.handler());
+                } catch (Exception e) {
+                    return TrackerResponse.exceptional(e);
+                }
             }
         };
     }
@@ -124,5 +128,12 @@ class UdpTracker implements Tracker {
             result += "?" + url.getQuery();
         }
         return result.isEmpty() ? Optional.empty() : Optional.of(result);
+    }
+
+    @Override
+    public String toString() {
+        return "UdpTracker{" +
+                "trackerUrl=" + trackerUrl +
+                '}';
     }
 }
