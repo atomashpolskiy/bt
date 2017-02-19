@@ -20,6 +20,8 @@ import static org.junit.Assert.assertEquals;
 
 public class Swarm_IT extends BaseBtTest {
 
+    private static final int NUMBER_OF_SEEDERS = 5;
+
     private static final Config CONFIG = new Config() {
         @Override
         public int getMaxTransferBlockSize() {
@@ -34,7 +36,12 @@ public class Swarm_IT extends BaseBtTest {
     };
 
     @Rule
-    public Swarm swarm = buildSwarm().config(CONFIG).seeders(10).leechers(10).module(new SharedTrackerModule()).build();
+    public Swarm swarm = buildSwarm()
+            .config(CONFIG)
+            .seeders(NUMBER_OF_SEEDERS)
+            .leechers(NUMBER_OF_SEEDERS)
+            .module(new SharedTrackerModule())
+            .build();
 
     @Test
     public void testSwarm_OneSeederOneLeecher() {
@@ -51,8 +58,8 @@ public class Swarm_IT extends BaseBtTest {
             }
         }, 1000).join();
 
-        assertEquals(11, swarm.getSeeders().size());
-        assertEquals(9, swarm.getLeechers().size());
+        assertEquals(NUMBER_OF_SEEDERS + 1, swarm.getSeeders().size());
+        assertEquals(NUMBER_OF_SEEDERS - 1, swarm.getLeechers().size());
     }
 
     @Test
@@ -72,8 +79,8 @@ public class Swarm_IT extends BaseBtTest {
             }
         }, 1000).join();
 
-        assertEquals(11, swarm.getSeeders().size());
-        assertEquals(9, swarm.getLeechers().size());
+        assertEquals(NUMBER_OF_SEEDERS + 1, swarm.getSeeders().size());
+        assertEquals(NUMBER_OF_SEEDERS - 1, swarm.getLeechers().size());
     }
 
     @Test
@@ -110,7 +117,7 @@ public class Swarm_IT extends BaseBtTest {
 
         seederFuture.join();
 
-        assertEquals(20, swarm.getSeeders().size());
+        assertEquals(NUMBER_OF_SEEDERS * 2, swarm.getSeeders().size());
         assertEquals(0, swarm.getLeechers().size());
     }
 
@@ -158,7 +165,7 @@ public class Swarm_IT extends BaseBtTest {
 
         seederFuture.join();
 
-        assertEquals(20, swarm.getSeeders().size());
+        assertEquals(NUMBER_OF_SEEDERS * 2, swarm.getSeeders().size());
         assertEquals(0, swarm.getLeechers().size());
     }
 }

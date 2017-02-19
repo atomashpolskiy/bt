@@ -123,6 +123,7 @@ public class MetadataService implements IMetadataService {
             } else {
                 List<BEMap> files = (List<BEMap>) infoMap.get(FILES_KEY).getValue();
                 List<TorrentFile> torrentFiles = new ArrayList<>(files.size() + 1);
+                BigInteger torrentSize = BigInteger.ZERO;
                 for (BEMap file : files) {
 
                     Map<String, BEObject<?>> fileMap = file.getValue();
@@ -130,6 +131,7 @@ public class MetadataService implements IMetadataService {
 
                     BigInteger fileSize = (BigInteger) fileMap.get(FILE_SIZE_KEY).getValue();
                     torrentFile.setSize(fileSize.longValueExact());
+                    torrentSize = torrentSize.add(fileSize);
 
                     List<BEString> pathElements = (List<BEString>) fileMap.get(FILE_PATH_ELEMENTS_KEY).getValue();
 
@@ -141,6 +143,7 @@ public class MetadataService implements IMetadataService {
                 }
 
                 torrent.setFiles(torrentFiles);
+                torrent.setSize(torrentSize.longValueExact());
             }
 
             boolean isPrivate = false;

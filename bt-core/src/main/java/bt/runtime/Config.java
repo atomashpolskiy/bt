@@ -28,6 +28,7 @@ public class Config {
     private int maxIOQueueSize;
     private Duration shutdownHookTimeout;
     private boolean shouldFailOnUnexpectedBlocks;
+    private int numOfHashingThreads;
 
     /**
      * Create a config with default parameters.
@@ -51,6 +52,7 @@ public class Config {
         this.maxIOQueueSize = 1000;
         this.shutdownHookTimeout = Duration.ofSeconds(5);
         this.shouldFailOnUnexpectedBlocks = false;
+        this.numOfHashingThreads = 1; // do not parallelize by default
     }
 
     /**
@@ -76,6 +78,7 @@ public class Config {
         this.maxIOQueueSize = config.getMaxIOQueueSize();
         this.shutdownHookTimeout = config.getShutdownHookTimeout();
         this.shouldFailOnUnexpectedBlocks = config.shouldFailOnUnexpectedBlocks();
+        this.numOfHashingThreads = config.getNumOfHashingThreads();
     }
 
     /**
@@ -318,5 +321,21 @@ public class Config {
      */
     public boolean shouldFailOnUnexpectedBlocks() {
         return shouldFailOnUnexpectedBlocks;
+    }
+
+    /**
+     * @param numOfHashingThreads Set this value to 2 or greater,
+     *                            if verification of the torrent data should be parallelized
+     * @since 1.1
+     */
+    public void setNumOfHashingThreads(int numOfHashingThreads) {
+        this.numOfHashingThreads = numOfHashingThreads;
+    }
+
+    /**
+     * @since 1.1
+     */
+    public int getNumOfHashingThreads() {
+        return numOfHashingThreads;
     }
 }

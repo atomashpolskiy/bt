@@ -174,6 +174,11 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
+    public long size() {
+        return file.length();
+    }
+
+    @Override
     public String toString() {
         return "(" + capacity + " B) " + file.getPath();
     }

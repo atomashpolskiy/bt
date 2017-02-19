@@ -48,7 +48,7 @@ public class MetadataServiceTest {
                     Collections.singletonList("http://jupiter.gx/ann"),
                     Collections.singletonList("http://jupiter.local/announce")
             ));
-            assertHasAttributes(torrent, announceKey, "BEWARE_BACH", 4194304L, 1329, 0L);
+            assertHasAttributes(torrent, announceKey, "BEWARE_BACH", 4194304L, 1329, 5573061611L);
 
             assertNotNull(torrent.getFiles());
             assertEquals(6, torrent.getFiles().size());

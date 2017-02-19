@@ -9,13 +9,15 @@ import bt.metainfo.Torrent;
 public class DataDescriptorFactory implements IDataDescriptorFactory {
 
     private int transferBlockSize;
+    private int numOfHashingThreads;
 
-    public DataDescriptorFactory(int transferBlockSize) {
+    public DataDescriptorFactory(int transferBlockSize, int numOfHashingThreads) {
         this.transferBlockSize = transferBlockSize;
+        this.numOfHashingThreads = numOfHashingThreads;
     }
 
     @Override
     public DataDescriptor createDescriptor(Torrent torrent, Storage storage) {
-        return new DefaultDataDescriptor(storage, torrent, transferBlockSize);
+        return new DefaultDataDescriptor(storage, torrent, transferBlockSize, numOfHashingThreads);
     }
 }

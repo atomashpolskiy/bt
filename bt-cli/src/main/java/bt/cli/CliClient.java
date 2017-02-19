@@ -3,12 +3,9 @@ package bt.cli;
 import bt.Bt;
 import bt.data.Storage;
 import bt.data.file.FileSystemStorage;
-import bt.dht.DHTConfig;
-import bt.dht.DHTModule;
-import bt.peerexchange.PeerExchangeModule;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
-import bt.tracker.http.HttpTrackerModule;
+import bt.runtime.Config;
 import com.googlecode.lanterna.input.KeyStroke;
 import joptsimple.OptionException;
 import org.apache.logging.log4j.LogManager;
@@ -59,18 +56,21 @@ public class CliClient  {
         Collection<KeyStrokeBinding> keyBindings = Collections.singletonList(
                 new KeyStrokeBinding(KeyStroke.fromString("p"), this::togglePause));
 
-        this.runtime = BtRuntime.builder()
-                .module(new PeerExchangeModule())
-                .module(new HttpTrackerModule())
-                .module(new DHTModule())
+        Config config = new Config() {
+            @Override
+            public int getNumOfHashingThreads() {
+                return 8;
+            }
+        };
+
+        this.runtime = BtRuntime.builder(config)
+                .autoLoadModules()
                 .disableAutomaticShutdown()
                 .build();
 
         Storage storage = new FileSystemStorage(options.getTargetDirectory());
 
-        this.client = Bt.client(storage)
-                .url(toUrl(options.getMetainfoFile()))
-                .attachToRuntime(runtime);
+        this.client = Bt.client(runtime).storage(storage).torrent(toUrl(options.getMetainfoFile())).build();
 
         this.printer = SessionStatePrinter.createKeyInputAwarePrinter(
                 client.getSession().getTorrent(), keyBindings);

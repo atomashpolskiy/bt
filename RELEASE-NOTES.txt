@@ -4,8 +4,33 @@ For the latest information visit project web site:
 http://atomashpolskiy.github.io/bt/
 
 ----------------------------------
-Release: 1.0
+Release: 1.1
 Date:
+----------------------------------
+Changes/New Features:
+
+* Support for auto-loading modules from the classpath
+* Enhanced API for building standalone and shared-runtime clients
+* Streaming (continuous) piece selectors
+* Improvements in piece selection and peer assignments algorithm
+* Support for multi-threaded hashing (verification) of torrent data on startup
+* Speed-up the initial startup by skipping verification if a storage unit is empty and by feeding larger blocks to the digester
+* Lifecycle binding API improvements; support for asynchronous bindings
+* Tools for creating custom protocol tests
+
+Bug Fixes:
+
+* Torrent processing should not terminate when interaction with the tracker failed
+* Announce key can be missing in trackerless torrents
+* Failures on receiving unexpected blocks should be optional
+* Peer connection occasionally stopped receiving/sending data due to a buffer compaction bug
+* Verification tasks should be submitted only for complete pieces
+* Calculate total size for multi-file torrents
+* NPE on UDP message worker shutdown
+
+----------------------------------
+Release: 1.0
+Date: 01/16/17
 ----------------------------------
 Features:
 

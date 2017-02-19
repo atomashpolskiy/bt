@@ -80,4 +80,12 @@ public interface StorageUnit extends Closeable {
      * @since 1.0
      */
     long capacity();
+
+    /**
+     * Get current amount of data in this storage.
+     *
+     * @return Current amount of data in this storage
+     * @since 1.1
+     */
+    long size();
 }

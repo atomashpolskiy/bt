@@ -221,7 +221,9 @@ class UdpMessageWorker {
             if (!shutdown) {
                 shutdown = true;
                 executor.shutdownNow();
-                socket.close();
+                if (socket != null) {
+                    socket.close();
+                }
             }
         }
     }

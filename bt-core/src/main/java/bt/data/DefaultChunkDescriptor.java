@@ -285,6 +285,14 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
             return false;
         }
 
+        // if any of this chunk's storage units doesn't exist,
+        // then it's neither complete nor verified
+        for (StorageUnit unit : units) {
+            if (unit.size() == 0) {
+                return false;
+            }
+        }
+
         Range allData = getRange(0, size);
         MessageDigest digest;
         try {
@@ -303,7 +311,7 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
 
             allData.visitFiles((unit, off, lim) -> {
 
-                int step = 2 << 12;
+                int step = 2 << 22; // 8 MB
                 long remaining = lim - off;
                 if (remaining > Integer.MAX_VALUE) {
                     throw new BtException("Too much data -- can't read to buffer");

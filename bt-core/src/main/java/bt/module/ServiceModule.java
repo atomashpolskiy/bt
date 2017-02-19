@@ -113,8 +113,8 @@ public class ServiceModule implements Module {
 
     @Provides
     @Singleton
-    public IDataDescriptorFactory provideDataDescriptorFactory() {
-        return new DataDescriptorFactory(config.getTransferBlockSize());
+    public IDataDescriptorFactory provideDataDescriptorFactory(Config config) {
+        return new DataDescriptorFactory(config.getTransferBlockSize(), config.getNumOfHashingThreads());
     }
 
     @Provides
