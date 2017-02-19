@@ -3,9 +3,12 @@ package bt.cli;
 import bt.Bt;
 import bt.data.Storage;
 import bt.data.file.FileSystemStorage;
+import bt.dht.DHTConfig;
+import bt.dht.DHTModule;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 import bt.runtime.Config;
+import com.google.inject.Module;
 import com.googlecode.lanterna.input.KeyStroke;
 import joptsimple.OptionException;
 import org.apache.logging.log4j.LogManager;
@@ -63,7 +66,15 @@ public class CliClient  {
             }
         };
 
+        Module dhtModule = new DHTModule(new DHTConfig() {
+            @Override
+            public boolean shouldUseRouterBootstrap() {
+                return true;
+            }
+        });
+
         this.runtime = BtRuntime.builder(config)
+                .module(dhtModule)
                 .autoLoadModules()
                 .disableAutomaticShutdown()
                 .build();
