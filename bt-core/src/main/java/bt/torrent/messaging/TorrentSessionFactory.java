@@ -62,12 +62,11 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
         TorrentDescriptor descriptor = getTorrentDescriptor(torrent);
         Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();
         BitfieldBasedStatistics pieceStatistics = new BitfieldBasedStatistics(bitfield);
-        Assignments assignments = new Assignments();
-        PieceSelector selector = createSelector(params, bitfield, assignments);
+        PieceSelector selector = createSelector(params, bitfield);
 
         DataWorker dataWorker = createDataWorker(descriptor);
-        IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceStatistics,
-                assignments, selector, dataWorker);
+        Assignments assignments = new Assignments(bitfield);
+        IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceStatistics, assignments, dataWorker);
 
         TorrentWorker torrentWorker = new TorrentWorker(torrent.getTorrentId(), bitfield, assignments,
                 selector, pieceStatistics, messageDispatcher, peerWorkerFactory);
@@ -81,9 +80,8 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
     }
 
     private PieceSelector createSelector(TorrentSessionParams params,
-                                         Bitfield bitfield,
-                                         Assignments assignments) {
-        Predicate<Integer> validator = new IncompleteUnassignedPieceValidator(bitfield, assignments);
+                                         Bitfield bitfield) {
+        Predicate<Integer> validator = new IncompletePiecesValidator(bitfield);
         PieceSelector selector = params.getPieceSelector();
         if (selector == null) {
             selector = new SelectorAdapter(params.getSelectionStrategy(), validator);
@@ -105,7 +103,6 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
     private IPeerWorkerFactory createPeerWorkerFactory(TorrentDescriptor descriptor,
                                                        BitfieldBasedStatistics pieceStatistics,
                                                        Assignments assignments,
-                                                       PieceSelector selector,
                                                        DataWorker dataWorker) {
         Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();
 
@@ -114,7 +111,7 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
         messagingAgents.add(new BitfieldConsumer(bitfield, pieceStatistics));
         messagingAgents.add(new PeerRequestConsumer(dataWorker));
         messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor(), assignments));
-        messagingAgents.add(new PieceConsumer(bitfield, assignments, dataWorker, config.shouldFailOnUnexpectedBlocks()));
+        messagingAgents.add(new PieceConsumer(bitfield, assignments, dataWorker));
 
         messagingAgents.addAll(this.messagingAgents);
 

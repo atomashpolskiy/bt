@@ -28,11 +28,6 @@ public class Swarm_IT extends BaseBtTest {
             // use smaller buffer size to trigger buffer compaction
             return 10000;
         }
-
-        @Override
-        public boolean shouldFailOnUnexpectedBlocks() {
-            return true;
-        }
     };
 
     @Rule

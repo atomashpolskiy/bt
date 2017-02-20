@@ -1,6 +1,5 @@
 package bt.torrent.messaging;
 
-import bt.BtException;
 import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
@@ -32,13 +31,10 @@ public class PieceConsumer {
     private DataWorker dataWorker;
     private ConcurrentLinkedQueue<BlockWrite> completedBlocks;
 
-    private boolean shouldFailOnUnexpectedBlocks;
-
-    PieceConsumer(Bitfield bitfield, Assignments assignments, DataWorker dataWorker, boolean shouldFailOnUnexpectedBlocks) {
+    PieceConsumer(Bitfield bitfield, Assignments assignments, DataWorker dataWorker) {
         this.bitfield = bitfield;
         this.assignments = assignments;
         this.dataWorker = dataWorker;
-        this.shouldFailOnUnexpectedBlocks = shouldFailOnUnexpectedBlocks;
         this.completedBlocks = new ConcurrentLinkedQueue<>();
     }
 
@@ -48,7 +44,9 @@ public class PieceConsumer {
         ConnectionState connectionState = context.getConnectionState();
 
         // check that this block was requested in the first place
-        assertBlockIsExpected(peer, connectionState, piece);
+        if (!checkBlockIsExpected(peer, connectionState, piece)) {
+            return;
+        }
 
         addBlock(peer, connectionState, piece).whenComplete((block, error) -> {
             if (error != null) {
@@ -74,15 +72,13 @@ public class PieceConsumer {
         });
     }
 
-    private void assertBlockIsExpected(Peer peer, ConnectionState connectionState, Piece piece) {
+    private boolean checkBlockIsExpected(Peer peer, ConnectionState connectionState, Piece piece) {
         Object key = Mapper.mapper().buildKey(piece.getPieceIndex(), piece.getOffset(), piece.getBlock().length);
-        if (!connectionState.getPendingRequests().remove(key)) {
-            if (shouldFailOnUnexpectedBlocks) {
-                throw new BtException("Received unexpected block " + piece + " from peer: " + peer);
-            } else {
-                LOGGER.warn("Received unexpected block {} from peer: {}", piece, peer);
-            }
+        boolean expected = connectionState.getPendingRequests().remove(key);
+        if (!expected && LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Discarding unexpected block {} from peer: {}", piece, peer);
         }
+        return expected;
     }
 
     private CompletableFuture<BlockWrite> addBlock(Peer peer, ConnectionState connectionState, Piece piece) {

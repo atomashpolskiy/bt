@@ -4,19 +4,17 @@ import bt.torrent.Bitfield;
 
 import java.util.function.Predicate;
 
-class IncompleteUnassignedPieceValidator implements Predicate<Integer> {
+class IncompletePiecesValidator implements Predicate<Integer> {
 
     private Bitfield bitfield;
-    private Assignments assignments;
 
-    IncompleteUnassignedPieceValidator(Bitfield bitfield, Assignments assignments) {
+    IncompletePiecesValidator(Bitfield bitfield) {
         this.bitfield = bitfield;
-        this.assignments = assignments;
     }
 
     @Override
     public boolean test(Integer pieceIndex) {
-        return ! (assignments.hasAssignees(pieceIndex) || isComplete(pieceIndex));
+        return !isComplete(pieceIndex);
     }
 
     private boolean isComplete(Integer pieceIndex) {

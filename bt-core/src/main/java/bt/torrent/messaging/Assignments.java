@@ -1,10 +1,12 @@
 package bt.torrent.messaging;
 
 import bt.net.Peer;
+import bt.torrent.Bitfield;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Optional;
@@ -13,10 +15,12 @@ import java.util.Set;
 
 class Assignments {
 
+    private Bitfield bitfield;
     private Map<Peer, Queue<Integer>> assignments;
     private Map<Integer, Set<Peer>> assignees;
 
-    Assignments() {
+    Assignments(Bitfield bitfield) {
+        this.bitfield = bitfield;
         this.assignments = new HashMap<>();
         this.assignees = new HashMap<>();
     }
@@ -53,7 +57,12 @@ class Assignments {
         }
 
         Integer pieceIndex = peerAssignments.remove();
-        removeAssignees(pieceIndex, Collections.singleton(peer));
+        // if all remaining pieces are requested,
+        // that would mean that we have entered the "endgame" mode
+        // and should not remove this assignment from the other peers
+        if (bitfield.getPiecesRemaining() > assignees.size()) {
+            removeAssignees(pieceIndex, Collections.singleton(peer));
+        }
         return Optional.of(pieceIndex);
     }
 
@@ -74,11 +83,27 @@ class Assignments {
     private void removeAssignees(Integer pieceIndex, Set<Peer> exceptThese) {
         Set<Peer> pieceAssignees = exceptThese.isEmpty() ? assignees.remove(pieceIndex) : assignees.get(pieceIndex);
         if (pieceAssignees != null) {
-            pieceAssignees.forEach(assignee -> {
+            Iterator<Peer> iter = pieceAssignees.iterator();
+            while (iter.hasNext()) {
+                Peer assignee = iter.next();
                 if (!exceptThese.contains(assignee)) {
-                    this.assignments.get(assignee).remove(pieceIndex);
+                    removeAssignment(assignee, pieceIndex);
+                    iter.remove();
                 }
-            });
+            }
+            if (pieceAssignees.isEmpty()) {
+                assignees.remove(pieceIndex);
+            }
+        }
+    }
+
+    private void removeAssignment(Peer assignee, Integer assignment) {
+        Queue<Integer> peerAssignments = this.assignments.get(assignee);
+        if (peerAssignments != null) {
+            peerAssignments.remove(assignment);
+            if (peerAssignments.isEmpty()) {
+                this.assignments.remove(assignee);
+            }
         }
     }
 
@@ -86,8 +111,18 @@ class Assignments {
         Queue<Integer> peerAssignments = assignments.remove(peer);
         if (peerAssignments != null) {
             peerAssignments.forEach(assignment -> {
-                assignees.get(assignment).remove(peer);
+                removeAssignee(assignment, peer);
             });
+        }
+    }
+
+    private void removeAssignee(Integer assignment, Peer assignee) {
+        Set<Peer> pieceAssignees = assignees.get(assignment);
+        if (pieceAssignees != null) {
+            pieceAssignees.remove(assignee);
+            if (pieceAssignees.isEmpty()) {
+                assignees.remove(assignment);
+            }
         }
     }
 
