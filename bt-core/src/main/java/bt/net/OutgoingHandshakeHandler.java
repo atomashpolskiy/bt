@@ -7,7 +7,7 @@ import bt.protocol.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Set;
+import java.util.Collection;
 
 /**
  * Handles handshake exchange for outgoing peer connections.
@@ -20,11 +20,11 @@ class OutgoingHandshakeHandler implements ConnectionHandler {
 
     private IHandshakeFactory handshakeFactory;
     private TorrentId torrentId;
-    private Set<HandshakeHandler> handshakeHandlers;
+    private Collection<HandshakeHandler> handshakeHandlers;
     private long handshakeTimeout;
 
     public OutgoingHandshakeHandler(IHandshakeFactory handshakeFactory, TorrentId torrentId,
-                                    Set<HandshakeHandler> handshakeHandlers, long handshakeTimeout) {
+                                    Collection<HandshakeHandler> handshakeHandlers, long handshakeTimeout) {
         this.handshakeFactory = handshakeFactory;
         this.torrentId = torrentId;
         this.handshakeHandlers = handshakeHandlers;
@@ -48,7 +48,7 @@ class OutgoingHandshakeHandler implements ConnectionHandler {
                     ((DefaultPeerConnection) connection).setTorrentId(torrentId);
 
                     handshakeHandlers.forEach(handler ->
-                            handler.processIncomingHandshake(connection.getRemotePeer(), peerHandshake));
+                            handler.processIncomingHandshake(new WriteOnlyPeerConnection(connection), peerHandshake));
 
                     return true;
                 }
