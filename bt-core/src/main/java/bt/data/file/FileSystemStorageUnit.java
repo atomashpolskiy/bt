@@ -66,7 +66,7 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
-    public void readBlock(ByteBuffer buffer, long offset) {
+    public synchronized void readBlock(ByteBuffer buffer, long offset) {
 
         if (closed) {
             if (!init(false)) {
@@ -92,7 +92,7 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
-    public byte[] readBlock(long offset, int length) {
+    public synchronized byte[] readBlock(long offset, int length) {
 
         if (closed) {
             if (!init(false)) {
@@ -121,7 +121,7 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
-    public void writeBlock(ByteBuffer buffer, long offset) {
+    public synchronized void writeBlock(ByteBuffer buffer, long offset) {
 
         if (closed) {
             init(true);
@@ -145,7 +145,7 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
-    public void writeBlock(byte[] block, long offset) {
+    public synchronized void writeBlock(byte[] block, long offset) {
 
         if (closed) {
             init(true);
