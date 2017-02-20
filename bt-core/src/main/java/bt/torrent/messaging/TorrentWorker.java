@@ -243,10 +243,6 @@ class TorrentWorker {
         });
 
         Iterator<Integer> suggestedPieces = pieceSelector.getNextPieces(pieceStatistics).iterator();
-        LOGGER.info("Assignees count: " + assignments.getAssigneesCount());
-        LOGGER.info("Suggested pieces has next: " + suggestedPieces.hasNext());
-        LOGGER.info("Ready peers count: " + readyPeers.size());
-        LOGGER.info("Choking peers count: " + chokingPeers.size());
         while (suggestedPieces.hasNext() && readyPeers.size() > 0
                 && assignments.getAssigneesCount() < MAX_CONCURRENT_ACTIVE_CONNECTIONS) {
 
