@@ -27,7 +27,6 @@ public class Config {
     private int maxTransferBlockSize;
     private int maxIOQueueSize;
     private Duration shutdownHookTimeout;
-    private boolean shouldFailOnUnexpectedBlocks;
     private int numOfHashingThreads;
 
     /**
@@ -46,12 +45,11 @@ public class Config {
         this.peerConnectionInactivityThreshold = Duration.ofMinutes(3);
         this.trackerQueryInterval = Duration.ofMinutes(5);
         this.maxPeerConnections = 500;
-        this.maxPeerConnectionsPerTorrent = 20;
+        this.maxPeerConnectionsPerTorrent = maxPeerConnections; // assume single torrent per runtime by default; change this to (maxActive * 2) maybe?
         this.transferBlockSize = 2 << 13; // 8 KB
         this.maxTransferBlockSize = 2 << 16; // 128 KB
         this.maxIOQueueSize = 1000;
         this.shutdownHookTimeout = Duration.ofSeconds(5);
-        this.shouldFailOnUnexpectedBlocks = false;
         this.numOfHashingThreads = 1; // do not parallelize by default
     }
 
@@ -77,7 +75,6 @@ public class Config {
         this.maxTransferBlockSize = config.getMaxTransferBlockSize();
         this.maxIOQueueSize = config.getMaxIOQueueSize();
         this.shutdownHookTimeout = config.getShutdownHookTimeout();
-        this.shouldFailOnUnexpectedBlocks = config.shouldFailOnUnexpectedBlocks();
         this.numOfHashingThreads = config.getNumOfHashingThreads();
     }
 
@@ -305,22 +302,6 @@ public class Config {
      */
     public Duration getShutdownHookTimeout() {
         return shutdownHookTimeout;
-    }
-
-    /**
-     * @param shouldFailOnUnexpectedBlocks true if the peer connection should be terminated
-     *                                     when an unexpected (not requested) block is received
-     * @since 1.1
-     */
-    public void setShouldFailOnUnexpectedBlocks(boolean shouldFailOnUnexpectedBlocks) {
-        this.shouldFailOnUnexpectedBlocks = shouldFailOnUnexpectedBlocks;
-    }
-
-    /**
-     * @since 1.1
-     */
-    public boolean shouldFailOnUnexpectedBlocks() {
-        return shouldFailOnUnexpectedBlocks;
     }
 
     /**

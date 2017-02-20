@@ -1,6 +1,7 @@
 package bt.torrent.messaging;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * Creates unique keys, that can be tested for equality with each other.
@@ -26,7 +27,11 @@ public class Mapper {
         return new Key(pieceIndex, offset, length);
     }
 
-    private static class Key {
+    static Optional<Key> decodeKey(Object object) {
+        return (object instanceof Key) ? Optional.of((Key) object) : Optional.empty();
+    }
+
+    static class Key {
 
         private final int[] key;
 
@@ -36,6 +41,18 @@ public class Mapper {
 
         int[] getKey() {
             return key;
+        }
+
+        int getPieceIndex() {
+            return key[0];
+        }
+
+        int getOffset() {
+            return key[1];
+        }
+
+        int getLength() {
+            return key[2];
         }
 
         @Override

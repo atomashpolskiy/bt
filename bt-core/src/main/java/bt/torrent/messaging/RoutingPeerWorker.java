@@ -2,8 +2,8 @@ package bt.torrent.messaging;
 
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
+import bt.protocol.Cancel;
 import bt.protocol.Choke;
-import bt.protocol.Have;
 import bt.protocol.Interested;
 import bt.protocol.Message;
 import bt.protocol.NotInterested;
@@ -105,18 +105,17 @@ class RoutingPeerWorker implements PeerWorker {
     }
 
     private void postMessage(Message message) {
-        // TODO: not sure if this is really important
-//        if (isUrgent(message)) {
-//            addUrgent(message);
-//        } else {
+        if (isUrgent(message)) {
+            addUrgent(message);
+        } else {
             add(message);
-//        }
+        }
     }
 
     private boolean isUrgent(Message message) {
         // TODO: this should be done based on priorities
         Class<? extends Message> messageType = message.getClass();
-        return Choke.class.equals(messageType) || Unchoke.class.equals(messageType) || Have.class.equals(messageType);
+        return Choke.class.equals(messageType) || Unchoke.class.equals(messageType) || Cancel.class.equals(messageType);
     }
 
     private void add(Message message) {

@@ -14,11 +14,10 @@ Changes/New Features:
 * Streaming (continuous) piece selectors
 * Improvements in piece selection and peer assignments algorithm
 * Support for multi-threaded hashing (verification) of torrent data on startup
-* Speed-up the initial startup by skipping verification if a storage unit is empty and by feeding larger blocks to the digester
 * Lifecycle binding API improvements; support for asynchronous bindings
 * Tools for creating custom protocol tests
 
-Bug Fixes:
+Bug Fixes/Improvements:
 
 * Torrent processing should not terminate when interaction with the tracker failed
 * Announce key can be missing in trackerless torrents
@@ -28,6 +27,9 @@ Bug Fixes:
 * Calculate total size for multi-file torrents
 * NPE on UDP message worker shutdown
 * Multi-tracker does not announce to next trackers in tier if an exception was thrown
+* Querying trackers and other peer sources should be async
+* Adaptive message processing interval in message dispatcher to reduce the CPU load
+* Speed-up the initial startup by skipping verification if a storage unit is empty and by feeding larger blocks to the digester
 
 ----------------------------------
 Release: 1.0

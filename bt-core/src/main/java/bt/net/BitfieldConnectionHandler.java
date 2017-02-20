@@ -2,6 +2,7 @@ package bt.net;
 
 import bt.BtException;
 import bt.metainfo.Torrent;
+import bt.protocol.Handshake;
 import bt.torrent.Bitfield;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
@@ -16,7 +17,7 @@ import java.util.Optional;
  *
  * @since 1.0
  */
-public class BitfieldConnectionHandler implements ConnectionHandler {
+public class BitfieldConnectionHandler implements HandshakeHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BitfieldConnectionHandler.class);
 
@@ -28,7 +29,7 @@ public class BitfieldConnectionHandler implements ConnectionHandler {
     }
 
     @Override
-    public boolean handleConnection(PeerConnection connection) {
+    public void processIncomingHandshake(PeerConnection connection, Handshake peerHandshake) {
         Torrent torrent = torrentRegistry.getTorrent(connection.getTorrentId())
                 // this should not happen, because presence of requested torrent
                 // should have already been tested by other connection handlers
@@ -46,8 +47,11 @@ public class BitfieldConnectionHandler implements ConnectionHandler {
                     LOGGER.debug("Sending " + bitfieldMessage + " for " + connection.getRemotePeer());
                 }
             }
-            return true;
         }
-        return false;
+    }
+
+    @Override
+    public void processOutgoingHandshake(Handshake handshake) {
+        // do nothing
     }
 }

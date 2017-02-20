@@ -4,6 +4,7 @@ import bt.BtException;
 import bt.data.ChunkDescriptor;
 import bt.data.DataDescriptor;
 import bt.net.Peer;
+import bt.protocol.Cancel;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.NotInterested;
@@ -32,7 +33,7 @@ public class RequestProducer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RequestProducer.class);
 
-    private static final int MAX_PENDING_REQUESTS = 3;
+    private static final int MAX_PENDING_REQUESTS = 5;
 
     private Bitfield bitfield;
     private Assignments assignments;
@@ -68,6 +69,12 @@ public class RequestProducer {
         if (currentAssignment.isPresent()) {
             int currentPiece = currentAssignment.get();
             if (bitfield.isComplete(currentPiece)) {
+                connectionState.getPendingRequests().forEach(r -> {
+                    Mapper.decodeKey(r).ifPresent(key -> {
+                        messageConsumer.accept(new Cancel(key.getPieceIndex(), key.getOffset(), key.getLength()));
+                    });
+                });
+                connectionState.getPendingWrites().clear();
                 resetConnection(connectionState, Optional.empty());
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Finished downloading piece #{}", currentPiece);
@@ -103,7 +110,6 @@ public class RequestProducer {
 
     private void resetConnection(ConnectionState connectionState, Optional<Integer> currentPiece) {
         connectionState.onUnassign();
-        connectionState.getPendingWrites().clear();
         if (currentPiece.isPresent()) {
             connectionState.setCurrentAssignment(currentPiece.get());
         }

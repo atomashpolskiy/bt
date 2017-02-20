@@ -1,11 +1,9 @@
 package bt.module;
 
 import bt.net.BitfieldConnectionHandler;
-import bt.net.ConnectionHandler;
 import bt.net.ConnectionHandlerFactory;
 import bt.net.HandshakeHandler;
 import bt.net.IConnectionHandlerFactory;
-import bt.net.extended.ExtendedProtocolConnectionHandler;
 import bt.net.extended.ExtendedProtocolHandshakeHandler;
 import bt.protocol.HandshakeFactory;
 import bt.protocol.IHandshakeFactory;
@@ -72,15 +70,6 @@ public class ProtocolModule implements Module {
     }
 
     /**
-     * Contribute a peer connection handler.
-     *
-     * @since 1.0
-     */
-    public static Multibinder<ConnectionHandler> contributeConnectionHandler(Binder binder) {
-        return Multibinder.newSetBinder(binder, ConnectionHandler.class);
-    }
-
-    /**
      * Contribute a handshake handler.
      *
      * @since 1.0
@@ -95,7 +84,6 @@ public class ProtocolModule implements Module {
         // trigger creation of extension points
         ProtocolModule.contributeMessageHandler(binder);
         ProtocolModule.contributeExtendedMessageHandler(binder);
-        ProtocolModule.contributeConnectionHandler(binder);
         ProtocolModule.contributeHandshakeHandler(binder);
 
         binder.bind(IHandshakeFactory.class).to(HandshakeFactory.class).in(Singleton.class);
@@ -107,28 +95,21 @@ public class ProtocolModule implements Module {
                 .addBinding(ExtendedProtocol.EXTENDED_MESSAGE_ID).to(ExtendedProtocol.class);
 
         binder.bind(ExtendedHandshake.class).toProvider(ExtendedHandshakeProvider.class).in(Singleton.class);
-
-        ProtocolModule.contributeConnectionHandler(binder).addBinding().to(BitfieldConnectionHandler.class);
-        ProtocolModule.contributeConnectionHandler(binder).addBinding().to(ExtendedProtocolConnectionHandler.class);
-
-        ProtocolModule.contributeHandshakeHandler(binder).addBinding().to(ExtendedProtocolHandshakeHandler.class);
     }
 
     @Provides
     @Singleton
     public IConnectionHandlerFactory provideConnectionHandlerFactory(IHandshakeFactory handshakeFactory,
                                                                      TorrentRegistry torrentRegistry,
-                                                                     Set<ConnectionHandler> connectionHandlers,
-                                                                     Set<HandshakeHandler> handshakeHandlers,
+                                                                     Set<HandshakeHandler> boundHandshakeHandlers,
                                                                      ExtendedHandshakeProvider extendedHandshakeProvider,
                                                                      Config config) {
+        List<HandshakeHandler> handshakeHandlers = new ArrayList<>(boundHandshakeHandlers);
+        // add default handshake handlers to the beginning of the connection handling chain
+        handshakeHandlers.add(new BitfieldConnectionHandler(torrentRegistry));
+        handshakeHandlers.add(new ExtendedProtocolHandshakeHandler(extendedHandshakeProvider));
 
-        List<ConnectionHandler> connectionHandlerList = new ArrayList<>(connectionHandlers);
-        // add default connection handlers to the end of the connection handling chain
-        connectionHandlerList.add(new ExtendedProtocolConnectionHandler(extendedHandshakeProvider));
-        connectionHandlerList.add(new BitfieldConnectionHandler(torrentRegistry));
-
-        return new ConnectionHandlerFactory(handshakeFactory, torrentRegistry, connectionHandlerList,
+        return new ConnectionHandlerFactory(handshakeFactory, torrentRegistry,
                 handshakeHandlers, config.getPeerHandshakeTimeout());
     }
 

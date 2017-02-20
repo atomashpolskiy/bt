@@ -5,14 +5,14 @@ import bt.metainfo.TorrentId;
 import bt.protocol.Handshake;
 import bt.protocol.IHandshakeFactory;
 import bt.protocol.Message;
-import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentDescriptor;
+import bt.torrent.TorrentRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * Handles handshake exchange for incoming peer connections.
@@ -25,11 +25,11 @@ class IncomingHandshakeHandler implements ConnectionHandler {
 
     private IHandshakeFactory handshakeFactory;
     private TorrentRegistry torrentRegistry;
-    private Set<HandshakeHandler> handshakeHandlers;
+    private Collection<HandshakeHandler> handshakeHandlers;
     private Duration handshakeTimeout;
 
     public IncomingHandshakeHandler(IHandshakeFactory handshakeFactory, TorrentRegistry torrentRegistry,
-                                    Set<HandshakeHandler> handshakeHandlers, Duration handshakeTimeout) {
+                                    Collection<HandshakeHandler> handshakeHandlers, Duration handshakeTimeout) {
         this.handshakeFactory = handshakeFactory;
         this.torrentRegistry = torrentRegistry;
         this.handshakeHandlers = handshakeHandlers;
@@ -59,7 +59,7 @@ class IncomingHandshakeHandler implements ConnectionHandler {
                         ((DefaultPeerConnection) connection).setTorrentId(torrentId);
 
                         handshakeHandlers.forEach(handler ->
-                                handler.processIncomingHandshake(connection.getRemotePeer(), peerHandshake));
+                                handler.processIncomingHandshake(new WriteOnlyPeerConnection(connection), peerHandshake));
 
                         return true;
                     }

@@ -61,18 +61,13 @@ public class MessageDispatcher implements IMessageDispatcher {
     private class Worker implements Runnable {
 
         private IPeerConnectionPool pool;
-
-        private ReentrantLock lock;
-        private Condition timer;
+        private LoopControl loopControl;
 
         private volatile boolean shutdown;
 
         Worker(IPeerConnectionPool pool) {
-
             this.pool = pool;
-
-            lock = new ReentrantLock();
-            timer = lock.newCondition();
+            this.loopControl = new LoopControl();
         }
 
         @Override
@@ -107,6 +102,7 @@ public class MessageDispatcher implements IMessageDispatcher {
                             }
 
                             if (message != null) {
+                                loopControl.incrementProcessed();
                                 for (Consumer<Message> messageConsumer : consumers) {
                                     try {
                                         messageConsumer.accept(message);
@@ -150,6 +146,7 @@ public class MessageDispatcher implements IMessageDispatcher {
                                 }
 
                                 if (message != null) {
+                                    loopControl.incrementProcessed();
                                     try {
                                         connection.postMessage(message);
                                     } catch (Exception e) {
@@ -166,19 +163,52 @@ public class MessageDispatcher implements IMessageDispatcher {
                     }
                 }
 
-                lock.lock();
-                try {
-                    timer.await(1, TimeUnit.MILLISECONDS);
-                } catch (InterruptedException e) {
-                    // ignore
-                } finally {
-                    lock.unlock();
-                }
+                loopControl.iterationFinished();
             }
         }
 
         public void shutdown() {
             shutdown = true;
+        }
+    }
+
+    /**
+     * Controls the amount of time to sleep after each iteration of the main message processing loop.
+     * It implements an adaptive strategy and increases the amount of time for the dispatcher to sleep
+     * after each iteration during which no messages were either received or sent.
+     * This strategy greatly reduces CPU load when there is little network activity.
+     */
+    private static class LoopControl {
+
+        private ReentrantLock lock;
+        private Condition timer;
+
+        private int messagesProcessed;
+        private long timeToSleep;
+
+        LoopControl() {
+            lock = new ReentrantLock();
+            timer = lock.newCondition();
+        }
+
+        void incrementProcessed() {
+            messagesProcessed++;
+            timeToSleep = 1;
+        }
+
+        void iterationFinished() {
+            if (messagesProcessed == 0) {
+                lock.lock();
+                try {
+                    timer.await(timeToSleep, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException e) {
+                    // ignore
+                } finally {
+                    lock.unlock();
+                }
+                timeToSleep = Math.min(timeToSleep << 1, 1000);
+            }
+            messagesProcessed = 0;
         }
     }
 

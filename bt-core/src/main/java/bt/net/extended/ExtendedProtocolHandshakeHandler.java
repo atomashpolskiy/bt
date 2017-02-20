@@ -1,7 +1,7 @@
 package bt.net.extended;
 
 import bt.net.HandshakeHandler;
-import bt.net.Peer;
+import bt.net.PeerConnection;
 import bt.protocol.Handshake;
 import bt.protocol.extended.ExtendedHandshake;
 import com.google.inject.Inject;
@@ -25,8 +25,13 @@ public class ExtendedProtocolHandshakeHandler implements HandshakeHandler {
     }
 
     @Override
-    public void processIncomingHandshake(Peer peer, Handshake peerHandshake) {
-        // do nothing... extended handshake will be processed by the extended protocol handlers
+    public void processIncomingHandshake(PeerConnection connection, Handshake peerHandshake) {
+        ExtendedHandshake extendedHandshake = extendedHandshakeProvider.get();
+        // do not send the extended handshake
+        // if local client does not have any extensions turned on
+        if (!extendedHandshake.getData().isEmpty()) {
+            connection.postMessage(extendedHandshake);
+        }
     }
 
     @Override
