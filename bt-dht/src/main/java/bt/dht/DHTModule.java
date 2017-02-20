@@ -4,7 +4,6 @@ import bt.module.ProtocolModule;
 import bt.module.ServiceModule;
 import bt.protocol.handler.PortMessageHandler;
 import bt.service.IRuntimeLifecycleBinder;
-import bt.torrent.messaging.DHTMessagingAgent;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -36,7 +35,6 @@ public class DHTModule implements Module {
         binder.bind(DHTConfig.class).toInstance(config);
 
         ServiceModule.contributePeerSourceFactory(binder).addBinding().to(DHTPeerSourceFactory.class);
-        ServiceModule.contributeMessagingAgent(binder).addBinding().to(DHTMessagingAgent.class);
         ProtocolModule.contributeHandshakeHandler(binder).addBinding().to(DHTHandshakeHandler.class);
         ProtocolModule.contributeMessageHandler(binder).addBinding(PortMessageHandler.PORT_ID).to(PortMessageHandler.class);
     }

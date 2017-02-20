@@ -1,9 +1,9 @@
 package bt.dht;
 
 import bt.net.HandshakeHandler;
-import bt.net.Peer;
+import bt.net.PeerConnection;
 import bt.protocol.Handshake;
-import bt.torrent.messaging.DHTMessagingAgent;
+import bt.protocol.Port;
 import com.google.inject.Inject;
 
 /**
@@ -13,19 +13,19 @@ public class DHTHandshakeHandler implements HandshakeHandler {
 
     private static final int DHT_FLAG_BIT_INDEX = 63;
 
-    private DHTMessagingAgent messagingAgent;
+    private DHTConfig config;
 
     @Inject
-    public DHTHandshakeHandler(DHTMessagingAgent messagingAgent) {
-        this.messagingAgent = messagingAgent;
+    public DHTHandshakeHandler(DHTConfig config) {
+        this.config = config;
     }
 
     @Override
-    public void processIncomingHandshake(Peer peer, Handshake peerHandshake) {
+    public void processIncomingHandshake(PeerConnection connection, Handshake peerHandshake) {
         // according to the spec, the client should immediately communicate its' DHT service port
         // upon receiving a handshake indicating DHT support
         if (peerHandshake.isReservedBitSet(DHT_FLAG_BIT_INDEX)) {
-            messagingAgent.shouldCommunicatePortTo(peer);
+            connection.postMessage(new Port(config.getListeningPort()));
         }
     }
 
