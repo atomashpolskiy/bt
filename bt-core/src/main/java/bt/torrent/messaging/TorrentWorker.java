@@ -101,7 +101,7 @@ class TorrentWorker {
     private long lastUpdated;
 
     private Map<Peer, Assignment> interestingPeers;
-    private Set<Peer> timeoutedPeers;
+    private Map<Peer, Long> timeoutedPeers;
     private Queue<Peer> disconnectedPeers;
     private Map<Peer, Message> interestUpdates;
 
@@ -126,7 +126,7 @@ class TorrentWorker {
 
         this.peerMap = new ConcurrentHashMap<>();
         this.interestingPeers = new ConcurrentHashMap<>();
-        this.timeoutedPeers = ConcurrentHashMap.newKeySet();
+        this.timeoutedPeers = new ConcurrentHashMap<>();
         this.disconnectedPeers = new LinkedBlockingQueue<>();
         this.interestUpdates = new ConcurrentHashMap<>();
 
@@ -191,6 +191,14 @@ class TorrentWorker {
             timeoutedPeers.remove(disconnectedPeer);
         }
 
+        Iterator<Map.Entry<Peer, Long>> timeoutedPeersIter = timeoutedPeers.entrySet().iterator();
+        while (timeoutedPeersIter.hasNext()) {
+            Map.Entry<Peer, Long> entry = timeoutedPeersIter.next();
+            if (System.currentTimeMillis() - entry.getValue() >= config.getTimeoutedAssignmentPeerBanDuration().toMillis()) {
+                timeoutedPeersIter.remove();
+            }
+        }
+
         Set<Peer> readyPeers = new HashSet<>();
         Set<Peer> chokingPeers = new HashSet<>();
 
@@ -204,7 +212,7 @@ class TorrentWorker {
                 case TIMEOUT: {
                     iter.remove();
                     if (assignments.hasAssignments(peer)) {
-                        timeoutedPeers.add(peer);
+                        timeoutedPeers.put(peer, System.currentTimeMillis());
                         assignments.removeAssignments(peer);
                         getWorker(peer).getConnectionState().onUnassign();
                         if (LOGGER.isTraceEnabled()) {
@@ -245,7 +253,7 @@ class TorrentWorker {
 
         Set<Peer> inactivePeers = new HashSet<>(peerMap.keySet());
         inactivePeers.removeAll(interestingPeers.keySet());
-        inactivePeers.removeAll(timeoutedPeers);
+        inactivePeers.removeAll(timeoutedPeers.keySet());
 
         inactivePeers.forEach(p -> {
             ConnectionState connectionState = getWorker(p).getConnectionState();

@@ -33,6 +33,7 @@ public class Config {
     private Duration maxMessageProcessingInterval;
     private Duration unreachablePeerBanDuration;
     private int maxPendingConnectionRequests;
+    private Duration timeoutedAssignmentPeerBanDuration;
 
     /**
      * Create a config with default parameters.
@@ -61,6 +62,7 @@ public class Config {
         this.maxMessageProcessingInterval = Duration.ofMillis(100);
         this.unreachablePeerBanDuration = Duration.ofMinutes(30);
         this.maxPendingConnectionRequests = 50;
+        this.timeoutedAssignmentPeerBanDuration = Duration.ofMinutes(1);
     }
 
     /**
@@ -91,6 +93,7 @@ public class Config {
         this.maxMessageProcessingInterval = config.getMaxMessageProcessingInterval();
         this.unreachablePeerBanDuration = config.getUnreachablePeerBanDuration();
         this.maxPendingConnectionRequests = config.getMaxPendingConnectionRequests();
+        this.timeoutedAssignmentPeerBanDuration = config.getTimeoutedAssignmentPeerBanDuration();
     }
 
     /**
@@ -436,5 +439,23 @@ public class Config {
      */
     public int getMaxPendingConnectionRequests() {
         return maxPendingConnectionRequests;
+    }
+
+    /**
+     * @param timeoutedAssignmentPeerBanDuration Amount of time to keep the torrent processing session from
+     *                                           requesting a peer for new pieces if this peer's previous assignment
+     *                                           was cancelled due to a timeout.
+     * @see #setMaxPieceReceivingTime(Duration)
+     * @since 1.1
+     */
+    public void setTimeoutedAssignmentPeerBanDuration(Duration timeoutedAssignmentPeerBanDuration) {
+        this.timeoutedAssignmentPeerBanDuration = timeoutedAssignmentPeerBanDuration;
+    }
+
+    /**
+     * @since 1.1
+     */
+    public Duration getTimeoutedAssignmentPeerBanDuration() {
+        return timeoutedAssignmentPeerBanDuration;
     }
 }
