@@ -214,6 +214,10 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
     @Override
     public void writeBlock(byte[] block, long offset) {
 
+        if (status == DataStatus.VERIFIED) {
+            throw new IllegalStateException("Failed to write data -- block is complete and verified");
+        }
+
         if (block.length == 0) {
             return;
         }
