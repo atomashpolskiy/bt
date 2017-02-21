@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,11 +48,13 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private ExecutorService executor;
     private ScheduledExecutorService cleaner;
 
-    private final Map<Peer, CompletableFuture<PeerConnection>> pendingConnections;
+    private final Map<Peer, CompletableFuture<Optional<PeerConnection>>> pendingConnections;
     private ConcurrentMap<Peer, DefaultPeerConnection> connections;
     private Set<PeerActivityListener> connectionListeners;
     private ReentrantReadWriteLock listenerLock;
-    private ReentrantLock connectionLock;
+    private ReentrantLock cleanerLock;
+
+    private Map<Peer, Long> unreachablePeers;
 
     private Duration peerConnectionInactivityThreshold;
 
@@ -75,7 +78,9 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         this.connections = new ConcurrentHashMap<>();
         this.connectionListeners = new HashSet<>();
         this.listenerLock = new ReentrantReadWriteLock();
-        this.connectionLock = new ReentrantLock();
+        this.cleanerLock = new ReentrantLock();
+
+        this.unreachablePeers = new ConcurrentHashMap<>();
 
         IncomingAcceptor acceptor = new IncomingAcceptor(socketChannelFactory);
         ExecutorService incomingAcceptor = Executors.newSingleThreadExecutor(
@@ -84,9 +89,9 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         this.cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, "bt.net.pool.cleaner"));
         lifecycleBinder.onStartup("Schedule periodic cleanup of stale peer connections",
-                () -> cleaner.scheduleAtFixedRate(new Cleaner(), 1000, 1000, TimeUnit.MILLISECONDS));
+                () -> cleaner.scheduleAtFixedRate(new Cleaner(config.getUnreachablePeerBanDuration()), 1000, 1000, TimeUnit.MILLISECONDS));
 
-        this.executor = Executors.newCachedThreadPool(
+        this.executor = Executors.newFixedThreadPool(config.getMaxPendingConnectionRequests(),
                 new ThreadFactory() {
 
                     private AtomicInteger threadCount = new AtomicInteger(1);
@@ -127,10 +132,14 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     }
 
     @Override
-    public CompletableFuture<PeerConnection> requestConnection(TorrentId torrentId, Peer peer) {
-        CompletableFuture<PeerConnection> connection = getExistingOrPendingConnection(peer);
+    public CompletableFuture<Optional<PeerConnection>> requestConnection(TorrentId torrentId, Peer peer) {
+        CompletableFuture<Optional<PeerConnection>> connection = getExistingOrPendingConnection(peer);
         if (connection != null) {
             return connection;
+        }
+
+        if (unreachablePeers.containsKey(peer)) {
+            return CompletableFuture.completedFuture(Optional.empty());
         }
 
         if (connections.size() >= config.getMaxPeerConnections()) {
@@ -152,7 +161,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                     if (!initConnection(newConnection, connectionHandler, true)) {
                         throw new BtException("Failed to initialize new connection for peer: " + peer);
                     }
-                    return (PeerConnection) connections.get(newConnection.getRemotePeer());
+                    return Optional.of((PeerConnection) connections.get(newConnection.getRemotePeer()));
                 } catch (IOException e) {
                     throw new BtException("Failed to create new outgoing connection for peer: " + peer, e);
                 } finally {
@@ -162,6 +171,12 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 }
             }, executor).whenComplete((acquiredConnection, throwable) -> {
                 if (throwable != null) {
+                    cleanerLock.lock();
+                    try {
+                        unreachablePeers.putIfAbsent(peer, System.currentTimeMillis());
+                    } finally {
+                        cleanerLock.unlock();
+                    }
                     if (LOGGER.isTraceEnabled()) {
                         LOGGER.trace("Failed to connect to peer: " + peer, throwable);
                     }
@@ -174,14 +189,14 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         }
     }
 
-    private CompletableFuture<PeerConnection> getExistingOrPendingConnection(Peer peer) {
+    private CompletableFuture<Optional<PeerConnection>> getExistingOrPendingConnection(Peer peer) {
 
         PeerConnection existingConnection = getConnection(peer);
         if (existingConnection != null) {
-            return CompletableFuture.completedFuture(existingConnection);
+            return CompletableFuture.completedFuture(Optional.of(existingConnection));
         }
 
-        CompletableFuture<PeerConnection> pendingConnection = pendingConnections.get(peer);
+        CompletableFuture<Optional<PeerConnection>> pendingConnection = pendingConnections.get(peer);
         if (pendingConnection != null) {
             return pendingConnection;
         }
@@ -263,6 +278,12 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     private class Cleaner implements Runnable {
 
+        private final Duration unreachablePeerBanDuration;
+
+        Cleaner(Duration unreachablePeerBanDuration) {
+            this.unreachablePeerBanDuration = unreachablePeerBanDuration;
+        }
+
         @Override
         public void run() {
 
@@ -270,29 +291,44 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 return;
             }
 
-            connectionLock.lock();
+            cleanerLock.lock();
             try {
-                Iterator<DefaultPeerConnection> iter = connections.values().iterator();
-                while (iter.hasNext()) {
+                {
+                    Iterator<DefaultPeerConnection> iter = connections.values().iterator();
+                    while (iter.hasNext()) {
 
-                    DefaultPeerConnection connection = iter.next();
-                    if (connection.isClosed()) {
-                        purgeConnectionWithPeer(connection.getRemotePeer());
-                        iter.remove();
+                        DefaultPeerConnection connection = iter.next();
+                        if (connection.isClosed()) {
+                            purgeConnectionWithPeer(connection.getRemotePeer());
+                            iter.remove();
 
-                    } else if (System.currentTimeMillis() - connection.getLastActive()
-                            >= peerConnectionInactivityThreshold.toMillis()) {
+                        } else if (System.currentTimeMillis() - connection.getLastActive()
+                                >= peerConnectionInactivityThreshold.toMillis()) {
 
-                        if (LOGGER.isDebugEnabled()) {
-                            LOGGER.debug("Removing inactive peer connection: " + connection.getRemotePeer());
+                            if (LOGGER.isDebugEnabled()) {
+                                LOGGER.debug("Removing inactive peer connection: {}", connection.getRemotePeer());
+                            }
+                            purgeConnectionWithPeer(connection.getRemotePeer());
+                            iter.remove();
                         }
-                        purgeConnectionWithPeer(connection.getRemotePeer());
-                        iter.remove();
+                        // can send keep-alives here based on lastActiveTime
                     }
-                    // can send keep-alives here based on lastActiveTime
+                }
+
+                {
+                    Iterator<Map.Entry<Peer, Long>> iter = unreachablePeers.entrySet().iterator();
+                    while (iter.hasNext()) {
+                        Map.Entry<Peer, Long> entry = iter.next();
+                        if (System.currentTimeMillis() - entry.getValue() >= unreachablePeerBanDuration.toMillis()) {
+                            if (LOGGER.isDebugEnabled()) {
+                                LOGGER.debug("Removing temporary ban for unreachable peer: {}", entry.getKey());
+                            }
+                            iter.remove();
+                        }
+                    }
                 }
             } finally {
-                connectionLock.unlock();
+                cleanerLock.unlock();
             }
         }
     }
@@ -332,7 +368,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         boolean added = false;
         DefaultPeerConnection existingConnection = null;
 
-        connectionLock.lock();
+        cleanerLock.lock();
         try {
             if (connections.size() >= config.getMaxPeerConnections()) {
                 if (LOGGER.isTraceEnabled()) {
@@ -345,7 +381,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 added = (existingConnection == null);
             }
         } finally {
-            connectionLock.unlock();
+            cleanerLock.unlock();
         }
         if (existingConnection != null) {
             if (LOGGER.isDebugEnabled()) {

@@ -30,7 +30,9 @@ public class Config {
     private int numOfHashingThreads;
     private int maxConcurrentlyActivePeerConnectionsPerTorrent;
     private Duration maxPieceReceivingTime;
-    private long maxMessageProcessingInterval;
+    private Duration maxMessageProcessingInterval;
+    private Duration unreachablePeerBanDuration;
+    private int maxPendingConnectionRequests;
 
     /**
      * Create a config with default parameters.
@@ -56,7 +58,9 @@ public class Config {
         this.numOfHashingThreads = 1; // do not parallelize by default
         this.maxConcurrentlyActivePeerConnectionsPerTorrent = 20;
         this.maxPieceReceivingTime = Duration.ofSeconds(30);
-        this.maxMessageProcessingInterval = 100;
+        this.maxMessageProcessingInterval = Duration.ofMillis(100);
+        this.unreachablePeerBanDuration = Duration.ofMinutes(30);
+        this.maxPendingConnectionRequests = 50;
     }
 
     /**
@@ -85,6 +89,8 @@ public class Config {
         this.maxConcurrentlyActivePeerConnectionsPerTorrent = config.getMaxConcurrentlyActivePeerConnectionsPerTorrent();
         this.maxPieceReceivingTime = config.getMaxPieceReceivingTime();
         this.maxMessageProcessingInterval = config.getMaxMessageProcessingInterval();
+        this.unreachablePeerBanDuration = config.getUnreachablePeerBanDuration();
+        this.maxPendingConnectionRequests = config.getMaxPendingConnectionRequests();
     }
 
     /**
@@ -223,7 +229,8 @@ public class Config {
     }
 
     /**
-     * @param maxPeerConnections Maximum amount of established peer connections
+     * @param maxPeerConnections Maximum amount of established peer connections per runtime
+     *                           (all torrent processing sessions combined).
      * @since 1.0
      */
     public void setMaxPeerConnections(int maxPeerConnections) {
@@ -240,7 +247,6 @@ public class Config {
     /**
      * @param maxPeerConnectionsPerTorrent Maximum number of established peer connections
      *                                     within a torrent processing session.
-     *                                     Affects performance (too few or too many is bad).
      * @since 1.0
      */
     public void setMaxPeerConnectionsPerTorrent(int maxPeerConnectionsPerTorrent) {
@@ -331,6 +337,8 @@ public class Config {
 
     /**
      * Maximum number of peer connections that are allowed to request and receive pieces.
+     * Affects performance (too few or too many is bad).
+     *
      * Note that this value implicitly affects when the torrent processing session enters
      * the so-called "endgame" mode. By default it's assumed that the endgame mode should
      * be activated when the number of remaining (incomplete) pieces is smaller than the
@@ -385,14 +393,48 @@ public class Config {
      * @param maxMessageProcessingInterval Maximum time to sleep between message processing loop iterations, in millis.
      * @since 1.1
      */
-    public void setMaxMessageProcessingInterval(long maxMessageProcessingInterval) {
+    public void setMaxMessageProcessingInterval(Duration maxMessageProcessingInterval) {
         this.maxMessageProcessingInterval = maxMessageProcessingInterval;
     }
 
     /**
      * @since 1.1
      */
-    public long getMaxMessageProcessingInterval() {
+    public Duration getMaxMessageProcessingInterval() {
         return maxMessageProcessingInterval;
+    }
+
+    /**
+     * @param unreachablePeerBanDuration If a peer is not reachable (i.e. some kind of I/O error happens
+     *                                   when a connection attempt is made), then new requests to connect
+     *                                   to this peer will be ignored for this amount of time.
+     * @since 1.1
+     */
+    public void setUnreachablePeerBanDuration(Duration unreachablePeerBanDuration) {
+        this.unreachablePeerBanDuration = unreachablePeerBanDuration;
+    }
+
+    /**
+     * @since 1.1
+     */
+    public Duration getUnreachablePeerBanDuration() {
+        return unreachablePeerBanDuration;
+    }
+
+    /**
+     * @param maxPendingConnectionRequests Maximum allowed number of simultaneous connection requests
+     *                                     (both inbound and outbound). All subsequent requests will be queued
+     *                                     until some of the currently pending/processed requests is completed.
+     * @since 1.1
+     */
+    public void setMaxPendingConnectionRequests(int maxPendingConnectionRequests) {
+        this.maxPendingConnectionRequests = maxPendingConnectionRequests;
+    }
+
+    /**
+     * @since 1.1
+     */
+    public int getMaxPendingConnectionRequests() {
+        return maxPendingConnectionRequests;
     }
 }

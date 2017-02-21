@@ -10,6 +10,7 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -67,9 +68,9 @@ public class MessageDispatcher implements IMessageDispatcher {
 
         private volatile boolean shutdown;
 
-        Worker(IPeerConnectionPool pool, long maxProcessingInterval) {
+        Worker(IPeerConnectionPool pool, Duration maxProcessingInterval) {
             this.pool = pool;
-            this.loopControl = new LoopControl(maxProcessingInterval);
+            this.loopControl = new LoopControl(maxProcessingInterval.toMillis());
         }
 
         @Override
