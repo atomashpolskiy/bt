@@ -20,7 +20,8 @@ import bt.torrent.selector.SelectorAdapter;
 import bt.torrent.selector.ValidatingSelector;
 import com.google.inject.Inject;
 
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -106,12 +107,12 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
                                                        DataWorker dataWorker) {
         Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();
 
-        Set<Object> messagingAgents = new HashSet<>();
+        List<Object> messagingAgents = new ArrayList<>();
         messagingAgents.add(GenericConsumer.consumer());
         messagingAgents.add(new BitfieldConsumer(bitfield, pieceStatistics));
+        messagingAgents.add(new PieceConsumer(bitfield, assignments, dataWorker));
         messagingAgents.add(new PeerRequestConsumer(dataWorker));
         messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor(), assignments));
-        messagingAgents.add(new PieceConsumer(bitfield, assignments, dataWorker));
 
         messagingAgents.addAll(this.messagingAgents);
 
