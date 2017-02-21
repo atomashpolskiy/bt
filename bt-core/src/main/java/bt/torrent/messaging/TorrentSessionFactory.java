@@ -69,7 +69,7 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
         IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceStatistics, assignments, dataWorker);
 
         TorrentWorker torrentWorker = new TorrentWorker(torrent.getTorrentId(), bitfield, assignments,
-                selector, pieceStatistics, messageDispatcher, peerWorkerFactory);
+                selector, pieceStatistics, messageDispatcher, peerWorkerFactory, config);
         TorrentSession session = new DefaultTorrentSession(connectionPool, torrentWorker,
                 torrent, bitfield, config.getMaxPeerConnectionsPerTorrent());
 
