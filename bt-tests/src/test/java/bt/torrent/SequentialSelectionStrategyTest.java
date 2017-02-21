@@ -12,6 +12,7 @@ public class SequentialSelectionStrategyTest {
     private static final Predicate<Integer> acceptAllValidator = i -> true;
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testSelection() {
         UpdatablePieceStatistics statistics = new UpdatablePieceStatistics(8);
 

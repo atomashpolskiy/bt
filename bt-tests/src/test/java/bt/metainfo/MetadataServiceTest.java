@@ -62,8 +62,8 @@ public class MetadataServiceTest {
     private void assertHasAttributes(Torrent torrent, AnnounceKey announceKey, String name, long chunkSize,
                                      int chunkHashesCount, long size) throws MalformedURLException {
 
-        assertTrue(torrent.getAnnounceKeyOptional().isPresent());
-        assertEquals(announceKey, torrent.getAnnounceKeyOptional().get());
+        assertTrue(torrent.getAnnounceKey().isPresent());
+        assertEquals(announceKey, torrent.getAnnounceKey().get());
         assertEquals(name, torrent.getName());
         assertEquals(chunkSize, torrent.getChunkSize());
 

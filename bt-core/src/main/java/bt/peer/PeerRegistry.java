@@ -80,7 +80,7 @@ public class PeerRegistry implements IPeerRegistry {
     }
 
     private void queryTracker(Torrent torrent, List<Consumer<Peer>> consumers) {
-        Optional<AnnounceKey> announceKey = torrent.getAnnounceKeyOptional();
+        Optional<AnnounceKey> announceKey = torrent.getAnnounceKey();
         if (announceKey.isPresent() && mightCreateTracker(announceKey.get())) {
             queryPeerSource(trackerPeerSourceFactory.getPeerSource(torrent), consumers);
         }

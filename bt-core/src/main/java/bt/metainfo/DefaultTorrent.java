@@ -14,7 +14,7 @@ class DefaultTorrent implements Torrent {
 
     private static final int CHUNK_HASH_LENGTH = 20;
 
-    private AnnounceKey announceKey;
+    private Optional<AnnounceKey> announceKey;
     private TorrentId torrentId;
     private String name;
     private long chunkSize;
@@ -23,14 +23,13 @@ class DefaultTorrent implements Torrent {
     private List<TorrentFile> files;
     private boolean isPrivate;
 
-    @Override
-    public AnnounceKey getAnnounceKey() {
-        return announceKey;
+    DefaultTorrent() {
+        this.announceKey = Optional.empty();
     }
 
     @Override
-    public Optional<AnnounceKey> getAnnounceKeyOptional() {
-        return Optional.ofNullable(announceKey);
+    public Optional<AnnounceKey> getAnnounceKey() {
+        return announceKey;
     }
 
     @Override
@@ -99,7 +98,7 @@ class DefaultTorrent implements Torrent {
     }
 
     void setAnnounceKey(AnnounceKey announceKey) {
-        this.announceKey = announceKey;
+        this.announceKey = Optional.of(announceKey);
     }
 
     void setTorrentId(TorrentId torrentId) {

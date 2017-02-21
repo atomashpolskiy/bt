@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -57,11 +55,6 @@ public class RuntimeLifecycleBinder implements IRuntimeLifecycleBinder {
     @Override
     public void addBinding(LifecycleEvent event, LifecycleBinding binding) {
         bindings.get(event).add(binding);
-    }
-
-    @Override
-    public void visitBindings(LifecycleEvent event, BiConsumer<Optional<String>, Runnable> consumer) {
-        bindings.get(event).forEach(binding -> consumer.accept(binding.getDescription(), binding.getRunnable()));
     }
 
     @Override

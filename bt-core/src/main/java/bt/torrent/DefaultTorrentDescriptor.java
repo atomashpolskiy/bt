@@ -33,7 +33,7 @@ class DefaultTorrentDescriptor implements TorrentDescriptor {
     }
 
     private Tracker createTracker(ITrackerService trackerService, Torrent torrent) {
-        Optional<AnnounceKey> announceKey = torrent.getAnnounceKeyOptional();
+        Optional<AnnounceKey> announceKey = torrent.getAnnounceKey();
         if (announceKey.isPresent()) {
             try {
                 String trackerUrl = getTrackerUrl(announceKey.get());

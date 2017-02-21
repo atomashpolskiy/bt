@@ -1,7 +1,5 @@
 package bt.service;
 
-import java.util.Optional;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -90,19 +88,6 @@ public interface IRuntimeLifecycleBinder {
      * @since 1.1
      */
     void addBinding(LifecycleEvent event, LifecycleBinding binding);
-
-    /**
-     * Visitor interface for inspecting all registered hooks for a particular lifecycle event.
-     *
-     * @param event Lifecycle event
-     * @param consumer First parameter is hook's optional description,
-     *                 second parameter is the hook itself.
-     * @see #visitBindings(LifecycleEvent, Consumer)
-     * @since 1.0
-     * @deprecated As of release 1.1, replaced by {@link #visitBindings(LifecycleEvent, Consumer)}
-     */
-    @Deprecated
-    void visitBindings(LifecycleEvent event, BiConsumer<Optional<String>, Runnable> consumer);
 
     /**
      * Visitor interface for inspecting all registered hooks for a particular lifecycle event.
