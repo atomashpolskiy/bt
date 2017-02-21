@@ -16,7 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
@@ -75,7 +75,7 @@ public class RequestProducer {
                     });
                 });
                 connectionState.getPendingWrites().clear();
-                resetConnection(connectionState, Optional.empty());
+                connectionState.onUnassign();
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Finished downloading piece #{}", currentPiece);
                 }
@@ -84,16 +84,6 @@ public class RequestProducer {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Begin downloading piece #{} from peer: {}", currentPiece, peer);
                 }
-            } else if (connectionState.getLastReceivedBlock().isPresent()
-                    && (System.currentTimeMillis() - connectionState.getLastReceivedBlock().get() >= 10000)) {
-                // this may happen when some of the received blocks were discarded by the data worker
-                // or some of the requests/responses were lost on the network;
-                // here we again create requests for the missing blocks;
-                // consider this to be a kind of tradeoff between memory consumption
-                // (internal capacity of the data worker) and additional network overhead from the duplicate requests
-                // while ensuring that the piece WILL be downloaded eventually
-                resetConnection(connectionState, currentAssignment);
-                initializeRequestQueue(connectionState, currentPiece);
             }
         }
 
@@ -108,42 +98,36 @@ public class RequestProducer {
         }
     }
 
-    private void resetConnection(ConnectionState connectionState, Optional<Integer> currentPiece) {
-        connectionState.onUnassign();
-        if (currentPiece.isPresent()) {
-            connectionState.setCurrentAssignment(currentPiece.get());
-        }
-    }
-
     private void initializeRequestQueue(ConnectionState connectionState, int pieceIndex) {
-        connectionState.getRequestQueue().addAll(
-                buildRequests(pieceIndex).stream()
-                    .filter(request -> {
-                        Object key = Mapper.mapper().buildKey(
-                            request.getPieceIndex(), request.getOffset(), request.getLength());
-                        if (connectionState.getPendingRequests().contains(key)) {
-                            return false;
-                        }
+        List<Request> requests = buildRequests(pieceIndex).stream()
+            .filter(request -> {
+                Object key = Mapper.mapper().buildKey(
+                    request.getPieceIndex(), request.getOffset(), request.getLength());
+                if (connectionState.getPendingRequests().contains(key)) {
+                    return false;
+                }
 
-                        CompletableFuture<BlockWrite> future = connectionState.getPendingWrites().get(key);
-                        if (future == null) {
-                            return true;
-                        } else if (!future.isDone()) {
-                            return false;
-                        }
+                CompletableFuture<BlockWrite> future = connectionState.getPendingWrites().get(key);
+                if (future == null) {
+                    return true;
+                } else if (!future.isDone()) {
+                    return false;
+                }
 
-                        boolean failed = future.isDone() && future.getNow(null).getError().isPresent();
-                        if (failed) {
-                            connectionState.getPendingWrites().remove(key);
-                        }
-                        return failed;
+                boolean failed = future.isDone() && future.getNow(null).getError().isPresent();
+                if (failed) {
+                    connectionState.getPendingWrites().remove(key);
+                }
+                return failed;
 
-                    }).collect(Collectors.toList()));
+            }).collect(Collectors.toList());
 
+        Collections.shuffle(requests);
+        connectionState.getRequestQueue().addAll(requests);
         connectionState.setInitializedRequestQueue(true);
     }
 
-    private Collection<Request> buildRequests(int pieceIndex) {
+    private List<Request> buildRequests(int pieceIndex) {
         List<Request> requests = new ArrayList<>();
         ChunkDescriptor chunk = chunks.get(pieceIndex);
         long chunkSize = chunk.getSize();
