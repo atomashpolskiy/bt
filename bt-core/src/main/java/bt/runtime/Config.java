@@ -30,6 +30,7 @@ public class Config {
     private int numOfHashingThreads;
     private int maxConcurrentlyActivePeerConnectionsPerTorrent;
     private Duration maxPieceReceivingTime;
+    private long maxMessageProcessingInterval;
 
     /**
      * Create a config with default parameters.
@@ -55,6 +56,7 @@ public class Config {
         this.numOfHashingThreads = 1; // do not parallelize by default
         this.maxConcurrentlyActivePeerConnectionsPerTorrent = 20;
         this.maxPieceReceivingTime = Duration.ofSeconds(30);
+        this.maxMessageProcessingInterval = 100;
     }
 
     /**
@@ -82,6 +84,7 @@ public class Config {
         this.numOfHashingThreads = config.getNumOfHashingThreads();
         this.maxConcurrentlyActivePeerConnectionsPerTorrent = config.getMaxConcurrentlyActivePeerConnectionsPerTorrent();
         this.maxPieceReceivingTime = config.getMaxPieceReceivingTime();
+        this.maxMessageProcessingInterval = config.getMaxMessageProcessingInterval();
     }
 
     /**
@@ -370,5 +373,26 @@ public class Config {
      */
     public Duration getMaxPieceReceivingTime() {
         return maxPieceReceivingTime;
+    }
+
+    /**
+     * This option is related to the adaptive message processing interval feature in the message dispatcher.
+     * The lower this value the higher the ingoing/outgoing message processing rate but also higher the CPU load.
+     * Reasonable value (in 100..1000 ms range) greatly reduces the CPU load when there is little network activity
+     * without compromising the overall message exchange rates.
+     *
+     * @see bt.net.MessageDispatcher
+     * @param maxMessageProcessingInterval Maximum time to sleep between message processing loop iterations, in millis.
+     * @since 1.1
+     */
+    public void setMaxMessageProcessingInterval(long maxMessageProcessingInterval) {
+        this.maxMessageProcessingInterval = maxMessageProcessingInterval;
+    }
+
+    /**
+     * @since 1.1
+     */
+    public long getMaxMessageProcessingInterval() {
+        return maxMessageProcessingInterval;
     }
 }

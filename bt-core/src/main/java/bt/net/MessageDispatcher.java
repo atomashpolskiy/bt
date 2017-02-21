@@ -2,6 +2,7 @@ package bt.net;
 
 import bt.metainfo.Torrent;
 import bt.protocol.Message;
+import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
@@ -40,14 +41,15 @@ public class MessageDispatcher implements IMessageDispatcher {
     @Inject
     public MessageDispatcher(IRuntimeLifecycleBinder lifecycleBinder,
                              IPeerConnectionPool pool,
-                             TorrentRegistry torrentRegistry) {
+                             TorrentRegistry torrentRegistry,
+                             Config config) {
 
         this.consumers = new ConcurrentHashMap<>();
         this.suppliers = new ConcurrentHashMap<>();
         this.torrentRegistry = torrentRegistry;
 
         ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.net.message-dispatcher"));
-        Worker worker = new Worker(pool);
+        Worker worker = new Worker(pool, config.getMaxMessageProcessingInterval());
         lifecycleBinder.onStartup("Initialize message dispatcher", () -> executor.execute(worker));
         lifecycleBinder.onShutdown("Shutdown message dispatcher worker", () -> {
             try {
@@ -65,9 +67,9 @@ public class MessageDispatcher implements IMessageDispatcher {
 
         private volatile boolean shutdown;
 
-        Worker(IPeerConnectionPool pool) {
+        Worker(IPeerConnectionPool pool, long maxProcessingInterval) {
             this.pool = pool;
-            this.loopControl = new LoopControl();
+            this.loopControl = new LoopControl(maxProcessingInterval);
         }
 
         @Override
@@ -183,10 +185,13 @@ public class MessageDispatcher implements IMessageDispatcher {
         private ReentrantLock lock;
         private Condition timer;
 
+        private long maxTimeToSleep;
         private int messagesProcessed;
         private long timeToSleep;
 
-        LoopControl() {
+        LoopControl(long maxTimeToSleep) {
+            this.maxTimeToSleep = maxTimeToSleep;
+
             lock = new ReentrantLock();
             timer = lock.newCondition();
         }
@@ -206,7 +211,7 @@ public class MessageDispatcher implements IMessageDispatcher {
                 } finally {
                     lock.unlock();
                 }
-                timeToSleep = Math.min(timeToSleep << 1, 1000);
+                timeToSleep = Math.min(timeToSleep << 1, maxTimeToSleep);
             }
             messagesProcessed = 0;
         }
