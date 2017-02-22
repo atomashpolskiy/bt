@@ -36,11 +36,8 @@ public class ConnectionState {
     private Map<Object, CompletableFuture<BlockWrite>> pendingWrites;
 
     private Queue<Request> requestQueue;
-    private long lastReceivedBlock;
-
     private boolean initializedRequestQueue;
-
-    private Optional<Integer> currentAssignment;
+    private Optional<Assignment> assignment;
 
     ConnectionState() {
         this.choking = true;
@@ -52,7 +49,7 @@ public class ConnectionState {
 
         this.requestQueue = new LinkedBlockingQueue<>();
 
-        this.currentAssignment = Optional.empty();
+        this.assignment = Optional.empty();
     }
 
     /**
@@ -237,14 +234,6 @@ public class ConnectionState {
         return requestQueue;
     }
 
-    Optional<Long> getLastReceivedBlock() {
-        return lastReceivedBlock == 0 ? Optional.empty() : Optional.of(lastReceivedBlock);
-    }
-
-    void setLastReceivedBlock(long lastReceivedBlock) {
-        this.lastReceivedBlock = lastReceivedBlock;
-    }
-
     boolean initializedRequestQueue() {
         return initializedRequestQueue;
     }
@@ -253,19 +242,15 @@ public class ConnectionState {
         this.initializedRequestQueue = initializedRequestQueue;
     }
 
-    Optional<Integer> getCurrentAssignment() {
-        return currentAssignment;
+    Optional<Assignment> getCurrentAssignment() {
+        return assignment;
     }
 
-    void setCurrentAssignment(Integer currentAssignment) {
-        this.currentAssignment = Optional.of(currentAssignment);
+    void setCurrentAssignment(Assignment assignment) {
+        this.assignment = Optional.of(assignment);
     }
 
-    void onUnassign() {
-        requestQueue.clear();
-        pendingRequests.clear();
-        initializedRequestQueue = false;
-        lastReceivedBlock = 0;
-        currentAssignment = Optional.empty();
+    void removeAssignment() {
+        this.assignment = Optional.empty();
     }
 }

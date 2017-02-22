@@ -66,11 +66,11 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
         PieceSelector selector = createSelector(params, bitfield);
 
         DataWorker dataWorker = createDataWorker(descriptor);
-        Assignments assignments = new Assignments(bitfield);
-        IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceStatistics, assignments, dataWorker);
+        Assignments assignments = new Assignments(bitfield, selector, pieceStatistics, config);
+        IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceStatistics, dataWorker);
 
         TorrentWorker torrentWorker = new TorrentWorker(torrent.getTorrentId(), bitfield, assignments,
-                selector, pieceStatistics, messageDispatcher, peerWorkerFactory, config);
+                pieceStatistics, messageDispatcher, peerWorkerFactory, config);
         TorrentSession session = new DefaultTorrentSession(connectionPool, torrentWorker,
                 torrent, bitfield, config.getMaxPeerConnectionsPerTorrent());
 
@@ -103,16 +103,15 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
 
     private IPeerWorkerFactory createPeerWorkerFactory(TorrentDescriptor descriptor,
                                                        BitfieldBasedStatistics pieceStatistics,
-                                                       Assignments assignments,
                                                        DataWorker dataWorker) {
         Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();
 
         List<Object> messagingAgents = new ArrayList<>();
         messagingAgents.add(GenericConsumer.consumer());
         messagingAgents.add(new BitfieldConsumer(bitfield, pieceStatistics));
-        messagingAgents.add(new PieceConsumer(bitfield, assignments, dataWorker));
+        messagingAgents.add(new PieceConsumer(bitfield, dataWorker));
         messagingAgents.add(new PeerRequestConsumer(dataWorker));
-        messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor(), assignments));
+        messagingAgents.add(new RequestProducer(descriptor.getDataDescriptor()));
 
         messagingAgents.addAll(this.messagingAgents);
 

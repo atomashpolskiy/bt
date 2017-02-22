@@ -27,13 +27,11 @@ public class PieceConsumer {
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceConsumer.class);
 
     private Bitfield bitfield;
-    private Assignments assignments;
     private DataWorker dataWorker;
     private ConcurrentLinkedQueue<BlockWrite> completedBlocks;
 
-    PieceConsumer(Bitfield bitfield, Assignments assignments, DataWorker dataWorker) {
+    PieceConsumer(Bitfield bitfield, DataWorker dataWorker) {
         this.bitfield = bitfield;
-        this.assignments = assignments;
         this.dataWorker = dataWorker;
         this.completedBlocks = new ConcurrentLinkedQueue<>();
     }
@@ -88,7 +86,12 @@ public class PieceConsumer {
         byte[] block = piece.getBlock();
 
         connectionState.incrementDownloaded(block.length);
-        connectionState.setLastReceivedBlock(System.currentTimeMillis());
+        if (connectionState.getCurrentAssignment().isPresent()) {
+            Assignment assignment = connectionState.getCurrentAssignment().get();
+            if (pieceIndex == assignment.getPiece()) {
+                assignment.check();
+            }
+        }
 
         CompletableFuture<BlockWrite> future = dataWorker.addBlock(peer, pieceIndex, offset, block);
         connectionState.getPendingWrites().put(
@@ -102,7 +105,6 @@ public class PieceConsumer {
         while ((block = completedBlocks.poll()) != null) {
             int pieceIndex = block.getPieceIndex();
             if (bitfield.getPieceStatus(pieceIndex) == Bitfield.PieceStatus.COMPLETE_VERIFIED) {
-                assignments.removeAssignees(pieceIndex);
                 messageConsumer.accept(new Have(pieceIndex));
             }
         }

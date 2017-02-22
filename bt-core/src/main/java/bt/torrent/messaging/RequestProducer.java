@@ -7,7 +7,6 @@ import bt.net.Peer;
 import bt.protocol.Cancel;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
-import bt.protocol.NotInterested;
 import bt.protocol.Request;
 import bt.torrent.Bitfield;
 import bt.torrent.annotation.Produces;
@@ -18,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -36,14 +34,11 @@ public class RequestProducer {
     private static final int MAX_PENDING_REQUESTS = 5;
 
     private Bitfield bitfield;
-    private Assignments assignments;
     private List<ChunkDescriptor> chunks;
 
-    RequestProducer(DataDescriptor dataDescriptor,
-                    Assignments assignments) {
+    RequestProducer(DataDescriptor dataDescriptor) {
         this.bitfield = dataDescriptor.getBitfield();
         this.chunks = dataDescriptor.getChunkDescriptors();
-        this.assignments = assignments;
     }
 
     @Produces
@@ -52,50 +47,46 @@ public class RequestProducer {
         Peer peer = context.getPeer();
         ConnectionState connectionState = context.getConnectionState();
 
-        if (bitfield.getPiecesRemaining() == 0) {
-            if (connectionState.isInterested()) {
-                messageConsumer.accept(NotInterested.instance());
-            }
+        if (!connectionState.getCurrentAssignment().isPresent()) {
+            resetConnection(connectionState, messageConsumer);
             return;
         }
 
-        Optional<Integer> currentAssignment = connectionState.getCurrentAssignment();
-        if (!currentAssignment.isPresent()) {
-            currentAssignment = assignments.pollNextAssignment(peer);
-            if (currentAssignment.isPresent()) {
-                connectionState.setCurrentAssignment(currentAssignment.get());
+        Assignment assignment = connectionState.getCurrentAssignment().get();
+        int currentPiece = assignment.getPiece();
+        if (bitfield.isComplete(currentPiece)) {
+            assignment.finish();
+            resetConnection(connectionState, messageConsumer);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Finished downloading piece #{}", currentPiece);
             }
-        }
-        if (currentAssignment.isPresent()) {
-            int currentPiece = currentAssignment.get();
-            if (bitfield.isComplete(currentPiece)) {
-                connectionState.getPendingRequests().forEach(r -> {
-                    Mapper.decodeKey(r).ifPresent(key -> {
-                        messageConsumer.accept(new Cancel(key.getPieceIndex(), key.getOffset(), key.getLength()));
-                    });
-                });
-                connectionState.getPendingWrites().clear();
-                connectionState.onUnassign();
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Finished downloading piece #{}", currentPiece);
-                }
-            } else if (!connectionState.initializedRequestQueue()) {
-                initializeRequestQueue(connectionState, currentPiece);
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Begin downloading piece #{} from peer: {}", currentPiece, peer);
-                }
+            return;
+        } else if (!connectionState.initializedRequestQueue()) {
+            connectionState.getPendingWrites().clear();
+            initializeRequestQueue(connectionState, currentPiece);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Begin downloading piece #{} from peer: {}", currentPiece, peer);
             }
         }
 
-        if (connectionState.initializedRequestQueue()) {
-            Queue<Request> requestQueue = connectionState.getRequestQueue();
-            while (!requestQueue.isEmpty() && connectionState.getPendingRequests().size() <= MAX_PENDING_REQUESTS) {
-                Request request = requestQueue.poll();
-                Object key = Mapper.mapper().buildKey(request.getPieceIndex(), request.getOffset(), request.getLength());
-                messageConsumer.accept(request);
-                connectionState.getPendingRequests().add(key);
-            }
+        Queue<Request> requestQueue = connectionState.getRequestQueue();
+        while (!requestQueue.isEmpty() && connectionState.getPendingRequests().size() <= MAX_PENDING_REQUESTS) {
+            Request request = requestQueue.poll();
+            Object key = Mapper.mapper().buildKey(request.getPieceIndex(), request.getOffset(), request.getLength());
+            messageConsumer.accept(request);
+            connectionState.getPendingRequests().add(key);
         }
+    }
+
+    private void resetConnection(ConnectionState connectionState, Consumer<Message> messageConsumer) {
+        connectionState.getRequestQueue().clear();
+        connectionState.setInitializedRequestQueue(false);
+        connectionState.getPendingRequests().forEach(r -> {
+            Mapper.decodeKey(r).ifPresent(key -> {
+                messageConsumer.accept(new Cancel(key.getPieceIndex(), key.getOffset(), key.getLength()));
+            });
+        });
+        connectionState.getPendingRequests().clear();
     }
 
     private void initializeRequestQueue(ConnectionState connectionState, int pieceIndex) {
