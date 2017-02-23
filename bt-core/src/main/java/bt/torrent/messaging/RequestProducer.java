@@ -65,7 +65,8 @@ public class RequestProducer {
             connectionState.getPendingWrites().clear();
             initializeRequestQueue(connectionState, currentPiece);
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Begin downloading piece #{} from peer: {}", currentPiece, peer);
+                LOGGER.debug("Begin downloading piece #{} from peer: {}. Request queue length: {}",
+                        currentPiece, peer, connectionState.getRequestQueue().size());
             }
         }
 
@@ -135,6 +136,10 @@ public class RequestProducer {
                     throw new BtException("Unexpected error", e);
                 }
             }
+        }
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.info("Built {} requests for piece #{} (size: {}, block size: {}, number of blocks: {}, status: {})",
+                    requests.size(), pieceIndex, chunkSize, blockSize, chunk.getBlockCount(), chunk.getStatus().name());
         }
         return requests;
     }

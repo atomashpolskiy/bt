@@ -75,4 +75,17 @@ class Assignment {
             connectionState.removeAssignment();
         }
     }
+
+    @Override
+    public String toString() {
+        return "Assignment{" +
+                "piece=" + piece +
+                ", peer=" + peer +
+                ", started=" + started +
+                ", limit=" + limit +
+                ", checked=" + checked +
+                ", aborted=" + aborted +
+                ", finished=" + finished +
+                '}';
+    }
 }

@@ -146,7 +146,7 @@ class TorrentWorker {
                     assignments.remove(assignment);
                     shouldAssign = false;
                     if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Peer assignment removed due to TIMEOUT: peer {}, assignment {}", peer, assignment);
+                        LOGGER.trace("Peer assignment removed due to TIMEOUT: {}", assignment);
                     }
                     break;
                 }
@@ -162,11 +162,11 @@ class TorrentWorker {
             if (assignment != null) {
                 assignments.remove(assignment);
                 if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Peer assignment removed due to CHOKING: peer {}, assignment {}", peer, assignment);
+                    LOGGER.trace("Peer assignment removed due to CHOKING: {}", assignment);
                 }
             }
         } else if (shouldAssign) {
-            if (assignments.count() < MAX_CONCURRENT_ACTIVE_CONNECTIONS) {
+            if (mightCreateMoreAssignments()) {
                 Optional<Assignment> newAssignment = assignments.assign(peer);
                 if (newAssignment.isPresent()) {
                     newAssignment.get().start(connectionState);
@@ -177,8 +177,16 @@ class TorrentWorker {
 
     private boolean shouldUpdateAssignments() {
         return (timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_OPTIONAL_INTERVAL.toMillis()
-                    && assignments.count() < MAX_CONCURRENT_ACTIVE_CONNECTIONS)
+                    && mightUseMoreAssignees())
             || timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_MANDATORY_INTERVAL.toMillis();
+    }
+
+    private boolean mightUseMoreAssignees() {
+        return assignments.workersCount() < MAX_CONCURRENT_ACTIVE_CONNECTIONS;
+    }
+
+    private boolean mightCreateMoreAssignments() {
+        return assignments.count() < MAX_CONCURRENT_ACTIVE_CONNECTIONS;
     }
 
     private long timeSinceLastUpdated() {
@@ -228,10 +236,7 @@ class TorrentWorker {
             }
         });
 
-        Set<Peer> combined = new HashSet<>(ready);
-        combined.addAll(choking);
-
-        Set<Peer> interesting = assignments.update(combined);
+        Set<Peer> interesting = assignments.update(ready, choking);
 
         ready.stream().filter(peer -> !interesting.contains(peer)).forEach(peer -> {
             ConnectionState connectionState = getWorker(peer).getConnectionState();
