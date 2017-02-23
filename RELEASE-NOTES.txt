@@ -24,6 +24,7 @@ Bug Fixes/Improvements:
 * Failures on receiving unexpected blocks should be optional
 * Peer connection occasionally stopped receiving/sending data due to a buffer compaction bug
 * Verification tasks should be submitted only for complete pieces
+* Chunk descriptor overlapping two files contained no blocks when the latter file was smaller than the leftovers from the former file
 * Calculate total size for multi-file torrents
 * NPE on UDP message worker shutdown
 * Multi-tracker does not announce to next trackers in tier if an exception was thrown

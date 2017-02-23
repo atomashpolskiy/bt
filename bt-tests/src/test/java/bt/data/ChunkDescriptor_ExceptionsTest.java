@@ -16,13 +16,6 @@ public class ChunkDescriptor_ExceptionsTest {
     }
 
     @Test
-    public void testExceptions_BlockSizeTooBig() {
-        assertExceptionWithMessage(
-                it -> new DefaultChunkDescriptor(new StorageUnit[1], 0, 5, new byte[20], 10, false),
-                "Illegal arguments -- chunk size is smaller than block size (size: 5, block size: 10)");
-    }
-
-    @Test
     public void testExceptions_TooManyBlocks() {
         assertExceptionWithMessage(
                 it -> new DefaultChunkDescriptor(new StorageUnit[1], 0, Long.MAX_VALUE, new byte[20], 1, false),
