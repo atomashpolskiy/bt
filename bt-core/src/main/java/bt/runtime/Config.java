@@ -28,6 +28,12 @@ public class Config {
     private int maxIOQueueSize;
     private Duration shutdownHookTimeout;
     private int numOfHashingThreads;
+    private int maxConcurrentlyActivePeerConnectionsPerTorrent;
+    private Duration maxPieceReceivingTime;
+    private Duration maxMessageProcessingInterval;
+    private Duration unreachablePeerBanDuration;
+    private int maxPendingConnectionRequests;
+    private Duration timeoutedAssignmentPeerBanDuration;
 
     /**
      * Create a config with default parameters.
@@ -51,6 +57,12 @@ public class Config {
         this.maxIOQueueSize = 1000;
         this.shutdownHookTimeout = Duration.ofSeconds(5);
         this.numOfHashingThreads = 1; // do not parallelize by default
+        this.maxConcurrentlyActivePeerConnectionsPerTorrent = 20;
+        this.maxPieceReceivingTime = Duration.ofSeconds(30);
+        this.maxMessageProcessingInterval = Duration.ofMillis(100);
+        this.unreachablePeerBanDuration = Duration.ofMinutes(30);
+        this.maxPendingConnectionRequests = 50;
+        this.timeoutedAssignmentPeerBanDuration = Duration.ofMinutes(1);
     }
 
     /**
@@ -76,6 +88,12 @@ public class Config {
         this.maxIOQueueSize = config.getMaxIOQueueSize();
         this.shutdownHookTimeout = config.getShutdownHookTimeout();
         this.numOfHashingThreads = config.getNumOfHashingThreads();
+        this.maxConcurrentlyActivePeerConnectionsPerTorrent = config.getMaxConcurrentlyActivePeerConnectionsPerTorrent();
+        this.maxPieceReceivingTime = config.getMaxPieceReceivingTime();
+        this.maxMessageProcessingInterval = config.getMaxMessageProcessingInterval();
+        this.unreachablePeerBanDuration = config.getUnreachablePeerBanDuration();
+        this.maxPendingConnectionRequests = config.getMaxPendingConnectionRequests();
+        this.timeoutedAssignmentPeerBanDuration = config.getTimeoutedAssignmentPeerBanDuration();
     }
 
     /**
@@ -214,7 +232,8 @@ public class Config {
     }
 
     /**
-     * @param maxPeerConnections Maximum amount of established peer connections
+     * @param maxPeerConnections Maximum amount of established peer connections per runtime
+     *                           (all torrent processing sessions combined).
      * @since 1.0
      */
     public void setMaxPeerConnections(int maxPeerConnections) {
@@ -231,7 +250,6 @@ public class Config {
     /**
      * @param maxPeerConnectionsPerTorrent Maximum number of established peer connections
      *                                     within a torrent processing session.
-     *                                     Affects performance (too few or too many is bad).
      * @since 1.0
      */
     public void setMaxPeerConnectionsPerTorrent(int maxPeerConnectionsPerTorrent) {
@@ -318,5 +336,126 @@ public class Config {
      */
     public int getNumOfHashingThreads() {
         return numOfHashingThreads;
+    }
+
+    /**
+     * Maximum number of peer connections that are allowed to request and receive pieces.
+     * Affects performance (too few or too many is bad).
+     *
+     * Note that this value implicitly affects when the torrent processing session enters
+     * the so-called "endgame" mode. By default it's assumed that the endgame mode should
+     * be activated when the number of remaining (incomplete) pieces is smaller than the
+     * number of pending requests, which in its' turn is no greater than this value.
+     *
+     * E.g. if the limit for concurrently active connections is 20, and there are in fact 20
+     * peers that we are downloading from at the moment, then the endgame will begin
+     * as soon as there are 20 pieces left to download. At the same time if there are only 15
+     * active connections, than the endgame will begin when there are 15 pieces left.
+     * Thus this value affects only the lower bound on the number of pieces to be left
+     * to trigger the beginning of an endgame.
+     *
+     * @param maxConcurrentlyActivePeerConnectionsPerTorrent Maximum number of peer connections
+     *                                                       that are allowed to request and receive pieces.
+     * @since 1.1
+     */
+    public void setMaxConcurrentlyActivePeerConnectionsPerTorrent(int maxConcurrentlyActivePeerConnectionsPerTorrent) {
+        this.maxConcurrentlyActivePeerConnectionsPerTorrent = maxConcurrentlyActivePeerConnectionsPerTorrent;
+    }
+
+    /**
+     * @since 1.1
+     */
+    public int getMaxConcurrentlyActivePeerConnectionsPerTorrent() {
+        return maxConcurrentlyActivePeerConnectionsPerTorrent;
+    }
+
+    /**
+     * @param maxPieceReceivingTime Limit on the amount of time it takes to receive all blocks in a piece
+     *                              from a peer until this peer is considered timeouted and banned for a short
+     *                              amount of time (with the piece being unassigned from this peer).
+     * @since 1.1
+     */
+    public void setMaxPieceReceivingTime(Duration maxPieceReceivingTime) {
+        this.maxPieceReceivingTime = maxPieceReceivingTime;
+    }
+
+    /**
+     * @since 1.1
+     */
+    public Duration getMaxPieceReceivingTime() {
+        return maxPieceReceivingTime;
+    }
+
+    /**
+     * This option is related to the adaptive message processing interval feature in the message dispatcher.
+     * The lower this value the higher the ingoing/outgoing message processing rate but also higher the CPU load.
+     * Reasonable value (in 100..1000 ms range) greatly reduces the CPU load when there is little network activity
+     * without compromising the overall message exchange rates.
+     *
+     * @see bt.net.MessageDispatcher
+     * @param maxMessageProcessingInterval Maximum time to sleep between message processing loop iterations, in millis.
+     * @since 1.1
+     */
+    public void setMaxMessageProcessingInterval(Duration maxMessageProcessingInterval) {
+        this.maxMessageProcessingInterval = maxMessageProcessingInterval;
+    }
+
+    /**
+     * @since 1.1
+     */
+    public Duration getMaxMessageProcessingInterval() {
+        return maxMessageProcessingInterval;
+    }
+
+    /**
+     * @param unreachablePeerBanDuration If a peer is not reachable (i.e. some kind of I/O error happens
+     *                                   when a connection attempt is made), then new requests to connect
+     *                                   to this peer will be ignored for this amount of time.
+     * @since 1.1
+     */
+    public void setUnreachablePeerBanDuration(Duration unreachablePeerBanDuration) {
+        this.unreachablePeerBanDuration = unreachablePeerBanDuration;
+    }
+
+    /**
+     * @since 1.1
+     */
+    public Duration getUnreachablePeerBanDuration() {
+        return unreachablePeerBanDuration;
+    }
+
+    /**
+     * @param maxPendingConnectionRequests Maximum allowed number of simultaneous connection requests
+     *                                     (both inbound and outbound). All subsequent requests will be queued
+     *                                     until some of the currently pending/processed requests is completed.
+     * @since 1.1
+     */
+    public void setMaxPendingConnectionRequests(int maxPendingConnectionRequests) {
+        this.maxPendingConnectionRequests = maxPendingConnectionRequests;
+    }
+
+    /**
+     * @since 1.1
+     */
+    public int getMaxPendingConnectionRequests() {
+        return maxPendingConnectionRequests;
+    }
+
+    /**
+     * @param timeoutedAssignmentPeerBanDuration Amount of time to keep the torrent processing session from
+     *                                           requesting a peer for new pieces if this peer's previous assignment
+     *                                           was cancelled due to a timeout.
+     * @see #setMaxPieceReceivingTime(Duration)
+     * @since 1.1
+     */
+    public void setTimeoutedAssignmentPeerBanDuration(Duration timeoutedAssignmentPeerBanDuration) {
+        this.timeoutedAssignmentPeerBanDuration = timeoutedAssignmentPeerBanDuration;
+    }
+
+    /**
+     * @since 1.1
+     */
+    public Duration getTimeoutedAssignmentPeerBanDuration() {
+        return timeoutedAssignmentPeerBanDuration;
     }
 }

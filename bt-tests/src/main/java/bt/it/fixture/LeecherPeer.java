@@ -19,9 +19,7 @@ class LeecherPeer extends SwarmPeer {
     LeecherPeer(File localRoot, TorrentFiles files, Supplier<Torrent> torrentSupplier, BtRuntime runtime) {
         super(runtime);
 
-        this.handle = Bt.client(new FileSystemStorage(localRoot))
-                .torrentSupplier(torrentSupplier)
-                .attachToRuntime(runtime);
+        this.handle = Bt.client(runtime).storage(new FileSystemStorage(localRoot)).torrent(torrentSupplier).build();
 
         this.localRoot = Objects.requireNonNull(localRoot);
         this.files = Objects.requireNonNull(files);

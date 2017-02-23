@@ -73,6 +73,13 @@ class DefaultDataWorker implements DataWorker {
             return CompletableFuture.supplyAsync(() -> {
                 try {
                     ChunkDescriptor chunk = chunks.get(pieceIndex);
+                    if (chunk.getStatus() == DataStatus.VERIFIED) {
+                        if (LOGGER.isTraceEnabled()) {
+                            LOGGER.trace("Rejecting request to write block because the chunk is already complete and verified: " +
+                                    "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + block.length + "}");
+                        }
+                        return BlockWrite.rejected(peer, pieceIndex, offset, block);
+                    }
                     chunk.writeBlock(block, offset);
                     if (LOGGER.isTraceEnabled()) {
                         LOGGER.trace("Successfully processed block: " +

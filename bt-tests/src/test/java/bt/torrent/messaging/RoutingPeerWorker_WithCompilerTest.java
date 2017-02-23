@@ -9,9 +9,11 @@ import bt.torrent.annotation.Produces;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -30,7 +32,7 @@ public class RoutingPeerWorker_WithCompilerTest {
         this.c1 = new C1();
         this.p1 = new P1();
 
-        Set<Object> agents = new HashSet<Object>() {{
+        List<Object> agents = new ArrayList<Object>() {{
             add(c1);
             add(p1);
         }};

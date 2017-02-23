@@ -44,7 +44,7 @@ class TrackerPeerSourceFactory implements PeerSourceFactory {
     public PeerSource getPeerSource(Torrent torrent) {
         TrackerPeerSource peerSource = peerSources.get(torrent);
         if (peerSource == null) {
-            Optional<AnnounceKey> announceKey = torrent.getAnnounceKeyOptional();
+            Optional<AnnounceKey> announceKey = torrent.getAnnounceKey();
             if (!announceKey.isPresent()) {
                 throw new IllegalStateException("Torrent does not have an announce key");
             }

@@ -11,20 +11,10 @@ import java.util.Optional;
 public interface Torrent {
 
     /**
-     * @return Announce key.
-     * @see #getAnnounceKeyOptional()
-     * @since 1.0
-     * @deprecated since 1.1 in favor of {@link #getAnnounceKeyOptional()}
-     *             as the announce key can be missing for trackerless torrents
-     */
-    @Deprecated
-    AnnounceKey getAnnounceKey();
-
-    /**
      * @return Announce key, or {@link Optional#empty()} for trackerless torrents
      * @since 1.1
      */
-    Optional<AnnounceKey> getAnnounceKeyOptional();
+    Optional<AnnounceKey> getAnnounceKey();
 
     /**
      * @return Torrent ID.

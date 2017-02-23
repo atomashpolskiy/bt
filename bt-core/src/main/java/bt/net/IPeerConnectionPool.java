@@ -2,6 +2,7 @@ package bt.net;
 
 import bt.metainfo.TorrentId;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -27,8 +28,8 @@ public interface IPeerConnectionPool {
     /**
      * Request to establish a connection with a remote peer for a given torrent ID.
      *
-     * @return Future connection
+     * @return Future connection if it can be established
      * @since 1.0
      */
-    CompletableFuture<PeerConnection> requestConnection(TorrentId torrentId, Peer peer);
+    CompletableFuture<Optional<PeerConnection>> requestConnection(TorrentId torrentId, Peer peer);
 }

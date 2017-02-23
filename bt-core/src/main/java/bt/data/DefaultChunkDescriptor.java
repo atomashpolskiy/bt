@@ -90,11 +90,6 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
             size += limit;
         }
 
-        if (size < blockSize) {
-            throw new BtException("Illegal arguments -- chunk size is smaller than block size (size: " +
-                    size + ", block size: " + blockSize + ")");
-        }
-
         long blockCount = (long) Math.ceil(((double) size) / blockSize);
         if (blockCount > Integer.MAX_VALUE) {
             throw new BtException("Integer overflow while constructing chunk: too many blocks");
@@ -214,6 +209,10 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
     @Override
     public void writeBlock(byte[] block, long offset) {
 
+        if (status == DataStatus.VERIFIED) {
+            throw new IllegalStateException("Failed to write data -- block is complete and verified");
+        }
+
         if (block.length == 0) {
             return;
         }
@@ -277,6 +276,7 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
         return doVerify(true);
     }
 
+    // TODO: we need to also fill bitfield here
     private boolean doVerify(boolean completeOnly) {
 
         if (status == DataStatus.VERIFIED) {

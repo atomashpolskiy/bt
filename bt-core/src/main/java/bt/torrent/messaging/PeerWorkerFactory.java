@@ -7,9 +7,9 @@ import bt.torrent.compiler.CompilerVisitor;
 import bt.torrent.compiler.MessagingAgentCompiler;
 
 import java.lang.invoke.MethodHandle;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  *<p><b>Note that this class implements a service.
@@ -17,15 +17,15 @@ import java.util.Set;
  */
 public class PeerWorkerFactory implements IPeerWorkerFactory {
 
-    private Set<MessageConsumer<?>> consumers;
-    private Set<MessageProducer> producers;
+    private List<MessageConsumer<?>> consumers;
+    private List<MessageProducer> producers;
 
-    public PeerWorkerFactory(Set<Object> messagingAgents) {
+    public PeerWorkerFactory(List<Object> messagingAgents) {
 
         MessagingAgentCompiler compiler = new MessagingAgentCompiler();
 
-        Set<MessageConsumer<?>> consumers = new HashSet<>();
-        Set<MessageProducer> producers = new HashSet<>();
+        List<MessageConsumer<?>> consumers = new ArrayList<>();
+        List<MessageProducer> producers = new ArrayList<>();
 
         messagingAgents.forEach(agent -> compiler.compileAndVisit(agent, new CompilerVisitor() {
             @Override

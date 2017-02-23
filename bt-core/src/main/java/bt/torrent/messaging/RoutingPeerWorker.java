@@ -14,10 +14,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.LinkedBlockingDeque;
 
 /**
@@ -33,17 +32,17 @@ class RoutingPeerWorker implements PeerWorker {
 
     private MessageContext context;
 
-    private Set<MessageConsumer<Message>> genericConsumers;
+    private List<MessageConsumer<Message>> genericConsumers;
     private Map<Class<?>, Collection<MessageConsumer<?>>> typedMessageConsumers;
-    private Set<MessageProducer> messageProducers;
+    private List<MessageProducer> messageProducers;
     private Deque<Message> outgoingMessages;
 
     private Choker choker;
 
     public RoutingPeerWorker(Peer peer,
                              Optional<TorrentId> torrentId,
-                             Set<MessageConsumer<?>> messageConsumers,
-                             Set<MessageProducer> messageProducers) {
+                             List<MessageConsumer<?>> messageConsumers,
+                             List<MessageProducer> messageProducers) {
         this.connectionState = new ConnectionState();
         this.context = new MessageContext(torrentId, peer, connectionState);
         this.messageProducers = messageProducers;
@@ -54,9 +53,9 @@ class RoutingPeerWorker implements PeerWorker {
     }
 
     @SuppressWarnings("unchecked")
-    private void initConsumers(Set<MessageConsumer<?>> messageConsumers) {
+    private void initConsumers(List<MessageConsumer<?>> messageConsumers) {
 
-        Set<MessageConsumer<Message>> genericConsumers = new HashSet<>();
+        List<MessageConsumer<Message>> genericConsumers = new ArrayList<>();
         Map<Class<?>, Collection<MessageConsumer<?>>> typedMessageConsumers = new HashMap<>();
 
         messageConsumers.forEach(consumer -> {

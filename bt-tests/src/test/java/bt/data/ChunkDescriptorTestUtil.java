@@ -33,7 +33,7 @@ public class ChunkDescriptorTestUtil {
         when(torrent.getChunkSize()).thenReturn(chunkSize);
         when(torrent.getSize()).thenReturn(size);
         when(torrent.getFiles()).thenReturn(Arrays.asList(files));
-        when(torrent.getAnnounceKeyOptional()).thenReturn(Optional.of(new AnnounceKey("http://tracker.org/ann")));
+        when(torrent.getAnnounceKey()).thenReturn(Optional.of(new AnnounceKey("http://tracker.org/ann")));
 
         return torrent;
     }

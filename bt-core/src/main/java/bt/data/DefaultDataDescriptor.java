@@ -11,7 +11,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -32,7 +31,7 @@ class DefaultDataDescriptor implements DataDescriptor {
     private List<ChunkDescriptor> chunkDescriptors;
     private Bitfield bitfield;
 
-    private Set<StorageUnit> storageUnits;
+    private List<StorageUnit> storageUnits;
 
     private int numOfHashingThreads;
 
@@ -44,7 +43,7 @@ class DefaultDataDescriptor implements DataDescriptor {
         this.torrent = torrent;
         this.numOfHashingThreads = numOfHashingThreads;
 
-        this.storageUnits = new HashSet<>();
+        this.storageUnits = new ArrayList<>();
 
         init(transferBlockSize);
     }
@@ -61,28 +60,29 @@ class DefaultDataDescriptor implements DataDescriptor {
             transferBlockSize = chunkSize;
         }
 
-        List<Supplier<ChunkDescriptor>> suppliers = new ArrayList<>((int) Math.ceil(totalSize / chunkSize) + 1);
+        int chunksTotal = (int) Math.ceil(totalSize / chunkSize);
+        List<Supplier<ChunkDescriptor>> suppliers = new ArrayList<>(chunksTotal + 1);
         Iterator<byte[]> chunkHashes = torrent.getChunkHashes().iterator();
-        StorageUnit[] files = new StorageUnit[filesCount];
+        this.storageUnits = torrentFiles.stream().map(f -> storage.getUnit(torrent, f)).collect(Collectors.toList());
+        StorageUnit[] files = storageUnits.toArray(new StorageUnit[storageUnits.size()]);
 
         long chunkOffset = 0,
              totalSizeOfFiles = 0;
 
         int firstFileInChunkIndex = 0;
 
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("Creating data descriptor for torrent: {}. " +
+                    "Total size: {}, number of files: {}, chunk size: {}, number of chunks: {}, transfer block size: {}.",
+                    torrent, totalSize, torrentFiles.size(), chunkSize, chunksTotal, transferBlockSize);
+        }
+
         for (int currentFileIndex = 0; currentFileIndex < filesCount; currentFileIndex++) {
-
             TorrentFile torrentFile = torrentFiles.get(currentFileIndex);
-
             long fileSize = torrentFile.getSize();
-            StorageUnit storageUnit = storage.getUnit(torrent, torrentFile);
-            storageUnits.add(storageUnit);
-            files[currentFileIndex] = storageUnit;
-
             totalSizeOfFiles += fileSize;
 
             if (totalSizeOfFiles >= chunkSize) {
-
                 do {
                     long limitInCurrentFile = chunkSize - (totalSizeOfFiles - fileSize);
 
@@ -91,8 +91,14 @@ class DefaultDataDescriptor implements DataDescriptor {
                         throw new BtException("Wrong number of chunk hashes in the torrent: too few");
                     }
 
-                    suppliers.add(createSupplier(Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1),
-                            chunkOffset, limitInCurrentFile, chunkHashes.next(), transferBlockSize));
+                    StorageUnit[] chunkFiles = Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1);
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Creating chunk descriptor for torrent files: {}. " +
+                                "Offset in first file: {}, limit in last file: {}, block size: {}",
+                                Arrays.toString(chunkFiles), chunkOffset, limitInCurrentFile, transferBlockSize);
+                    }
+
+                    suppliers.add(createSupplier(chunkFiles, chunkOffset, limitInCurrentFile, chunkHashes.next(), transferBlockSize));
 
                     firstFileInChunkIndex = currentFileIndex;
                     chunkOffset = limitInCurrentFile;
@@ -103,21 +109,29 @@ class DefaultDataDescriptor implements DataDescriptor {
                 // then we need to catch up and create more than one chunk
                 } while (totalSizeOfFiles >= chunkSize);
 
-                if (totalSizeOfFiles == 0) {
+                if (totalSizeOfFiles > 0) {
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Bytes remaining in the current file: {}. Creating next chunk...", totalSizeOfFiles);
+                    }
+                } else if (totalSizeOfFiles == 0) {
                     // no bytes left in the current file,
                     // new chunk will begin with the next file
                     firstFileInChunkIndex++;
                     chunkOffset = 0;
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("No bytes remaining in the current file. Next chunk will begin in the next file.");
+                    }
                 }
             }
             if (currentFileIndex == filesCount - 1 && totalSizeOfFiles > 0) {
                 // create chunk for the remainder of the last file
-                long remaining = fileSize - chunkOffset;
-                if (transferBlockSize > remaining) {
-                    transferBlockSize = remaining;
+                StorageUnit[] chunkFiles = Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1);
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Creating chunk descriptor for torrent files: {}. " +
+                            "Offset in first file: {}, limit in last file: {}, block size: {}",
+                            Arrays.toString(chunkFiles), chunkOffset, fileSize, transferBlockSize);
                 }
-                suppliers.add(createSupplier(Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1),
-                        chunkOffset, fileSize, chunkHashes.next(), transferBlockSize));
+                suppliers.add(createSupplier(chunkFiles, chunkOffset, fileSize, chunkHashes.next(), transferBlockSize));
             }
         }
 
@@ -129,6 +143,7 @@ class DefaultDataDescriptor implements DataDescriptor {
                 suppliers.stream().map(Supplier::get).collect(Collectors.toList());
         this.bitfield = new Bitfield(this.chunkDescriptors);
 
+        // try to purge all data that was loaded by the verifiers
         System.gc();
     }
 
