@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.github.atomashpolskiy</groupId>
@@ -9,6 +10,24 @@
 
     <name>Bt</name>
     <description>BitTorrent Library</description>
+    <url>https://github.com/atomashpolskiy/bt</url>
+    <inceptionYear>2016</inceptionYear>
+
+    <developers>
+        <developer>
+            <id>atomashpolskiy</id>
+            <name>Andrei Tomashpolskiy</name>
+            <email>nordmann89@gmail.com</email>
+        </developer>
+    </developers>
+
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>https://github.com/atomashpolskiy/bt/blob/master/LICENSE</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <modules>
         <module>bt-bencoding</module>
@@ -16,7 +35,6 @@
         <module>bt-http-tracker-client</module>
         <module>bt-dht</module>
         <module>bt-tests</module>
-        <module>bt-cli</module>
     </modules>
 
     <properties>
@@ -29,30 +47,12 @@
         <mockito-version>1.10.19</mockito-version>
     </properties>
 
-    <url>https://github.com/atomashpolskiy/bt</url>
-
-    <developers>
-        <developer>
-            <id>atomashpolskiy</id>
-            <name>Andrei Tomashpolskiy</name>
-            <email>nordmann89@gmail.com</email>
-        </developer>
-    </developers>
-
     <scm>
         <connection>scm:git:https://github.com/atomashpolskiy/bt</connection>
         <developerConnection>scm:git:ssh://git@github.com/atomashpolskiy/bt</developerConnection>
         <url>https://github.com/atomashpolskiy/bt</url>
-      <tag>HEAD</tag>
-  </scm>
-
-    <licenses>
-        <license>
-            <name>Apache 2.0 License</name>
-            <url>https://github.com/atomashpolskiy/bt/blob/master/LICENSE</url>
-            <distribution>manual</distribution>
-        </license>
-    </licenses>
+        <tag>HEAD</tag>
+    </scm>
 
     <distributionManagement>
         <repository>
@@ -65,6 +65,11 @@
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </snapshotRepository>
     </distributionManagement>
+
+    <ciManagement>
+        <system>Travis CI</system>
+        <url>https://travis-ci.org/atomashpolskiy/bt</url>
+    </ciManagement>
 
     <dependencyManagement>
         <dependencies>
@@ -185,6 +190,11 @@
                     <artifactId>maven-release-plugin</artifactId>
                     <version>2.5.3</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>license-maven-plugin</artifactId>
+                    <version>1.12</version>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -238,6 +248,12 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>lgpl</id>
+            <modules>
+                <module>bt-cli</module>
+            </modules>
+        </profile>
         <profile>
             <id>release</id>
             <build>

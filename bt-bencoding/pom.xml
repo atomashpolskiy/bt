@@ -11,7 +11,7 @@
 
     <artifactId>bt-bencoding</artifactId>
     <name>Bt BEncoding</name>
-    <description>Provides facilities for parsing, encoding and validating bencoded documents</description>
+    <description>Library for parsing, encoding and validating bencoded documents in Java</description>
 
     <properties>
         <snakeyaml-version>1.17</snakeyaml-version>
