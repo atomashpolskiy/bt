@@ -11,7 +11,7 @@
 
     <artifactId>bt-http-tracker-client</artifactId>
     <name>Bt HTTP Tracker Client</name>
-    <description>Provides support for integration with HTTP trackers</description>
+    <description>Library for integration with HTTP BitTorrent trackers</description>
 
     <properties>
         <httpclient-version>4.5.2</httpclient-version>

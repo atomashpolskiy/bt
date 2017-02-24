@@ -11,7 +11,7 @@
 
     <artifactId>bt-cli</artifactId>
     <name>Bt CLI Launcher</name>
-    <description>Bt Command Line Launcher</description>
+    <description>Command line BitTorrent client</description>
 
     <properties>
         <main.class>bt.cli.CliClient</main.class>

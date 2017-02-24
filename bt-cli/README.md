@@ -6,7 +6,7 @@ This module contains a simple CLI launcher for **Bt**.
 
 ### Assemble the wrapper
 
-```mvn clean package```
+```mvn clean package -DskipTests=true``` from this module's directory or ```mvn clean package -DskipTests=true -Plgpl``` from project's root directory.
 
 ### Print help
 
@@ -32,3 +32,8 @@ $ java -jar target/bt-launcher.jar --file /path/to/torrent --dir /save/to/here -
 `Press 'p' to pause/resume` _(GUI will "freeze" when paused)_
 
 `Ctrl-C to quit`
+
+### LGPL dependencies
+
+Please note that this module includes LGPL dependencies and can't be released to Maven Central in binary form.
+To use this module, you will need to build it from sources manually.
