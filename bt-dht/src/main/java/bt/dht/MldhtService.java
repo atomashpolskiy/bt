@@ -60,9 +60,12 @@ class MldhtService implements DHTService {
     private DHTConfiguration config;
     private DHT dht;
 
+    private boolean shouldBootstrap;
+
     public MldhtService(IRuntimeLifecycleBinder lifecycleBinder, DHTConfig config) {
         this.dht = new DHT(config.shouldUseIPv6()? DHTtype.IPV6_DHT : DHTtype.IPV4_DHT);
         this.config = toMldhtConfig(config);
+        this.shouldBootstrap = config.shouldUseRouterBootstrap();
 
         lifecycleBinder.onStartup(LifecycleBinding.bind(this::start).description("Initialize DHT facilities").async().build());
         lifecycleBinder.onShutdown("Shutdown DHT facilities", this::shutdown);
@@ -87,7 +90,7 @@ class MldhtService implements DHTService {
 
             @Override
             public boolean noRouterBootstrap() {
-                return !config.shouldUseRouterBootstrap();
+                return true;
             }
 
             @Override
@@ -101,10 +104,20 @@ class MldhtService implements DHTService {
         if (!dht.isRunning()) {
             try {
                 dht.start(config);
+                if (shouldBootstrap) {
+                    bootstrap();
+                }
             } catch (SocketException e) {
                 throw new BtException("Failed to start DHT", e);
             }
         }
+    }
+
+    // TODO: move the list of bootstrap nodes to config
+    private void bootstrap() {
+        dht.addDHTNode("router.bittorrent.com", 6881);
+        dht.addDHTNode("dht.transmissionbt.com", 6881);
+        dht.addDHTNode("router.utorrent.com", 6881);
     }
 
     private void shutdown() {
@@ -155,6 +168,8 @@ class MldhtService implements DHTService {
     public void addNode(Peer node) {
         dht.addDHTNode(node.getInetAddress().getHostAddress(), node.getPort());
     }
+
+    // TODO: add node by hostname/ipaddr and port ?
 
     private String getDiagnostics() {
         StringWriter sw = new StringWriter();
