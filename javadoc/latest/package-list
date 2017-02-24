@@ -2,7 +2,6 @@ bt
 bt.bencoding
 bt.bencoding.model
 bt.bencoding.model.rule
-bt.cli
 bt.data
 bt.data.file
 bt.it.fixture
