@@ -3,6 +3,9 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+    <modules>
+        <module>bt-dht</module>
+    </modules>
 
     <parent>
         <artifactId>bt-parent</artifactId>
@@ -11,9 +14,10 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>bt-dht</artifactId>
+    <artifactId>bt-dht-parent</artifactId>
     <name>Bt DHT</name>
-    <description>Provides DHT support</description>
+    <description>Support for BEP-5: DHT Protocol</description>
+    <packaging>pom</packaging>
 
     <properties>
         <mldht-version>0.0.1-SNAPSHOT</mldht-version>
@@ -28,27 +32,4 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
-    <dependencies>
-        <!-- Runtime dependencies -->
-        <dependency>
-            <groupId>com.github.atomashpolskiy</groupId>
-            <artifactId>bt-core</artifactId>
-            <version>${project.version}</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>mldht.core</groupId>
-            <artifactId>libmldht</artifactId>
-            <scope>compile</scope>
-        </dependency>
-
-        <!-- Test dependencies -->
-        <dependency>
-            <groupId>com.github.atomashpolskiy</groupId>
-            <artifactId>bt-tests</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
 </project>
