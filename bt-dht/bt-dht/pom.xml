@@ -20,7 +20,8 @@
             <groupId>com.github.atomashpolskiy</groupId>
             <artifactId>bt-core</artifactId>
             <version>${project.version}</version>
-            <scope>compile</scope>
+            <!-- don't bundle the core in bt-dht jar distribution -->
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>mldht.core</groupId>
@@ -36,5 +37,22 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

@@ -1,1 +1,3 @@
-This is a stub for BEP-5: DHT Protocol, planned to eventually include a wrapper around some lightweight Java DHT implementation.
+# Mainline DHT adapter for Bt
+
+This module provides support for BEP-5: DHT Protocol. It includes a thin wrapper around [the8472/mldht](https://github.com/the8472/mldht), a Mainline DHT implementation in Java.
