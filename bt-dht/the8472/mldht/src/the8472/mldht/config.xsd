@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?><schema targetNamespace="http://mldht/config/" xmlns="http://www.w3.org/2001/XMLSchema" xmlns:mldht="http://mldht/config/">
+
+
+
+
+    
+    <complexType name="clusterNodeList">
+    	<sequence>
+    		<element name="networkPrefix" type="string" minOccurs="1" maxOccurs="unbounded"></element>
+    	</sequence>
+    </complexType>
+
+    
+
+    <element name="config" type="mldht:documentRoot"></element>
+
+    <complexType name="documentRoot">
+    	<sequence>
+    		<element name="core" type="mldht:dhtCoreConfig"></element>
+    		<element name="components" type="mldht:componentList" minOccurs="0" maxOccurs="1"></element>
+    	</sequence>
+    </complexType>
+
+    <complexType name="dhtCoreConfig">
+        <all>
+    		<element name="clusterNodes" type="mldht:clusterNodeList" maxOccurs="1" minOccurs="0">
+    		</element>
+    		<element name="logLevel">
+    			<simpleType>
+    				<restriction base="string">
+    					<enumeration value="Fatal"></enumeration>
+    					<enumeration value="Error"></enumeration>
+    					<enumeration value="Info"></enumeration>
+    					<enumeration value="Debug"></enumeration>
+    					<enumeration value="Verbose"></enumeration>
+    				</restriction>
+    			</simpleType>
+    		</element>
+    		<element name="port">
+    			<simpleType>
+    				<restriction base="unsignedShort">
+    					<minInclusive value="1"></minInclusive>
+    				</restriction>
+    			</simpleType>
+    		</element>
+    		<element name="useBootstrapServers" type="boolean"></element>
+    		<element name="multihoming" type="boolean"></element>
+    		<element name="persistID" type="boolean"></element>
+    		<element name="disableIPVersion" minOccurs="0" maxOccurs="1">
+    			<simpleType>
+    				<restriction base="int">
+    					<enumeration value="4"></enumeration>
+    					<enumeration value="6"></enumeration>
+    				</restriction>
+    			</simpleType>
+    		</element>
+    	</all>
+    </complexType>
+
+    <complexType name="componentList">
+    	<sequence>
+
+    		<element name="component" type="mldht:componentBase" maxOccurs="unbounded" minOccurs="0"></element>
+    	</sequence>
+    </complexType>
+
+    <complexType name="componentBase">
+    	<sequence>
+    		<element name="className" type="string"></element>
+    	</sequence>
+    </complexType>
+
+    <complexType name="redisIndexerType">
+    	<complexContent>
+    		<extension base="mldht:componentBase">
+    			<sequence>
+    				<element name="address" type="string"></element>
+    			</sequence>
+    		</extension>
+    	</complexContent>
+    </complexType>
+    
+
+
+</schema>
