@@ -35,5 +35,12 @@ $ java -jar target/bt-launcher.jar --file /path/to/torrent --dir /save/to/here -
 
 ### LGPL dependencies
 
-Please note that this module includes LGPL dependencies and can't be released to Maven Central in binary form.
-To use this module, you will need to build it from sources manually.
+_Please note that this module includes bundled LGPL dependencies and can't be distributed or released to Maven Central in binary form.
+To use this module, you will need to build it from sources manually._
+
+This product depends on 'Lanterna', a Java library for creating text-based terminal GUIs, which can be obtained at:
+  * LICENSE:
+    * https://github.com/mabe02/lanterna/blob/master/License.txt (GNU Lesser General Public License v3.0 only)
+  * HOMEPAGE:
+    * http://code.google.com/p/lanterna/
+    * https://github.com/mabe02/lanterna
