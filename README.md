@@ -1,26 +1,6 @@
-[![Build Status](https://travis-ci.org/atomashpolskiy/bt.svg?branch=master)](https://travis-ci.org/atomashpolskiy/bt) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/) [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](http://atomashpolskiy.github.io/bt/javadoc/latest/)
+[![Build Status](https://travis-ci.org/atomashpolskiy/bt.svg?branch=master)](https://travis-ci.org/atomashpolskiy/bt) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/) [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](http://atomashpolskiy.github.io/bt/javadoc/latest/) [![Join the chat at https://gitter.im/bt-java/general](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/bt-java/general?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 **Bt** is a lightweight framework for P2P-lovers and enthusiastic BitTorrent researchers, perfect choice for light enterprise and home usage and experimentation. It offers good performance, reliability and is highly customizable. With Bt you can create a production-grade BitTorrent client in a matter of minutes. Bt is still in its' early days, but is actively developed and designed with stability and maintainability in mind.
-
-## Usage
-
-Declare the following dependencies in your project’s **pom.xml**:
-
-```xml
-<dependency>
-    <groupId>com.github.atomashpolskiy</groupId>
-    <artifactId>bt-core</artifactId>
-    <version>1.0</version>
-</dependency>
-<!-- for the sake of keeping the core with minimum number of 3-rd party 
-     dependencies HTTP tracker support is shipped as a separate module;
-     you may omit this dependency if only UDP trackers are going to be used -->
-<dependency>
-    <groupId>com.github.atomashpolskiy</groupId>
-    <artifactId>bt-http-tracker-client</artifactId>
-    <version>1.0</version>
-</dependency>
-```
 
 ## Quick Links
 
@@ -31,6 +11,78 @@ Declare the following dependencies in your project’s **pom.xml**:
 [JavaDoc](http://atomashpolskiy.github.io/bt/javadoc/latest/) (based on the latest commit in _**master**_)
 
 [CLI Launcher](https://github.com/atomashpolskiy/bt/tree/master/bt-cli)
+
+## Release 1.1
+
+As of February-March 2017 a new 1.1 release is on its' way. It includes a number of major performance and algorithmic improvements, critical bug fixes and API enhancements. Full list is available in [release notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.txt). **It's strongly recommended for all users to switch to 1.1-SNAPSHOT.**
+
+## Support for BEP-5: DHT Protocol
+
+Available in [dht-experimental](https://github.com/atomashpolskiy/bt/tree/dht-experimental) branch. It's stable and already includes all changes from the 1.1 version.
+
+## Building from source
+
+1) Clone the git repo:
+```
+git clone https://github.com/atomashpolskiy/bt.git
+```
+
+2) Fetch and checkout dht-experimental (if you'd like to have DHT support)
+```
+git fetch
+git checkout dht-experimental
+```
+
+3) Build
+ ```
+ mvn clean install -Plgpl -DskipTests=true
+ ```
+ 
+4) Download with CLI wrapper or use as a library
+```
+java -Xmx64m -jar bt-cli/target/bt-launcher.jar -f <path-to-torrent-file> -d <download-dir>
+```
+
+## Usage
+
+Declare the following dependencies in your project’s **pom.xml**:
+
+```xml
+<dependency>
+    <groupId>com.github.atomashpolskiy</groupId>
+    <artifactId>bt-core</artifactId>
+    <version>1.1-SNAPSHOT</version>
+</dependency>
+<!-- for the sake of keeping the core with minimum number of 3-rd party 
+     dependencies HTTP tracker support is shipped as a separate module;
+     you may omit this dependency if only UDP trackers are going to be used -->
+<dependency>
+    <groupId>com.github.atomashpolskiy</groupId>
+    <artifactId>bt-http-tracker-client</artifactId>
+    <version>1.1-SNAPSHOT</version>
+</dependency>
+```
+
+## Code sample
+
+```java
+// get torrent file URL and download directory
+URL torrentUrl = getTorrentUrl();
+File targetDirectory = getTargetDirectory();
+
+// create file system based backend for torrent data
+Storage storage = new FileSystemStorage(targetDirectory);
+
+// create client with a private runtime
+BtClient client = Bt.client().storage(storage).torrent(torrentUrl).autoLoadModules().build();
+
+// launch
+client.startAsync(state -> {
+    if (state.getPiecesRemaining() == 0) {
+        client.stop();
+    }
+}, 1000).join();
+```
 
 ## What makes Bt stand out from the crowd
 
@@ -48,7 +100,7 @@ One notable customization scenario is extending the standard BitTorrent protocol
 
 ### Test infrastructure
 
-To allow you test the changes that you've made to the core, **Bt** ships with a specialized framework for integration tests. Create an arbitrary-sized _swarm_ of peers inside a simple _JUnit_ test, set the number of seeders and leechers and start a real torrent session on your localhost. E.g. create one seeder and many leechers to stress test the network overhead; use a really large file and multiple peers to stress test your newest laptop's expensive SSD storage (pun intended); or just launch the whole swarm in _no-files_ mode and test your protocol extensions.
+To allow you test the changes that you've made to the core, **Bt** ships with a specialized framework for integration tests. Create an arbitrary-sized _swarm_ of peers inside a simple _JUnit_ test, set the number of seeders and leechers and start a real torrent session on your localhost. E.g. create one seeder and many leechers to stress test the network overhead; use a really large file and multiple peers to stress test your newest laptop's expensive SSD storage; or just launch the whole swarm in _no-files_ mode and test your protocol extensions.
 
 ### Parallel downloads
 
@@ -73,29 +125,6 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 * [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
 * [BEP-27: Private Torrents](http://bittorrent.org/beps/bep_0027.html)
 * [BEP-41: UDP Tracker Protocol Extensions](http://bittorrent.org/beps/bep_0041.html)
-
-## Code sample
-
-```java
-public static void main(String[] args) {
-
-  URL metainfoUrl = getMetainfoUrl();
-  File targetDirectory = getTargetDirectory();
-  
-  // create file system based backend for torrent contents
-  Storage storage = new FileSystemStorage(targetDirectory);
-  
-  // create client with a private runtime
-  BtClient client = Bt.client(storage).url(metainfoUrl).standalone();
-  
-  // launch
-  client.startAsync(state -> {
-      if (state.getPiecesRemaining() == 0) {
-          client.stop();
-      }
-  }, 1000).join();
-}
-```
 
 ## Feedback
 
