@@ -71,6 +71,22 @@ Declare the following dependencies in your project’s **pom.xml**:
 ## Code sample
 
 ```java
+// enable multithreaded verification of torrent data
+Config config = new Config() {
+    @Override
+    public int getNumOfHashingThreads() {
+        return 8;
+    }
+};
+
+// enable bootstrapping from public routers
+Module dhtModule = new DHTModule(new DHTConfig() {
+    @Override
+    public boolean shouldUseRouterBootstrap() {
+        return true;
+    }
+});
+
 // get torrent file URL and download directory
 URL torrentUrl = getTorrentUrl();
 File targetDirectory = getTargetDirectory();
@@ -79,7 +95,13 @@ File targetDirectory = getTargetDirectory();
 Storage storage = new FileSystemStorage(targetDirectory);
 
 // create client with a private runtime
-BtClient client = Bt.client().storage(storage).torrent(torrentUrl).autoLoadModules().build();
+BtClient client = Bt.client()
+        .config(config)
+        .storage(storage)
+        .torrent(torrentUrl)
+        .autoLoadModules()
+        .module(dhtModule)
+        .build();
 
 // launch
 client.startAsync(state -> {
