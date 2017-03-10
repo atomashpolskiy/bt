@@ -61,6 +61,11 @@ Declare the following dependencies in your project’s **pom.xml**:
     <artifactId>bt-http-tracker-client</artifactId>
     <version>1.1-SNAPSHOT</version>
 </dependency>
+<dependency>
+    <groupId>com.github.atomashpolskiy</groupId>
+    <artifactId>bt-dht</artifactId>
+    <version>1.1-SNAPSHOT</version>
+</dependency>
 ```
 
 ## Code sample
