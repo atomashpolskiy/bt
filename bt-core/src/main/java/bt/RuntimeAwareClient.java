@@ -64,4 +64,9 @@ class RuntimeAwareClient implements BtClient {
     public TorrentSession getSession() {
         return delegate.getSession();
     }
+
+    @Override
+    public boolean isStarted() {
+        return delegate.isStarted();
+    }
 }

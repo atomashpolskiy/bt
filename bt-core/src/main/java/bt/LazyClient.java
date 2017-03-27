@@ -62,4 +62,9 @@ class LazyClient implements BtClient {
         }
         return delegate.getSession();
     }
+
+    @Override
+    public boolean isStarted() {
+        return delegate != null && delegate.isStarted();
+    }
 }
