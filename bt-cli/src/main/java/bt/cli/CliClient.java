@@ -8,6 +8,9 @@ import bt.dht.DHTModule;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 import bt.runtime.Config;
+import bt.torrent.selector.PieceSelector;
+import bt.torrent.selector.RarestFirstSelector;
+import bt.torrent.selector.SequentialSelector;
 import com.google.inject.Module;
 import com.googlecode.lanterna.input.KeyStroke;
 import joptsimple.OptionException;
@@ -62,7 +65,7 @@ public class CliClient  {
         Config config = new Config() {
             @Override
             public int getNumOfHashingThreads() {
-                return 8;
+                return Runtime.getRuntime().availableProcessors();
             }
         };
 
@@ -80,8 +83,14 @@ public class CliClient  {
                 .build();
 
         Storage storage = new FileSystemStorage(options.getTargetDirectory());
+        PieceSelector selector = options.downloadSequentially() ?
+                SequentialSelector.sequential() : RarestFirstSelector.randomizedRarest();
 
-        this.client = Bt.client(runtime).storage(storage).torrent(toUrl(options.getMetainfoFile())).build();
+        this.client = Bt.client(runtime)
+                .storage(storage)
+                .torrent(toUrl(options.getMetainfoFile()))
+                .selector(selector)
+                .build();
 
         this.printer = SessionStatePrinter.createKeyInputAwarePrinter(
                 client.getSession().getTorrent(), keyBindings);
