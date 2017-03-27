@@ -112,4 +112,9 @@ class DefaultClient implements BtClient {
     public TorrentSession getSession() {
         return session;
     }
+
+    @Override
+    public boolean isStarted() {
+        return delegate.isActive();
+    }
 }

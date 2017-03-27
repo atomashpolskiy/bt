@@ -11,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -168,6 +170,15 @@ public class BtRuntime {
         } else {
             throw new IllegalArgumentException("Unknown client: " + client);
         }
+    }
+
+    /**
+     * Get all clients, that are attached to this runtime.
+     *
+     * @since 1.1
+     */
+    public Collection<BtClient> getClients() {
+        return Collections.unmodifiableCollection(knownClients);
     }
 
     /**

@@ -52,4 +52,12 @@ public interface BtClient {
      * @since 1.0
      */
     TorrentSession getSession();
+
+    /**
+     * Check if this client is started.
+     *
+     * @return true if this client is started
+     * @since 1.1
+     */
+    boolean isStarted();
 }
