@@ -15,6 +15,7 @@ public class Options {
     private static final OptionSpec<File> metainfoFileOptionSpec;
     private static final OptionSpec<File> targetDirectoryOptionSpec;
     private static final OptionSpec<Void> shouldSeedOptionSpec;
+    private static final OptionSpec<Void> sequentialOptionSpec;
 
     private static final OptionParser parser;
 
@@ -33,6 +34,8 @@ public class Options {
                 .required();
 
         shouldSeedOptionSpec = parser.acceptsAll(Arrays.asList("s", "seed"), "Continue to seed when download is complete");
+
+        sequentialOptionSpec = parser.acceptsAll(Arrays.asList("S", "sequential"), "Download sequentially");
     }
 
     /**
@@ -43,7 +46,8 @@ public class Options {
         return new Options(
                 opts.valueOf(metainfoFileOptionSpec),
                 opts.valueOf(targetDirectoryOptionSpec),
-                opts.has(shouldSeedOptionSpec));
+                opts.has(shouldSeedOptionSpec),
+                opts.has(sequentialOptionSpec));
     }
 
     public static void printHelp(OutputStream out) {
@@ -57,12 +61,13 @@ public class Options {
     private File metainfoFile;
     private File targetDirectory;
     private boolean seedAfterDownloaded;
+    private boolean sequential;
 
-    public Options(File metainfoFile, File targetDirectory, boolean seedAfterDownloaded) {
-
+    public Options(File metainfoFile, File targetDirectory, boolean seedAfterDownloaded, boolean sequential) {
         this.metainfoFile = metainfoFile;
         this.targetDirectory = targetDirectory;
         this.seedAfterDownloaded = seedAfterDownloaded;
+        this.sequential = sequential;
     }
 
     public File getMetainfoFile() {
@@ -75,5 +80,9 @@ public class Options {
 
     public boolean shouldSeedAfterDownloaded() {
         return seedAfterDownloaded;
+    }
+
+    public boolean downloadSequentially() {
+        return sequential;
     }
 }
