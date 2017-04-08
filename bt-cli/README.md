@@ -16,6 +16,7 @@ $ java -jar target/bt-launcher.jar
 Option (* = required)  Description                               
 ---------------------  -----------                               
 -?, -h, --help                                                   
+-S, --sequential       Download sequentially                     
 * -d, --dir <File>     Target download location                  
 * -f, --file <File>    Torrent metainfo file                     
 -s, --seed             Continue to seed when download is complete
@@ -24,8 +25,10 @@ Option (* = required)  Description
 ### Run
 
 ```
-$ java -jar target/bt-launcher.jar --file /path/to/torrent --dir /save/to/here --seed
+$ java -jar target/bt-launcher.jar -f /path/to/torrent -d /save/to/here
 ```
+
+Add `-S` flag to download the data in sequential order (e.g. for streaming content).
 
 ### Key bindings
 
