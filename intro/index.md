@@ -14,7 +14,7 @@ Declare the following dependencies in your project's **pom.xml**:
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-core</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
 </dependency>
 <!-- for the sake of keeping the core with minimum number of 3-rd party 
      dependencies HTTP tracker support is shipped as a separate module;
@@ -22,7 +22,7 @@ Declare the following dependencies in your project's **pom.xml**:
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-http-tracker-client</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
 </dependency>
 ```
 
@@ -56,7 +56,7 @@ Hence, there are two ways to create a Bt client:
 ```java
 Storage storage = new FileSystemStorage(/* target directory */);
 
-BtClient client = Bt.client(storage).url(/* torrent file URL */).standalone();
+BtClient client = Bt.client().storage(storage).torrent(/* torrent source */).build();
 
 client.startAsync().join();
 ```
@@ -71,15 +71,14 @@ BtRuntime sharedRuntime = BtRuntime.defaultRuntime();
 URL url1 = /* torrent file URL #1 */,
     url2 = /* torrent file URL #2 */;
 
-BtClient client1 = Bt.client(storage).url(url1).attachToRuntime(sharedRuntime);
-BtClient client2 = Bt.client(storage).url(url2).attachToRuntime(sharedRuntime);
+BtClient client1 = Bt.client(sharedRuntime).storage(storage).torrent(/* torrent source #1 */).build();
+BtClient client2 = Bt.client(sharedRuntime).storage(storage).torrent(/* torrent source #2 */).build();
 
+// wait until both clients have finished
 CompletableFuture.allOf(client1.startAsync(), client2.startAsync()).join();
 ```
 
-As a bonus, in the latter case the main thread will wait until both torrents are completed.
-
-## _**Modular architecture**_
+## _**Modularity**_
 
 Bt is built around [Google Guice](https://github.com/google/guice) DI container and follows the canonical modular approach:
 
@@ -102,17 +101,38 @@ The reason for not including HTTP tracker support in the core is that it depends
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-http-tracker-client</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1-SNAPSHOT</version>
 </dependency>
 ```
 
-Then contribute _**bt.tracker.http.HttpTrackerModule**_ into runtime:
+There are two ways of contributing an extra module into runtime:
+
+- to auto-load all modules that are available on the classpath, use `bt.runtime.BtRuntimeBuilder#autoLoadModules()` method when building a runtime; in this case each loaded module will use its' default configuration
 
 ```java
-BtRuntime runtime = BtRuntime.builder().module(new HttpTrackerModule()).build();
+BtRuntimeBuilder builder = BtRuntimeBuilder.builder();
+
+// ... setup as needed
+
+BtRuntime runtime = builder.autoLoadModules().build();
 ```
 
-Peer exchange service is also turned off by default. Contribute _**bt.peerexchange.PeerExchangeModule**_ into runtime to enable peer sharing.
+- to manually load a module with custom configuration, use `bt.runtime.BtRuntimeBuilder#module()` method:
+
+```java
+PeerExchangeConfig config = new PeerExchangeConfig() {
+    @Override
+    public int getMinEventsPerMessage() {
+        // don't send PEX message if there are less than 50 added/dropped peer events
+        return 50;
+    }
+};
+
+PeerExchangeModule customModule = new PeerExchangeModule(config);
+BtRuntime runtime = BtRuntime.builder().module(customModule).build();
+```
+
+Peer exchange service is also turned off by default. Enable auto-loading of modules or manually contribute _**bt.peerexchange.PeerExchangeModule**_ into runtime to enable peer sharing.
 
 # **Configuration**
 
@@ -149,7 +169,7 @@ client.startAsync(state -> {
 }, 1000).join();
 ```
 
-Both methods return a [CompletableFuture&lt;Void&gt;](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html), which provides the most natural way for co-ordinating multiple torrent sessions. Run in parallel? Sequentially? Custom processing chain? All is possible via standard Java API.
+Both methods return a [CompletableFuture&lt;?&gt;](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html), which provides the most natural way for co-ordinating multiple torrent sessions. Run in parallel? Sequentially? Custom processing chain? All is possible via standard Java API.
 
 ## _**Shutdown**_
 
