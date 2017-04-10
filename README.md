@@ -14,7 +14,7 @@
 
 ## Release 1.1
 
-As of February-March 2017 a new 1.1 release is on its' way. It includes a number of major performance and algorithmic improvements, critical bug fixes and API enhancements. Full list is available in [release notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.txt). **It's strongly recommended for all users to switch to 1.1-SNAPSHOT.**
+Release 1.1 includes a number of major performance and algorithmic improvements, critical bug fixes and API enhancements. Full list is available in [release notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.txt). **It's strongly recommended for all users to switch to 1.1.**
 
 ## Support for BEP-5: DHT Protocol
 
@@ -51,7 +51,7 @@ Declare the following dependencies in your project’s **pom.xml**:
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-core</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.1</version>
 </dependency>
 <!-- for the sake of keeping the core with minimum number of 3-rd party 
      dependencies HTTP tracker support is shipped as a separate module;
@@ -59,12 +59,14 @@ Declare the following dependencies in your project’s **pom.xml**:
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-http-tracker-client</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.1</version>
 </dependency>
+<!-- bt-dht will be available if you've built the project manually 
+     from dht-experimental branch-->
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-dht</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.2-SNAPSHOT</version>
 </dependency>
 ```
 
