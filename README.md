@@ -146,6 +146,7 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 ## List of supported BEPs
 
 * [BEP-3: The BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html)
+* [BEP-5: DHT Protocol](http://bittorrent.org/beps/bep_0005.html) (available in [dht-experimental](https://github.com/atomashpolskiy/bt/tree/dht-experimental) branch)
 * [BEP-10: Extension Protocol](http://bittorrent.org/beps/bep_0010.html)
 * [BEP-11: Peer Exchange (PEX)](http://bittorrent.org/beps/bep_0011.html)
 * [BEP-12: Multitracker metadata extension](http://bittorrent.org/beps/bep_0012.html)
