@@ -12,6 +12,27 @@
 
 [CLI Launcher](https://github.com/atomashpolskiy/bt/tree/master/bt-cli)
 
+## Support and feedback
+
+Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new features and BEPs to be added. You have the following options to share your ideas, receive help or report bugs:
+
+* open a new  [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
+* post your question on the [Bt forum](https://groups.google.com/forum/#!forum/bttorrent)
+* join the [Gitter chat](https://gitter.im/bt-java/general)
+
+## List of supported BEPs
+
+* [BEP-3: The BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html)
+* [BEP-5: DHT Protocol](http://bittorrent.org/beps/bep_0005.html) (available in [dht-experimental](https://github.com/atomashpolskiy/bt/tree/dht-experimental) branch)
+* [BEP-10: Extension Protocol](http://bittorrent.org/beps/bep_0010.html)
+* [BEP-11: Peer Exchange (PEX)](http://bittorrent.org/beps/bep_0011.html)
+* [BEP-12: Multitracker metadata extension](http://bittorrent.org/beps/bep_0012.html)
+* [BEP-15: UDP Tracker Protocol](http://bittorrent.org/beps/bep_0015.html)
+* [BEP-20: Peer ID Conventions](http://bittorrent.org/beps/bep_0020.html)
+* [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
+* [BEP-27: Private Torrents](http://bittorrent.org/beps/bep_0027.html)
+* [BEP-41: UDP Tracker Protocol Extensions](http://bittorrent.org/beps/bep_0041.html)
+
 ## Release 1.1
 
 Release 1.1 includes a number of major performance and algorithmic improvements, critical bug fixes and API enhancements. Full list is available in [release notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.txt). **It's strongly recommended for all users to switch to 1.1.**
@@ -27,9 +48,8 @@ Available in [dht-experimental](https://github.com/atomashpolskiy/bt/tree/dht-ex
 git clone https://github.com/atomashpolskiy/bt.git
 ```
 
-2) Fetch and checkout dht-experimental (if you'd like to have DHT support)
+2) Checkout dht-experimental (if you'd like to have DHT support)
 ```
-git fetch
 git checkout dht-experimental
 ```
 
@@ -142,20 +162,3 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 ### And much more...
 
 * _**check out [Release Notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.txt) for details!**_
-
-## List of supported BEPs
-
-* [BEP-3: The BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html)
-* [BEP-5: DHT Protocol](http://bittorrent.org/beps/bep_0005.html) (available in [dht-experimental](https://github.com/atomashpolskiy/bt/tree/dht-experimental) branch)
-* [BEP-10: Extension Protocol](http://bittorrent.org/beps/bep_0010.html)
-* [BEP-11: Peer Exchange (PEX)](http://bittorrent.org/beps/bep_0011.html)
-* [BEP-12: Multitracker metadata extension](http://bittorrent.org/beps/bep_0012.html)
-* [BEP-15: UDP Tracker Protocol](http://bittorrent.org/beps/bep_0015.html)
-* [BEP-20: Peer ID Conventions](http://bittorrent.org/beps/bep_0020.html)
-* [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
-* [BEP-27: Private Torrents](http://bittorrent.org/beps/bep_0027.html)
-* [BEP-41: UDP Tracker Protocol Extensions](http://bittorrent.org/beps/bep_0041.html)
-
-## Feedback
-
-Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new features and BEPs to be added. Please don't hesitate to post an issue or contact me personally!
