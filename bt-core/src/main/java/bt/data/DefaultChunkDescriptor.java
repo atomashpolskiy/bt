@@ -247,7 +247,11 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
             // if only a part of some block is written,
             // then don't count it
             boolean shouldCheckIfComplete = false;
-            if (offset + block.length == size) {
+            // handle the case when the last block is smaller than the others
+            // mark it as complete only when all of the block's data is present
+            long lastBlockSize = size % blockSize;
+            long lastBlockOffset = size - lastBlockSize;
+            if (offset <= lastBlockOffset && offset + block.length >= size) {
                 bitfield[bitfield.length - 1] = true;
                 shouldCheckIfComplete = true;
             }

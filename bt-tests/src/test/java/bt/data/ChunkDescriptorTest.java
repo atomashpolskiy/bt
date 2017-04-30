@@ -59,6 +59,26 @@ public class ChunkDescriptorTest {
     }
 
     @Test
+    public void testChunk_Lifecycle_PartialLastBlock_Incomplete() {
+
+        long blockSize = 4,
+             fileSize = blockSize + 3;
+
+        ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
+                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, new byte[20], blockSize, false);
+
+        assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
+
+        chunkDescriptor.writeBlock(new byte[4], 0);
+        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+
+        chunkDescriptor.writeBlock(new byte[2], blockSize + 1);
+        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+
+        assertHasBlockStatuses(chunkDescriptor, new byte[]{1,0});
+    }
+
+    @Test
     public void testChunk_Lifecycle_PartialLastBlock_Overlaps() {
 
         long blockSize = 4,
