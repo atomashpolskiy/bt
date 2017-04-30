@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -23,6 +24,7 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
     private long limitInLastChunkFile;
     private long size;
     private long blockSize;
+    private int blockCount;
 
     private ReentrantReadWriteLock readWriteLock;
 
@@ -32,9 +34,9 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
     private byte[] checksum;
 
     /**
-     * List of statuses of this chunk's blocks: true for complete-and-verified blocks
+     * List of statuses of this chunk's blocks: 1 for complete-and-verified blocks
      */
-    private boolean[] bitfield;
+    private BitSet bitfield;
 
     /**
      * This is a "map" of this chunk's "virtual addresses" (offsets) into the chunk's files.
@@ -94,7 +96,8 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
         if (blockCount > Integer.MAX_VALUE) {
             throw new BtException("Integer overflow while constructing chunk: too many blocks");
         }
-        bitfield = new boolean[(int) blockCount];
+        this.blockCount = (int) blockCount;
+        this.bitfield = new BitSet(this.blockCount);
 
         fileOffsets = new long[units.length];
         // first "virtual" address (first file begins with offset 0)
@@ -125,7 +128,7 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
 
     @Override
     public int getBlockCount() {
-        return bitfield.length;
+        return blockCount;
     }
 
     @Override
@@ -135,11 +138,11 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
 
     @Override
     public boolean isBlockVerified(int blockIndex) {
-        if (blockIndex < 0 || blockIndex >= bitfield.length) {
+        if (blockIndex < 0 || blockIndex >= blockCount) {
             throw new IllegalArgumentException("Invalid block index: " + blockIndex + "." +
-                    " Expected 0.." + (bitfield.length - 1));
+                    " Expected 0.." + (blockCount - 1));
         }
-        return bitfield[blockIndex];
+        return bitfield.get(blockIndex);
     }
 
     /**
@@ -252,7 +255,7 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
             long lastBlockSize = size % blockSize;
             long lastBlockOffset = size - lastBlockSize;
             if (offset <= lastBlockOffset && offset + block.length >= size) {
-                bitfield[bitfield.length - 1] = true;
+                bitfield.set(blockCount - 1);
                 shouldCheckIfComplete = true;
             }
             if (block.length >= blockSize) {
@@ -261,7 +264,7 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
                     int firstBlockIndex = (int) Math.ceil(((double) offset) / blockSize);
                     int lastBlockIndex = (int) Math.floor(((double)(offset + block.length)) / blockSize) - 1;
                     if (lastBlockIndex >= firstBlockIndex) {
-                        Arrays.fill(bitfield, firstBlockIndex, lastBlockIndex + 1, true);
+                        bitfield.set(firstBlockIndex, lastBlockIndex + 1);
                         shouldCheckIfComplete = true;
                     }
                 }
@@ -340,14 +343,7 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
     }
 
     private boolean isComplete() {
-
-        // check if all chunk's blocks are present
-        for (boolean b : bitfield) {
-            if (!b) {
-                return false;
-            }
-        }
-        return true;
+        return bitfield.cardinality() == blockCount;
     }
 
     private Range getRange(long offset, long length) {
