@@ -33,12 +33,6 @@ public interface ChunkDescriptor {
     DataStatus getStatus();
 
     /**
-     * @return Chunk size in bytes
-     * @since 1.0
-     */
-    long getSize();
-
-    /**
      * Get the total number of blocks in this chunk.
      *
      * @return Total number of blocks in this chunk.
@@ -58,40 +52,22 @@ public interface ChunkDescriptor {
     long getBlockSize();
 
     /**
-     * Check if a block is complete and verified.
+     * Check if a block's data is present.
      *
      * @param blockIndex Index of a block in this chunk
      *                   (0-based, maximum value is <code>{@link #getBlockCount()} - 1</code>)
-     * @return true if block is complete and verified.
+     * @return true if block's data is present
      * @since 1.0
      */
-    boolean isBlockVerified(int blockIndex);
+    boolean isBlockPresent(int blockIndex);
 
     /**
-     * Reads a block of data.
-     * <p>Implementations must throw an exception, if
-     * <blockquote>
-     * <code>offset &gt; {@link #getSize()} - length</code>
-     * </blockquote>
+     * Get chunk's data accessor.
      *
-     * @param offset Offset from the beginning of this chunk (0-based)
-     * @param length Requested block length
-     * @since 1.0
+     * @return Chunk's data accessor
+     * @since 1.2
      */
-    byte[] readBlock(long offset, int length);
-
-    /**
-     * Writes a block of data.
-     * <p>Implementations must throw an exception, if
-     * <blockquote>
-     * <code>offset &gt; {@link #getSize()} - block.length</code>
-     * </blockquote>
-     *
-     * @param block A block to write
-     * @param offset Offset from the beginning of this chunk (0-based)
-     * @since 1.0
-     */
-    void writeBlock(byte[] block, long offset);
+    DataRange getData();
 
     /**
      * Check integrity of this chunk.

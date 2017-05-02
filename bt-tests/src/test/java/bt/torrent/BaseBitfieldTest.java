@@ -1,5 +1,6 @@
 package bt.torrent;
 
+import bt.data.DataRange;
 import bt.data.DataStatus;
 import bt.data.ChunkDescriptor;
 import org.junit.BeforeClass;
@@ -10,18 +11,16 @@ import java.util.function.Supplier;
 public abstract class BaseBitfieldTest {
 
     protected static long blockSize = 4;
-    protected static long chunkSize = blockSize * 4;
 
     protected static ChunkDescriptor emptyChunk, completeChunk;
 
     @BeforeClass
     public static void setUp() {
-        emptyChunk = mockChunk(chunkSize, new byte[]{0,0,0,0}, null);
-        completeChunk = mockChunk(chunkSize, new byte[]{1,1,1,1}, null);
+        emptyChunk = mockChunk(new byte[]{0,0,0,0}, null);
+        completeChunk = mockChunk(new byte[]{1,1,1,1}, null);
     }
 
-    protected static ChunkDescriptor mockChunk(long chunkSize, byte[] bitfield,
-                                               Supplier<Boolean> verifier) {
+    protected static ChunkDescriptor mockChunk(byte[] bitfield, Supplier<Boolean> verifier) {
 
         byte[] _bitfield = Arrays.copyOf(bitfield, bitfield.length);
 
@@ -30,11 +29,6 @@ public abstract class BaseBitfieldTest {
             public DataStatus getStatus() {
                 return (verifier == null) ? statusForBitfield(_bitfield)
                         : (verifier.get()? DataStatus.VERIFIED : statusForBitfield(_bitfield));
-            }
-
-            @Override
-            public long getSize() {
-                return chunkSize;
             }
 
             @Override
@@ -48,17 +42,12 @@ public abstract class BaseBitfieldTest {
             }
 
             @Override
-            public boolean isBlockVerified(int blockIndex) {
+            public boolean isBlockPresent(int blockIndex) {
                 return _bitfield[blockIndex] == 1;
             }
 
             @Override
-            public byte[] readBlock(long offset, int length) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void writeBlock(byte[] block, long offset) {
+            public DataRange getData() {
                 throw new UnsupportedOperationException();
             }
 

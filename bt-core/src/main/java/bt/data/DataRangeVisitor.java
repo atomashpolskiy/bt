@@ -15,8 +15,9 @@ public interface DataRangeVisitor {
      * @param lim Limit that designates the end of this chunk's part in the file, exclusive;
      *            visitor must not access the file at or past this index
      *            (i.e. the limit does not belong to this chunk)
+     * @return true if next file should be visited; false to stop
      *
      * @since 1.2
      */
-    void visitUnit(StorageUnit unit, long off, long lim);
+    boolean visitUnit(StorageUnit unit, long off, long lim);
 }

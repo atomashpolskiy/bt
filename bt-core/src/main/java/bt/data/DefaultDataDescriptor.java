@@ -1,6 +1,7 @@
 package bt.data;
 
 import bt.BtException;
+import bt.data.digest.Digester;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 import bt.torrent.Bitfield;
@@ -33,14 +34,17 @@ class DefaultDataDescriptor implements DataDescriptor {
 
     private List<StorageUnit> storageUnits;
 
+    private Digester digester;
     private int numOfHashingThreads;
 
     public DefaultDataDescriptor(Storage storage,
                                  Torrent torrent,
+                                 Digester digester,
                                  int transferBlockSize,
                                  int numOfHashingThreads) {
         this.storage = storage;
         this.torrent = torrent;
+        this.digester = digester;
         this.numOfHashingThreads = numOfHashingThreads;
 
         this.storageUnits = new ArrayList<>();
@@ -152,7 +156,7 @@ class DefaultDataDescriptor implements DataDescriptor {
                                                      long limit,
                                                      byte[] checksum,
                                                      long blockSize) {
-        return () -> new DefaultChunkDescriptor(files, offset, limit, checksum, blockSize, true);
+        return () -> new DefaultChunkDescriptor(files, offset, limit, blockSize, checksum, digester, true);
     }
 
     private List<ChunkDescriptor> collectParallel(List<Supplier<ChunkDescriptor>> suppliers) {

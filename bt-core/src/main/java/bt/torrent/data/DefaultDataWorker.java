@@ -52,7 +52,7 @@ class DefaultDataWorker implements DataWorker {
             return CompletableFuture.supplyAsync(() -> {
                 try {
                     ChunkDescriptor chunk = chunks.get(pieceIndex);
-                    byte[] block = chunk.readBlock(offset, length);
+                    byte[] block = chunk.getData().getSubrange(offset, length).getBytes();
                     return BlockRead.complete(peer, pieceIndex, offset, block);
                 } catch (Throwable e) {
                     return BlockRead.exceptional(peer, e, pieceIndex, offset);
@@ -80,7 +80,7 @@ class DefaultDataWorker implements DataWorker {
                         }
                         return BlockWrite.rejected(peer, pieceIndex, offset, block);
                     }
-                    chunk.writeBlock(block, offset);
+                    chunk.getData().getSubrange(offset).putBytes(block);
                     if (LOGGER.isTraceEnabled()) {
                         LOGGER.trace("Successfully processed block: " +
                                 "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + block.length + "}");

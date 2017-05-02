@@ -122,11 +122,11 @@ public class RequestProducer {
     private List<Request> buildRequests(int pieceIndex) {
         List<Request> requests = new ArrayList<>();
         ChunkDescriptor chunk = chunks.get(pieceIndex);
-        long chunkSize = chunk.getSize();
+        long chunkSize = chunk.getData().length();
         long blockSize = chunk.getBlockSize();
 
         for (int blockIndex = 0; blockIndex < chunk.getBlockCount(); blockIndex++) {
-            if (!chunk.isBlockVerified(blockIndex)) {
+            if (!chunk.isBlockPresent(blockIndex)) {
                 int offset = (int) (blockIndex * blockSize);
                 int length = (int) Math.min(blockSize, chunkSize - offset);
                 try {
