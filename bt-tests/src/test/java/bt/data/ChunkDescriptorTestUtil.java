@@ -11,7 +11,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.mockito.Mockito.mock;
@@ -19,9 +21,15 @@ import static org.mockito.Mockito.when;
 
 public class ChunkDescriptorTestUtil {
 
-    public static StorageUnit mockStorageUnit(long size) {
+    public static List<StorageUnit> mockStorageUnits(long... capacities) {
+        return Arrays.stream(capacities)
+                .mapToObj(ChunkDescriptorTestUtil::mockStorageUnit)
+                .collect(Collectors.<StorageUnit>toList());
+    }
+
+    public static StorageUnit mockStorageUnit(long capacity) {
         StorageUnit storageUnit = mock(StorageUnit.class);
-        when(storageUnit.capacity()).thenReturn(size);
+        when(storageUnit.capacity()).thenReturn(capacity);
         return storageUnit;
     }
 

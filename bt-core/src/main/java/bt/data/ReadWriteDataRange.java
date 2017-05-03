@@ -71,7 +71,6 @@ public class ReadWriteDataRange implements DataRange {
                               long limitInLastUnit,
                               ReadWriteLock lock) {
         this(units,
-             calculateOffsets(units, offsetInFirstUnit),
              0,
              offsetInFirstUnit,
              units.size() - 1,
@@ -80,19 +79,45 @@ public class ReadWriteDataRange implements DataRange {
     }
 
     private ReadWriteDataRange(List<StorageUnit> units,
-                               long[] fileOffsets,
                                int firstUnit,
                                long offsetInFirstUnit,
                                int lastUnit,
                                long limitInLastUnit,
                                ReadWriteLock lock) {
 
+        if (units.isEmpty()) {
+            throw new IllegalArgumentException("Empty list of units");
+        }
+        if (firstUnit < 0 || firstUnit > units.size() - 1) {
+            throw new IllegalArgumentException("Invalid first unit index: " + firstUnit + ", expected 0.." + (units.size() - 1));
+        }
+        if (lastUnit < 0 || lastUnit > units.size() - 1) {
+            throw new IllegalArgumentException("Invalid last unit index: " + lastUnit + ", expected 0.." + (units.size() - 1));
+        }
+        if (firstUnit > lastUnit) {
+            throw new IllegalArgumentException("First unit index is greater than last unit index: " + firstUnit + " > " + lastUnit);
+        }
+        if (offsetInFirstUnit < 0 || offsetInFirstUnit > units.get(firstUnit).capacity() - 1) {
+            throw new IllegalArgumentException("Invalid offset in first unit: " + offsetInFirstUnit +
+                    ", expected 0.." + (units.get(firstUnit).capacity() - 1));
+        }
+        if (limitInLastUnit <= 0 || limitInLastUnit > units.get(lastUnit).capacity()) {
+            throw new IllegalArgumentException("Invalid limit in last unit: " + limitInLastUnit +
+                    ", expected 1.." + (units.get(lastUnit).capacity()));
+        }
+        if (firstUnit == lastUnit && offsetInFirstUnit >= limitInLastUnit) {
+            throw new IllegalArgumentException("Offset is greater than limit in a single-unit range: " +
+                    offsetInFirstUnit + " >= " + limitInLastUnit);
+        }
+
         this.units = units;
-        this.fileOffsets = fileOffsets;
+        this.fileOffsets = calculateOffsets(units, offsetInFirstUnit);
+
         this.firstUnit = firstUnit;
-        this.offsetInFirstUnit = offsetInFirstUnit;
         this.lastUnit = lastUnit;
+        this.offsetInFirstUnit = offsetInFirstUnit;
         this.limitInLastUnit = limitInLastUnit;
+
         this.length = calculateLength(units, offsetInFirstUnit, limitInLastUnit);
         this.lock = lock;
     }
@@ -132,9 +157,16 @@ public class ReadWriteDataRange implements DataRange {
 
     @Override
     public ReadWriteDataRange getSubrange(long offset, long length) {
-        if (offset < 0 || length <= 0) {
+        if (length == 0) {
+            throw new BtException("Requested empty subrange, expected length of 1.." + length());
+        }
+        if (offset < 0 || length < 0) {
             throw new BtException("Illegal arguments: offset (" + offset + "), length (" + length + ")");
-        } else if (offset == 0 && length == length()) {
+        }
+        if (offset >= length()) {
+            throw new BtException("Offset is too large: " + offset + ", expected 0.." + (length() - 1));
+        }
+        if (offset == 0 && length == length()) {
             return this;
         }
 
@@ -177,7 +209,7 @@ public class ReadWriteDataRange implements DataRange {
 
         if (lastRequestedFileIndex >= units.size()) {
             // data in this chunk is insufficient to fulfill the block request
-            throw new BtException("Insufficient data (offset: " + offset + ", requested block length: " + length + ")");
+            throw new BtException("Insufficient data (offset: " + offset + ", requested length: " + length + ")");
         }
         // if remaining is negative now, then we need to
         // strip off some data from the last file
@@ -186,7 +218,7 @@ public class ReadWriteDataRange implements DataRange {
         if (lastRequestedFileIndex == units.size() - 1) {
             if (limitInLastRequestedFile > limitInLastUnit) {
                 // data in this chunk is insufficient to fulfill the block request
-                throw new BtException("Insufficient data (offset: " + offset + ", requested block length: " + length + ")");
+                throw new BtException("Insufficient data (offset: " + offset + ", requested length: " + length + ")");
             }
         }
 
