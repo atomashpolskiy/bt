@@ -2,13 +2,13 @@ package bt.torrent.data;
 
 import bt.data.ChunkDescriptor;
 import bt.data.DataDescriptor;
-import bt.data.DataStatus;
+import bt.data.digest.Digester;
 import bt.net.Peer;
 import bt.service.IRuntimeLifecycleBinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,14 +19,20 @@ class DefaultDataWorker implements DataWorker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDataWorker.class);
 
-    private List<ChunkDescriptor> chunks;
+    private DataDescriptor data;
+    private Digester digester;
 
     private final ExecutorService executor;
     private final int maxPendingTasks;
     private final AtomicInteger pendingTasksCount;
 
-    public DefaultDataWorker(IRuntimeLifecycleBinder lifecycleBinder, DataDescriptor dataDescriptor, int maxQueueLength) {
-        this.chunks = dataDescriptor.getChunkDescriptors();
+    public DefaultDataWorker(IRuntimeLifecycleBinder lifecycleBinder,
+                             DataDescriptor data,
+                             Digester digester,
+                             int maxQueueLength) {
+
+        this.data = data;
+        this.digester = digester;
         this.executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
 
             private AtomicInteger i = new AtomicInteger();
@@ -39,7 +45,7 @@ class DefaultDataWorker implements DataWorker {
         this.maxPendingTasks = maxQueueLength;
         this.pendingTasksCount = new AtomicInteger();
 
-        lifecycleBinder.onShutdown("Shutdown data worker for descriptor: " + dataDescriptor, this.executor::shutdownNow);
+        lifecycleBinder.onShutdown("Shutdown data worker for descriptor: " + data, this.executor::shutdownNow);
     }
 
     @Override
@@ -51,7 +57,7 @@ class DefaultDataWorker implements DataWorker {
             pendingTasksCount.incrementAndGet();
             return CompletableFuture.supplyAsync(() -> {
                 try {
-                    ChunkDescriptor chunk = chunks.get(pieceIndex);
+                    ChunkDescriptor chunk = data.getChunkDescriptors().get(pieceIndex);
                     byte[] block = chunk.getData().getSubrange(offset, length).getBytes();
                     return BlockRead.complete(peer, pieceIndex, offset, block);
                 } catch (Throwable e) {
@@ -72,14 +78,15 @@ class DefaultDataWorker implements DataWorker {
             pendingTasksCount.incrementAndGet();
             return CompletableFuture.supplyAsync(() -> {
                 try {
-                    ChunkDescriptor chunk = chunks.get(pieceIndex);
-                    if (chunk.getStatus() == DataStatus.VERIFIED) {
+                    if (data.getBitfield().isVerified(pieceIndex)) {
                         if (LOGGER.isTraceEnabled()) {
                             LOGGER.trace("Rejecting request to write block because the chunk is already complete and verified: " +
                                     "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + block.length + "}");
                         }
                         return BlockWrite.rejected(peer, pieceIndex, offset, block);
                     }
+
+                    ChunkDescriptor chunk = data.getChunkDescriptors().get(pieceIndex);
                     chunk.getData().getSubrange(offset).putBytes(block);
                     if (LOGGER.isTraceEnabled()) {
                         LOGGER.trace("Successfully processed block: " +
@@ -87,8 +94,14 @@ class DefaultDataWorker implements DataWorker {
                     }
 
                     CompletableFuture<Boolean> verificationFuture = null;
-                    if (chunk.getStatus() == DataStatus.COMPLETE) {
-                        verificationFuture = CompletableFuture.supplyAsync(chunk::verify, executor);
+                    if (chunk.isComplete()) {
+                        verificationFuture = CompletableFuture.supplyAsync(() -> {
+                            boolean verified = verify(chunk);
+                            if (verified) {
+                                data.getBitfield().markVerified(pieceIndex);
+                            }
+                            return verified;
+                        }, executor);
                     }
 
                     return BlockWrite.complete(peer, pieceIndex, offset, block, verificationFuture);
@@ -99,5 +112,11 @@ class DefaultDataWorker implements DataWorker {
                 }
             }, executor);
         }
+    }
+
+    private boolean verify(ChunkDescriptor chunk) {
+        byte[] expected = chunk.getChecksum();
+        byte[] actual = digester.digest(chunk.getData());
+        return Arrays.equals(expected, actual);
     }
 }

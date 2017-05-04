@@ -65,7 +65,7 @@ public class BitfieldBasedStatistics implements PieceStatistics {
             }
         }
 
-        bitfield.markComplete(pieceIndex);
+        bitfield.markVerified(pieceIndex);
         pieceTotals[pieceIndex]++;
     }
 

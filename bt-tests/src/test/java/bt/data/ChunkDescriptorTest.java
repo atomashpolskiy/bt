@@ -3,7 +3,6 @@ package bt.data;
 import org.junit.Test;
 
 import static bt.data.ChunkDescriptorTestUtil.mockStorageUnit;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -16,21 +15,21 @@ public class ChunkDescriptorTest {
              fileSize = blockSize * 4;
 
         ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
-                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20], null, false);
+                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20]);
 
-        assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isEmpty());
 
         chunkDescriptor.getData().putBytes(new byte[4]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
 
         chunkDescriptor.getData().getSubrange(blockSize).putBytes(new byte[4]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
 
         chunkDescriptor.getData().getSubrange(blockSize * 2).putBytes(new byte[4]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
 
         chunkDescriptor.getData().getSubrange(blockSize * 3).putBytes(new byte[4]);
-        assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isComplete());
 
         assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1,1});
     }
@@ -42,18 +41,18 @@ public class ChunkDescriptorTest {
              fileSize = blockSize * 2 + 3;
 
         ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
-                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20], null, false);
+                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20]);
 
-        assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isEmpty());
 
         chunkDescriptor.getData().putBytes(new byte[4]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
 
         chunkDescriptor.getData().getSubrange(blockSize).putBytes(new byte[4]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
 
         chunkDescriptor.getData().getSubrange(blockSize * 2).putBytes(new byte[3]);
-        assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isComplete());
 
         assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1});
     }
@@ -65,15 +64,15 @@ public class ChunkDescriptorTest {
              fileSize = blockSize + 3;
 
         ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
-                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20], null, false);
+                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20]);
 
-        assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isEmpty());
 
         chunkDescriptor.getData().putBytes(new byte[4]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
 
         chunkDescriptor.getData().getSubrange(blockSize + 1).putBytes(new byte[2]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
 
         assertHasBlockStatuses(chunkDescriptor, new byte[]{1,0});
     }
@@ -85,15 +84,15 @@ public class ChunkDescriptorTest {
              fileSize = blockSize * 2 + 3;
 
         ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
-                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20], null, false);
+                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20]);
 
-        assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isEmpty());
 
         chunkDescriptor.getData().putBytes(new byte[4]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
 
         chunkDescriptor.getData().getSubrange(blockSize).putBytes(new byte[7]);
-        assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isComplete());
 
         assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1});
     }
@@ -107,21 +106,21 @@ public class ChunkDescriptorTest {
 
         ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
                 new StorageUnit[]{mockStorageUnit(fileSize1), mockStorageUnit(fileSize2)},
-                0, fileSize2, blockSize, new byte[20], null, false);
+                0, fileSize2, blockSize, new byte[20]);
 
-        assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isEmpty());
 
         chunkDescriptor.getData().putBytes(new byte[4]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
 
         chunkDescriptor.getData().getSubrange(blockSize).putBytes(new byte[4]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
 
         chunkDescriptor.getData().getSubrange(blockSize * 2).putBytes(new byte[4]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
 
         chunkDescriptor.getData().getSubrange(blockSize * 3).putBytes(new byte[4]);
-        assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isComplete());
 
         assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1,1});
     }
@@ -133,35 +132,35 @@ public class ChunkDescriptorTest {
              fileSize = blockSize * 4;
 
         ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
-                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20], null, false);
+                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20]);
 
-        assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isEmpty());
 
         chunkDescriptor.getData().getSubrange(1).putBytes(new byte[4]);
-        assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isEmpty());
 
         chunkDescriptor.getData().getSubrange(1).putBytes(new byte[7]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
         assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,0,0});
 
         chunkDescriptor.getData().getSubrange(blockSize * 2).putBytes(new byte[6]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
         assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,1,0});
 
         chunkDescriptor.getData().getSubrange(blockSize * 3 + 1).putBytes(new byte[1]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
         assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,1,0});
 
         chunkDescriptor.getData().getSubrange(blockSize - 1).putBytes(new byte[1]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
         assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,1,0});
 
         chunkDescriptor.getData().putBytes(new byte[5]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
         assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1,0});
 
         chunkDescriptor.getData().getSubrange(blockSize * 3 - 1).putBytes(new byte[5]);
-        assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isComplete());
         assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1,1});
     }
 
@@ -177,35 +176,35 @@ public class ChunkDescriptorTest {
         ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
                 new StorageUnit[]{mockStorageUnit(fileSize1), mockStorageUnit(fileSize2),
                         mockStorageUnit(fileSize3), mockStorageUnit(fileSize4)},
-                0, fileSize4, blockSize, new byte[20], null, false);
+                0, fileSize4, blockSize, new byte[20]);
 
-        assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isEmpty());
 
         chunkDescriptor.getData().getSubrange(1).putBytes(new byte[4]);
-        assertEquals(DataStatus.EMPTY, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isEmpty());
 
         chunkDescriptor.getData().getSubrange(1).putBytes(new byte[7]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
         assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,0,0});
 
         chunkDescriptor.getData().getSubrange(blockSize * 2).putBytes(new byte[6]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
         assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,1,0});
 
         chunkDescriptor.getData().getSubrange(blockSize * 3 + 1).putBytes(new byte[1]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
         assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,1,0});
 
         chunkDescriptor.getData().getSubrange(blockSize - 1).putBytes(new byte[1]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
         assertHasBlockStatuses(chunkDescriptor, new byte[]{0,1,1,0});
 
         chunkDescriptor.getData().putBytes(new byte[5]);
-        assertEquals(DataStatus.INCOMPLETE, chunkDescriptor.getStatus());
+        assertFalse(chunkDescriptor.isEmpty() || chunkDescriptor.isComplete());
         assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1,0});
 
         chunkDescriptor.getData().getSubrange(blockSize * 3 - 1).putBytes(new byte[5]);
-        assertEquals(DataStatus.COMPLETE, chunkDescriptor.getStatus());
+        assertTrue(chunkDescriptor.isComplete());
         assertHasBlockStatuses(chunkDescriptor, new byte[]{1,1,1,1});
     }
 

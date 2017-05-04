@@ -25,12 +25,13 @@ import bt.metainfo.Torrent;
 public interface ChunkDescriptor {
 
     /**
-     * Check if this chunk is empty, incomplete, complete or complete-and-verified.
+     * Expected hash of this chunk's contents as indicated in torrent file.
      *
-     * @return Status of this chunk
-     * @since 1.0
+     * @return Expected hash of this chunk's contents; used to verify integrity of chunk's data
+     *
+     * @since 1.2
      */
-    DataStatus getStatus();
+    byte[] getChecksum();
 
     /**
      * Get the total number of blocks in this chunk.
@@ -62,18 +63,26 @@ public interface ChunkDescriptor {
     boolean isBlockPresent(int blockIndex);
 
     /**
+     * Shortcut method to determine if data for all blocks is present
+     *
+     * @return true if data for all blocks is present
+     * @since 1.2
+     */
+    boolean isComplete();
+
+    /**
+     * Shortcut method to determine if no data is present
+     *
+     * @return true if no data is present
+     * @since 1.2
+     */
+    boolean isEmpty();
+
+    /**
      * Get chunk's data accessor.
      *
      * @return Chunk's data accessor
      * @since 1.2
      */
     DataRange getData();
-
-    /**
-     * Check integrity of this chunk.
-     *
-     * @return true if this chunk is complete and succesfully verified
-     * @since 1.0
-     */
-    boolean verify();
 }

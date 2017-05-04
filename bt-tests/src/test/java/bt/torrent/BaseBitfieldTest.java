@@ -1,12 +1,10 @@
 package bt.torrent;
 
-import bt.data.DataRange;
-import bt.data.DataStatus;
 import bt.data.ChunkDescriptor;
+import bt.data.DataRange;
 import org.junit.BeforeClass;
 
 import java.util.Arrays;
-import java.util.function.Supplier;
 
 public abstract class BaseBitfieldTest {
 
@@ -16,19 +14,19 @@ public abstract class BaseBitfieldTest {
 
     @BeforeClass
     public static void setUp() {
-        emptyChunk = mockChunk(new byte[]{0,0,0,0}, null);
-        completeChunk = mockChunk(new byte[]{1,1,1,1}, null);
+        emptyChunk = mockChunk(new byte[]{0,0,0,0});
+        completeChunk = mockChunk(new byte[]{1,1,1,1});
     }
 
-    protected static ChunkDescriptor mockChunk(byte[] bitfield, Supplier<Boolean> verifier) {
+    protected static ChunkDescriptor mockChunk(byte[] bitfield) {
 
         byte[] _bitfield = Arrays.copyOf(bitfield, bitfield.length);
 
         return new ChunkDescriptor() {
+
             @Override
-            public DataStatus getStatus() {
-                return (verifier == null) ? statusForBitfield(_bitfield)
-                        : (verifier.get()? DataStatus.VERIFIED : statusForBitfield(_bitfield));
+            public byte[] getChecksum() {
+                return new byte[0];
             }
 
             @Override
@@ -47,29 +45,29 @@ public abstract class BaseBitfieldTest {
             }
 
             @Override
-            public DataRange getData() {
-                throw new UnsupportedOperationException();
+            public boolean isComplete() {
+                for (byte b : _bitfield) {
+                    if (b != 1) {
+                        return false;
+                    }
+                }
+                return true;
             }
 
             @Override
-            public boolean verify() {
-                return (verifier == null) ? false : verifier.get();
+            public boolean isEmpty() {
+                for (byte b : _bitfield) {
+                    if (b == 1) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            @Override
+            public DataRange getData() {
+                throw new UnsupportedOperationException();
             }
         };
-    }
-
-    private static DataStatus statusForBitfield(byte[] bitfield) {
-
-        if (bitfield.length == 0) {
-            throw new RuntimeException("Empty bitfield");
-        }
-
-        byte first = bitfield[0];
-        for (byte b : bitfield) {
-            if (b != first) {
-                return DataStatus.INCOMPLETE;
-            }
-        }
-        return first == 0? DataStatus.EMPTY : DataStatus.VERIFIED;
     }
 }

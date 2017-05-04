@@ -46,6 +46,18 @@ public class PieceConsumer {
             return;
         }
 
+        // discard blocks for pieces that have already been verified
+        if (bitfield.isVerified(piece.getPieceIndex())) {
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace(
+                        "Discarding received block because the chunk is already complete and verified: " +
+                        "piece index {" + piece.getPieceIndex() + "}, " +
+                        "offset {" + piece.getOffset() + "}, " +
+                        "length {" + piece.getBlock().length + "}");
+            }
+            return;
+        }
+
         addBlock(peer, connectionState, piece).whenComplete((block, error) -> {
             if (error != null) {
                 throw new RuntimeException("Failed to perform request to write block", error);

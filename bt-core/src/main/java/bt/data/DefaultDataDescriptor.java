@@ -19,7 +19,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 class DefaultDataDescriptor implements DataDescriptor {
@@ -65,7 +64,7 @@ class DefaultDataDescriptor implements DataDescriptor {
         }
 
         int chunksTotal = (int) Math.ceil(totalSize / chunkSize);
-        List<Supplier<ChunkDescriptor>> suppliers = new ArrayList<>(chunksTotal + 1);
+        List<ChunkDescriptor> chunks = new ArrayList<>(chunksTotal + 1);
         Iterator<byte[]> chunkHashes = torrent.getChunkHashes().iterator();
         this.storageUnits = torrentFiles.stream().map(f -> storage.getUnit(torrent, f)).collect(Collectors.toList());
         StorageUnit[] files = storageUnits.toArray(new StorageUnit[storageUnits.size()]);
@@ -102,7 +101,7 @@ class DefaultDataDescriptor implements DataDescriptor {
                                 Arrays.toString(chunkFiles), chunkOffset, limitInCurrentFile, transferBlockSize);
                     }
 
-                    suppliers.add(createSupplier(chunkFiles, chunkOffset, limitInCurrentFile, chunkHashes.next(), transferBlockSize));
+                    chunks.add(createChunk(chunkFiles, chunkOffset, limitInCurrentFile, transferBlockSize, chunkHashes.next()));
 
                     firstFileInChunkIndex = currentFileIndex;
                     chunkOffset = limitInCurrentFile;
@@ -135,7 +134,7 @@ class DefaultDataDescriptor implements DataDescriptor {
                             "Offset in first file: {}, limit in last file: {}, block size: {}",
                             Arrays.toString(chunkFiles), chunkOffset, fileSize, transferBlockSize);
                 }
-                suppliers.add(createSupplier(chunkFiles, chunkOffset, fileSize, chunkHashes.next(), transferBlockSize));
+                chunks.add(createChunk(chunkFiles, chunkOffset, fileSize, transferBlockSize, chunkHashes.next()));
             }
         }
 
@@ -143,40 +142,48 @@ class DefaultDataDescriptor implements DataDescriptor {
             throw new BtException("Wrong number of chunk hashes in the torrent: too many");
         }
 
-        this.chunkDescriptors = (numOfHashingThreads > 1) ? collectParallel(suppliers) :
-                suppliers.stream().map(Supplier::get).collect(Collectors.toList());
-        this.bitfield = new Bitfield(this.chunkDescriptors);
+        this.bitfield = buildBitfield(chunks);
+        this.chunkDescriptors = chunks;
+    }
 
+    private Bitfield buildBitfield(List<ChunkDescriptor> chunks) {
+        ChunkDescriptor[] arr = chunks.toArray(new ChunkDescriptor[chunks.size()]);
+        Bitfield bitfield = new Bitfield(chunks.size());
+        if (numOfHashingThreads > 1) {
+            collectParallel(arr, bitfield);
+        } else {
+            createWorker(arr, 0, arr.length, bitfield).run();
+        }
         // try to purge all data that was loaded by the verifiers
         System.gc();
+
+        return bitfield;
     }
 
-    private Supplier<ChunkDescriptor> createSupplier(StorageUnit[] files,
-                                                     long offset,
-                                                     long limit,
-                                                     byte[] checksum,
-                                                     long blockSize) {
-        return () -> new DefaultChunkDescriptor(files, offset, limit, blockSize, checksum, digester, true);
+    private ChunkDescriptor createChunk(StorageUnit[] files,
+                                        long offset,
+                                        long limit,
+                                        long blockSize,
+                                        byte[] checksum) {
+        return new DefaultChunkDescriptor(files, offset, limit, blockSize, checksum);
     }
 
-    private List<ChunkDescriptor> collectParallel(List<Supplier<ChunkDescriptor>> suppliers) {
-        ChunkDescriptor[] descriptors = new ChunkDescriptor[suppliers.size()];
-
+    private List<ChunkDescriptor> collectParallel(ChunkDescriptor[] chunks, Bitfield bitfield) {
         int n = numOfHashingThreads;
         ExecutorService workers = Executors.newFixedThreadPool(n);
 
         List<Future<?>> futures = new ArrayList<>();
 
-        int batchSize = suppliers.size() / n;
+        int batchSize = chunks.length / n;
         int i, limit = 0;
-        while ((i = limit) < suppliers.size()) {
+        while ((i = limit) < chunks.length) {
             if (futures.size() == n - 1) {
                 // assign the remaining bits to the last worker
-                limit = suppliers.size();
+                limit = chunks.length;
             } else {
                 limit = i + batchSize;
             }
-            futures.add(workers.submit(createWorker(descriptors, i, Math.min(suppliers.size(), limit), suppliers)));
+            futures.add(workers.submit(createWorker(chunks, i, Math.min(chunks.length, limit), bitfield)));
         }
 
         if (LOGGER.isDebugEnabled()) {
@@ -207,7 +214,7 @@ class DefaultDataDescriptor implements DataDescriptor {
                     errors.stream().map(this::errorToString).reduce(String::concat).get());
         }
 
-        return Arrays.asList(descriptors);
+        return Arrays.asList(chunks);
     }
 
     private String errorToString(Throwable e) {
@@ -222,14 +229,32 @@ class DefaultDataDescriptor implements DataDescriptor {
         return buf.toString();
     }
 
-    private Runnable createWorker(ChunkDescriptor[] descriptors,
+    private Runnable createWorker(ChunkDescriptor[] chunks,
                                   int from,
                                   int to,
-                                  List<Supplier<ChunkDescriptor>> suppliers) {
+                                  Bitfield bitfield) {
         return () -> {
             int i = from;
             while (i < to) {
-                descriptors[i] = suppliers.get(i).get();
+                // optimization to speedup the initial verification of torrent's data
+                int[] emptyUnits = new int[]{0};
+                chunks[i].getData().visitUnits((u, off, lim) -> {
+                    if (u.size() == 0) {
+                        emptyUnits[0]++;
+                    }
+                    return true;
+                });
+
+                // if any of this chunk's storage units is empty,
+                // then the chunk is neither complete nor verified
+                if (emptyUnits[0] == 0) {
+                    byte[] expected = chunks[i].getChecksum();
+                    byte[] actual = digester.digest(chunks[i].getData());
+                    boolean verified = Arrays.equals(expected, actual);
+                    if (verified) {
+                        bitfield.markVerified(i);
+                    }
+                }
                 i++;
             }
         };

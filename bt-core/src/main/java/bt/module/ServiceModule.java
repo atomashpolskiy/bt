@@ -128,8 +128,8 @@ public class ServiceModule implements Module {
 
     @Provides
     @Singleton
-    public IDataWorkerFactory provideDataWorkerFactory(IRuntimeLifecycleBinder lifecycleBinder) {
-        return new DataWorkerFactory(lifecycleBinder, config.getMaxIOQueueSize());
+    public IDataWorkerFactory provideDataWorkerFactory(IRuntimeLifecycleBinder lifecycleBinder, Digester digester) {
+        return new DataWorkerFactory(lifecycleBinder, digester, config.getMaxIOQueueSize());
     }
 
     @Provides

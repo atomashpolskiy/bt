@@ -1,5 +1,6 @@
 package bt.data;
 
+import bt.data.digest.Digester;
 import bt.data.digest.SHA1Digester;
 import bt.metainfo.Torrent;
 import bt.service.CryptoUtil;
@@ -23,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 public class ChunkDescriptor_FileStorageUnitTest {
 
     private static int transferBlockSize = 4;
+    private static Digester digester = new SHA1Digester(32);
 
     @Rule
     public TestFileSystemStorage storage = new TestFileSystemStorage();
@@ -64,26 +66,29 @@ public class ChunkDescriptor_FileStorageUnitTest {
 
         chunks.get(0).getData().putBytes(sequence(8));
         chunks.get(0).getData().getSubrange(8).putBytes(sequence(8));
-        assertTrue(chunks.get(0).verify());
+        assertTrue(chunks.get(0).isComplete());
+        assertTrue(verify(chunks.get(0)));
 
         chunks.get(1).getData().putBytes(sequence(4));
         chunks.get(1).getData().getSubrange(4).putBytes(sequence(4));
         chunks.get(1).getData().getSubrange(8).putBytes(sequence(4));
         chunks.get(1).getData().getSubrange(12).putBytes(sequence(4));
-        assertTrue(chunks.get(1).verify());
+        assertTrue(chunks.get(1).isComplete());
+        assertTrue(verify(chunks.get(1)));
 
         // reverse order
         chunks.get(2).getData().getSubrange(5).putBytes(sequence(11));
         chunks.get(2).getData().getSubrange(2).putBytes(sequence(3));
         chunks.get(2).getData().putBytes(sequence(2));
-        assertFalse(chunks.get(2).verify());
+        assertFalse(chunks.get(2).isComplete());
 
         // "random" order
         chunks.get(3).getData().getSubrange(4).putBytes(sequence(4));
         chunks.get(3).getData().getSubrange(0).putBytes(sequence(4));
         chunks.get(3).getData().getSubrange(12).putBytes(sequence(4));
         chunks.get(3).getData().getSubrange(8).putBytes(sequence(4));
-        assertTrue(chunks.get(3).verify());
+        assertTrue(chunks.get(3).isComplete());
+        assertTrue(verify(chunks.get(3)));
 
         assertFileHasContents(new File(storage.getRoot(), fileName), SINGLE_FILE);
     }
@@ -244,40 +249,46 @@ public class ChunkDescriptor_FileStorageUnitTest {
 
         chunks.get(0).getData().putBytes(sequence(8));
         chunks.get(0).getData().getSubrange(8).putBytes(sequence(8));
-        assertTrue(chunks.get(0).verify());
+        assertTrue(chunks.get(0).isComplete());
+        assertTrue(verify(chunks.get(0)));
 
         chunks.get(1).getData().putBytes(sequence(4));
         chunks.get(1).getData().getSubrange(4).putBytes(sequence(4));
         chunks.get(1).getData().getSubrange(8).putBytes(sequence(4));
         chunks.get(1).getData().getSubrange(12).putBytes(sequence(4));
-        assertTrue(chunks.get(1).verify());
+        assertTrue(chunks.get(1).isComplete());
+        assertTrue(verify(chunks.get(1)));
 
         // reverse order
         chunks.get(2).getData().getSubrange(5).putBytes(sequence(11));
         chunks.get(2).getData().getSubrange(2).putBytes(sequence(3));
         chunks.get(2).getData().putBytes(sequence(2));
-        assertFalse(chunks.get(2).verify());
+        assertFalse(chunks.get(2).isComplete());
         chunks.get(2).getData().putBytes(new byte[]{1,2,1,2,3,1,2,3});
-        assertTrue(chunks.get(2).verify());
+        assertTrue(chunks.get(2).isComplete());
+        assertTrue(verify(chunks.get(2)));
 
         // "random" order
         chunks.get(3).getData().getSubrange(4).putBytes(sequence(4));
         chunks.get(3).getData().putBytes(sequence(4));
         chunks.get(3).getData().getSubrange(12).putBytes(sequence(4));
         chunks.get(3).getData().getSubrange(8).putBytes(sequence(4));
-        assertTrue(chunks.get(3).verify());
+        assertTrue(chunks.get(3).isComplete());
+        assertTrue(verify(chunks.get(3)));
 
         // block size same as chunk size
         chunks.get(4).getData().putBytes(sequence(16));
-        assertTrue(chunks.get(4).verify());
+        assertTrue(chunks.get(4).isComplete());
+        assertTrue(verify(chunks.get(4)));
 
         // 1-byte blocks
         chunks.get(5).getData().putBytes(sequence(1));
         chunks.get(5).getData().getSubrange(15).putBytes(sequence(1));
         chunks.get(5).getData().getSubrange(1).putBytes(sequence(14));
-        assertFalse(chunks.get(5).verify());
+        assertFalse(chunks.get(5).isComplete());
         chunks.get(5).getData().putBytes(new byte[]{1,1,2,3,4,5,6,7,8,9,1,2,3,4,5,1});
-        assertTrue(chunks.get(5).verify());
+        assertTrue(chunks.get(5).isComplete());
+        assertTrue(verify(chunks.get(5)));
 
         assertFileHasContents(new File(torrentDirectory, fileName1), MULTI_FILE_1);
         assertFileHasContents(new File(torrentDirectory, fileName2), MULTI_FILE_2);
@@ -425,5 +436,12 @@ public class ChunkDescriptor_FileStorageUnitTest {
         // 1-byte block
         block = chunks.get(5).getData().getSubrange(15, 1).getBytes();
         assertArrayEquals(Arrays.copyOfRange(MULTI_FILE_6, 0, 1), block);
+    }
+
+    private boolean verify(ChunkDescriptor chunk) {
+        if (!chunk.isComplete()) {
+            throw new IllegalStateException("Can't verify -- chunk is not complete");
+        }
+        return Arrays.equals(chunk.getChecksum(), digester.digest(chunk.getData()));
     }
 }

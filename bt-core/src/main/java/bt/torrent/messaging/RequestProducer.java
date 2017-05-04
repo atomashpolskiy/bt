@@ -138,8 +138,8 @@ public class RequestProducer {
             }
         }
         if (LOGGER.isTraceEnabled()) {
-            LOGGER.info("Built {} requests for piece #{} (size: {}, block size: {}, number of blocks: {}, status: {})",
-                    requests.size(), pieceIndex, chunkSize, blockSize, chunk.getBlockCount(), chunk.getStatus().name());
+            LOGGER.info("Built {} requests for piece #{} (size: {}, block size: {}, number of blocks: {})",
+                    requests.size(), pieceIndex, chunkSize, blockSize, chunk.getBlockCount());
         }
         return requests;
     }
