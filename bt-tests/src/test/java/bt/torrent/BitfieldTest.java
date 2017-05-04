@@ -1,5 +1,6 @@
 package bt.torrent;
 
+import bt.data.Bitfield;
 import bt.data.ChunkDescriptor;
 import org.junit.Test;
 

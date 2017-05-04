@@ -4,7 +4,6 @@ import bt.BtException;
 import bt.data.digest.Digester;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
-import bt.torrent.Bitfield;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,8 +1,6 @@
-package bt.torrent;
+package bt.data;
 
 import bt.BtException;
-import bt.data.ChunkDescriptor;
-import bt.data.DataDescriptor;
 import bt.protocol.Protocols;
 
 import java.util.Arrays;

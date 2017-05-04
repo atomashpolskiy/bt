@@ -4,7 +4,7 @@ import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
-import bt.torrent.Bitfield;
+import bt.data.Bitfield;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
 

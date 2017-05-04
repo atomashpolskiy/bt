@@ -8,7 +8,7 @@ import bt.protocol.Cancel;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.Request;
-import bt.torrent.Bitfield;
+import bt.data.Bitfield;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
 import org.slf4j.Logger;

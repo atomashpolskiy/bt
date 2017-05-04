@@ -16,17 +16,17 @@ import bt.torrent.annotation.Consumes;
  */
 public class BitfieldConsumer {
 
-    private bt.torrent.Bitfield bitfield;
+    private bt.data.Bitfield bitfield;
     private BitfieldBasedStatistics pieceStatistics;
 
-    BitfieldConsumer(bt.torrent.Bitfield bitfield, BitfieldBasedStatistics pieceStatistics) {
+    BitfieldConsumer(bt.data.Bitfield bitfield, BitfieldBasedStatistics pieceStatistics) {
         this.bitfield = bitfield;
         this.pieceStatistics = pieceStatistics;
     }
 
     @Consumes
     public void consume(Bitfield bitfieldMessage, MessageContext context) {
-        bt.torrent.Bitfield peerBitfield = new bt.torrent.Bitfield(bitfieldMessage.getBitfield(), bitfield.getPiecesTotal());
+        bt.data.Bitfield peerBitfield = new bt.data.Bitfield(bitfieldMessage.getBitfield(), bitfield.getPiecesTotal());
         pieceStatistics.addBitfield(context.getPeer(), peerBitfield);
     }
 

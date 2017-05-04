@@ -1,6 +1,6 @@
 package bt.torrent.messaging;
 
-import bt.torrent.Bitfield;
+import bt.data.Bitfield;
 
 import java.util.function.Predicate;
 

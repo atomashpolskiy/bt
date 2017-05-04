@@ -3,7 +3,7 @@ package bt.net;
 import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.protocol.Handshake;
-import bt.torrent.Bitfield;
+import bt.data.Bitfield;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import com.google.inject.Inject;

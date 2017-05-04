@@ -8,7 +8,7 @@ import bt.protocol.Interested;
 import bt.protocol.Message;
 import bt.protocol.NotInterested;
 import bt.runtime.Config;
-import bt.torrent.Bitfield;
+import bt.data.Bitfield;
 import bt.torrent.BitfieldBasedStatistics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
