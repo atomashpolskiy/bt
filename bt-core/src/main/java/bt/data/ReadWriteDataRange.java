@@ -12,7 +12,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * @since 1.2
  */
-public class ReadWriteDataRange implements DataRange {
+class ReadWriteDataRange implements DataRange {
 
     private List<StorageUnit> units;
     private int firstUnit;
