@@ -3,6 +3,7 @@ bt.bencoding
 bt.bencoding.model
 bt.bencoding.model.rule
 bt.data
+bt.data.digest
 bt.data.file
 bt.it.fixture
 bt.metainfo
