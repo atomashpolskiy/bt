@@ -193,6 +193,11 @@
                     <artifactId>license-maven-plugin</artifactId>
                     <version>1.12</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>0.7.7.201606060606</version>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -241,6 +246,45 @@
                     <releaseProfiles>release</releaseProfiles>
                     <goals>deploy</goals>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${build.directory}/codecov-unit</outputDirectory>
+                            <excludes>
+                                <exclude>bt.test.*</exclude>
+                                <exclude>bt.it.*</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>report-integration-test</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${build.directory}/codecov-it</outputDirectory>
+                            <excludes>
+                                <exclude>bt.test.*</exclude>
+                                <exclude>bt.it.*</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
