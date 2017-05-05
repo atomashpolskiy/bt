@@ -7,7 +7,7 @@ branches:
 os:
 - linux
 script:
-- mvn -U install
+- mvn -U install 2>&1 | awk '!/DEBUG/ && !/TRACE/'
 after_success:
 - mvn site
 - .travis/publish-javadoc.sh
