@@ -2,7 +2,8 @@ package bt.data;
 
 import org.junit.Test;
 
-import static bt.data.ChunkDescriptorTestUtil.mockStorageUnit;
+import static bt.data.ChunkDescriptorTestUtil.buildChunk;
+import static bt.data.ChunkDescriptorTestUtil.mockStorageUnits;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -14,8 +15,7 @@ public class ChunkDescriptorTest {
         long blockSize = 4,
              fileSize = blockSize * 4;
 
-        ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
-                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20]);
+        ChunkDescriptor chunkDescriptor = buildChunk(mockStorageUnits(fileSize), blockSize);
 
         assertTrue(chunkDescriptor.isEmpty());
 
@@ -40,8 +40,7 @@ public class ChunkDescriptorTest {
         long blockSize = 4,
              fileSize = blockSize * 2 + 3;
 
-        ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
-                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20]);
+        ChunkDescriptor chunkDescriptor = buildChunk(mockStorageUnits(fileSize), blockSize);
 
         assertTrue(chunkDescriptor.isEmpty());
 
@@ -63,8 +62,7 @@ public class ChunkDescriptorTest {
         long blockSize = 4,
              fileSize = blockSize + 3;
 
-        ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
-                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20]);
+        ChunkDescriptor chunkDescriptor = buildChunk(mockStorageUnits(fileSize), blockSize);
 
         assertTrue(chunkDescriptor.isEmpty());
 
@@ -83,8 +81,7 @@ public class ChunkDescriptorTest {
         long blockSize = 4,
              fileSize = blockSize * 2 + 3;
 
-        ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
-                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20]);
+        ChunkDescriptor chunkDescriptor = buildChunk(mockStorageUnits(fileSize), blockSize);
 
         assertTrue(chunkDescriptor.isEmpty());
 
@@ -104,9 +101,7 @@ public class ChunkDescriptorTest {
              fileSize1 = blockSize * 2 - 3,
              fileSize2 = blockSize * 2 + 3;
 
-        ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
-                new StorageUnit[]{mockStorageUnit(fileSize1), mockStorageUnit(fileSize2)},
-                0, fileSize2, blockSize, new byte[20]);
+        ChunkDescriptor chunkDescriptor = buildChunk(mockStorageUnits(fileSize1, fileSize2), blockSize);
 
         assertTrue(chunkDescriptor.isEmpty());
 
@@ -131,8 +126,7 @@ public class ChunkDescriptorTest {
         long blockSize = 4,
              fileSize = blockSize * 4;
 
-        ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
-                new StorageUnit[]{mockStorageUnit(fileSize)}, 0, fileSize, blockSize, new byte[20]);
+        ChunkDescriptor chunkDescriptor = buildChunk(mockStorageUnits(fileSize), blockSize);
 
         assertTrue(chunkDescriptor.isEmpty());
 
@@ -173,10 +167,7 @@ public class ChunkDescriptorTest {
              fileSize3 = blockSize - 2,
              fileSize4 = blockSize + 2;
 
-        ChunkDescriptor chunkDescriptor = new DefaultChunkDescriptor(
-                new StorageUnit[]{mockStorageUnit(fileSize1), mockStorageUnit(fileSize2),
-                        mockStorageUnit(fileSize3), mockStorageUnit(fileSize4)},
-                0, fileSize4, blockSize, new byte[20]);
+        ChunkDescriptor chunkDescriptor = buildChunk(mockStorageUnits(fileSize1, fileSize2, fileSize3, fileSize4), blockSize);
 
         assertTrue(chunkDescriptor.isEmpty());
 
@@ -213,11 +204,11 @@ public class ChunkDescriptorTest {
             int status = blockStatuses[i];
             switch (status) {
                 case 1: {
-                    assertTrue("Expected block at position " + i + " to be verified", chunkDescriptor.isBlockPresent(i));
+                    assertTrue("Expected block at position " + i + " to be verified", chunkDescriptor.isPresent(i));
                     break;
                 }
                 case 0: {
-                    assertFalse("Expected block at position " + i + " to be unverified", chunkDescriptor.isBlockPresent(i));
+                    assertFalse("Expected block at position " + i + " to be unverified", chunkDescriptor.isPresent(i));
                     break;
                 }
                 default: {

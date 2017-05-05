@@ -6,21 +6,19 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @since 1.2
  */
 class ReadWriteDataRange implements DataRange {
 
-    private List<StorageUnit> units;
-    private int firstUnit;
-    private int lastUnit;
-    private long offsetInFirstUnit;
-    private long limitInLastUnit;
+    private final List<StorageUnit> units;
+    private final int firstUnit;
+    private final int lastUnit;
+    private final long offsetInFirstUnit;
+    private final long limitInLastUnit;
 
-    private long length;
+    private final long length;
 
     /**
      * This is a "map" of this range's "virtual addresses" (offsets) into the range's files.
@@ -37,11 +35,6 @@ class ReadWriteDataRange implements DataRange {
     private long[] fileOffsets;
 
     /**
-     * Shared lock for this range and all its' child subranges
-     */
-    private ReadWriteLock lock;
-
-    /**
      * Create a data range.
      *
      * @param units List of storage units, the data from which should be accessible via this data range.
@@ -53,37 +46,18 @@ class ReadWriteDataRange implements DataRange {
     public ReadWriteDataRange(List<StorageUnit> units,
                               long offsetInFirstUnit,
                               long limitInLastUnit) {
-        this(units, offsetInFirstUnit, limitInLastUnit, new ReentrantReadWriteLock());
-    }
-
-    /**
-     * Create a data range synchronized with a shared lock.
-     *
-     * @param units List of storage units, the data from which should be accessible via this data range.
-     * @param offsetInFirstUnit Offset from the beginning of the first unit in {@code units}; inclusive
-     * @param limitInLastUnit Offset from the beginning of the last unit in {@code units}; exclusive
-     * @param lock Shared lock to use for read/write operations
-     *
-     * @since 1.2
-     */
-    public ReadWriteDataRange(List<StorageUnit> units,
-                              long offsetInFirstUnit,
-                              long limitInLastUnit,
-                              ReadWriteLock lock) {
         this(units,
              0,
              offsetInFirstUnit,
              units.size() - 1,
-             limitInLastUnit,
-             lock);
+             limitInLastUnit);
     }
 
     private ReadWriteDataRange(List<StorageUnit> units,
                                int firstUnit,
                                long offsetInFirstUnit,
                                int lastUnit,
-                               long limitInLastUnit,
-                               ReadWriteLock lock) {
+                               long limitInLastUnit) {
 
         if (units.isEmpty()) {
             throw new IllegalArgumentException("Empty list of units");
@@ -119,7 +93,6 @@ class ReadWriteDataRange implements DataRange {
         this.limitInLastUnit = limitInLastUnit;
 
         this.length = calculateLength(units, offsetInFirstUnit, limitInLastUnit);
-        this.lock = lock;
     }
 
     private static long calculateLength(List<StorageUnit> units, long offsetInFirstUnit, long limitInLastUnit) {
@@ -230,9 +203,7 @@ class ReadWriteDataRange implements DataRange {
         return new ReadWriteDataRange(
                 _units,
                 offsetInFirstRequestedFile,
-                limitInLastRequestedFile,
-                // pass shared lock
-                lock);
+                limitInLastRequestedFile);
     }
 
     @Override
@@ -243,14 +214,6 @@ class ReadWriteDataRange implements DataRange {
         return offset == 0 ? this : getSubrange(offset, length() - offset);
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * Blocks current thread if there are concurrent write operations in progress.
-     * Blocks all concurrent write operations.
-     *
-     * @since 1.2
-     */
     @Override
     public byte[] getBytes() {
         if (length() > Integer.MAX_VALUE) {
@@ -260,46 +223,33 @@ class ReadWriteDataRange implements DataRange {
         byte[] block = new byte[(int) length()];
         ByteBuffer buffer = ByteBuffer.wrap(block);
 
-        lock.readLock().lock();
-        try {
-            visitUnits(new DataRangeVisitor() {
-                int offsetInBlock = 0;
+        visitUnits(new DataRangeVisitor() {
+            int offsetInBlock = 0;
 
-                @Override
-                public boolean visitUnit(StorageUnit unit, long off, long lim) {
-                    long len = lim - off;
-                    if (len > Integer.MAX_VALUE) {
-                        throw new BtException("Too much data requested");
-                    }
-
-                    if (((long) offsetInBlock) + len > Integer.MAX_VALUE) {
-                        // overflow -- isn't supposed to happen unless the algorithm in range is incorrect
-                        throw new BtException("Integer overflow while constructing block");
-                    }
-
-                    buffer.limit(offsetInBlock + (int) len);
-                    buffer.position(offsetInBlock);
-                    unit.readBlock(buffer, off);
-                    offsetInBlock += len;
-
-                    return true;
+            @Override
+            public boolean visitUnit(StorageUnit unit, long off, long lim) {
+                long len = lim - off;
+                if (len > Integer.MAX_VALUE) {
+                    throw new BtException("Too much data requested");
                 }
-            });
-        } finally {
-            lock.readLock().unlock();
-        }
+
+                if (((long) offsetInBlock) + len > Integer.MAX_VALUE) {
+                    // overflow -- isn't supposed to happen unless the algorithm in range is incorrect
+                    throw new BtException("Integer overflow while constructing block");
+                }
+
+                buffer.limit(offsetInBlock + (int) len);
+                buffer.position(offsetInBlock);
+                unit.readBlock(buffer, off);
+                offsetInBlock += len;
+
+                return true;
+            }
+        });
 
         return block;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * Blocks current thread if there are concurrent read operations in progress.
-     * Block all concurrent read operations.
-     *
-     * @since 1.2
-     */
     @Override
     public void putBytes(byte[] block) {
         if (block.length == 0) {
@@ -309,33 +259,28 @@ class ReadWriteDataRange implements DataRange {
                     "Data does not fit in this range (expected max %d bytes, actual: %d)", length(), block.length));
         }
 
-        lock.writeLock().lock();
-        try {
-            ByteBuffer buffer = ByteBuffer.wrap(block).asReadOnlyBuffer();
-            visitUnits(new DataRangeVisitor() {
+        ByteBuffer buffer = ByteBuffer.wrap(block).asReadOnlyBuffer();
+        visitUnits(new DataRangeVisitor() {
 
-                int offsetInBlock = 0;
-                int limitInBlock;
+            int offsetInBlock = 0;
+            int limitInBlock;
 
-                @Override
-                public boolean visitUnit(StorageUnit unit, long off, long lim) {
-                    long fileSize = lim - off;
-                    if (fileSize > Integer.MAX_VALUE) {
-                        throw new BtException("Unexpected file size -- insufficient data in block");
-                    }
-
-                    limitInBlock = Math.min(buffer.capacity(), offsetInBlock + (int) fileSize);
-                    buffer.limit(limitInBlock);
-                    buffer.position(offsetInBlock);
-                    unit.writeBlock(buffer, off);
-                    offsetInBlock = limitInBlock;
-
-                    return offsetInBlock < block.length - 1;
+            @Override
+            public boolean visitUnit(StorageUnit unit, long off, long lim) {
+                long fileSize = lim - off;
+                if (fileSize > Integer.MAX_VALUE) {
+                    throw new BtException("Unexpected file size -- insufficient data in block");
                 }
-            });
-        } finally {
-            lock.writeLock().unlock();
-        }
+
+                limitInBlock = Math.min(buffer.capacity(), offsetInBlock + (int) fileSize);
+                buffer.limit(limitInBlock);
+                buffer.position(offsetInBlock);
+                unit.writeBlock(buffer, off);
+                offsetInBlock = limitInBlock;
+
+                return offsetInBlock < block.length - 1;
+            }
+        });
     }
 
     @Override

@@ -21,6 +21,15 @@ import static org.mockito.Mockito.when;
 
 public class ChunkDescriptorTestUtil {
 
+    public static ChunkDescriptor buildChunk(List<StorageUnit> units, long blockSize) {
+        long offsetInFirstUnit = 0;
+        long limitInLastUnit = units.get(units.size() - 1).capacity();
+
+        DataRange data = new ReadWriteDataRange(units, offsetInFirstUnit, limitInLastUnit);
+        BlockDataRange blockData = new BlockDataRange(data, blockSize);
+        return new DefaultChunkDescriptor(blockData, blockData.getBlockSet(), new byte[20]);
+    }
+
     public static List<StorageUnit> mockStorageUnits(long... capacities) {
         return Arrays.stream(capacities)
                 .mapToObj(ChunkDescriptorTestUtil::mockStorageUnit)

@@ -30,17 +30,27 @@ public abstract class BaseBitfieldTest {
             }
 
             @Override
-            public int getBlockCount() {
+            public int blockCount() {
                 return _bitfield.length;
             }
 
             @Override
-            public long getBlockSize() {
+            public long length() {
+                return blockSize * blockCount();
+            }
+
+            @Override
+            public long blockSize() {
                 return blockSize;
             }
 
             @Override
-            public boolean isBlockPresent(int blockIndex) {
+            public long lastBlockSize() {
+                return length() % blockSize();
+            }
+
+            @Override
+            public boolean isPresent(int blockIndex) {
                 return _bitfield[blockIndex] == 1;
             }
 

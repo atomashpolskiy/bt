@@ -22,7 +22,7 @@ import bt.metainfo.Torrent;
  *
  * @since 1.0
  */
-public interface ChunkDescriptor {
+public interface ChunkDescriptor extends BlockSet {
 
     /**
      * Expected hash of this chunk's contents as indicated in torrent file.
@@ -32,51 +32,6 @@ public interface ChunkDescriptor {
      * @since 1.2
      */
     byte[] getChecksum();
-
-    /**
-     * Get the total number of blocks in this chunk.
-     *
-     * @return Total number of blocks in this chunk.
-     * @since 1.0
-     */
-    int getBlockCount();
-
-    /**
-     * Get the size of a block in this chunk.
-     *
-     * <p>Note that the last block might be smaller due to truncation
-     * (i.e. when the chunk's size is not a factor of the size of a block).
-     *
-     * @return Block size
-     * @since 1.0
-     */
-    long getBlockSize();
-
-    /**
-     * Check if a block's data is present.
-     *
-     * @param blockIndex Index of a block in this chunk
-     *                   (0-based, maximum value is <code>{@link #getBlockCount()} - 1</code>)
-     * @return true if block's data is present
-     * @since 1.0
-     */
-    boolean isBlockPresent(int blockIndex);
-
-    /**
-     * Shortcut method to determine if data for all blocks is present
-     *
-     * @return true if data for all blocks is present
-     * @since 1.2
-     */
-    boolean isComplete();
-
-    /**
-     * Shortcut method to determine if no data is present
-     *
-     * @return true if no data is present
-     * @since 1.2
-     */
-    boolean isEmpty();
 
     /**
      * Get chunk's data accessor.

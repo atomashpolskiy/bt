@@ -123,10 +123,10 @@ public class RequestProducer {
         List<Request> requests = new ArrayList<>();
         ChunkDescriptor chunk = chunks.get(pieceIndex);
         long chunkSize = chunk.getData().length();
-        long blockSize = chunk.getBlockSize();
+        long blockSize = chunk.blockSize();
 
-        for (int blockIndex = 0; blockIndex < chunk.getBlockCount(); blockIndex++) {
-            if (!chunk.isBlockPresent(blockIndex)) {
+        for (int blockIndex = 0; blockIndex < chunk.blockCount(); blockIndex++) {
+            if (!chunk.isPresent(blockIndex)) {
                 int offset = (int) (blockIndex * blockSize);
                 int length = (int) Math.min(blockSize, chunkSize - offset);
                 try {
@@ -139,7 +139,7 @@ public class RequestProducer {
         }
         if (LOGGER.isTraceEnabled()) {
             LOGGER.info("Built {} requests for piece #{} (size: {}, block size: {}, number of blocks: {})",
-                    requests.size(), pieceIndex, chunkSize, blockSize, chunk.getBlockCount());
+                    requests.size(), pieceIndex, chunkSize, blockSize, chunk.blockCount());
         }
         return requests;
     }
