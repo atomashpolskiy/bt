@@ -1,14 +1,13 @@
 package bt.torrent.data;
 
 import bt.data.ChunkDescriptor;
+import bt.data.ChunkVerifier;
 import bt.data.DataDescriptor;
-import bt.data.digest.Digester;
 import bt.net.Peer;
 import bt.service.IRuntimeLifecycleBinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,7 +19,7 @@ class DefaultDataWorker implements DataWorker {
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDataWorker.class);
 
     private DataDescriptor data;
-    private Digester digester;
+    private ChunkVerifier verifier;
 
     private final ExecutorService executor;
     private final int maxPendingTasks;
@@ -28,11 +27,11 @@ class DefaultDataWorker implements DataWorker {
 
     public DefaultDataWorker(IRuntimeLifecycleBinder lifecycleBinder,
                              DataDescriptor data,
-                             Digester digester,
+                             ChunkVerifier verifier,
                              int maxQueueLength) {
 
         this.data = data;
-        this.digester = digester;
+        this.verifier = verifier;
         this.executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
 
             private AtomicInteger i = new AtomicInteger();
@@ -96,7 +95,7 @@ class DefaultDataWorker implements DataWorker {
                     CompletableFuture<Boolean> verificationFuture = null;
                     if (chunk.isComplete()) {
                         verificationFuture = CompletableFuture.supplyAsync(() -> {
-                            boolean verified = verify(chunk);
+                            boolean verified = verifier.verify(chunk);
                             if (verified) {
                                 data.getBitfield().markVerified(pieceIndex);
                             }
@@ -112,11 +111,5 @@ class DefaultDataWorker implements DataWorker {
                 }
             }, executor);
         }
-    }
-
-    private boolean verify(ChunkDescriptor chunk) {
-        byte[] expected = chunk.getChecksum();
-        byte[] actual = digester.digest(chunk.getData());
-        return Arrays.equals(expected, actual);
     }
 }

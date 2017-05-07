@@ -1,6 +1,8 @@
 package bt.module;
 
+import bt.data.ChunkVerifier;
 import bt.data.DataDescriptorFactory;
+import bt.data.DefaultChunkVerifier;
 import bt.data.IDataDescriptorFactory;
 import bt.data.digest.Digester;
 import bt.data.digest.JavaSecurityDigester;
@@ -122,14 +124,20 @@ public class ServiceModule implements Module {
 
     @Provides
     @Singleton
-    public IDataDescriptorFactory provideDataDescriptorFactory(Config config, Digester digester) {
-        return new DataDescriptorFactory(digester, config.getTransferBlockSize(), config.getNumOfHashingThreads());
+    public ChunkVerifier provideVerifier(Config config, Digester digester) {
+        return new DefaultChunkVerifier(digester, config.getNumOfHashingThreads());
     }
 
     @Provides
     @Singleton
-    public IDataWorkerFactory provideDataWorkerFactory(IRuntimeLifecycleBinder lifecycleBinder, Digester digester) {
-        return new DataWorkerFactory(lifecycleBinder, digester, config.getMaxIOQueueSize());
+    public IDataDescriptorFactory provideDataDescriptorFactory(Config config, ChunkVerifier verifier) {
+        return new DataDescriptorFactory(verifier, config.getTransferBlockSize());
+    }
+
+    @Provides
+    @Singleton
+    public IDataWorkerFactory provideDataWorkerFactory(IRuntimeLifecycleBinder lifecycleBinder, ChunkVerifier verifier) {
+        return new DataWorkerFactory(lifecycleBinder, verifier, config.getMaxIOQueueSize());
     }
 
     @Provides

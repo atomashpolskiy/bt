@@ -1,6 +1,5 @@
 package bt.data;
 
-import bt.data.digest.Digester;
 import bt.metainfo.Torrent;
 
 /**
@@ -9,20 +8,17 @@ import bt.metainfo.Torrent;
  */
 public class DataDescriptorFactory implements IDataDescriptorFactory {
 
-    private Digester digester;
+    private ChunkVerifier verifier;
     private int transferBlockSize;
-    private int numOfHashingThreads;
 
-    public DataDescriptorFactory(Digester digester,
-                                 int transferBlockSize,
-                                 int numOfHashingThreads) {
-        this.digester = digester;
+    public DataDescriptorFactory(ChunkVerifier verifier,
+                                 int transferBlockSize) {
+        this.verifier = verifier;
         this.transferBlockSize = transferBlockSize;
-        this.numOfHashingThreads = numOfHashingThreads;
     }
 
     @Override
     public DataDescriptor createDescriptor(Torrent torrent, Storage storage) {
-        return new DefaultDataDescriptor(storage, torrent, digester, transferBlockSize, numOfHashingThreads);
+        return new DefaultDataDescriptor(storage, torrent, verifier, transferBlockSize);
     }
 }

@@ -4,6 +4,7 @@ import bt.data.digest.Digester;
 import bt.data.digest.SHA1Digester;
 import bt.metainfo.Torrent;
 import bt.service.CryptoUtil;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -23,11 +24,21 @@ import static org.junit.Assert.assertTrue;
 
 public class ChunkDescriptor_FileStorageUnitTest {
 
-    private static int transferBlockSize = 4;
-    private static Digester digester = new SHA1Digester(32);
-
     @Rule
     public TestFileSystemStorage storage = new TestFileSystemStorage();
+
+    private ChunkVerifier verifier;
+    private IDataDescriptorFactory dataDescriptorFactory;
+
+    @Before
+    public void before() {
+        int step = 8;
+        Digester digester = SHA1Digester.rolling(step);
+        int numOfHashingThreads = 4;
+        this.verifier = new DefaultChunkVerifier(digester, numOfHashingThreads);
+        int transferBlockSize = 4;
+        this.dataDescriptorFactory = new DataDescriptorFactory(verifier, transferBlockSize);
+    }
 
     private byte[] SINGLE_FILE = new byte[] {
             1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,
@@ -36,7 +47,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
             1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4
     };
 
-    private DataDescriptor createDataDescriptor_SingleFile(String fileName, int numOfHashingThreads) {
+    private DataDescriptor createDataDescriptor_SingleFile(String fileName) {
 
         long chunkSize = 16;
         long fileSize = chunkSize * 4;
@@ -50,8 +61,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
                 },
                 mockTorrentFile(fileSize, fileName));
 
-        DataDescriptor descriptor = new DefaultDataDescriptor(
-                storage, torrent, SHA1Digester.rolling(8), transferBlockSize, numOfHashingThreads);
+        DataDescriptor descriptor = dataDescriptorFactory.createDescriptor(torrent, storage);
         assertEquals(4, descriptor.getChunkDescriptors().size());
 
         return descriptor;
@@ -61,20 +71,20 @@ public class ChunkDescriptor_FileStorageUnitTest {
     public void testDescriptors_WriteSingleFile() {
 
         String fileName = "1-single.bin";
-        DataDescriptor descriptor = createDataDescriptor_SingleFile(fileName, 1);
+        DataDescriptor descriptor = createDataDescriptor_SingleFile(fileName);
         List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
         chunks.get(0).getData().putBytes(sequence(8));
         chunks.get(0).getData().getSubrange(8).putBytes(sequence(8));
         assertTrue(chunks.get(0).isComplete());
-        assertTrue(verify(chunks.get(0)));
+        assertTrue(verifier.verify(chunks.get(0)));
 
         chunks.get(1).getData().putBytes(sequence(4));
         chunks.get(1).getData().getSubrange(4).putBytes(sequence(4));
         chunks.get(1).getData().getSubrange(8).putBytes(sequence(4));
         chunks.get(1).getData().getSubrange(12).putBytes(sequence(4));
         assertTrue(chunks.get(1).isComplete());
-        assertTrue(verify(chunks.get(1)));
+        assertTrue(verifier.verify(chunks.get(1)));
 
         // reverse order
         chunks.get(2).getData().getSubrange(5).putBytes(sequence(11));
@@ -88,7 +98,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
         chunks.get(3).getData().getSubrange(12).putBytes(sequence(4));
         chunks.get(3).getData().getSubrange(8).putBytes(sequence(4));
         assertTrue(chunks.get(3).isComplete());
-        assertTrue(verify(chunks.get(3)));
+        assertTrue(verifier.verify(chunks.get(3)));
 
         assertFileHasContents(new File(storage.getRoot(), fileName), SINGLE_FILE);
     }
@@ -99,35 +109,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
         String fileName = "1-single-read.bin";
         writeBytesToFile(new File(storage.getRoot(), fileName), SINGLE_FILE);
 
-        DataDescriptor descriptor = createDataDescriptor_SingleFile(fileName, 1);
-        List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
-
-        byte[] block;
-
-        // beginning
-        block = chunks.get(0).getData().getSubrange(0, 8).getBytes();
-        assertArrayEquals(Arrays.copyOfRange(SINGLE_FILE, 0, 8), block);
-
-        // end
-        block = chunks.get(0).getData().getSubrange(8, 8).getBytes();
-        assertArrayEquals(Arrays.copyOfRange(SINGLE_FILE, 8, 16), block);
-
-        // whole chunk
-        block = chunks.get(0).getData().getSubrange(0, 16).getBytes();
-        assertArrayEquals(Arrays.copyOfRange(SINGLE_FILE, 0, 16), block);
-
-        // piece
-        block = chunks.get(0).getData().getSubrange(1, 14).getBytes();
-        assertArrayEquals(Arrays.copyOfRange(SINGLE_FILE, 1, 15), block);
-    }
-
-    @Test
-    public void testDescriptors_ReadSingleFile_Parallel() {
-
-        String fileName = "1-single-read.bin";
-        writeBytesToFile(new File(storage.getRoot(), fileName), SINGLE_FILE);
-
-        DataDescriptor descriptor = createDataDescriptor_SingleFile(fileName, 3);
+        DataDescriptor descriptor = createDataDescriptor_SingleFile(fileName);
         List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
         byte[] block;
@@ -174,7 +156,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
 
     private DataDescriptor createDataDescriptor_MultiFile(String fileName1, String fileName2, String fileName3,
                                                           String fileName4, String fileName5, String fileName6,
-                                                          File parentDirectory, int numOfHashingThreads) {
+                                                          File parentDirectory) {
 
         String torrentName = parentDirectory.getName();
 
@@ -222,8 +204,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
                 mockTorrentFile(fileSize3, fileName3), mockTorrentFile(fileSize4, fileName4),
                 mockTorrentFile(fileSize5, fileName5), mockTorrentFile(fileSize6, fileName6));
 
-        DataDescriptor descriptor = new DefaultDataDescriptor(
-                storage, torrent, SHA1Digester.rolling(8), transferBlockSize, numOfHashingThreads);
+        DataDescriptor descriptor = dataDescriptorFactory.createDescriptor(torrent, storage);
         assertEquals(6, descriptor.getChunkDescriptors().size());
 
         return descriptor;
@@ -244,20 +225,20 @@ public class ChunkDescriptor_FileStorageUnitTest {
                fileName6 = 6 + extension;
 
         DataDescriptor descriptor = createDataDescriptor_MultiFile(fileName1, fileName2, fileName3, fileName4,
-                fileName5, fileName6, torrentDirectory, 1);
+                fileName5, fileName6, torrentDirectory);
         List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
         chunks.get(0).getData().putBytes(sequence(8));
         chunks.get(0).getData().getSubrange(8).putBytes(sequence(8));
         assertTrue(chunks.get(0).isComplete());
-        assertTrue(verify(chunks.get(0)));
+        assertTrue(verifier.verify(chunks.get(0)));
 
         chunks.get(1).getData().putBytes(sequence(4));
         chunks.get(1).getData().getSubrange(4).putBytes(sequence(4));
         chunks.get(1).getData().getSubrange(8).putBytes(sequence(4));
         chunks.get(1).getData().getSubrange(12).putBytes(sequence(4));
         assertTrue(chunks.get(1).isComplete());
-        assertTrue(verify(chunks.get(1)));
+        assertTrue(verifier.verify(chunks.get(1)));
 
         // reverse order
         chunks.get(2).getData().getSubrange(5).putBytes(sequence(11));
@@ -266,7 +247,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
         assertFalse(chunks.get(2).isComplete());
         chunks.get(2).getData().putBytes(new byte[]{1,2,1,2,3,1,2,3});
         assertTrue(chunks.get(2).isComplete());
-        assertTrue(verify(chunks.get(2)));
+        assertTrue(verifier.verify(chunks.get(2)));
 
         // "random" order
         chunks.get(3).getData().getSubrange(4).putBytes(sequence(4));
@@ -274,12 +255,12 @@ public class ChunkDescriptor_FileStorageUnitTest {
         chunks.get(3).getData().getSubrange(12).putBytes(sequence(4));
         chunks.get(3).getData().getSubrange(8).putBytes(sequence(4));
         assertTrue(chunks.get(3).isComplete());
-        assertTrue(verify(chunks.get(3)));
+        assertTrue(verifier.verify(chunks.get(3)));
 
         // block size same as chunk size
         chunks.get(4).getData().putBytes(sequence(16));
         assertTrue(chunks.get(4).isComplete());
-        assertTrue(verify(chunks.get(4)));
+        assertTrue(verifier.verify(chunks.get(4)));
 
         // 1-byte blocks
         chunks.get(5).getData().putBytes(sequence(1));
@@ -288,7 +269,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
         assertFalse(chunks.get(5).isComplete());
         chunks.get(5).getData().putBytes(new byte[]{1,1,2,3,4,5,6,7,8,9,1,2,3,4,5,1});
         assertTrue(chunks.get(5).isComplete());
-        assertTrue(verify(chunks.get(5)));
+        assertTrue(verifier.verify(chunks.get(5)));
 
         assertFileHasContents(new File(torrentDirectory, fileName1), MULTI_FILE_1);
         assertFileHasContents(new File(torrentDirectory, fileName2), MULTI_FILE_2);
@@ -320,7 +301,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
         writeBytesToFile(new File(torrentDirectory, fileName6), MULTI_FILE_6);
 
         DataDescriptor descriptor = createDataDescriptor_MultiFile(fileName1, fileName2, fileName3, fileName4,
-                fileName5, fileName6, torrentDirectory, 1);
+                fileName5, fileName6, torrentDirectory);
         List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
         byte[] block;
@@ -366,82 +347,5 @@ public class ChunkDescriptor_FileStorageUnitTest {
         // 1-byte block
         block = chunks.get(5).getData().getSubrange(15, 1).getBytes();
         assertArrayEquals(Arrays.copyOfRange(MULTI_FILE_6, 0, 1), block);
-    }
-
-    @Test
-    public void testDescriptors_ReadMultiFile_Parallel() {
-
-        String torrentName = "xyz-torrent-read";
-        File torrentDirectory = new File(storage.getRoot(), torrentName);
-        String extension = "-multi.bin";
-
-        String fileName1 = 1 + extension,
-               fileName2 = 2 + extension,
-               fileName3 = 3 + extension,
-               fileName4 = 4 + extension,
-               fileName5 = 5 + extension,
-               fileName6 = 6 + extension;
-
-        writeBytesToFile(new File(torrentDirectory, fileName1), MULTI_FILE_1);
-        writeBytesToFile(new File(torrentDirectory, fileName2), MULTI_FILE_2);
-        writeBytesToFile(new File(torrentDirectory, fileName3), MULTI_FILE_3);
-        writeBytesToFile(new File(torrentDirectory, fileName4), MULTI_FILE_4);
-        writeBytesToFile(new File(torrentDirectory, fileName5), MULTI_FILE_5);
-        writeBytesToFile(new File(torrentDirectory, fileName6), MULTI_FILE_6);
-
-        DataDescriptor descriptor = createDataDescriptor_MultiFile(fileName1, fileName2, fileName3, fileName4,
-                fileName5, fileName6, torrentDirectory, 3);
-        List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
-
-        byte[] block;
-
-        // beginning
-        block = chunks.get(0).getData().getSubrange(0, 8).getBytes();
-        assertArrayEquals(Arrays.copyOfRange(MULTI_FILE_1, 0, 8), block);
-
-        // end
-        block = chunks.get(0).getData().getSubrange(8, 8).getBytes();
-        assertArrayEquals(Arrays.copyOfRange(MULTI_FILE_1, 8, 16), block);
-
-        // whole chunk
-        block = chunks.get(0).getData().getSubrange(0, 16).getBytes();
-        assertArrayEquals(Arrays.copyOfRange(MULTI_FILE_1, 0, 16), block);
-
-        // piece
-        block = chunks.get(0).getData().getSubrange(1, 14).getBytes();
-        assertArrayEquals(Arrays.copyOfRange(MULTI_FILE_1, 1, 15), block);
-
-        // end of a file
-        block = chunks.get(1).getData().getSubrange(0, 9).getBytes();
-        assertArrayEquals(Arrays.copyOfRange(MULTI_FILE_1, 16, 25), block);
-
-        // beginning of a file
-        block = chunks.get(1).getData().getSubrange(9, 7).getBytes();
-        assertArrayEquals(Arrays.copyOfRange(MULTI_FILE_2, 0, 7), block);
-
-        // whole chunk that consists of 2 files
-        block = chunks.get(1).getData().getSubrange(0, 16).getBytes();
-        byte[] chunk1 = new byte[16];
-        System.arraycopy(MULTI_FILE_1, 16, chunk1, 0, 9);
-        System.arraycopy(MULTI_FILE_2, 0, chunk1, 9, 7);
-        assertArrayEquals(chunk1, block);
-
-        // piece of a chunk that consists of 2 files
-        block = chunks.get(1).getData().getSubrange(8, 2).getBytes();
-        byte[] chunk1piece = new byte[2];
-        System.arraycopy(MULTI_FILE_1, 24, chunk1piece, 0, 1);
-        System.arraycopy(MULTI_FILE_2, 0, chunk1piece, 1, 1);
-        assertArrayEquals(chunk1piece, block);
-
-        // 1-byte block
-        block = chunks.get(5).getData().getSubrange(15, 1).getBytes();
-        assertArrayEquals(Arrays.copyOfRange(MULTI_FILE_6, 0, 1), block);
-    }
-
-    private boolean verify(ChunkDescriptor chunk) {
-        if (!chunk.isComplete()) {
-            throw new IllegalStateException("Can't verify -- chunk is not complete");
-        }
-        return Arrays.equals(chunk.getChecksum(), digester.digest(chunk.getData()));
     }
 }
