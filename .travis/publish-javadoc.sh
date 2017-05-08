@@ -20,6 +20,6 @@ if [ "$TRAVIS_REPO_SLUG" == "atomashpolskiy/bt" ] && [ "$TRAVIS_OS_NAME" == "lin
   git add --all
   git commit -m "latest javadoc for commit $TRAVIS_COMMIT (build $TRAVIS_BUILD_NUMBER)"
   # prevent showing the token in travis logs
-  git push origin HEAD:gh-pages > /dev/null
+  git push origin HEAD:gh-pages > /dev/null 2>&1
 
 fi
