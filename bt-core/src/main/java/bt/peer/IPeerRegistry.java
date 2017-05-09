@@ -3,6 +3,8 @@ package bt.peer;
 import bt.metainfo.Torrent;
 import bt.net.Peer;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 
 /**
@@ -19,6 +21,14 @@ public interface IPeerRegistry {
      * @since 1.0
      */
     Peer getLocalPeer();
+
+    /**
+     * Get peer for an internet address
+     * or create and return a new one with default options, if it does not exist.
+     *
+     * @since 1.2
+     */
+    Peer getPeerForAddress(InetSocketAddress address);
 
     /**
      * Add a listener for new discovered peers

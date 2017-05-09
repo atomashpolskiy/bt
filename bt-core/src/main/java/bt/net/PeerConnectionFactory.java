@@ -5,8 +5,8 @@ import bt.protocol.handler.MessageHandler;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
+import java.util.Objects;
 
 class PeerConnectionFactory {
 
@@ -23,21 +23,8 @@ class PeerConnectionFactory {
         this.maxTransferBlockSize = maxTransferBlockSize;
     }
 
-    public DefaultPeerConnection createConnection(SocketChannel channel) throws IOException {
-
-        Peer peer = getPeerForAddress((InetSocketAddress) channel.getRemoteAddress());
-        return new DefaultPeerConnection(messageHandler, peer, channel, maxTransferBlockSize);
-    }
-
-    private Peer getPeerForAddress(InetSocketAddress address) {
-        return new InetPeer(address.getAddress(), address.getPort());
-    }
-
     public DefaultPeerConnection createConnection(Peer peer) throws IOException {
-
-        if (peer == null) {
-            throw new NullPointerException("Peer is null");
-        }
+        Objects.requireNonNull(peer);
 
         InetAddress inetAddress = peer.getInetAddress();
         int port = peer.getPort();
@@ -46,9 +33,13 @@ class PeerConnectionFactory {
         try {
             channel = socketChannelFactory.getChannel(inetAddress, port);
         } catch (IOException e) {
-            throw new IOException("Failed to create peer connection @ " + inetAddress + ":" + port, e);
+            throw new IOException("Failed to create peer connection (" + inetAddress + ":" + port + ")", e);
         }
 
+        return createConnection(peer, channel);
+    }
+
+    public DefaultPeerConnection createConnection(Peer peer, SocketChannel channel) throws IOException {
         return new DefaultPeerConnection(messageHandler, peer, channel, maxTransferBlockSize);
     }
 }

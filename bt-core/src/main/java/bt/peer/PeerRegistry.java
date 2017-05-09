@@ -3,6 +3,7 @@ package bt.peer;
 import bt.metainfo.Torrent;
 import bt.net.InetPeer;
 import bt.net.Peer;
+import bt.net.PeerId;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdentityService;
 import bt.tracker.AnnounceKey;
@@ -11,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,6 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 /**
@@ -33,6 +36,7 @@ public class PeerRegistry implements IPeerRegistry {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerRegistry.class);
 
     private final Peer localPeer;
+    private final PeerCache cache;
 
     private ITrackerService trackerService;
     private TrackerPeerSourceFactory trackerPeerSourceFactory;
@@ -51,6 +55,7 @@ public class PeerRegistry implements IPeerRegistry {
 
         this.peerConsumers = new ConcurrentHashMap<>();
         this.localPeer = new InetPeer(localPeerAddress, localPeerPort, idService.getLocalPeerId());
+        this.cache = new PeerCache();
 
         this.trackerService = trackerService;
         this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, lifecycleBinder, trackerQueryInterval);
@@ -107,6 +112,7 @@ public class PeerRegistry implements IPeerRegistry {
             if (peerSource.update()) {
                 Collection<Peer> discoveredPeers = peerSource.getPeers();
                 for (Peer peer : discoveredPeers) {
+                    cache.registerPeer(peer);
                     for (Consumer<Peer> consumer : peerConsumers) {
                         try {
                             consumer.accept(peer);
@@ -127,6 +133,11 @@ public class PeerRegistry implements IPeerRegistry {
     }
 
     @Override
+    public Peer getPeerForAddress(InetSocketAddress address) {
+        return cache.getPeerForAddress(address);
+    }
+
+    @Override
     public void addPeerConsumer(Torrent torrent, Consumer<Peer> consumer) {
         List<Consumer<Peer>> consumers = peerConsumers.get(torrent);
         if (consumers == null) {
@@ -143,5 +154,99 @@ public class PeerRegistry implements IPeerRegistry {
     @Override
     public void removePeerConsumers(Torrent torrent) {
         peerConsumers.remove(torrent);
+    }
+
+    private static class PeerCache {
+        // all known peers (lookup by inet address)
+        private final ConcurrentMap<InetSocketAddress, UpdatablePeer> knownPeers;
+        private final ReentrantLock peerLock;
+
+        PeerCache() {
+            this.knownPeers = new ConcurrentHashMap<>();
+            this.peerLock = new ReentrantLock();
+        }
+
+        // need to do this atomically:
+        // - concurrent call to getPeerForAddress(InetSocketAddress)
+        //   might coincide with querying peer sources (overwriting options, etc)
+        private UpdatablePeer registerPeer(Peer peer) {
+            peerLock.lock();
+            try {
+                UpdatablePeer newPeer = new UpdatablePeer(peer);
+                UpdatablePeer existing = knownPeers.putIfAbsent(peer.getInetSocketAddress(), newPeer);
+                if (existing != null) {
+                    existing.setOptions(peer.getOptions());
+                }
+                return (existing == null) ? newPeer : existing;
+            } finally {
+                peerLock.unlock();
+            }
+        }
+
+        public Peer getPeerForAddress(InetSocketAddress address) {
+            Peer existing = knownPeers.get(address);
+            if (existing == null) {
+                peerLock.lock();
+                try {
+                    existing = knownPeers.get(address);
+                    if (existing == null) {
+                        existing = registerPeer(new InetPeer(address));
+                    }
+                } finally {
+                    peerLock.unlock();
+                }
+            }
+            return existing;
+        }
+    }
+
+    private static class UpdatablePeer implements Peer {
+        private final Peer delegate;
+        private volatile PeerOptions options;
+
+        UpdatablePeer(Peer delegate) {
+            super();
+            this.delegate = delegate;
+            this.options = delegate.getOptions();
+        }
+
+        @Override
+        public InetSocketAddress getInetSocketAddress() {
+            return delegate.getInetSocketAddress();
+        }
+
+        @Override
+        public InetAddress getInetAddress() {
+            return delegate.getInetAddress();
+        }
+
+        @Override
+        public int getPort() {
+            return delegate.getPort();
+        }
+
+        @Override
+        public Optional<PeerId> getPeerId() {
+            return delegate.getPeerId();
+        }
+
+        @Override
+        public PeerOptions getOptions() {
+            return options;
+        }
+
+        void setOptions(PeerOptions options) {
+            this.options = options;
+        }
+
+        @Override
+        public int hashCode() {
+            return delegate.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return delegate.equals(obj);
+        }
     }
 }

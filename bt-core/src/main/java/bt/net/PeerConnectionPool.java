@@ -3,6 +3,7 @@ package bt.net;
 import bt.BtException;
 import bt.metainfo.TorrentId;
 import bt.module.BitTorrentProtocol;
+import bt.peer.IPeerRegistry;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 import bt.runtime.Config;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -42,6 +44,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionPool.class);
 
     private Config config;
+    private IPeerRegistry peerRegistry;
     private PeerConnectionFactory connectionFactory;
     private IConnectionHandlerFactory connectionHandlerFactory;
 
@@ -60,11 +63,13 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     @Inject
     public PeerConnectionPool(@BitTorrentProtocol MessageHandler<Message> messageHandler,
+                              IPeerRegistry peerRegistry,
                               IConnectionHandlerFactory connectionHandlerFactory,
                               IRuntimeLifecycleBinder lifecycleBinder,
                               Config config) {
 
         this.config = config;
+        this.peerRegistry = peerRegistry;
 
         SocketChannelFactory socketChannelFactory =
                 new SocketChannelFactory(config.getAcceptorAddress(), config.getAcceptorPort());
@@ -337,7 +342,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         executor.execute(() -> {
             try {
                 incomingChannel.configureBlocking(false);
-                DefaultPeerConnection incomingConnection = connectionFactory.createConnection(incomingChannel);
+                Peer peer = peerRegistry.getPeerForAddress((InetSocketAddress) incomingChannel.getRemoteAddress());
+                DefaultPeerConnection incomingConnection = connectionFactory.createConnection(peer, incomingChannel);
                 initConnection(incomingConnection, connectionHandlerFactory.getIncomingHandler(), true);
             } catch (IOException e) {
                 LOGGER.error("Failed to process incoming connection", e);
