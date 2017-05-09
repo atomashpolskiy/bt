@@ -13,4 +13,5 @@
       - {key: complete, type: integer, required: false}
       - {key: incomplete, type: integer, required: false}
       - {key: peers, type: string}
+      - {key: crypto_flags, type: string, required: false}
 
