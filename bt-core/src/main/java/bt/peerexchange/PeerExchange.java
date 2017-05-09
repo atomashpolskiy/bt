@@ -17,12 +17,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 class PeerExchange extends ExtendedMessage {
 
     private static final String ADDED_IPV4_KEY = "added";
+    private static final String ADDED_IPV4_FLAGS_KEY = "added.f";
     private static final String ADDED_IPV6_KEY = "added6";
+    private static final String ADDED_IPV6_FLAGS_KEY = "added6.f";
     private static final String DROPPED_IPV4_KEY = "dropped";
     private static final String DROPPED_IPV6_KEY = "dropped6";
 
@@ -31,24 +34,45 @@ class PeerExchange extends ExtendedMessage {
     }
 
     public static PeerExchange parse(BEMap message) {
+        Map<String, BEObject<?>> m = message.getValue();
 
         Collection<Peer> added = new HashSet<>();
-        extractPeers((BEString) message.getValue().get(ADDED_IPV4_KEY), added, AddressType.IPV4);
-        extractPeers((BEString) message.getValue().get(ADDED_IPV6_KEY), added, AddressType.IPV6);
+        extractPeers(m, ADDED_IPV4_KEY, ADDED_IPV4_FLAGS_KEY, AddressType.IPV4, added);
+        extractPeers(m, ADDED_IPV6_KEY, ADDED_IPV6_FLAGS_KEY, AddressType.IPV6, added);
 
         Collection<Peer> dropped = new HashSet<>();
-        extractPeers((BEString) message.getValue().get(DROPPED_IPV4_KEY), dropped, AddressType.IPV4);
-        extractPeers((BEString) message.getValue().get(DROPPED_IPV6_KEY), dropped, AddressType.IPV6);
+        extractPeers(m, DROPPED_IPV4_KEY, null, AddressType.IPV4, dropped);
+        extractPeers(m, DROPPED_IPV6_KEY, null, AddressType.IPV6, dropped);
 
         return new PeerExchange(added, dropped);
     }
 
-    private static void extractPeers(BEString source, Collection<Peer> destination, AddressType addressType) {
-        if (source == null) {
-            return;
+    private static void extractPeers(Map<String, BEObject<?>> m,
+                              String peersKey,
+                              String flagsKey,
+                              AddressType addressType,
+                              Collection<Peer> destination) {
+        if (m.containsKey(peersKey)) {
+            byte[] peers = ((BEString) m.get(peersKey)).getValue();
+            if (flagsKey != null && m.containsKey(flagsKey)) {
+                byte[] flags = ((BEString) m.get(flagsKey)).getValue();
+                extractPeers(peers, flags, addressType, destination);
+            } else {
+                extractPeers(peers, addressType, destination);
+            }
         }
-        new CompactPeerInfo(source.getValue(), addressType).iterator()
-                .forEachRemaining(destination::add);
+    }
+
+    private static void extractPeers(byte[] peers, byte[] flags, AddressType addressType, Collection<Peer> destination) {
+        byte[] cryptoFlags = new byte[flags.length];
+        for (int i = 0; i < flags.length; i++) {
+            cryptoFlags[i] = (byte) (flags[i] & 0x01);
+        }
+        new CompactPeerInfo(peers, addressType, cryptoFlags).iterator().forEachRemaining(destination::add);
+    }
+
+    private static void extractPeers(byte[] peers, AddressType addressType, Collection<Peer> destination) {
+        new CompactPeerInfo(peers, addressType).iterator().forEachRemaining(destination::add);
     }
 
     private Collection<Peer> added;
