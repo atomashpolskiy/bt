@@ -281,20 +281,20 @@ class PeerConnectionFactory {
             digest.update(s.getBytes("ASCII"));
             digest.update(S);
             digest.update(SKEY);
-            return new SecretKeySpec(digest.digest(), "SHA-1");
+            return new SecretKeySpec(digest.digest(), "ARCFOUR");
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
     }
 
     private OutputStream getEncryptedOutputStream(WritableByteChannel channel, Key key) {
-        String transformation = "ARCFOUR/EBC/NoPadding";
+        String transformation = "ARCFOUR";
         Cipher cipher = createCipher(Cipher.ENCRYPT_MODE, transformation, key);
         return new CipherOutputStream(Channels.newOutputStream(channel), cipher);
     }
 
     private InputStream getDecryptedInputStream(ReadableByteChannel channel, Key key) {
-        String transformation = "ARCFOUR/EBC/NoPadding";
+        String transformation = "ARCFOUR";
         Cipher cipher = createCipher(Cipher.DECRYPT_MODE, transformation, key);
         return new CipherInputStream(Channels.newInputStream(channel), cipher);
     }
