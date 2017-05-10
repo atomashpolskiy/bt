@@ -6,20 +6,22 @@ import bt.protocol.handler.MessageHandler;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 
 class PeerConnectionMessageWriter {
 
     private static final int WRITE_ATTEMPTS = 10;
 
     private MessageHandler<Message> messageHandler;
-    private SocketChannel channel;
+    private WritableByteChannel channel;
     private ByteBuffer buffer;
 
-    PeerConnectionMessageWriter(MessageHandler<Message> messageHandler, SocketChannel channel, int bufferSize) {
+    PeerConnectionMessageWriter(MessageHandler<Message> messageHandler,
+                                WritableByteChannel channel,
+                                int bufferSize) {
         this.messageHandler = messageHandler;
         this.channel = channel;
-        buffer = ByteBuffer.allocateDirect(bufferSize);
+        this.buffer = ByteBuffer.allocateDirect(bufferSize);
     }
 
     void writeMessage(Message message) {
@@ -39,31 +41,25 @@ class PeerConnectionMessageWriter {
         buffer.limit(end);
 
         try {
-            if (channel.isBlocking()) {
-                int written = channel.write(buffer);
-                if (begin + written < end) {
-                    throw new BtException("Failed to write the whole message (in blocking mode)");
-                }
-            } else {
-                int written;
-                int k = 0;
-                do {
-                    buffer.position(begin);
-                    written = channel.write(buffer);
-                    k++;
-                    if (k > 1) {
-                        if (k <= WRITE_ATTEMPTS) {
-                            try {
-                                Thread.sleep(100);
-                            } catch (InterruptedException e) {
-                                throw new BtException("Interrupted while writing message", e);
-                            }
-                        } else {
-                            throw new BtException("Failed to write message in " + WRITE_ATTEMPTS + " attempts");
+            int written;
+            int k = 0;
+            do {
+                buffer.position(begin);
+                written = channel.write(buffer);
+                begin = begin + written;
+
+                if (begin < end) {
+                    if (++k <= WRITE_ATTEMPTS) {
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            throw new BtException("Interrupted while writing message", e);
                         }
+                    } else {
+                        throw new BtException("Failed to write message in " + WRITE_ATTEMPTS + " attempts");
                     }
-                } while ((begin = begin + written) < end);
-            }
+                }
+            } while (begin < end);
         } catch (IOException e) {
             throw new BtException("Unexpected error when writing message", e);
         }

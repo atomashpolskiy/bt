@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.ByteChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
@@ -26,7 +26,7 @@ class DefaultPeerConnection implements PeerConnection {
     private TorrentId torrentId;
     private Peer remotePeer;
 
-    private SocketChannel channel;
+    private ByteChannel channel;
     private PeerConnectionMessageReader messageReader;
     private PeerConnectionMessageWriter messageWriter;
 
@@ -36,21 +36,23 @@ class DefaultPeerConnection implements PeerConnection {
     private final ReentrantLock readLock;
     private final Condition condition;
 
-    DefaultPeerConnection(MessageHandler<Message> messageHandler, Peer remotePeer,
-                          SocketChannel channel, long maxTransferBlockSize) {
+    DefaultPeerConnection(MessageHandler<Message> messageHandler,
+                          Peer remotePeer,
+                          ByteChannel channel,
+                          long maxTransferBlockSize) {
 
         this.remotePeer = remotePeer;
         this.channel = channel;
 
         int bufferSize = getBufferSize(maxTransferBlockSize);
-        messageReader = new PeerConnectionMessageReader(messageHandler, channel,
+        this.messageReader = new PeerConnectionMessageReader(messageHandler, channel,
                 () -> new DecodingContext(remotePeer), bufferSize);
-        messageWriter = new PeerConnectionMessageWriter(messageHandler, channel, bufferSize);
+        this.messageWriter = new PeerConnectionMessageWriter(messageHandler, channel, bufferSize);
 
-        lastActive = new AtomicLong();
+        this.lastActive = new AtomicLong();
 
-        readLock = new ReentrantLock(true);
-        condition = readLock.newCondition();
+        this.readLock = new ReentrantLock(true);
+        this.condition = this.readLock.newCondition();
     }
 
     private static int getBufferSize(long maxTransferBlockSize) {
