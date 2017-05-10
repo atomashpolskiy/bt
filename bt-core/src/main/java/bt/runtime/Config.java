@@ -65,7 +65,7 @@ public class Config {
         this.unreachablePeerBanDuration = Duration.ofMinutes(30);
         this.maxPendingConnectionRequests = 50;
         this.timeoutedAssignmentPeerBanDuration = Duration.ofMinutes(1);
-        this.encryptionPolicy = EncryptionPolicy.REQUIRE_PLAINTEXT;
+        this.encryptionPolicy = EncryptionPolicy.PREFER_PLAINTEXT;
     }
 
     /**
