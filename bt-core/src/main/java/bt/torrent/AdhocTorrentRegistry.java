@@ -9,6 +9,7 @@ import bt.tracker.ITrackerService;
 import com.google.inject.Inject;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -42,6 +43,11 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
     }
 
     @Override
+    public Collection<Torrent> getTorrents() {
+        return torrents.values();
+    }
+
+    @Override
     public Optional<Torrent> getTorrent(TorrentId torrentId) {
         return Optional.ofNullable(torrents.get(torrentId));
     }
@@ -53,9 +59,7 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
 
     @Override
     public TorrentDescriptor getOrCreateDescriptor(Torrent torrent, Storage storage) {
-
         return getDescriptor(torrent).orElseGet(() -> {
-
             TorrentDescriptor descriptor = new DefaultTorrentDescriptor(trackerService, torrent,
                     dataDescriptorFactory.createDescriptor(torrent, storage));
             TorrentDescriptor existing = descriptors.putIfAbsent(torrent, descriptor);
