@@ -1,7 +1,6 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
-import bt.protocol.DecodingContext;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 import org.slf4j.Logger;
@@ -27,8 +26,7 @@ class DefaultPeerConnection implements PeerConnection {
     private Peer remotePeer;
 
     private ByteChannel channel;
-    private PeerConnectionMessageReader messageReader;
-    private PeerConnectionMessageWriter messageWriter;
+    private DefaultMessageWorker messageWorker;
 
     private volatile boolean closed;
     private AtomicLong lastActive;
@@ -36,30 +34,18 @@ class DefaultPeerConnection implements PeerConnection {
     private final ReentrantLock readLock;
     private final Condition condition;
 
-    DefaultPeerConnection(MessageHandler<Message> messageHandler,
-                          Peer remotePeer,
+    DefaultPeerConnection(Peer remotePeer,
                           ByteChannel channel,
-                          long maxTransferBlockSize) {
-
+                          MessageHandler<Message> messageHandler,
+                          int bufferSize) {
         this.remotePeer = remotePeer;
         this.channel = channel;
-
-        int bufferSize = getBufferSize(maxTransferBlockSize);
-        this.messageReader = new PeerConnectionMessageReader(messageHandler, channel,
-                () -> new DecodingContext(remotePeer), bufferSize);
-        this.messageWriter = new PeerConnectionMessageWriter(messageHandler, channel, bufferSize);
+        this.messageWorker = new DefaultMessageWorker(remotePeer, channel, messageHandler, bufferSize);
 
         this.lastActive = new AtomicLong();
 
         this.readLock = new ReentrantLock(true);
         this.condition = this.readLock.newCondition();
-    }
-
-    private static int getBufferSize(long maxTransferBlockSize) {
-        if (maxTransferBlockSize > ((Integer.MAX_VALUE - 13) / 2)) {
-            throw new IllegalArgumentException("Transfer block size is too large: " + maxTransferBlockSize);
-        }
-        return (int) (maxTransferBlockSize) * 2;
     }
 
     /**
@@ -76,7 +62,7 @@ class DefaultPeerConnection implements PeerConnection {
 
     @Override
     public synchronized Message readMessageNow() {
-        Message message = messageReader.readMessage();
+        Message message = messageWorker.readMessage();
         if (message != null) {
             updateLastActive();
             if (LOGGER.isTraceEnabled()) {
@@ -88,7 +74,6 @@ class DefaultPeerConnection implements PeerConnection {
 
     @Override
     public synchronized Message readMessage(long timeout) {
-
         Message message = readMessageNow();
         if (message == null) {
 
@@ -133,7 +118,7 @@ class DefaultPeerConnection implements PeerConnection {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Sending message to peer: " + remotePeer + " -- " + message);
         }
-        messageWriter.writeMessage(message);
+        messageWorker.writeMessage(message);
     }
 
     private void updateLastActive() {

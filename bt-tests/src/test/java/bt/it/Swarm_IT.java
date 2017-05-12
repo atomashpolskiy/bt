@@ -4,6 +4,7 @@ import bt.it.fixture.BaseBtTest;
 import bt.it.fixture.SharedTrackerModule;
 import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
+import bt.protocol.crypto.EncryptionPolicy;
 import bt.runtime.BtClient;
 import bt.runtime.Config;
 import org.junit.Rule;
@@ -27,6 +28,11 @@ public class Swarm_IT extends BaseBtTest {
         public int getMaxTransferBlockSize() {
             // use smaller buffer size to trigger buffer compaction
             return 10000;
+        }
+
+        @Override
+        public EncryptionPolicy getEncryptionPolicy() {
+            return EncryptionPolicy.REQUIRE_PLAINTEXT;
         }
     };
 

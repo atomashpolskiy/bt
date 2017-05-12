@@ -50,7 +50,7 @@ public class PeerConnectionTest {
 
     @Test
     public void testConnection() throws InvalidMessageException, IOException {
-        PeerConnection connection = new DefaultPeerConnection(TEST.getProtocol(), mock(Peer.class), clientChannel, BUFFER_SIZE);
+        PeerConnection connection = new DefaultPeerConnection(mock(Peer.class), clientChannel, TEST.getProtocol(), BUFFER_SIZE);
 
         Message message;
 

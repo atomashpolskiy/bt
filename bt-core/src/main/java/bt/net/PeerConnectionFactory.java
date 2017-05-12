@@ -1,57 +1,60 @@
 package bt.net;
 
+import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
+import bt.net.crypto.DiffieHellman;
+import bt.net.crypto.NegotiateEncryptionPolicy;
+import bt.net.crypto.ReceiveData;
+import bt.net.crypto.SendData;
+import bt.net.crypto.StreamCipher;
 import bt.protocol.Message;
-import bt.protocol.Protocols;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.protocol.handler.MessageHandler;
+import bt.torrent.TorrentDescriptor;
+import bt.torrent.TorrentRegistry;
 
-import javax.crypto.Cipher;
-import javax.crypto.CipherInputStream;
-import javax.crypto.CipherOutputStream;
-import javax.crypto.spec.DHPublicKeySpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
-import java.nio.channels.Channel;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.security.Key;
-import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.Random;
 
 class PeerConnectionFactory {
 
     private MessageHandler<Message> messageHandler;
     private SocketChannelFactory socketChannelFactory;
+    private TorrentRegistry torrentRegistry;
+    private EncryptionPolicy encryptionPolicy;
 
     private int maxTransferBlockSize;
 
     public PeerConnectionFactory(MessageHandler<Message> messageHandler,
                                  SocketChannelFactory socketChannelFactory,
-                                 int maxTransferBlockSize) {
+                                 int maxTransferBlockSize,
+                                 TorrentRegistry torrentRegistry,
+                                 EncryptionPolicy encryptionPolicy) {
         this.messageHandler = messageHandler;
         this.socketChannelFactory = socketChannelFactory;
         this.maxTransferBlockSize = maxTransferBlockSize;
+        this.torrentRegistry = torrentRegistry;
+        this.encryptionPolicy = encryptionPolicy;
     }
 
-    public DefaultPeerConnection createConnection(Peer peer) throws IOException {
+    public DefaultPeerConnection createOutgoingConnection(Peer peer, TorrentId torrentId) throws IOException {
         Objects.requireNonNull(peer);
 
         InetAddress inetAddress = peer.getInetAddress();
@@ -64,19 +67,144 @@ class PeerConnectionFactory {
             throw new IOException("Failed to create peer connection (" + inetAddress + ":" + port + ")", e);
         }
 
-        return createConnection(peer, channel);
+        return createConnection(peer, torrentId, channel, false);
     }
 
-    public DefaultPeerConnection createConnection(Peer peer, SocketChannel channel) throws IOException {
-        return new DefaultPeerConnection(messageHandler, peer, channel, maxTransferBlockSize);
+    public DefaultPeerConnection createIncomingConnection(Peer peer, SocketChannel channel) throws IOException {
+        return createConnection(peer, null, channel, true);
+    }
+
+    private DefaultPeerConnection createConnection(Peer peer, TorrentId torrentId, SocketChannel channel, boolean incoming) throws IOException {
+        // some magic going on here:
+        // we need to trick encrypted streams into thinking that the channel is blocking,
+        // while using a non-blocking socket channel
+        channel.configureBlocking(false);
+        DelegatingByteChannel proxyChannel = new DelegatingByteChannel(channel);
+        proxyChannel.configureBlocking(true);
+
+        ByteChannel negotiatedChannel = incoming ?
+                encryptIncomingChannel(proxyChannel) : encryptOutgoingChannel(proxyChannel, torrentId);
+        return new DefaultPeerConnection(peer, negotiatedChannel, messageHandler, getBufferSize(maxTransferBlockSize));
+    }
+
+    private static int getBufferSize(long maxTransferBlockSize) {
+        if (maxTransferBlockSize > ((Integer.MAX_VALUE - 13) / 2)) {
+            throw new IllegalArgumentException("Transfer block size is too large: " + maxTransferBlockSize);
+        }
+        return (int) (maxTransferBlockSize) * 2;
     }
 
     private BigInteger Y = BigInteger.valueOf(1); // private key: random 128/160 bit integer (configurable length/provider)
-    // 768-bit prime
-    private BigInteger P = new BigInteger("0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A63A36210000000000090563", 16);
-    private BigInteger G = BigInteger.valueOf(2);
 
-    private ByteChannel encryptedChannel(SocketChannel channel, TorrentId torrentId, EncryptionPolicy encryptionPolicy) throws IOException {
+    private Duration timeout = Duration.ofSeconds(5);
+
+    private ByteChannel encryptIncomingChannel(ByteChannel channel) throws IOException {
+        /**
+         * Blocking steps:
+         *
+         * 1. A->B: Diffie Hellman Ya, PadA
+         * 2. B->A: Diffie Hellman Yb, PadB
+         * 3. A->B: HASH('req1', S), HASH('req2', SKEY) xor HASH('req3', S), ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA)), ENCRYPT(IA)
+         * 4. B->A: ENCRYPT(VC, crypto_select, len(padD), padD), ENCRYPT2(Payload Stream)
+         * 5. A->B: ENCRYPT2(Payload Stream)
+         */
+
+        ByteBuffer buf = ByteBuffer.allocateDirect(128 * 1024);
+
+        // 1. A->B: Diffie Hellman Ya, PadA
+        // read initiator's public key
+        new ReceiveData(channel, timeout).execute(buf, 96, 608);
+
+        buf.flip();
+        BigInteger peerPublicKey = new DiffieHellman().parseKey(buf);
+        buf.clear();
+
+        // 2. B->A: Diffie Hellman Yb, PadB
+        // write our key
+        Key localPublicKey = new DiffieHellman().generateKey(Y); // our 768-bit public key
+        buf.put(localPublicKey.getEncoded());
+        buf.put(getPadding(512));
+        buf.flip();
+        new SendData(channel).execute(buf);
+        buf.clear();
+
+        // calculate shared secret S
+        BigInteger S = new DiffieHellman().calculateSharedSecret(peerPublicKey, Y);
+
+        MessageDigest digest = getDigest("SHA-1");
+        // 3. A->B:
+        // receive all data
+        new ReceiveData(channel, timeout).execute(buf, 20 + 20 + 8 + 4 + 2 + 0 + 2, 20 + 20 + 8 + 4 + 2 + 512 + 2);
+        buf.flip();
+
+        byte[] bytes = new byte[20];
+        // - HASH('req1', S)
+        buf.get(bytes); // read S hash
+        digest.update("req1".getBytes("ASCII"));
+        digest.update(S.toByteArray());
+        byte[] req1hash = digest.digest();
+        if (!Arrays.equals(req1hash, bytes)) {
+            throw new IllegalStateException("Invalid shared secret hash");
+        }
+        // - HASH('req2', SKEY) xor HASH('req3', S)
+        buf.get(bytes); // read SKEY/S hash
+        Torrent requestedTorrent = null;
+        digest.update("req3".getBytes("ASCII"));
+        digest.update(S.toByteArray());
+        byte[] b2 = digest.digest();
+        for (Torrent torrent : torrentRegistry.getTorrents()) {
+            digest.update("req2".getBytes("ASCII"));
+            digest.update(torrent.getTorrentId().getBytes());
+            byte[] b1 = digest.digest();
+            if (Arrays.equals(xor(b1, b2), bytes)) {
+                requestedTorrent = torrent;
+                break;
+            }
+        }
+        boolean err = false;
+        if (requestedTorrent == null) {
+            err = true;
+        } else {
+            Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(requestedTorrent);
+            if (!descriptor.isPresent() || !descriptor.get().isActive()) {
+                err = true;
+            }
+        }
+        if (err) {
+            throw new IllegalStateException("Unsupported/inactive torrent");
+        }
+
+        // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
+        StreamCipher cipher = StreamCipher.forReceiver(S, requestedTorrent.getTorrentId());
+        ByteChannel channel2 = buildChannel(channel, buf);
+        InputStream in = cipher.encryptIncomingChannel(channel2);
+
+        // 4. B->A:
+        // - ENCRYPT(VC, crypto_select, len(padD), padD)
+        // - ENCRYPT2(Payload Stream)
+        OutputStream out = cipher.encryptOugoingChannel(channel);
+
+        EncryptionPolicy negotiatedEncryptionPolicy = new NegotiateEncryptionPolicy(encryptionPolicy).negotiateIncoming(in, out);
+        if (buf.hasRemaining()) {
+            throw new IllegalStateException("Should not happen"); // remove this after verifying the code
+        }
+
+        switch (negotiatedEncryptionPolicy) {
+            case REQUIRE_PLAINTEXT:
+            case PREFER_PLAINTEXT: {
+                return channel;
+            }
+            case PREFER_ENCRYPTED:
+            case REQUIRE_ENCRYPTED: {
+                return buildChannel(in, out);
+            }
+            default: {
+                throw new IllegalStateException("Unknown encryption policy: " + negotiatedEncryptionPolicy.name());
+            }
+        }
+    }
+
+    private ByteChannel encryptOutgoingChannel(ByteChannel channel, TorrentId torrentId) throws IOException {
         /**
          * Blocking steps:
          *
@@ -90,28 +218,24 @@ class PeerConnectionFactory {
         ByteBuffer buf = ByteBuffer.allocateDirect(128 * 1024);
 
         // 1. send our public key
-        Key localPublicKey = getDiffieHellmanKey(Y, P, G); // our 768-bit public key
+        Key localPublicKey = new DiffieHellman().generateKey(Y); // our 768-bit public key
         buf.put(localPublicKey.getEncoded());
         buf.put(getPadding(512));
 
         // write
         buf.flip();
-        channel.write(buf);
+        new SendData(channel).execute(buf);
         buf.clear();
 
         // 2. receive peer's public key
-        Duration timeout = Duration.ofSeconds(30);
-        int min = 96, limit = 608;
-        read(channel, buf, timeout, min, limit);
-        byte[] bytes = new byte[min];
+        new ReceiveData(channel, timeout).execute(buf, 96, 608);
         buf.flip();
-        buf.get(bytes);
+        BigInteger peerPublicKey = new DiffieHellman().parseKey(buf);
         buf.clear();
 
         // calculate shared secret S
-        BigInteger peerPublicKey = new BigInteger(bytes);
-        BigInteger S = peerPublicKey.xor(Y).mod(P);
-        byte[] VC = getVerificationConstant();
+        BigInteger S = new DiffieHellman().calculateSharedSecret(peerPublicKey, Y);
+
 
         MessageDigest digest = getDigest("SHA-1");
         // 3. A->B:
@@ -127,52 +251,24 @@ class PeerConnectionFactory {
         digest.update(S.toByteArray());
         byte[] b2 = digest.digest();
         buf.put(xor(b1, b2));
-        // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
-        Key initiatorKey = getInitiatorEncryptionKey(S.toByteArray(), torrentId.getBytes());
-        OutputStream out = getEncryptedOutputStream(channel, initiatorKey);
-        out.write(VC);
-        out.write(getCryptoProvideBitfield(encryptionPolicy));
-        byte[] padding = getZeroPadding(512);
-        out.write(Protocols.getShortBytes(padding.length));
-        out.write(padding);
-        // - ENCRYPT(IA)
-        // do not write IA (initial payload data) for now, wait for encryption negotiation
-        out.write(0); // IA length = 0
-
         // write
         buf.flip();
-        channel.write(buf);
+        new SendData(channel).execute(buf);
         buf.clear();
 
-        // 4. B->A:
-        // - ENCRYPT(VC, crypto_select, len(padD), padD)
-        // - ENCRYPT2(Payload Stream)
-        Key receiverKey = getReceiverEncryptionKey(S.toByteArray(), torrentId.getBytes());
-        InputStream in = getDecryptedInputStream(channel, receiverKey);
-        read(in, buf, timeout, 14, 14 + 512);
-        int received = buf.position();
-        buf.flip();
-        byte[] theirVC = new byte[8];
-        buf.get(theirVC);
-        if (!Arrays.equals(VC, theirVC)) {
-            throw new IllegalStateException("Invalid VC: "+ Arrays.toString(theirVC));
-        }
-        byte[] crypto_select = new byte[4];
-        buf.get(crypto_select);
-        EncryptionPolicy negotiatedEncryptionPolicy = selectPolicy(crypto_select, encryptionPolicy)
-                .orElseThrow(() -> new IllegalStateException("Failed to negotiate the encryption policy"));
-        int theirPadding = Protocols.readShort(buf);
-        buf.limit(received);
-        buf.position(14 + theirPadding);
+        StreamCipher cipher = StreamCipher.forInitiator(S, torrentId);
+        InputStream in = cipher.encryptIncomingChannel(channel);
+        OutputStream out = cipher.encryptOugoingChannel(channel);
+        EncryptionPolicy negotiatedEncryptionPolicy = new NegotiateEncryptionPolicy(encryptionPolicy).negotiateOutgoing(in, out);
 
         switch (negotiatedEncryptionPolicy) {
             case REQUIRE_PLAINTEXT:
             case PREFER_PLAINTEXT: {
-                return buf.hasRemaining()? buildChannel(channel, buf) : channel;
+                return channel;
             }
             case PREFER_ENCRYPTED:
             case REQUIRE_ENCRYPTED: {
-                return buf.hasRemaining()? buildChannel(channel, in, out, buf) : buildChannel(channel, in, out);
+                return buildChannel(in, out);
             }
             default: {
                 throw new IllegalStateException("Unknown encryption policy: " + negotiatedEncryptionPolicy.name());
@@ -180,72 +276,14 @@ class PeerConnectionFactory {
         }
     }
 
-    private Key getDiffieHellmanKey(BigInteger Y, BigInteger P, BigInteger G) {
-        try {
-            KeyFactory factory = KeyFactory.getInstance("DiffieHellman");
-            return factory.generatePublic(new DHPublicKeySpec(Y, P, G));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private byte[] getPadding(int length) {
         // todo: use this constructor everywhere in the project
         Random r = new Random();
-        byte[] padding = new byte[r.nextInt(length)];
+        byte[] padding = new byte[r.nextInt(length + 1)];
         for (int i = 0; i < padding.length; i++) {
             padding[i] = (byte) r.nextInt(256);
         }
         return padding;
-    }
-
-    private byte[] getZeroPadding(int length) {
-        // todo: use this constructor everywhere in the project
-        Random r = new Random();
-        return new byte[r.nextInt(length)];
-    }
-
-    private void read(SocketChannel channel, ByteBuffer buf, Duration timeout, int min, int limit) throws IOException {
-        boolean blocking = channel.isBlocking();
-        channel.configureBlocking(false);
-        try {
-            tryRead(channel, buf, timeout, min, limit);
-        } finally {
-            channel.configureBlocking(blocking);
-        }
-    }
-
-    private void read(InputStream in, ByteBuffer buf, Duration timeout, int min, int limit) throws IOException {
-        tryRead(Channels.newChannel(in), buf, timeout, min, limit);
-    }
-
-    private void tryRead(ReadableByteChannel channel, ByteBuffer buf, Duration timeout, int min, int limit) throws IOException {
-        long t1 = System.currentTimeMillis();
-        int read_total = 0;
-        int times_nothing_received = 0;
-        do {
-            int read = channel.read(buf);
-            if (read == 0) {
-                times_nothing_received++;
-            } else {
-                read_total += read;
-            }
-            if (read_total > limit) {
-                throw new IllegalStateException("More than " + limit + " bytes received: " + read_total);
-            } else if (read_total >= min && times_nothing_received >= 3) {
-                // hasn't received anything for 3 times in a row; assuming all data has arrived
-                break;
-            }
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException("Interrupted while waiting for data", e);
-            }
-        } while (System.currentTimeMillis() - t1 <= timeout.toMillis());
-
-        if (read_total < min) {
-            throw new IllegalStateException("Less than " + min + " bytes received: " + read_total);
-        }
     }
 
     private MessageDigest getDigest(String algorithm) {
@@ -267,129 +305,6 @@ class PeerConnectionFactory {
         return result;
     }
 
-    private Key getInitiatorEncryptionKey(byte[] S, byte[] SKEY) {
-        return getEncryptionKey("keyA", S, SKEY);
-    }
-
-    private Key getReceiverEncryptionKey(byte[] S, byte[] SKEY) {
-        return getEncryptionKey("keyB", S, SKEY);
-    }
-
-    private Key getEncryptionKey(String s, byte[] S, byte[] SKEY) {
-        try {
-            MessageDigest digest = getDigest("SHA-1");
-            digest.update(s.getBytes("ASCII"));
-            digest.update(S);
-            digest.update(SKEY);
-            return new SecretKeySpec(digest.digest(), "ARCFOUR");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private OutputStream getEncryptedOutputStream(WritableByteChannel channel, Key key) {
-        String transformation = "ARCFOUR";
-        Cipher cipher = createCipher(Cipher.ENCRYPT_MODE, transformation, key);
-        return new CipherOutputStream(Channels.newOutputStream(channel), cipher);
-    }
-
-    private InputStream getDecryptedInputStream(ReadableByteChannel channel, Key key) {
-        String transformation = "ARCFOUR";
-        Cipher cipher = createCipher(Cipher.DECRYPT_MODE, transformation, key);
-        return new CipherInputStream(Channels.newInputStream(channel), cipher);
-    }
-
-    private Cipher createCipher(int mode, String transformation, Key key) {
-        Cipher cipher;
-        try {
-            cipher = Cipher.getInstance(transformation);
-            cipher.init(mode, key);
-            cipher.update(new byte[1024]); // discard first 1024 bytes
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return cipher;
-    }
-
-    private byte[] getVerificationConstant() {
-        return new byte[8];
-    }
-
-    private byte[] getCryptoProvideBitfield(EncryptionPolicy encryptionPolicy) {
-        byte[] crypto_provide = new byte[4];
-        switch (encryptionPolicy) {
-            case REQUIRE_PLAINTEXT: {
-                crypto_provide[3] = 1; // only 0x01
-                break;
-            }
-            case PREFER_PLAINTEXT:
-            case PREFER_ENCRYPTED: {
-                crypto_provide[3] = 3; // both 0x01 and 0x02
-                break;
-            }
-            case REQUIRE_ENCRYPTED: {
-                crypto_provide[3] = 2; // only 0x02
-                break;
-            }
-            default: {
-                // do nothing, bitfield is all zeros
-            }
-        }
-        return crypto_provide;
-    }
-
-    private byte[] getCryptoSelectBitfield(EncryptionPolicy encryptionPolicy) {
-        byte[] crypto_select = new byte[4];
-        switch (encryptionPolicy) {
-            case REQUIRE_PLAINTEXT:
-            case PREFER_PLAINTEXT: {
-                crypto_select[3] = 1; // only 0x01
-                break;
-            }
-
-            case PREFER_ENCRYPTED:
-            case REQUIRE_ENCRYPTED: {
-                crypto_select[3] = 2; // only 0x02
-                break;
-            }
-            default: {
-                throw new IllegalStateException("Can't select crypto options, unknown encryption policy: " + encryptionPolicy.name());
-            }
-        }
-        return crypto_select;
-    }
-
-    private Optional<EncryptionPolicy> selectPolicy(byte[] crypto_provide, EncryptionPolicy localEncryptionPolicy) {
-        boolean plaintextProvided = (crypto_provide[3] & 0x01) == 0x01;
-        boolean encryptionProvided = (crypto_provide[3] & 0x02) == 0x02;
-        if (!plaintextProvided && !encryptionProvided) {
-            return Optional.empty();
-        }
-        switch (localEncryptionPolicy) {
-            case REQUIRE_PLAINTEXT: {
-                return plaintextProvided? Optional.of(EncryptionPolicy.REQUIRE_PLAINTEXT) : Optional.empty();
-            }
-            case PREFER_PLAINTEXT: {
-                return plaintextProvided? Optional.of(EncryptionPolicy.REQUIRE_PLAINTEXT)
-                        : Optional.of(EncryptionPolicy.REQUIRE_ENCRYPTED);
-            }
-            case PREFER_ENCRYPTED: {
-                return encryptionProvided? Optional.of(EncryptionPolicy.REQUIRE_ENCRYPTED)
-                        : Optional.of(EncryptionPolicy.REQUIRE_PLAINTEXT);
-            }
-            case REQUIRE_ENCRYPTED: {
-                return encryptionProvided? Optional.of(EncryptionPolicy.REQUIRE_ENCRYPTED) : Optional.empty();
-            }
-            default: {
-                throw new IllegalStateException("Unknown encryption policy: " + localEncryptionPolicy.name());
-            }
-        }
-    }
-
-    private ByteChannel buildChannel(ByteChannel origin, InputStream in, OutputStream out, ByteBuffer remaining) {
-        return buildChannel(buildChannel(origin, remaining), in, out);
-    }
-
     private ByteChannel buildChannel(ByteChannel origin, ByteBuffer received) {
         return new ByteChannel() {
             @Override
@@ -397,11 +312,18 @@ class PeerConnectionFactory {
                 int remaining = received.remaining();
                 if (remaining == 0) {
                     return origin.read(dst);
+                } else if (dst.remaining() == 0) {
+                    return 0;
                 } else if (remaining <= dst.remaining()) {
                     dst.put(received);
                     return remaining;
                 } else {
-                    return 0;
+                    int limit = received.limit();
+                    received.limit(received.position() + dst.remaining());
+                    int written = received.remaining();
+                    dst.put(received);
+                    received.limit(limit);
+                    return written;
                 }
             }
 
@@ -422,59 +344,34 @@ class PeerConnectionFactory {
         };
     }
 
-    private ByteChannel buildChannel(Channel origin, InputStream in, OutputStream out) {
+    private ByteChannel buildChannel(InputStream in, OutputStream out) {
+        ReadableByteChannel cin = Channels.newChannel(in);
+        WritableByteChannel cout = Channels.newChannel(out);
         return new ByteChannel() {
-            private Queue<byte[]> leftovers = new PriorityQueue<>();
-
             @Override
             public int read(ByteBuffer dst) throws IOException {
-                int written = 0;
-
-                byte[] buf;
-                while ((buf = leftovers.peek()) != null) {
-                    if (buf.length <= dst.remaining()) {
-                        dst.put(buf);
-                        leftovers.remove();
-                        written += buf.length;
-                    } else {
-                        return written;
-                    }
-                }
-
-                buf = new byte[8192];
-                int read = in.read(buf);
-
-                boolean success;
-                if (read <= dst.remaining()) {
-                    dst.put(buf, 0, read);
-                    written += read;
-                    success = true;
-                } else {
-                    leftovers.add(Arrays.copyOfRange(buf, 0, read));
-                    success = false;
-                }
-
-                return success ? written : 0;
+                return cin.read(dst);
             }
 
             @Override
             public int write(ByteBuffer src) throws IOException {
-                byte[] buf = new byte[src.remaining()];
-                src.get(buf);
-                out.write(buf);
-                return buf.length;
+                return cout.write(src);
             }
 
             @Override
             public boolean isOpen() {
-                return origin.isOpen();
+                return cin.isOpen() || cout.isOpen();
             }
 
             @Override
             public void close() throws IOException {
-                // not closing cipher streams
                 try {
-                    origin.close();
+                    cin.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    cout.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

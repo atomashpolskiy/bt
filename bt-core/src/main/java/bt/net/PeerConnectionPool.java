@@ -8,6 +8,7 @@ import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
+import bt.torrent.TorrentRegistry;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +65,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     @Inject
     public PeerConnectionPool(@BitTorrentProtocol MessageHandler<Message> messageHandler,
                               IPeerRegistry peerRegistry,
+                              TorrentRegistry torrentRegistry,
                               IConnectionHandlerFactory connectionHandlerFactory,
                               IRuntimeLifecycleBinder lifecycleBinder,
                               Config config) {
@@ -74,7 +76,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         SocketChannelFactory socketChannelFactory =
                 new SocketChannelFactory(config.getAcceptorAddress(), config.getAcceptorPort());
         this.connectionFactory = new PeerConnectionFactory(messageHandler,
-                socketChannelFactory, config.getMaxTransferBlockSize());
+                socketChannelFactory, config.getMaxTransferBlockSize(), torrentRegistry, config.getEncryptionPolicy());
 
         this.connectionHandlerFactory = connectionHandlerFactory;
         this.peerConnectionInactivityThreshold = config.getPeerConnectionInactivityThreshold();
@@ -161,7 +163,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             ConnectionHandler connectionHandler = connectionHandlerFactory.getOutgoingHandler(torrentId);
             connection = CompletableFuture.supplyAsync(() -> {
                 try {
-                    DefaultPeerConnection newConnection = connectionFactory.createConnection(peer);
+                    DefaultPeerConnection newConnection = connectionFactory.createOutgoingConnection(peer, torrentId);
 
                     if (!initConnection(newConnection, connectionHandler, true)) {
                         throw new BtException("Failed to initialize new connection for peer: " + peer);
@@ -341,9 +343,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private void acceptIncomingConnection(SocketChannel incomingChannel) {
         executor.execute(() -> {
             try {
-                incomingChannel.configureBlocking(false);
                 Peer peer = peerRegistry.getPeerForAddress((InetSocketAddress) incomingChannel.getRemoteAddress());
-                DefaultPeerConnection incomingConnection = connectionFactory.createConnection(peer, incomingChannel);
+                DefaultPeerConnection incomingConnection = connectionFactory.createIncomingConnection(peer, incomingChannel);
                 initConnection(incomingConnection, connectionHandlerFactory.getIncomingHandler(), true);
             } catch (IOException e) {
                 LOGGER.error("Failed to process incoming connection", e);
