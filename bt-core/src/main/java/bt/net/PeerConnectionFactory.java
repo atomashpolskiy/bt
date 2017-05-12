@@ -24,7 +24,6 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
-import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
@@ -94,7 +93,8 @@ class PeerConnectionFactory {
         return (int) (maxTransferBlockSize) * 2;
     }
 
-    private BigInteger Y = BigInteger.valueOf(1); // private key: random 128/160 bit integer (configurable length/provider)
+    // private key: random 128/160 bit integer (configurable length/provider)
+    private BigInteger Y = new DiffieHellman().generatePrivateKey();
 
     private Duration timeout = Duration.ofSeconds(5);
 
@@ -121,8 +121,8 @@ class PeerConnectionFactory {
 
         // 2. B->A: Diffie Hellman Yb, PadB
         // write our key
-        Key localPublicKey = new DiffieHellman().generateKey(Y); // our 768-bit public key
-        buf.put(localPublicKey.getEncoded());
+        BigInteger localPublicKey = new DiffieHellman().createPublicKey(Y); // our 768-bit public key
+        buf.put(new DiffieHellman().toByteArray(localPublicKey));
         buf.put(getPadding(512));
         buf.flip();
         new SendData(channel).execute(buf);
@@ -141,7 +141,7 @@ class PeerConnectionFactory {
         // - HASH('req1', S)
         buf.get(bytes); // read S hash
         digest.update("req1".getBytes("ASCII"));
-        digest.update(S.toByteArray());
+        digest.update(new DiffieHellman().toByteArray(S));
         byte[] req1hash = digest.digest();
         if (!Arrays.equals(req1hash, bytes)) {
             throw new IllegalStateException("Invalid shared secret hash");
@@ -150,7 +150,7 @@ class PeerConnectionFactory {
         buf.get(bytes); // read SKEY/S hash
         Torrent requestedTorrent = null;
         digest.update("req3".getBytes("ASCII"));
-        digest.update(S.toByteArray());
+        digest.update(new DiffieHellman().toByteArray(S));
         byte[] b2 = digest.digest();
         for (Torrent torrent : torrentRegistry.getTorrents()) {
             digest.update("req2".getBytes("ASCII"));
@@ -176,15 +176,15 @@ class PeerConnectionFactory {
 
         // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
         StreamCipher cipher = StreamCipher.forReceiver(S, requestedTorrent.getTorrentId());
-        ByteChannel channel2 = buildChannel(channel, buf);
-        InputStream in = cipher.encryptIncomingChannel(channel2);
+        InputStream in = cipher.encryptIncomingChannel(channel);
 
         // 4. B->A:
         // - ENCRYPT(VC, crypto_select, len(padD), padD)
         // - ENCRYPT2(Payload Stream)
         OutputStream out = cipher.encryptOugoingChannel(channel);
 
-        EncryptionPolicy negotiatedEncryptionPolicy = new NegotiateEncryptionPolicy(encryptionPolicy).negotiateIncoming(in, out);
+
+        EncryptionPolicy negotiatedEncryptionPolicy = new NegotiateEncryptionPolicy(encryptionPolicy).negotiateIncoming(in, out, buf);
         if (buf.hasRemaining()) {
             throw new IllegalStateException("Should not happen"); // remove this after verifying the code
         }
@@ -218,8 +218,8 @@ class PeerConnectionFactory {
         ByteBuffer buf = ByteBuffer.allocateDirect(128 * 1024);
 
         // 1. send our public key
-        Key localPublicKey = new DiffieHellman().generateKey(Y); // our 768-bit public key
-        buf.put(localPublicKey.getEncoded());
+        BigInteger localPublicKey = new DiffieHellman().createPublicKey(Y); // our 768-bit public key
+        buf.put(new DiffieHellman().toByteArray(localPublicKey));
         buf.put(getPadding(512));
 
         // write
@@ -241,14 +241,14 @@ class PeerConnectionFactory {
         // 3. A->B:
         // - HASH('req1', S)
         digest.update("req1".getBytes("ASCII"));
-        digest.update(S.toByteArray());
+        digest.update(new DiffieHellman().toByteArray(S));
         buf.put(digest.digest());
         // - HASH('req2', SKEY) xor HASH('req3', S)
         digest.update("req2".getBytes("ASCII"));
         digest.update(torrentId.getBytes());
         byte[] b1 = digest.digest();
         digest.update("req3".getBytes("ASCII"));
-        digest.update(S.toByteArray());
+        digest.update(new DiffieHellman().toByteArray(S));
         byte[] b2 = digest.digest();
         buf.put(xor(b1, b2));
         // write
@@ -283,7 +283,8 @@ class PeerConnectionFactory {
         for (int i = 0; i < padding.length; i++) {
             padding[i] = (byte) r.nextInt(256);
         }
-        return padding;
+//        return padding;
+        return new byte[0];
     }
 
     private MessageDigest getDigest(String algorithm) {
@@ -303,45 +304,6 @@ class PeerConnectionFactory {
             result[i] = (byte) (b1[i] ^ b2[i]);
         }
         return result;
-    }
-
-    private ByteChannel buildChannel(ByteChannel origin, ByteBuffer received) {
-        return new ByteChannel() {
-            @Override
-            public int read(ByteBuffer dst) throws IOException {
-                int remaining = received.remaining();
-                if (remaining == 0) {
-                    return origin.read(dst);
-                } else if (dst.remaining() == 0) {
-                    return 0;
-                } else if (remaining <= dst.remaining()) {
-                    dst.put(received);
-                    return remaining;
-                } else {
-                    int limit = received.limit();
-                    received.limit(received.position() + dst.remaining());
-                    int written = received.remaining();
-                    dst.put(received);
-                    received.limit(limit);
-                    return written;
-                }
-            }
-
-            @Override
-            public int write(ByteBuffer src) throws IOException {
-                return origin.write(src);
-            }
-
-            @Override
-            public boolean isOpen() {
-                return origin.isOpen();
-            }
-
-            @Override
-            public void close() throws IOException {
-                origin.close();
-            }
-        };
     }
 
     private ByteChannel buildChannel(InputStream in, OutputStream out) {

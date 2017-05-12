@@ -9,6 +9,8 @@ import java.nio.channels.spi.AbstractSelectableChannel;
 
 public class InputStreamChannel extends AbstractSelectableChannel implements ReadableByteChannel {
 
+    private static final int MAX_TRANSFER_SIZE = 8192;
+
     private final InputStream in;
     private byte[] buf;
 
@@ -26,13 +28,14 @@ public class InputStreamChannel extends AbstractSelectableChannel implements Rea
             if (in.available() <= 0) {
                 break;
             }
-            int remaining = dst.remaining();
-            if (buf == null || buf.length < remaining) {
-                buf = new byte[remaining];
+            int remaining = Math.min(dst.remaining(), MAX_TRANSFER_SIZE);
+            int bytesToRead = Math.min(remaining, in.available());
+            if (buf == null || buf.length < bytesToRead) {
+                buf = new byte[bytesToRead];
             }
             try {
                 begin(); // prepare for interrupt
-                read = in.read(buf, 0, remaining);
+                read = in.read(buf, 0, bytesToRead);
             } finally {
                 end(read > 0); // catch interrupt
             }
@@ -42,6 +45,7 @@ public class InputStreamChannel extends AbstractSelectableChannel implements Rea
                 totalRead += read;
             }
             dst.put(buf, 0, read);
+
         }
         if ((read < 0) && (totalRead == 0)) {
             return -1;

@@ -47,11 +47,8 @@ public class ReceiveData {
         int readTotal = 0;
         int read;
         int times_nothing_received = 0;
-        Integer id = new Random().nextInt();
         do {
             read = channel.read(buf);
-            System.out.println(id + " - DEBUUUUG " + times_nothing_received + " : " + readTotal + " : " + read);
-            System.out.flush();
             if (read <= 0) {
                 times_nothing_received++;
             } else {
@@ -69,9 +66,6 @@ public class ReceiveData {
                 throw new RuntimeException("Interrupted while waiting for data", e);
             }
         } while (System.currentTimeMillis() - t1 <= timeout.toMillis());
-
-        System.out.println(id + " - FINISHED");
-        System.out.flush();
 
         if (readTotal < min) {
             throw new IllegalStateException("Less than " + min + " bytes received: " + readTotal);

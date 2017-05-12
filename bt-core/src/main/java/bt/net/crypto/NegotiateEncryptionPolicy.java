@@ -20,17 +20,28 @@ public class NegotiateEncryptionPolicy {
         this.encryptionPolicy = encryptionPolicy;
     }
 
-    public EncryptionPolicy negotiateIncoming(InputStream in, OutputStream out) {
+    public EncryptionPolicy negotiateIncoming(InputStream in, OutputStream out, ByteBuffer buf) {
+        if (buf.remaining() > 16 + 512) {
+            throw new IllegalArgumentException("Too much initial data");
+        }
+
         EncryptionPolicy negotiatedEncryptionPolicy;
         try {
-            byte[] VC = getVerificationConstant();
+            int min = Math.max(16 - buf.remaining(), 0);
+            int limit = 16 + 512 - buf.remaining();
+
             // 3. ...
             // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
-            ByteBuffer buf = ByteBuffer.allocate(2048); // temp
-            new ReceiveData(in, Duration.ofSeconds(30)).execute(buf, 16, 16 + 512);
+            if (limit > 0) { // if limit is 0 then all possible data has already been received
+                int offset = buf.position();
+                buf.position(buf.limit());
+                buf.limit(buf.capacity());
+                new ReceiveData(in, Duration.ofSeconds(30)).execute(buf, min, limit);
+                buf.flip();
+                buf.position(offset);
+            }
 
-            buf.flip();
-
+            byte[] VC = getVerificationConstant();
             byte[] theirVC = new byte[8];
             buf.get(theirVC);
             if (!Arrays.equals(VC, theirVC)) {
@@ -87,7 +98,7 @@ public class NegotiateEncryptionPolicy {
             out.write(0);
             out.flush();
 
-            ByteBuffer buf = ByteBuffer.allocate(2048); // temp
+            ByteBuffer buf = ByteBuffer.allocateDirect(2048); // temp
             new ReceiveData(in, Duration.ofSeconds(30)).execute(buf, 14, 14 + 512);
 
             // 4. B->A:
@@ -177,6 +188,7 @@ public class NegotiateEncryptionPolicy {
     private byte[] getZeroPadding(int length) {
         // todo: use this constructor everywhere in the project
         Random r = new Random();
-        return new byte[r.nextInt(length + 1)];
+//        return new byte[r.nextInt(length + 1)];
+        return new byte[0];
     }
 }

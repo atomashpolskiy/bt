@@ -16,6 +16,7 @@ import java.nio.channels.WritableByteChannel;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 public class StreamCipher {
 
@@ -31,10 +32,10 @@ public class StreamCipher {
     }
 
     private StreamCipher(BigInteger S, TorrentId torrentId, boolean initiator) {
-        Key outgoingKey = getInitiatorEncryptionKey(S.toByteArray(), torrentId.getBytes());
-        Key incomingKey = getReceiverEncryptionKey(S.toByteArray(), torrentId.getBytes());
-        this.outgoingKey = initiator ? outgoingKey : incomingKey;
-        this.incomingKey = initiator ? incomingKey : outgoingKey;
+        Key initiatorKey = getInitiatorEncryptionKey(S.toByteArray(), torrentId.getBytes());
+        Key receiverKey = getReceiverEncryptionKey(S.toByteArray(), torrentId.getBytes());
+        this.outgoingKey = initiator ? initiatorKey : receiverKey;
+        this.incomingKey = initiator ? receiverKey : initiatorKey;
     }
 
     public OutputStream encryptOugoingChannel(WritableByteChannel channel) {
@@ -58,6 +59,8 @@ public class StreamCipher {
             MessageDigest digest = getDigest("SHA-1");
             digest.update(s.getBytes("ASCII"));
             digest.update(S);
+            System.out.println("S " + Arrays.toString(S));
+            System.out.flush();
             digest.update(SKEY);
             return new SecretKeySpec(digest.digest(), "ARCFOUR");
         } catch (UnsupportedEncodingException e) {
