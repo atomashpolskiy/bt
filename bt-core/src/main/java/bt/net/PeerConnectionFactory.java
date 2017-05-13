@@ -176,13 +176,24 @@ class PeerConnectionFactory {
 
         // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
         StreamCipher cipher = StreamCipher.forReceiver(S, requestedTorrent.getTorrentId());
-        InputStream in = cipher.encryptIncomingChannel(channel);
+        InputStream in = cipher.decryptIncomingChannel(channel);
 
         // 4. B->A:
         // - ENCRYPT(VC, crypto_select, len(padD), padD)
         // - ENCRYPT2(Payload Stream)
         OutputStream out = cipher.encryptOugoingChannel(channel);
 
+        // derypt encrypted leftovers
+        int pos = buf.position();
+        byte[] leftovers = new byte[buf.remaining()];
+        buf.get(leftovers);
+        buf.position(pos);
+        try {
+            buf.put(cipher.getDecryptionCipher().doFinal(leftovers));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to decrypt leftover bytes: " + leftovers.length);
+        }
+        buf.position(pos);
 
         EncryptionPolicy negotiatedEncryptionPolicy = new NegotiateEncryptionPolicy(encryptionPolicy).negotiateIncoming(in, out, buf);
         if (buf.hasRemaining()) {
@@ -257,7 +268,7 @@ class PeerConnectionFactory {
         buf.clear();
 
         StreamCipher cipher = StreamCipher.forInitiator(S, torrentId);
-        InputStream in = cipher.encryptIncomingChannel(channel);
+        InputStream in = cipher.decryptIncomingChannel(channel);
         OutputStream out = cipher.encryptOugoingChannel(channel);
         EncryptionPolicy negotiatedEncryptionPolicy = new NegotiateEncryptionPolicy(encryptionPolicy).negotiateOutgoing(in, out);
 

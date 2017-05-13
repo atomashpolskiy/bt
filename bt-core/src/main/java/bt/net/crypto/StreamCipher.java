@@ -8,17 +8,18 @@ import javax.crypto.CipherOutputStream;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.charset.Charset;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 
 public class StreamCipher {
+
+    private static final String transformation = "ARCFOUR";
 
     private final Key incomingKey;
     private final Key outgoingKey;
@@ -32,8 +33,8 @@ public class StreamCipher {
     }
 
     private StreamCipher(BigInteger S, TorrentId torrentId, boolean initiator) {
-        Key initiatorKey = getInitiatorEncryptionKey(S.toByteArray(), torrentId.getBytes());
-        Key receiverKey = getReceiverEncryptionKey(S.toByteArray(), torrentId.getBytes());
+        Key initiatorKey = getInitiatorEncryptionKey(new DiffieHellman().toByteArray(S), torrentId.getBytes());
+        Key receiverKey = getReceiverEncryptionKey(new DiffieHellman().toByteArray(S), torrentId.getBytes());
         this.outgoingKey = initiator ? initiatorKey : receiverKey;
         this.incomingKey = initiator ? receiverKey : initiatorKey;
     }
@@ -42,8 +43,12 @@ public class StreamCipher {
         return encryptChannel(channel, outgoingKey);
     }
 
-    public InputStream encryptIncomingChannel(ReadableByteChannel channel) {
-        return encryptChannel(channel, incomingKey);
+    public InputStream decryptIncomingChannel(ReadableByteChannel channel) {
+        return decryptChannel(channel, incomingKey);
+    }
+
+    public Cipher getDecryptionCipher() {
+        return createCipher(Cipher.DECRYPT_MODE, transformation, incomingKey);
     }
 
     private Key getInitiatorEncryptionKey(byte[] S, byte[] SKEY) {
@@ -55,17 +60,11 @@ public class StreamCipher {
     }
 
     private Key getEncryptionKey(String s, byte[] S, byte[] SKEY) {
-        try {
-            MessageDigest digest = getDigest("SHA-1");
-            digest.update(s.getBytes("ASCII"));
-            digest.update(S);
-            System.out.println("S " + Arrays.toString(S));
-            System.out.flush();
-            digest.update(SKEY);
-            return new SecretKeySpec(digest.digest(), "ARCFOUR");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+        MessageDigest digest = getDigest("SHA-1");
+        digest.update(s.getBytes(Charset.forName("ASCII")));
+        digest.update(S);
+        digest.update(SKEY);
+        return new SecretKeySpec(digest.digest(), "ARCFOUR");
     }
 
     private MessageDigest getDigest(String algorithm) {
@@ -77,13 +76,11 @@ public class StreamCipher {
     }
 
     private OutputStream encryptChannel(WritableByteChannel channel, Key key) {
-        String transformation = "ARCFOUR";
         Cipher cipher = createCipher(Cipher.ENCRYPT_MODE, transformation, key);
         return new CipherOutputStream(Channels.newOutputStream(channel), cipher);
     }
 
-    private InputStream encryptChannel(ReadableByteChannel channel, Key key) {
-        String transformation = "ARCFOUR";
+    private InputStream decryptChannel(ReadableByteChannel channel, Key key) {
         Cipher cipher = createCipher(Cipher.DECRYPT_MODE, transformation, key);
         return new CipherInputStream(Channels.newInputStream(channel), cipher);
     }

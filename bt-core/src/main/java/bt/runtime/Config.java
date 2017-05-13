@@ -49,7 +49,7 @@ public class Config {
         this.peerConnectionRetryInterval = Duration.ofMinutes(5);
         this.peerConnectionRetryCount = 3;
         this.peerConnectionTimeout = Duration.ofSeconds(30);
-        this.peerHandshakeTimeout = Duration.ofSeconds(3);
+        this.peerHandshakeTimeout = Duration.ofSeconds(30);
         this.peerConnectionInactivityThreshold = Duration.ofMinutes(3);
         this.trackerQueryInterval = Duration.ofMinutes(5);
         this.maxPeerConnections = 500;

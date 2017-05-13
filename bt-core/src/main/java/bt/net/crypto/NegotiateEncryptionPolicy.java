@@ -54,8 +54,8 @@ public class NegotiateEncryptionPolicy {
                     .orElseThrow(() -> new IllegalStateException("Failed to negotiate the encryption policy"));
 
             byte[] bytes = new byte[2];
-            bytes[0] = (byte) in.read();
-            bytes[1] = (byte) in.read();
+            bytes[0] = buf.get();
+            bytes[1] = buf.get();
             int theirPadding = Protocols.readShort(bytes, 0);
             // assume that all data has been received, so the whole padding block is present
             for (int i = 0; i < theirPadding; i++) {
@@ -116,8 +116,8 @@ public class NegotiateEncryptionPolicy {
             negotiatedEncryptionPolicy = selectPolicy(crypto_select, encryptionPolicy)
                     .orElseThrow(() -> new IllegalStateException("Failed to negotiate the encryption policy"));
             byte[] bytes = new byte[2];
-            bytes[0] = (byte) in.read();
-            bytes[1] = (byte) in.read();
+            bytes[0] = buf.get();
+            bytes[1] = buf.get();
             int theirPadding = Protocols.readShort(bytes, 0);
 //        buf.limit(received);
 //        buf.position(14 + theirPadding);
