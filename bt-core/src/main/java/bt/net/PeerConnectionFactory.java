@@ -122,7 +122,7 @@ class PeerConnectionFactory {
         // 2. B->A: Diffie Hellman Yb, PadB
         // write our key
         BigInteger localPublicKey = new DiffieHellman().createPublicKey(Y); // our 768-bit public key
-        buf.put(new DiffieHellman().toByteArray(localPublicKey));
+        buf.put(new DiffieHellman().toByteArray(localPublicKey, 96));
         buf.put(getPadding(512));
         buf.flip();
         new SendData(channel).execute(buf);
@@ -219,7 +219,7 @@ class PeerConnectionFactory {
 
         // 1. send our public key
         BigInteger localPublicKey = new DiffieHellman().createPublicKey(Y); // our 768-bit public key
-        buf.put(new DiffieHellman().toByteArray(localPublicKey));
+        buf.put(new DiffieHellman().toByteArray(localPublicKey, 96));
         buf.put(getPadding(512));
 
         // write

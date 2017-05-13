@@ -14,13 +14,10 @@ public class DiffieHellman {
 
     public BigInteger generatePrivateKey() {
         Random r = new Random();
-        int len = 96;
-        byte[] bytes = new byte[len + 1]; // leading byte is treated by BigInteger as signum
+        int len = 20; // in bytes
+        byte[] bytes = new byte[len + 1];
         for (int i = 1; i < len + 1; i++) {
-            int k;
-            while ((k = r.nextInt(255)) == 0)
-                ;
-            bytes[i] = (byte) k;
+            bytes[i] = (byte) r.nextInt(15);
         }
         return new BigInteger(bytes);
     }
@@ -34,9 +31,20 @@ public class DiffieHellman {
     }
 
     public byte[] toByteArray(BigInteger i) {
-        byte[] bytes = i.toByteArray();
-        // strip leading signum byte
-        return Arrays.copyOfRange(bytes, 1, bytes.length);
+        byte[] ibytes = i.toByteArray();
+        return Arrays.copyOfRange(ibytes, 1, ibytes.length);
+    }
+
+    public byte[] toByteArray(BigInteger i, int arrayLength) {
+        byte[] ibytes = i.toByteArray();
+        // leading byte is treated by BigInteger as signum
+        if (ibytes.length > arrayLength + 1) {
+            throw new IllegalArgumentException("Value will be truncated: value length (" +
+                    ibytes.length + "), requested array length (" + arrayLength + "), expected 0.." + (ibytes.length - 1));
+        }
+        byte[] bytes = new byte[arrayLength];
+        System.arraycopy(ibytes, 0, bytes, (bytes.length - ibytes.length), ibytes.length);
+        return bytes;
     }
 
     public BigInteger parseKey(ByteBuffer buffer) {
