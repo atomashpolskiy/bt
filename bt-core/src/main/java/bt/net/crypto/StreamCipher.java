@@ -3,15 +3,8 @@ package bt.net.crypto;
 import bt.metainfo.TorrentId;
 
 import javax.crypto.Cipher;
-import javax.crypto.CipherInputStream;
-import javax.crypto.CipherOutputStream;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.math.BigInteger;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.security.Key;
 import java.security.MessageDigest;
@@ -39,12 +32,8 @@ public class StreamCipher {
         this.incomingKey = initiator ? receiverKey : initiatorKey;
     }
 
-    public OutputStream encryptOugoingChannel(WritableByteChannel channel) {
-        return encryptChannel(channel, outgoingKey);
-    }
-
-    public InputStream decryptIncomingChannel(ReadableByteChannel channel) {
-        return decryptChannel(channel, incomingKey);
+    public Cipher getEncryptionCipher() {
+        return createCipher(Cipher.ENCRYPT_MODE, transformation, outgoingKey);
     }
 
     public Cipher getDecryptionCipher() {
@@ -73,16 +62,6 @@ public class StreamCipher {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private OutputStream encryptChannel(WritableByteChannel channel, Key key) {
-        Cipher cipher = createCipher(Cipher.ENCRYPT_MODE, transformation, key);
-        return new CipherOutputStream(Channels.newOutputStream(channel), cipher);
-    }
-
-    private InputStream decryptChannel(ReadableByteChannel channel, Key key) {
-        Cipher cipher = createCipher(Cipher.DECRYPT_MODE, transformation, key);
-        return new CipherInputStream(Channels.newInputStream(channel), cipher);
     }
 
     private Cipher createCipher(int mode, String transformation, Key key) {

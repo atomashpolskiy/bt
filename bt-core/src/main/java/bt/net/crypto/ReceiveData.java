@@ -1,13 +1,9 @@
 package bt.net.crypto;
 
-import bt.net.InputStreamChannel;
-
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.time.Duration;
-import java.util.Random;
 
 public class ReceiveData {
 
@@ -15,17 +11,6 @@ public class ReceiveData {
     private final Duration timeout;
 
     public ReceiveData(ReadableByteChannel channel, Duration timeout) {
-        this.channel = channel;
-        this.timeout = timeout;
-    }
-
-    public ReceiveData(InputStream in, Duration timeout) {
-        InputStreamChannel channel = new InputStreamChannel(in);
-        try {
-            channel.configureBlocking(false);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to configure blocking mode", e);
-        }
         this.channel = channel;
         this.timeout = timeout;
     }
@@ -49,8 +34,10 @@ public class ReceiveData {
         int times_nothing_received = 0;
         do {
             read = channel.read(buf);
-            if (read <= 0) {
+            if (read == 0) {
                 times_nothing_received++;
+            } else if (read < 0) {
+                break;
             } else {
                 readTotal += read;
             }

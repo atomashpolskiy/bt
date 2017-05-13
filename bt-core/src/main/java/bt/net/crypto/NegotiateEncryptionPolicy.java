@@ -3,10 +3,8 @@ package bt.net.crypto;
 import bt.protocol.Protocols;
 import bt.protocol.crypto.EncryptionPolicy;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.ByteChannel;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
@@ -20,113 +18,115 @@ public class NegotiateEncryptionPolicy {
         this.encryptionPolicy = encryptionPolicy;
     }
 
-    public EncryptionPolicy negotiateIncoming(InputStream in, OutputStream out, ByteBuffer buf) {
+    public EncryptionPolicy negotiateIncoming(ByteChannel channel, ByteBuffer buf) {
         if (buf.remaining() > 16 + 512) {
             throw new IllegalArgumentException("Too much initial data");
         }
 
         EncryptionPolicy negotiatedEncryptionPolicy;
-        try {
-            int min = Math.max(16 - buf.remaining(), 0);
-            int limit = 16 + 512 - buf.remaining();
+        int min = Math.max(16 - buf.remaining(), 0);
+        int limit = 16 + 512 - buf.remaining();
 
-            // 3. ...
-            // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
-            if (limit > 0) { // if limit is 0 then all possible data has already been received
-                int offset = buf.position();
-                buf.position(buf.limit());
-                buf.limit(buf.capacity());
-                new ReceiveData(in, Duration.ofSeconds(30)).execute(buf, min, limit);
-                buf.flip();
-                buf.position(offset);
-            }
-
-            byte[] VC = getVerificationConstant();
-            byte[] theirVC = new byte[8];
-            buf.get(theirVC);
-            if (!Arrays.equals(VC, theirVC)) {
-                throw new IllegalStateException("Invalid VC: "+ Arrays.toString(theirVC));
-            }
-
-            byte[] crypto_provide = new byte[4];
-            buf.get(crypto_provide);
-            negotiatedEncryptionPolicy = selectPolicy(crypto_provide, encryptionPolicy)
-                    .orElseThrow(() -> new IllegalStateException("Failed to negotiate the encryption policy"));
-
-            byte[] bytes = new byte[2];
-            bytes[0] = buf.get();
-            bytes[1] = buf.get();
-            int theirPadding = Protocols.readShort(bytes, 0);
-            // assume that all data has been received, so the whole padding block is present
-            for (int i = 0; i < theirPadding; i++) {
-                buf.get(); // replace with check for remaining bytes
-            }
-
-            // skip Initial Payload length
-            buf.get(); // replace with check for remaining bytes
-            buf.get(); // replace with check for remaining bytes
-
-            // 4. B->A:
-            // - ENCRYPT(VC, crypto_select, len(padD), padD)
-            // - ENCRYPT2(Payload Stream)
-            out.write(VC);
-            out.write(getCryptoProvideBitfield(negotiatedEncryptionPolicy));
-            byte[] padding = getZeroPadding(512);
-            out.write(Protocols.getShortBytes(padding.length));
-            out.write(padding);
-            out.flush();
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        // 3. ...
+        // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
+        if (limit > 0) { // if limit is 0 then all possible data has already been received
+            int offset = buf.position();
+            buf.position(buf.limit());
+            buf.limit(buf.capacity());
+            new ReceiveData(channel, Duration.ofSeconds(30)).execute(buf, min, limit);
+            buf.flip();
+            buf.position(offset);
         }
+
+        byte[] VC = getVerificationConstant();
+        byte[] theirVC = new byte[8];
+        buf.get(theirVC);
+        if (!Arrays.equals(VC, theirVC)) {
+            throw new IllegalStateException("Invalid VC: "+ Arrays.toString(theirVC));
+        }
+
+        byte[] crypto_provide = new byte[4];
+        buf.get(crypto_provide);
+        negotiatedEncryptionPolicy = selectPolicy(crypto_provide, encryptionPolicy)
+                .orElseThrow(() -> new IllegalStateException("Failed to negotiate the encryption policy"));
+
+        byte[] bytes = new byte[2];
+        bytes[0] = buf.get();
+        bytes[1] = buf.get();
+        int theirPadding = Protocols.readShort(bytes, 0);
+        // assume that all data has been received, so the whole padding block is present
+        for (int i = 0; i < theirPadding; i++) {
+            buf.get(); // replace with check for remaining bytes
+        }
+
+        // skip Initial Payload length
+        buf.get(); // replace with check for remaining bytes
+        buf.get(); // replace with check for remaining bytes
+        if (buf.hasRemaining()) {
+            throw new RuntimeException("should not happen");
+        }
+
+        // 4. B->A:
+        // - ENCRYPT(VC, crypto_select, len(padD), padD)
+        // - ENCRYPT2(Payload Stream)
+        buf.clear();
+        buf.put(VC);
+        buf.put(getCryptoProvideBitfield(negotiatedEncryptionPolicy));
+        byte[] padding = getZeroPadding(512);
+        buf.put(Protocols.getShortBytes(padding.length));
+        buf.put(padding);
+
+        buf.flip();
+        new SendData(channel).execute(buf);
+        buf.clear();
+
         return negotiatedEncryptionPolicy;
     }
 
-    public EncryptionPolicy negotiateOutgoing(InputStream in, OutputStream out) {
+    public EncryptionPolicy negotiateOutgoing(ByteChannel channel, ByteBuffer buf) {
         EncryptionPolicy negotiatedEncryptionPolicy;
-        try {
-            // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
-            byte[] VC = getVerificationConstant();
-            out.write(VC);
-            out.write(getCryptoProvideBitfield(encryptionPolicy));
-            byte[] padding = getZeroPadding(512);
-            out.write(Protocols.getShortBytes(padding.length));
-            out.write(padding);
-            // - ENCRYPT(IA)
-            // do not write IA (initial payload data) for now, wait for encryption negotiation
-            out.write(0); // IA length = 0
-            out.write(0);
-            out.flush();
+        // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
+        buf.clear();
+        byte[] VC = getVerificationConstant();
+        buf.put(VC);
+        buf.put(getCryptoProvideBitfield(encryptionPolicy));
+        byte[] padding = getZeroPadding(512);
+        buf.put(Protocols.getShortBytes(padding.length));
+        buf.put(padding);
+        // - ENCRYPT(IA)
+        // do not write IA (initial payload data) for now, wait for encryption negotiation
+        buf.put((byte) 0); // IA length = 0
+        buf.put((byte) 0);
 
-            ByteBuffer buf = ByteBuffer.allocateDirect(2048); // temp
-            new ReceiveData(in, Duration.ofSeconds(30)).execute(buf, 14, 14 + 512);
+        buf.flip();
+        new SendData(channel).execute(buf);
+        buf.clear();
 
-            // 4. B->A:
-            // - ENCRYPT(VC, crypto_select, len(padD), padD)
-            // - ENCRYPT2(Payload Stream)
-            buf.flip();
+        new ReceiveData(channel, Duration.ofSeconds(30)).execute(buf, 14, 14 + 512);
 
-            byte[] theirVC = new byte[8];
-            buf.get(theirVC);
-            if (!Arrays.equals(VC, theirVC)) {
-                throw new IllegalStateException("Invalid VC: " + Arrays.toString(theirVC));
-            }
-            byte[] crypto_select = new byte[4];
-            buf.get(crypto_select);
-            negotiatedEncryptionPolicy = selectPolicy(crypto_select, encryptionPolicy)
-                    .orElseThrow(() -> new IllegalStateException("Failed to negotiate the encryption policy"));
-            byte[] bytes = new byte[2];
-            bytes[0] = buf.get();
-            bytes[1] = buf.get();
-            int theirPadding = Protocols.readShort(bytes, 0);
+        // 4. B->A:
+        // - ENCRYPT(VC, crypto_select, len(padD), padD)
+        // - ENCRYPT2(Payload Stream)
+        buf.flip();
+
+        byte[] theirVC = new byte[8];
+        buf.get(theirVC);
+        if (!Arrays.equals(VC, theirVC)) {
+            throw new IllegalStateException("Invalid VC: " + Arrays.toString(theirVC));
+        }
+        byte[] crypto_select = new byte[4];
+        buf.get(crypto_select);
+        negotiatedEncryptionPolicy = selectPolicy(crypto_select, encryptionPolicy)
+                .orElseThrow(() -> new IllegalStateException("Failed to negotiate the encryption policy"));
+        byte[] bytes = new byte[2];
+        bytes[0] = buf.get();
+        bytes[1] = buf.get();
+        int theirPadding = Protocols.readShort(bytes, 0);
 //        buf.limit(received);
 //        buf.position(14 + theirPadding);
-            // assume that all data has been received, so the whole padding block is present
-            for (int i = 0; i < theirPadding; i++) {
-                buf.get(); // replace with check for remaining bytes
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        // assume that all data has been received, so the whole padding block is present
+        for (int i = 0; i < theirPadding; i++) {
+            buf.get(); // replace with check for remaining bytes
         }
         return negotiatedEncryptionPolicy;
     }

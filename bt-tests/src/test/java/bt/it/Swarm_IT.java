@@ -32,7 +32,7 @@ public class Swarm_IT extends BaseBtTest {
 
         @Override
         public EncryptionPolicy getEncryptionPolicy() {
-            return EncryptionPolicy.REQUIRE_PLAINTEXT;
+            return EncryptionPolicy.REQUIRE_ENCRYPTED;
         }
     };
 
