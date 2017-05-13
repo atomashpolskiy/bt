@@ -8,6 +8,8 @@ import java.nio.channels.spi.AbstractSelectableChannel;
 
 public class DelegatingByteChannel extends AbstractSelectableChannel implements ByteChannel {
 
+    private static final int WRITE_ATTEMPTS = 10;
+
     private final ByteChannel delegate;
 
     public DelegatingByteChannel(ByteChannel delegate) {
@@ -23,7 +25,36 @@ public class DelegatingByteChannel extends AbstractSelectableChannel implements 
 
     @Override
     public int write(ByteBuffer src) throws IOException {
-        return delegate.write(src);
+        return writeMessageFromBuffer(src);
+    }
+
+    // TODO: duplicates code in bt.net.DefaultMessageWorker
+    private int writeMessageFromBuffer(ByteBuffer buffer) {
+        int offset = buffer.position();
+        int written;
+        try {
+            int k = 0;
+            do {
+                buffer.position(offset);
+                written = delegate.write(buffer);
+                offset = offset + written;
+
+                if (offset < buffer.limit()) {
+                    if (++k <= WRITE_ATTEMPTS) {
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException("Interrupted while writing message", e);
+                        }
+                    } else {
+                        throw new RuntimeException("Failed to write message in " + WRITE_ATTEMPTS + " attempts");
+                    }
+                }
+            } while (offset < buffer.limit());
+        } catch (IOException e) {
+            throw new RuntimeException("Unexpected error when writing message", e);
+        }
+        return written;
     }
 
     @Override

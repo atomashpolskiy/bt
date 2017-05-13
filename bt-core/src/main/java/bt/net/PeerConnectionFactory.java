@@ -96,7 +96,7 @@ class PeerConnectionFactory {
     // private key: random 128/160 bit integer (configurable length/provider)
     private BigInteger Y = new DiffieHellman().generatePrivateKey();
 
-    private Duration timeout = Duration.ofSeconds(5);
+    private Duration timeout = Duration.ofSeconds(30);
 
     private ByteChannel encryptIncomingChannel(ByteChannel channel) throws IOException {
         /**
