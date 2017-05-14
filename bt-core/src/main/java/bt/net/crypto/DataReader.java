@@ -5,17 +5,17 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.time.Duration;
 
-public class ReceiveData {
+class DataReader {
 
     private final ReadableByteChannel channel;
     private final Duration timeout;
 
-    public ReceiveData(ReadableByteChannel channel, Duration timeout) {
+    DataReader(ReadableByteChannel channel, Duration timeout) {
         this.channel = channel;
         this.timeout = timeout;
     }
 
-    public int execute(ByteBuffer buffer, int min, int limit) {
+    int read(ByteBuffer buffer, int min, int limit) {
         try {
             return read(channel, buffer, timeout, min, limit);
         } catch (IOException e) {

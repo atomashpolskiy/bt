@@ -10,24 +10,24 @@ import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-public class StreamCipher {
+public class MSECipher {
 
     private static final String transformation = "ARCFOUR/ECB/NoPadding";
 
     private final Cipher incomingCipher;
     private final Cipher outgoingCipher;
 
-    public static StreamCipher forInitiator(BigInteger S, TorrentId torrentId) {
-        return new StreamCipher(S, torrentId, true);
+    public static MSECipher forInitiator(BigInteger S, TorrentId torrentId) {
+        return new MSECipher(S, torrentId, true);
     }
 
-    public static StreamCipher forReceiver(BigInteger S, TorrentId torrentId) {
-        return new StreamCipher(S, torrentId, false);
+    public static MSECipher forReceiver(BigInteger S, TorrentId torrentId) {
+        return new MSECipher(S, torrentId, false);
     }
 
-    private StreamCipher(BigInteger S, TorrentId torrentId, boolean initiator) {
-        Key initiatorKey = getInitiatorEncryptionKey(new DiffieHellman().toByteArray(S), torrentId.getBytes());
-        Key receiverKey = getReceiverEncryptionKey(new DiffieHellman().toByteArray(S), torrentId.getBytes());
+    private MSECipher(BigInteger S, TorrentId torrentId, boolean initiator) {
+        Key initiatorKey = getInitiatorEncryptionKey(BigIntegers.toByteArray(S), torrentId.getBytes());
+        Key receiverKey = getReceiverEncryptionKey(BigIntegers.toByteArray(S), torrentId.getBytes());
         Key outgoingKey = initiator ? initiatorKey : receiverKey;
         Key incomingKey = initiator ? receiverKey : initiatorKey;
         this.incomingCipher = createCipher(Cipher.DECRYPT_MODE, transformation, incomingKey);

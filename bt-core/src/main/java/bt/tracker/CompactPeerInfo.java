@@ -153,7 +153,7 @@ public class CompactPeerInfo implements Iterable<Peer> {
                 PeerOptions options = PeerOptions.defaultOptions();
                 boolean requiresEncryption = cryptoFlags.isPresent() && cryptoFlags.get()[index] == 1;
                 if (requiresEncryption) {
-                    options = options.withEncryptionPolicy(EncryptionPolicy.REQUIRE_ENCRYPTED);
+                    options = options.withEncryptionPolicy(EncryptionPolicy.PREFER_ENCRYPTED);
                 }
                 Peer peer = new InetPeer(addr, options);
                 peerList.add(peer);

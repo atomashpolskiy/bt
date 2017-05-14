@@ -18,7 +18,7 @@ public class PeerOptions {
      * @since 1.2
      */
     public static PeerOptions defaultOptions() {
-        return new PeerOptions(EncryptionPolicy.REQUIRE_PLAINTEXT);
+        return new PeerOptions(EncryptionPolicy.PREFER_PLAINTEXT);
     }
 
     private final EncryptionPolicy encryptionPolicy;

@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 
-public class Swarm_IT extends BaseBtTest {
+public class Swarm_EncryptedIT extends BaseBtTest {
 
     private static final int NUMBER_OF_SEEDERS = 5;
 
@@ -32,7 +32,7 @@ public class Swarm_IT extends BaseBtTest {
 
         @Override
         public EncryptionPolicy getEncryptionPolicy() {
-            return EncryptionPolicy.REQUIRE_PLAINTEXT;
+            return EncryptionPolicy.REQUIRE_ENCRYPTED;
         }
     };
 

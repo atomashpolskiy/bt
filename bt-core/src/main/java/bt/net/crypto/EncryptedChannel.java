@@ -1,6 +1,4 @@
-package bt.net;
-
-import bt.net.crypto.StreamCipher;
+package bt.net.crypto;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -9,9 +7,9 @@ import java.nio.channels.ByteChannel;
 class EncryptedChannel implements ByteChannel {
 
     private final ByteChannel delegate;
-    private final StreamCipher cipher;
+    private final MSECipher cipher;
 
-    EncryptedChannel(ByteChannel delegate, StreamCipher cipher) {
+    EncryptedChannel(ByteChannel delegate, MSECipher cipher) {
         this.delegate = delegate;
         this.cipher = cipher;
     }
