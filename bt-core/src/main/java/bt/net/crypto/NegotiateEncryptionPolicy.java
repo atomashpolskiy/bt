@@ -188,7 +188,6 @@ public class NegotiateEncryptionPolicy {
     private byte[] getZeroPadding(int length) {
         // todo: use this constructor everywhere in the project
         Random r = new Random();
-//        return new byte[r.nextInt(length + 1)];
-        return new byte[0];
+        return new byte[r.nextInt(length + 1)];
     }
 }

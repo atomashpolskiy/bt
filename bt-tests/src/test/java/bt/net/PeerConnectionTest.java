@@ -6,6 +6,7 @@ import bt.protocol.Handshake;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.Request;
+import bt.protocol.handler.MessageHandler;
 import bt.test.protocol.ProtocolTest;
 import org.junit.After;
 import org.junit.Before;
@@ -19,6 +20,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -50,7 +53,11 @@ public class PeerConnectionTest {
 
     @Test
     public void testConnection() throws InvalidMessageException, IOException {
-        PeerConnection connection = new DefaultPeerConnection(mock(Peer.class), clientChannel, TEST.getProtocol(), BUFFER_SIZE);
+        Peer peer = mock(Peer.class);
+        MessageHandler<Message> messageHandler = TEST.getProtocol();
+        Supplier<Message> reader = new DefaultMessageReader(peer, clientChannel, messageHandler, BUFFER_SIZE);
+        Consumer<Message> writer = new DefaultMessageWriter(clientChannel, messageHandler, BUFFER_SIZE);
+        PeerConnection connection = new DefaultPeerConnection(peer, clientChannel, reader, writer);
 
         Message message;
 

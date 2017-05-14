@@ -182,12 +182,12 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
             return null;
         }
 
-        buffer.mark();
+        int position = buffer.position();
         byte first = buffer.get();
         if (first == PROTOCOL_NAME.length()) {
             return Handshake.class;
         }
-        buffer.reset();
+        buffer.position(position);
 
         Integer length = readInt(buffer);
         if (length == null) {
@@ -224,14 +224,14 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
             return 0;
         }
 
-        buffer.mark();
+        int position = buffer.position();
         Class<? extends Message> messageType = readMessageType(buffer);
         if (messageType == null) {
             return 0;
         }
 
         if (Handshake.class.equals(messageType)) {
-            buffer.reset();
+            buffer.position(position);
             return decodeHandshake(context, buffer);
         }
         if (KeepAlive.class.equals(messageType)) {
@@ -240,7 +240,7 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
         }
 
         MessageHandler<?> handler = Objects.requireNonNull(handlersByType.get(messageType));
-        buffer.reset();
+        buffer.position(position);
         return handler.decode(context, buffer);
     }
 

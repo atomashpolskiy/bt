@@ -13,7 +13,6 @@ import bt.protocol.handler.MessageHandler;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 
-import javax.crypto.Cipher;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -27,6 +26,8 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 class PeerConnectionFactory {
 
@@ -72,7 +73,10 @@ class PeerConnectionFactory {
     private DefaultPeerConnection createConnection(Peer peer, TorrentId torrentId, SocketChannel channel, boolean incoming) throws IOException {
         channel.configureBlocking(false);
         ByteChannel negotiatedChannel = incoming ? negotiateIncomingConnection(channel) : encryptOutgoingChannel(channel, torrentId);
-        return new DefaultPeerConnection(peer, negotiatedChannel, messageHandler, getBufferSize(maxTransferBlockSize));
+        int bufferSize = getBufferSize(maxTransferBlockSize);
+        Supplier<Message> reader = new DefaultMessageReader(peer, negotiatedChannel, messageHandler, bufferSize);
+        Consumer<Message> writer = new DefaultMessageWriter(negotiatedChannel, messageHandler, bufferSize);
+        return new DefaultPeerConnection(peer, negotiatedChannel, reader, writer);
     }
 
     private static int getBufferSize(long maxTransferBlockSize) {
@@ -170,7 +174,7 @@ class PeerConnectionFactory {
         // - ENCRYPT(VC, crypto_select, len(padD), padD)
         // - ENCRYPT2(Payload Stream)
         StreamCipher cipher = StreamCipher.forReceiver(S, requestedTorrent.getTorrentId());
-        ByteChannel encryptedChannel = encryptChannel(channel, cipher.getDecryptionCipher(), cipher.getEncryptionCipher());
+        ByteChannel encryptedChannel = encryptChannel(channel, cipher);
 
         // derypt encrypted leftovers
         int pos = buf.position();
@@ -178,7 +182,7 @@ class PeerConnectionFactory {
         buf.get(leftovers);
         buf.position(pos);
         try {
-            buf.put(cipher.getDecryptionCipher().doFinal(leftovers));
+            buf.put(cipher.getDecryptionCipher().update(leftovers));
         } catch (Exception e) {
             throw new RuntimeException("Failed to decrypt leftover bytes: " + leftovers.length);
         }
@@ -255,7 +259,7 @@ class PeerConnectionFactory {
         buf.clear();
 
         StreamCipher cipher = StreamCipher.forInitiator(S, torrentId);
-        ByteChannel encryptedChannel = encryptChannel(channel, cipher.getDecryptionCipher(), cipher.getEncryptionCipher());
+        ByteChannel encryptedChannel = encryptChannel(channel, cipher);
         EncryptionPolicy negotiatedEncryptionPolicy =
                 new NegotiateEncryptionPolicy(encryptionPolicy).negotiateOutgoing(encryptedChannel, buf);
 
@@ -281,8 +285,7 @@ class PeerConnectionFactory {
         for (int i = 0; i < padding.length; i++) {
             padding[i] = (byte) r.nextInt(256);
         }
-//        return padding;
-        return new byte[0];
+        return padding;
     }
 
     private MessageDigest getDigest(String algorithm) {
@@ -304,62 +307,7 @@ class PeerConnectionFactory {
         return result;
     }
 
-    private ByteChannel encryptChannel(ByteChannel channel, Cipher in, Cipher out) {
-        return new ByteChannel() {
-            @Override
-            public int read(ByteBuffer dst) throws IOException {
-                int read = 0;
-                if (dst.hasRemaining()) {
-                    int position = dst.position();
-                    int limit = dst.limit();
-                    read = channel.read(dst);
-                    if (read > 0) {
-                        dst.limit(dst.position());
-                        dst.position(position);
-                        byte[] bytes = new byte[dst.remaining()];
-                        dst.get(bytes);
-                        try {
-                            bytes = in.doFinal(bytes);
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                        dst.position(position);
-                        dst.put(bytes);
-                        dst.limit(limit);
-                    }
-                }
-                return read;
-            }
-
-            @Override
-            public int write(ByteBuffer src) throws IOException {
-                int written = 0;
-                if (src.hasRemaining()) {
-                    int position = src.position();
-                    byte[] bytes = new byte[src.remaining()];
-                    src.get(bytes);
-                    try {
-                        bytes = out.doFinal(bytes);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                    src.position(position);
-                    src.put(bytes);
-                    src.position(position);
-                    written = channel.write(src);
-                }
-                return written;
-            }
-
-            @Override
-            public boolean isOpen() {
-                return channel.isOpen();
-            }
-
-            @Override
-            public void close() throws IOException {
-                channel.close();
-            }
-        };
+    private ByteChannel encryptChannel(ByteChannel channel, StreamCipher cipher) {
+        return new EncryptedChannel(channel, cipher);
     }
 }

@@ -2,16 +2,17 @@ package bt.net;
 
 import bt.metainfo.TorrentId;
 import bt.protocol.Message;
-import bt.protocol.handler.MessageHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.channels.ByteChannel;
+import java.nio.channels.Channel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * @since 1.0
@@ -25,8 +26,9 @@ class DefaultPeerConnection implements PeerConnection {
     private TorrentId torrentId;
     private Peer remotePeer;
 
-    private ByteChannel channel;
-    private DefaultMessageWorker messageWorker;
+    private Channel channel;
+    private Supplier<Message> messageSource;
+    private Consumer<Message> messageConsumer;
 
     private volatile boolean closed;
     private AtomicLong lastActive;
@@ -35,15 +37,14 @@ class DefaultPeerConnection implements PeerConnection {
     private final Condition condition;
 
     DefaultPeerConnection(Peer remotePeer,
-                          ByteChannel channel,
-                          MessageHandler<Message> messageHandler,
-                          int bufferSize) {
+                          Channel channel,
+                          Supplier<Message> messageSource,
+                          Consumer<Message> messageConsumer) {
         this.remotePeer = remotePeer;
         this.channel = channel;
-        this.messageWorker = new DefaultMessageWorker(remotePeer, channel, messageHandler, bufferSize);
-
+        this.messageSource = messageSource;
+        this.messageConsumer = messageConsumer;
         this.lastActive = new AtomicLong();
-
         this.readLock = new ReentrantLock(true);
         this.condition = this.readLock.newCondition();
     }
@@ -62,7 +63,7 @@ class DefaultPeerConnection implements PeerConnection {
 
     @Override
     public synchronized Message readMessageNow() {
-        Message message = messageWorker.readMessage();
+        Message message = messageSource.get();
         if (message != null) {
             updateLastActive();
             if (LOGGER.isTraceEnabled()) {
@@ -118,7 +119,7 @@ class DefaultPeerConnection implements PeerConnection {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Sending message to peer: " + remotePeer + " -- " + message);
         }
-        messageWorker.writeMessage(message);
+        messageConsumer.accept(message);
     }
 
     private void updateLastActive() {

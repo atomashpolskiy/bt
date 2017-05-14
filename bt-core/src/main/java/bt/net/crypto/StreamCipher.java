@@ -12,10 +12,10 @@ import java.security.NoSuchAlgorithmException;
 
 public class StreamCipher {
 
-    private static final String transformation = "ARCFOUR";
+    private static final String transformation = "ARCFOUR/ECB/NoPadding";
 
-    private final Key incomingKey;
-    private final Key outgoingKey;
+    private final Cipher incomingCipher;
+    private final Cipher outgoingCipher;
 
     public static StreamCipher forInitiator(BigInteger S, TorrentId torrentId) {
         return new StreamCipher(S, torrentId, true);
@@ -28,16 +28,18 @@ public class StreamCipher {
     private StreamCipher(BigInteger S, TorrentId torrentId, boolean initiator) {
         Key initiatorKey = getInitiatorEncryptionKey(new DiffieHellman().toByteArray(S), torrentId.getBytes());
         Key receiverKey = getReceiverEncryptionKey(new DiffieHellman().toByteArray(S), torrentId.getBytes());
-        this.outgoingKey = initiator ? initiatorKey : receiverKey;
-        this.incomingKey = initiator ? receiverKey : initiatorKey;
+        Key outgoingKey = initiator ? initiatorKey : receiverKey;
+        Key incomingKey = initiator ? receiverKey : initiatorKey;
+        this.incomingCipher = createCipher(Cipher.DECRYPT_MODE, transformation, incomingKey);
+        this.outgoingCipher = createCipher(Cipher.ENCRYPT_MODE, transformation, outgoingKey);
     }
 
     public Cipher getEncryptionCipher() {
-        return createCipher(Cipher.ENCRYPT_MODE, transformation, outgoingKey);
+        return outgoingCipher;
     }
 
     public Cipher getDecryptionCipher() {
-        return createCipher(Cipher.DECRYPT_MODE, transformation, incomingKey);
+        return incomingCipher;
     }
 
     private Key getInitiatorEncryptionKey(byte[] S, byte[] SKEY) {
@@ -69,7 +71,9 @@ public class StreamCipher {
         try {
             cipher = Cipher.getInstance(transformation);
             cipher.init(mode, key);
-            cipher.update(new byte[1024]); // discard first 1024 bytes
+            if (mode == Cipher.ENCRYPT_MODE) {
+                cipher.doFinal(new byte[1024]); // discard first 1024 bytes
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
