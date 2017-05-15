@@ -25,5 +25,14 @@ public enum EncryptionPolicy {
     /**
      * @since 1.2
      */
-    REQUIRE_ENCRYPTED
+    REQUIRE_ENCRYPTED;
+
+    public boolean isCompatible(EncryptionPolicy that) {
+        if (this == REQUIRE_PLAINTEXT && that == REQUIRE_ENCRYPTED) {
+            return false;
+        } else if (this == REQUIRE_ENCRYPTED && that == REQUIRE_PLAINTEXT) {
+            return false;
+        }
+        return true;
+    }
 }

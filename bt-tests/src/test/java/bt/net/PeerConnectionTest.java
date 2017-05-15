@@ -57,7 +57,8 @@ public class PeerConnectionTest {
         MessageHandler<Message> messageHandler = TEST.getProtocol();
         Supplier<Message> reader = new DefaultMessageReader(peer, clientChannel, messageHandler, BUFFER_SIZE);
         Consumer<Message> writer = new DefaultMessageWriter(clientChannel, messageHandler, BUFFER_SIZE);
-        PeerConnection connection = new DefaultPeerConnection(peer, clientChannel, reader, writer);
+        MessageReaderWriter readerWriter = new DelegatingMessageReaderWriter(reader, writer);
+        PeerConnection connection = new DefaultPeerConnection(peer, clientChannel, readerWriter);
 
         Message message;
 

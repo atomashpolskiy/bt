@@ -4,7 +4,6 @@ import bt.metainfo.TorrentId;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.security.Key;
 import java.security.MessageDigest;
@@ -17,17 +16,17 @@ public class MSECipher {
     private final Cipher incomingCipher;
     private final Cipher outgoingCipher;
 
-    public static MSECipher forInitiator(BigInteger S, TorrentId torrentId) {
+    public static MSECipher forInitiator(byte[] S, TorrentId torrentId) {
         return new MSECipher(S, torrentId, true);
     }
 
-    public static MSECipher forReceiver(BigInteger S, TorrentId torrentId) {
+    public static MSECipher forReceiver(byte[] S, TorrentId torrentId) {
         return new MSECipher(S, torrentId, false);
     }
 
-    private MSECipher(BigInteger S, TorrentId torrentId, boolean initiator) {
-        Key initiatorKey = getInitiatorEncryptionKey(BigIntegers.toByteArray(S), torrentId.getBytes());
-        Key receiverKey = getReceiverEncryptionKey(BigIntegers.toByteArray(S), torrentId.getBytes());
+    private MSECipher(byte[] S, TorrentId torrentId, boolean initiator) {
+        Key initiatorKey = getInitiatorEncryptionKey(S, torrentId.getBytes());
+        Key receiverKey = getReceiverEncryptionKey(S, torrentId.getBytes());
         Key outgoingKey = initiator ? initiatorKey : receiverKey;
         Key incomingKey = initiator ? receiverKey : initiatorKey;
         this.incomingCipher = createCipher(Cipher.DECRYPT_MODE, transformation, incomingKey);

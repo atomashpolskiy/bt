@@ -11,7 +11,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-class DefaultMessageReader implements Supplier<Message> {
+public class DefaultMessageReader implements Supplier<Message> {
 
     private final ReadableByteChannel channel;
     private final MessageHandler<Message> messageHandler;
@@ -24,14 +24,14 @@ class DefaultMessageReader implements Supplier<Message> {
 
     private int dataOffset;
 
-    DefaultMessageReader(Peer peer,
+    public DefaultMessageReader(Peer peer,
                                 ReadableByteChannel channel,
                                 MessageHandler<Message> messageHandler,
                                 int bufferSize) {
         this(peer, channel, messageHandler, ByteBuffer.allocateDirect(bufferSize));
     }
 
-    DefaultMessageReader(Peer peer,
+    public DefaultMessageReader(Peer peer,
                                 ReadableByteChannel channel,
                                 MessageHandler<Message> messageHandler,
                                 ByteBuffer buffer) {
@@ -41,7 +41,7 @@ class DefaultMessageReader implements Supplier<Message> {
         this.context = createDecodingContext(peer);
         this.buffer = buffer;
         this.readOnlyBuffer = buffer.asReadOnlyBuffer();
-        this.dataOffset = buffer.position();
+        this.dataOffset = 0;
     }
 
     @Override

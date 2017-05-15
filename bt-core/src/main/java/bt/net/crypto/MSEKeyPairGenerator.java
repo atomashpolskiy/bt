@@ -16,7 +16,7 @@ class MSEKeyPairGenerator {
                                     "E485B576625E7EC6F44C42E9A63A36210000000000090563", 16);
 
     private static final BigInteger G = BigInteger.valueOf(2);
-    private static final int PUBLIC_KEY_BYTES = (int) Math.ceil(P.bitCount() / 8d);
+    private static final int PUBLIC_KEY_BYTES = 96;
 
     KeyPair generateKeyPair() {
         MSEPrivateKey privateKey = new MSEPrivateKey();
@@ -26,6 +26,10 @@ class MSEKeyPairGenerator {
 
     int getKeySize() {
         return PUBLIC_KEY_BYTES;
+    }
+
+    int getKeySizeBits() {
+        return PUBLIC_KEY_BYTES * 8;
     }
 
     BigInteger calculateSharedSecret(BigInteger publicKey, PrivateKey privateKey) {
@@ -65,7 +69,7 @@ class MSEKeyPairGenerator {
             if (encoded == null) {
                 synchronized (lock) {
                     if (encoded == null) {
-                        encoded = BigIntegers.toByteArray(value, PUBLIC_KEY_BYTES);
+                        encoded = BigIntegers.toByteArray(value, PUBLIC_KEY_BYTES * 8);
                     }
                 }
             }
@@ -89,18 +93,21 @@ class MSEKeyPairGenerator {
         private BigInteger generatePrivateKey() {
             Random r = new Random();
             int len = 20; // in bytes
-            byte[] bytes = new byte[len + 1];
-            for (int i = 1; i < len + 1; i++) {
-                bytes[i] = (byte) r.nextInt(15);
+            byte[] bytes = new byte[len];
+            byte k;
+            for (int i = 0; i < len; i++) {
+                while ((k = (byte) r.nextInt(256)) == 0)
+                    ;
+                bytes[i] = k;
             }
-            return new BigInteger(bytes);
+            return new BigInteger(bytes).abs();
         }
 
         MSEPublicKey getPublicKey() {
             if (publicKey == null) {
                 synchronized (lock) {
                     if (publicKey == null) {
-                        publicKey = new MSEPublicKey(G.xor(value).mod(P));
+                        publicKey = new MSEPublicKey(G.modPow(value, P));
                     }
                 }
             }
@@ -108,7 +115,7 @@ class MSEKeyPairGenerator {
         }
 
         BigInteger calculateSharedSecret(MSEPublicKey publicKey) {
-            return publicKey.getValue().xor(value).mod(P);
+            return publicKey.getValue().modPow(value, P);
         }
 
         @Override

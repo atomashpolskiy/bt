@@ -245,8 +245,8 @@ public class PeerRegistry implements IPeerRegistry {
         }
 
         @Override
-        public boolean equals(Object obj) {
-            return delegate.equals(obj);
+        public boolean equals(Object object) {
+            return delegate.equals(object);
         }
 
         @Override

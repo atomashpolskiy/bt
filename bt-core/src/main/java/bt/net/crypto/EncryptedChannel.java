@@ -1,5 +1,6 @@
 package bt.net.crypto;
 
+import javax.crypto.Cipher;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
@@ -7,11 +8,13 @@ import java.nio.channels.ByteChannel;
 class EncryptedChannel implements ByteChannel {
 
     private final ByteChannel delegate;
-    private final MSECipher cipher;
+    private final Cipher cipherIn;
+    private final Cipher cipherOut;
 
-    EncryptedChannel(ByteChannel delegate, MSECipher cipher) {
+    EncryptedChannel(ByteChannel delegate, Cipher cipherIn, Cipher cipherOut) {
         this.delegate = delegate;
-        this.cipher = cipher;
+        this.cipherIn = cipherIn;
+        this.cipherOut = cipherOut;
     }
 
     @Override
@@ -29,7 +32,7 @@ class EncryptedChannel implements ByteChannel {
                 dst.limit(limit);
                 dst.position(position);
                 try {
-                    bytes = cipher.getDecryptionCipher().update(bytes);
+                    bytes = cipherIn.update(bytes);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -48,7 +51,7 @@ class EncryptedChannel implements ByteChannel {
             src.get(bytes);
             src.position(position);
             try {
-                bytes = cipher.getEncryptionCipher().update(bytes);
+                bytes = cipherOut.update(bytes);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

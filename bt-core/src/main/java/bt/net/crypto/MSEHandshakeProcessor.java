@@ -2,10 +2,21 @@ package bt.net.crypto;
 
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
+import bt.net.DefaultMessageReader;
+import bt.net.DefaultMessageWriter;
+import bt.net.DelegatingMessageReaderWriter;
+import bt.net.MessageReaderWriter;
+import bt.net.Peer;
+import bt.protocol.DecodingContext;
+import bt.protocol.Handshake;
+import bt.protocol.Message;
 import bt.protocol.Protocols;
 import bt.protocol.crypto.EncryptionPolicy;
+import bt.protocol.handler.MessageHandler;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -18,25 +29,37 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class MSEHandshakeProcessor {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MSEHandshakeProcessor.class);
 
     private static final Duration receiveTimeout = Duration.ofSeconds(30);
     private static final int paddingMaxLength = 512;
     private static final byte[] VC = new byte[8];
 
-    private MSEKeyPairGenerator keyGenerator;
-    private TorrentRegistry torrentRegistry;
-    private EncryptionPolicy localEncryptionPolicy;
+    private final MSEKeyPairGenerator keyGenerator;
+    private final TorrentRegistry torrentRegistry;
+    private final MessageHandler<Message> messageHandler;
+    private final EncryptionPolicy localEncryptionPolicy;
+    private final int bufferSize;
 
     public MSEHandshakeProcessor(TorrentRegistry torrentRegistry,
-                                 EncryptionPolicy localEncryptionPolicy) {
+                                 MessageHandler<Message> messageHandler,
+                                 EncryptionPolicy localEncryptionPolicy,
+                                 int bufferSize) {
         this.keyGenerator = new MSEKeyPairGenerator();
         this.torrentRegistry = torrentRegistry;
+        this.messageHandler = messageHandler;
         this.localEncryptionPolicy = localEncryptionPolicy;
+        this.bufferSize = bufferSize;
     }
 
-    public ByteChannel negotiateOutgoing(ByteChannel channel, TorrentId torrentId) throws IOException {
+    public MessageReaderWriter negotiateOutgoing(Peer peer, ByteChannel channel, TorrentId torrentId) throws IOException {
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("Negotiating encryption for outgoing connection: {}", peer);
+        }
         /**
          * Blocking steps:
          *
@@ -53,8 +76,21 @@ public class MSEHandshakeProcessor {
          * 5. A->B: ENCRYPT2(Payload Stream)
          */
 
-        ByteBuffer in = ByteBuffer.allocateDirect(128 * 1024);
-        ByteBuffer out = ByteBuffer.allocateDirect(128 * 1024);
+        // check if the encryption negotiation can be skipped or preemptively aborted
+        EncryptionPolicy peerEncryptionPolicy = peer.getOptions().getEncryptionPolicy();
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("Peer {} has encryption policy: {}", peer, peerEncryptionPolicy);
+        }
+        assertPolicyIsCompatible(peerEncryptionPolicy);
+
+        ByteBuffer in = ByteBuffer.allocateDirect(bufferSize);
+        ByteBuffer out = ByteBuffer.allocateDirect(bufferSize);
+
+        if (peerEncryptionPolicy == EncryptionPolicy.REQUIRE_PLAINTEXT) {
+            // if peer requires plaintext and we support it, then do not negotiate encryption and use plaintext right away
+            return createReaderWriter(peer, channel, in, out);
+        }
+
         DataReader reader = new DataReader(channel, receiveTimeout);
 
         // 1. A->B: Diffie Hellman Ya, PadA
@@ -80,14 +116,14 @@ public class MSEHandshakeProcessor {
         MessageDigest digest = getDigest("SHA-1");
         // - HASH('req1', S)
         digest.update("req1".getBytes("ASCII"));
-        digest.update(BigIntegers.toByteArray(S));
+        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySizeBits()));
         out.put(digest.digest());
         // - HASH('req2', SKEY) xor HASH('req3', S)
         digest.update("req2".getBytes("ASCII"));
         digest.update(torrentId.getBytes());
         byte[] b1 = digest.digest();
         digest.update("req3".getBytes("ASCII"));
-        digest.update(BigIntegers.toByteArray(S));
+        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySizeBits()));
         byte[] b2 = digest.digest();
         out.put(xor(b1, b2));
         // write
@@ -95,8 +131,8 @@ public class MSEHandshakeProcessor {
         channel.write(out);
         out.clear();
 
-        MSECipher cipher = MSECipher.forInitiator(S, torrentId);
-        ByteChannel encryptedChannel = new EncryptedChannel(channel, cipher);
+        MSECipher cipher = MSECipher.forInitiator(BigIntegers.toByteArray(S, keyGenerator.getKeySizeBits()), torrentId);
+        ByteChannel encryptedChannel = new EncryptedChannel(channel, cipher.getDecryptionCipher(), cipher.getEncryptionCipher());
         // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
         out.put(VC);
         out.put(getCryptoProvideBitfield(localEncryptionPolicy));
@@ -124,22 +160,28 @@ public class MSEHandshakeProcessor {
         byte[] crypto_select = new byte[4];
         in.get(crypto_select);
         EncryptionPolicy negotiatedEncryptionPolicy = selectPolicy(crypto_select, localEncryptionPolicy);
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("Negotiated encryption policy: {}, peer: {}", negotiatedEncryptionPolicy, peer);
+        }
 
-        int theirPadding = in.getShort();
+        int theirPadding = in.getShort() & 0xFFFF;
         // assume that all data has been received, so the whole padding block is present
         for (int i = 0; i < theirPadding; i++) {
             in.get();
         }
 
+        in.clear();
+        out.clear();
+
         // - ENCRYPT2(Payload Stream)
         switch (negotiatedEncryptionPolicy) {
             case REQUIRE_PLAINTEXT:
             case PREFER_PLAINTEXT: {
-                return channel;
+                return createReaderWriter(peer, channel, in, out);
             }
             case PREFER_ENCRYPTED:
             case REQUIRE_ENCRYPTED: {
-                return encryptedChannel;
+                return createReaderWriter(peer, encryptedChannel, in, out);
             }
             default: {
                 throw new IllegalStateException("Unknown encryption policy: " + negotiatedEncryptionPolicy.name());
@@ -147,7 +189,10 @@ public class MSEHandshakeProcessor {
         }
     }
 
-    public ByteChannel negotiateIncoming(ByteChannel channel) throws IOException {
+    public MessageReaderWriter negotiateIncoming(Peer peer, ByteChannel channel) throws IOException {
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("Negotiating encryption for incoming connection: {}", peer);
+        }
         /**
          * Blocking steps:
          *
@@ -164,14 +209,37 @@ public class MSEHandshakeProcessor {
          * 5. A->B: ENCRYPT2(Payload Stream)
          */
 
-        ByteBuffer in = ByteBuffer.allocateDirect(128 * 1024);
-        ByteBuffer out = ByteBuffer.allocateDirect(128 * 1024);
+        ByteBuffer in = ByteBuffer.allocateDirect(bufferSize);
+        ByteBuffer out = ByteBuffer.allocateDirect(bufferSize);
         DataReader reader = new DataReader(channel, receiveTimeout);
 
         // 1. A->B: Diffie Hellman Ya, PadA
         // receive initiator's public key
-        reader.read(in, keyGenerator.getKeySize(), keyGenerator.getKeySize() + paddingMaxLength);
+        // do not specify lower threshold on the amount of bytes to receive,
+        // as we will try to decode plaintext message of an unknown length first
+        reader.read(in, 1, keyGenerator.getKeySize() + paddingMaxLength);
         in.flip();
+        // try to determine the protocol from the first received bytes
+        DecodingContext context = new DecodingContext(peer);
+        int consumed = 0;
+        try {
+             consumed = messageHandler.decode(context, in);
+        } catch (Exception e) {
+            // ignore
+        }
+        in.position(0); // reset buffer (message will be decoded once again by the upper layer)
+        // TODO: can this be done without knowing the protocol specifics? (KeepAlive can be especially misleading: 0x00 0x00 0x00 0x00)
+        if (consumed > 0 && context.getMessage() instanceof Handshake) {
+            // decoding was successful, can use plaintext (if supported)
+            assertPolicyIsCompatible(EncryptionPolicy.REQUIRE_PLAINTEXT);
+            return createReaderWriter(peer, channel, in, out);
+        }
+
+        // verify that there is a sufficient amount of bytes to decode peer's public key
+        if (in.remaining() < keyGenerator.getKeySize()) {
+            throw new IllegalStateException("Less than " + keyGenerator.getKeySize() + " bytes received");
+        }
+
         BigInteger peerPublicKey = BigIntegers.fromBytes(in, keyGenerator.getKeySize());
         in.clear(); // ignore padding
 
@@ -197,7 +265,7 @@ public class MSEHandshakeProcessor {
         // - HASH('req1', S)
         in.get(bytes); // read S hash
         digest.update("req1".getBytes("ASCII"));
-        digest.update(BigIntegers.toByteArray(S));
+        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySizeBits()));
         byte[] req1hash = digest.digest();
         if (!Arrays.equals(req1hash, bytes)) {
             throw new IllegalStateException("Shared secret does not match");
@@ -206,7 +274,7 @@ public class MSEHandshakeProcessor {
         in.get(bytes); // read SKEY/S hash
         Torrent requestedTorrent = null;
         digest.update("req3".getBytes("ASCII"));
-        digest.update(BigIntegers.toByteArray(S));
+        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySizeBits()));
         byte[] b2 = digest.digest();
         for (Torrent torrent : torrentRegistry.getTorrents()) {
             digest.update("req2".getBytes("ASCII"));
@@ -231,8 +299,8 @@ public class MSEHandshakeProcessor {
             throw new IllegalStateException("Unsupported/inactive torrent requested");
         }
 
-        MSECipher cipher = MSECipher.forReceiver(S, requestedTorrent.getTorrentId());
-        ByteChannel encryptedChannel = new EncryptedChannel(channel, cipher);
+        MSECipher cipher = MSECipher.forReceiver(BigIntegers.toByteArray(S, keyGenerator.getKeySizeBits()), requestedTorrent.getTorrentId());
+        ByteChannel encryptedChannel = new EncryptedChannel(channel, cipher.getDecryptionCipher(), cipher.getEncryptionCipher());
 
         // derypt encrypted leftovers from step #3
         int pos = in.position();
@@ -272,16 +340,20 @@ public class MSEHandshakeProcessor {
         byte[] crypto_provide = new byte[4];
         in.get(crypto_provide);
         EncryptionPolicy negotiatedEncryptionPolicy = selectPolicy(crypto_provide, localEncryptionPolicy);
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("Negotiated encryption policy: {}, peer: {}", negotiatedEncryptionPolicy, peer);
+        }
 
-        int theirPadding = in.getShort();
+        int theirPadding = in.getShort() & 0xFFFF;
         // assume that all data has been received, so the whole padding block is present
         for (int i = 0; i < theirPadding; i++) {
             in.get();
         }
 
-        // skip Initial Payload length
-        in.get();
-        in.get();
+        // Initial Payload length (0..65535 bytes)
+        int initialPayloadLength = in.getShort() & 0xFFFF;
+        in.limit(in.position() + initialPayloadLength);
+        in.compact();
 
         // 4. B->A:
         // - ENCRYPT(VC, crypto_select, len(padD), padD)
@@ -298,16 +370,29 @@ public class MSEHandshakeProcessor {
         switch (negotiatedEncryptionPolicy) {
             case REQUIRE_PLAINTEXT:
             case PREFER_PLAINTEXT: {
-                return channel;
+                return createReaderWriter(peer, channel, in, out);
             }
             case PREFER_ENCRYPTED:
             case REQUIRE_ENCRYPTED: {
-                return encryptedChannel;
+                return createReaderWriter(peer, encryptedChannel, in, out);
             }
             default: {
                 throw new IllegalStateException("Unknown encryption policy: " + negotiatedEncryptionPolicy.name());
             }
         }
+    }
+
+    private void assertPolicyIsCompatible(EncryptionPolicy peerEncryptionPolicy) {
+        if (!localEncryptionPolicy.isCompatible(peerEncryptionPolicy)) {
+            throw new RuntimeException("Encryption policies are incompatible: peer's (" + peerEncryptionPolicy.name()
+                    + "), local (" + localEncryptionPolicy.name() + ")");
+        }
+    }
+
+    private MessageReaderWriter createReaderWriter(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out) {
+        Supplier<Message> reader = new DefaultMessageReader(peer, channel, messageHandler, in);
+        Consumer<Message> writer = new DefaultMessageWriter(channel, messageHandler, out);
+        return new DelegatingMessageReaderWriter(reader, writer);
     }
 
     private byte[] getPadding(int length) {

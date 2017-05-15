@@ -6,32 +6,35 @@ import bt.protocol.Message;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.protocol.handler.MessageHandler;
 import bt.torrent.TorrentRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.nio.channels.ByteChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Objects;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 class PeerConnectionFactory {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionFactory.class);
 
-    private MessageHandler<Message> messageHandler;
     private SocketChannelFactory socketChannelFactory;
     private MSEHandshakeProcessor cryptoHandshakeProcessor;
-
-    private int maxTransferBlockSize;
 
     public PeerConnectionFactory(MessageHandler<Message> messageHandler,
                                  SocketChannelFactory socketChannelFactory,
                                  int maxTransferBlockSize,
                                  TorrentRegistry torrentRegistry,
                                  EncryptionPolicy encryptionPolicy) {
-        this.messageHandler = messageHandler;
         this.socketChannelFactory = socketChannelFactory;
-        this.maxTransferBlockSize = maxTransferBlockSize;
-        this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(torrentRegistry, encryptionPolicy);
+        this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(
+                torrentRegistry, messageHandler, encryptionPolicy, getBufferSize(maxTransferBlockSize));
+    }
+
+    private static int getBufferSize(long maxTransferBlockSize) {
+        if (maxTransferBlockSize > ((Integer.MAX_VALUE - 13) / 2)) {
+            throw new IllegalArgumentException("Transfer block size is too large: " + maxTransferBlockSize);
+        }
+        return (int) (maxTransferBlockSize) * 2;
     }
 
     public DefaultPeerConnection createOutgoingConnection(Peer peer, TorrentId torrentId) throws IOException {
@@ -40,38 +43,53 @@ class PeerConnectionFactory {
         InetAddress inetAddress = peer.getInetAddress();
         int port = peer.getPort();
 
-        SocketChannel channel;
+        SocketChannel channel = null;
         try {
             channel = socketChannelFactory.getChannel(inetAddress, port);
+            return createConnection(peer, torrentId, channel, false);
         } catch (IOException e) {
+            closeQuietly(channel);
             throw new IOException("Failed to create peer connection (" + inetAddress + ":" + port + ")", e);
         }
-
-        return createConnection(peer, torrentId, channel, false);
     }
 
     public DefaultPeerConnection createIncomingConnection(Peer peer, SocketChannel channel) throws IOException {
-        return createConnection(peer, null, channel, true);
+        try {
+            return createConnection(peer, null, channel, true);
+        } catch (IOException e) {
+            closeQuietly(channel);
+            throw e;
+        }
     }
 
     private DefaultPeerConnection createConnection(Peer peer, TorrentId torrentId, SocketChannel channel, boolean incoming) throws IOException {
+        // sanity check
+        if (!incoming && torrentId == null) {
+            throw new IllegalStateException("Requested outgoing connection without torrent ID. Peer: " + peer);
+        }
+
         channel.configureBlocking(false);
-        ByteChannel negotiatedChannel = incoming ?
-                cryptoHandshakeProcessor.negotiateIncoming(channel) : cryptoHandshakeProcessor.negotiateOutgoing(channel, torrentId);
-        int bufferSize = getBufferSize(maxTransferBlockSize);
+        MessageReaderWriter readerWriter = incoming ?
+                cryptoHandshakeProcessor.negotiateIncoming(peer, channel)
+                : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId);
         // TODO:
         // 1. pre-fill buffer with data that has already been received during the MSE handshake (i.e. IA)
         // 2. for outgoing connections, check local config ("alwaysNegotiateEncryption") and peer options
         // 3. for incoming connections, detect by first bytes if peer uses plaintext or MSE
-        Supplier<Message> reader = new DefaultMessageReader(peer, negotiatedChannel, messageHandler, bufferSize);
-        Consumer<Message> writer = new DefaultMessageWriter(negotiatedChannel, messageHandler, bufferSize);
-        return new DefaultPeerConnection(peer, negotiatedChannel, reader, writer);
+        return new DefaultPeerConnection(peer, channel, readerWriter);
     }
 
-    private static int getBufferSize(long maxTransferBlockSize) {
-        if (maxTransferBlockSize > ((Integer.MAX_VALUE - 13) / 2)) {
-            throw new IllegalArgumentException("Transfer block size is too large: " + maxTransferBlockSize);
+    private void closeQuietly(SocketChannel channel) {
+        if (channel != null && channel.isOpen()) {
+            try {
+                channel.close();
+            } catch (IOException e1) {
+                try {
+                    LOGGER.warn("Failed to close outgoing channel: " + channel.getRemoteAddress(), e1);
+                } catch (IOException e2) {
+                    // ignore
+                }
+            }
         }
-        return (int) (maxTransferBlockSize) * 2;
     }
 }

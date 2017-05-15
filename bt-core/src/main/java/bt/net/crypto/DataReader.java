@@ -31,15 +31,17 @@ class DataReader {
         long t1 = System.currentTimeMillis();
         int readTotal = 0;
         int read;
+        long timeoutMillis = timeout.toMillis();
         int times_nothing_received = 0;
         do {
             read = channel.read(buf);
             if (read == 0) {
                 times_nothing_received++;
             } else if (read < 0) {
-                break;
+                throw new RuntimeException("Received EOF, total bytes read: " + readTotal + ", expected: " + min + ".." + limit);
             } else {
                 readTotal += read;
+                times_nothing_received = 0;
             }
             if (readTotal > limit) {
                 throw new IllegalStateException("More than " + limit + " bytes received: " + readTotal);
@@ -52,7 +54,7 @@ class DataReader {
             } catch (InterruptedException e) {
                 throw new RuntimeException("Interrupted while waiting for data", e);
             }
-        } while (System.currentTimeMillis() - t1 <= timeout.toMillis());
+        } while (System.currentTimeMillis() - t1 <= timeoutMillis);
 
         if (readTotal < min) {
             throw new IllegalStateException("Less than " + min + " bytes received: " + readTotal);

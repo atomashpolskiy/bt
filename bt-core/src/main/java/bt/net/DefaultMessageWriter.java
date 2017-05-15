@@ -9,7 +9,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.function.Consumer;
 
-class DefaultMessageWriter implements Consumer<Message> {
+public class DefaultMessageWriter implements Consumer<Message> {
 
     private static final int WRITE_ATTEMPTS = 10;
 
@@ -18,19 +18,18 @@ class DefaultMessageWriter implements Consumer<Message> {
 
     private final ByteBuffer buffer;
 
-    DefaultMessageWriter(WritableByteChannel channel,
+    public DefaultMessageWriter(WritableByteChannel channel,
                                 MessageHandler<Message> messageHandler,
                                 int bufferSize) {
         this(channel, messageHandler, ByteBuffer.allocateDirect(bufferSize));
     }
 
-    DefaultMessageWriter(WritableByteChannel channel,
+    public DefaultMessageWriter(WritableByteChannel channel,
                                 MessageHandler<Message> messageHandler,
                                 ByteBuffer buffer) {
         this.channel = channel;
         this.messageHandler = messageHandler;
         this.buffer = buffer;
-
     }
 
     @Override

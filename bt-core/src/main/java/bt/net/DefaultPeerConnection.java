@@ -7,12 +7,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.Channel;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 /**
  * @since 1.0
@@ -27,8 +26,7 @@ class DefaultPeerConnection implements PeerConnection {
     private Peer remotePeer;
 
     private Channel channel;
-    private Supplier<Message> messageSource;
-    private Consumer<Message> messageConsumer;
+    private MessageReaderWriter readerWriter;
 
     private volatile boolean closed;
     private AtomicLong lastActive;
@@ -38,12 +36,10 @@ class DefaultPeerConnection implements PeerConnection {
 
     DefaultPeerConnection(Peer remotePeer,
                           Channel channel,
-                          Supplier<Message> messageSource,
-                          Consumer<Message> messageConsumer) {
+                          MessageReaderWriter readerWriter) {
         this.remotePeer = remotePeer;
         this.channel = channel;
-        this.messageSource = messageSource;
-        this.messageConsumer = messageConsumer;
+        this.readerWriter = readerWriter;
         this.lastActive = new AtomicLong();
         this.readLock = new ReentrantLock(true);
         this.condition = this.readLock.newCondition();
@@ -63,8 +59,10 @@ class DefaultPeerConnection implements PeerConnection {
 
     @Override
     public synchronized Message readMessageNow() {
-        Message message = messageSource.get();
-        if (message != null) {
+        Message message = null;
+        Optional<Message> messageOptional = readerWriter.readMessage();
+        if (messageOptional.isPresent()) {
+            message = messageOptional.get();
             updateLastActive();
             if (LOGGER.isTraceEnabled()) {
                 LOGGER.trace("Received message from peer: " + remotePeer + " -- " + message);
@@ -119,7 +117,7 @@ class DefaultPeerConnection implements PeerConnection {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Sending message to peer: " + remotePeer + " -- " + message);
         }
-        messageConsumer.accept(message);
+        readerWriter.writeMessage(message);
     }
 
     private void updateLastActive() {
