@@ -28,10 +28,6 @@ class MSEKeyPairGenerator {
         return PUBLIC_KEY_BYTES;
     }
 
-    int getKeySizeBits() {
-        return PUBLIC_KEY_BYTES * 8;
-    }
-
     BigInteger calculateSharedSecret(BigInteger publicKey, PrivateKey privateKey) {
         if (privateKey instanceof MSEPrivateKey) {
             return ((MSEPrivateKey) privateKey).calculateSharedSecret(new MSEPublicKey(publicKey));
@@ -69,7 +65,7 @@ class MSEKeyPairGenerator {
             if (encoded == null) {
                 synchronized (lock) {
                     if (encoded == null) {
-                        encoded = BigIntegers.toByteArray(value, PUBLIC_KEY_BYTES * 8);
+                        encoded = BigIntegers.toByteArray(value, PUBLIC_KEY_BYTES);
                     }
                 }
             }
@@ -94,13 +90,10 @@ class MSEKeyPairGenerator {
             Random r = new Random();
             int len = 20; // in bytes
             byte[] bytes = new byte[len];
-            byte k;
             for (int i = 0; i < len; i++) {
-                while ((k = (byte) r.nextInt(256)) == 0)
-                    ;
-                bytes[i] = k;
+                bytes[i] = (byte) r.nextInt(256);
             }
-            return new BigInteger(bytes).abs();
+            return new BigInteger(bytes);
         }
 
         MSEPublicKey getPublicKey() {

@@ -116,14 +116,14 @@ public class MSEHandshakeProcessor {
         MessageDigest digest = getDigest("SHA-1");
         // - HASH('req1', S)
         digest.update("req1".getBytes("ASCII"));
-        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySizeBits()));
+        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySize()));
         out.put(digest.digest());
         // - HASH('req2', SKEY) xor HASH('req3', S)
         digest.update("req2".getBytes("ASCII"));
         digest.update(torrentId.getBytes());
         byte[] b1 = digest.digest();
         digest.update("req3".getBytes("ASCII"));
-        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySizeBits()));
+        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySize()));
         byte[] b2 = digest.digest();
         out.put(xor(b1, b2));
         // write
@@ -131,7 +131,7 @@ public class MSEHandshakeProcessor {
         channel.write(out);
         out.clear();
 
-        MSECipher cipher = MSECipher.forInitiator(BigIntegers.toByteArray(S, keyGenerator.getKeySizeBits()), torrentId);
+        MSECipher cipher = MSECipher.forInitiator(BigIntegers.toByteArray(S, keyGenerator.getKeySize()), torrentId);
         ByteChannel encryptedChannel = new EncryptedChannel(channel, cipher.getDecryptionCipher(), cipher.getEncryptionCipher());
         // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
         out.put(VC);
@@ -265,7 +265,7 @@ public class MSEHandshakeProcessor {
         // - HASH('req1', S)
         in.get(bytes); // read S hash
         digest.update("req1".getBytes("ASCII"));
-        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySizeBits()));
+        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySize()));
         byte[] req1hash = digest.digest();
         if (!Arrays.equals(req1hash, bytes)) {
             throw new IllegalStateException("Shared secret does not match");
@@ -274,7 +274,7 @@ public class MSEHandshakeProcessor {
         in.get(bytes); // read SKEY/S hash
         Torrent requestedTorrent = null;
         digest.update("req3".getBytes("ASCII"));
-        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySizeBits()));
+        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySize()));
         byte[] b2 = digest.digest();
         for (Torrent torrent : torrentRegistry.getTorrents()) {
             digest.update("req2".getBytes("ASCII"));
@@ -299,7 +299,7 @@ public class MSEHandshakeProcessor {
             throw new IllegalStateException("Unsupported/inactive torrent requested");
         }
 
-        MSECipher cipher = MSECipher.forReceiver(BigIntegers.toByteArray(S, keyGenerator.getKeySizeBits()), requestedTorrent.getTorrentId());
+        MSECipher cipher = MSECipher.forReceiver(BigIntegers.toByteArray(S, keyGenerator.getKeySize()), requestedTorrent.getTorrentId());
         ByteChannel encryptedChannel = new EncryptedChannel(channel, cipher.getDecryptionCipher(), cipher.getEncryptionCipher());
 
         // derypt encrypted leftovers from step #3
