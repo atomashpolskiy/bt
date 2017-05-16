@@ -104,10 +104,12 @@ public class MSEHandshakeProcessor {
 
         // 2. B->A: Diffie Hellman Yb, PadB
         // receive peer's public key
-        reader.read(in, keyGenerator.getKeySize(), keyGenerator.getKeySize() + paddingMaxLength);
+        int phase1Min = keyGenerator.getKeySize();
+        int phase1Limit = phase1Min + paddingMaxLength;
+        int phase1Read = reader.timedRead(in, phase1Min, phase1Limit);
         in.flip();
-        BigInteger peerPublicKey = BigIntegers.decodeUnsigned(in, keyGenerator.getKeySize());
-        in.clear(); // ignore padding
+        BigInteger peerPublicKey = BigIntegers.decodeUnsigned(in, phase1Min);
+        in.clear(); // discard the padding, if present
 
         // calculate shared secret S
         BigInteger S = keyGenerator.calculateSharedSecret(peerPublicKey, keys.getPrivate());
@@ -147,15 +149,25 @@ public class MSEHandshakeProcessor {
         out.clear();
 
         // 4. B->A:
-        new DataReader(encryptedChannel, receiveTimeout).read(in, 14, 14 + 512);
+        DataReader encryptedReader = new DataReader(encryptedChannel, receiveTimeout);
         // - ENCRYPT(VC, crypto_select, len(padD), padD)
-        in.flip();
+        int phase2Min = VC.length + 4/*crypto_select*/ + 2/*padding_len*/;
+        // account for (phase1Limit - phase1Read) in case the padding from phase1 arrives out of order
+        int phase2Limit = (phase1Limit - phase1Read) + phase2Min + paddingMaxLength;
 
-        byte[] theirVC = new byte[8];
-        in.get(theirVC);
-        if (!Arrays.equals(VC, theirVC)) {
-            throw new IllegalStateException("Invalid verification constant: " + Arrays.toString(theirVC));
+        int initpos = in.position();
+        int phase2Read = encryptedReader.timedSync(in, phase2Min, phase2Limit, VC);
+        int matchpos = in.position();
+
+        in.limit(initpos + phase2Read);
+        if (in.remaining() < (phase2Min - VC.length)) {
+            int lim = in.limit();
+            in.limit(in.capacity());
+            int read = encryptedReader.timedRead(in, (phase2Min - VC.length), (phase2Min - VC.length) + paddingMaxLength);
+            in.position(matchpos);
+            in.limit(lim + read);
         }
+
         byte[] crypto_select = new byte[4];
         in.get(crypto_select);
         EncryptionPolicy negotiatedEncryptionPolicy = selectPolicy(crypto_select, localEncryptionPolicy);
@@ -164,12 +176,16 @@ public class MSEHandshakeProcessor {
         }
 
         int theirPadding = in.getShort() & 0xFFFF;
-        // assume that all data has been received, so the whole padding block is present
-        for (int i = 0; i < theirPadding; i++) {
-            in.get();
+        int missing = (theirPadding - in.remaining());
+        if (missing > 0) {
+            int pos = in.position();
+            encryptedReader.timedRead(in, missing, Integer.MAX_VALUE);
+            in.position(pos);
         }
 
-        in.clear();
+        in.position(in.position() + theirPadding);
+        in.compact();
+        in.position(0);
         out.clear();
 
         // - ENCRYPT2(Payload Stream)
@@ -216,7 +232,7 @@ public class MSEHandshakeProcessor {
         // receive initiator's public key
         // do not specify lower threshold on the amount of bytes to receive,
         // as we will try to decode plaintext message of an unknown length first
-        reader.read(in, 1, keyGenerator.getKeySize() + paddingMaxLength);
+        reader.timedRead(in, 1, keyGenerator.getKeySize() + paddingMaxLength);
         in.flip();
         // try to determine the protocol from the first received bytes
         DecodingContext context = new DecodingContext(peer);
@@ -257,7 +273,7 @@ public class MSEHandshakeProcessor {
         // 3. A->B:
         MessageDigest digest = getDigest("SHA-1");
         // receive all data
-        reader.read(in, 20 + 20 + 8 + 4 + 2 + 0 + 2, 20 + 20 + 8 + 4 + 2 + 512 + 2);
+        reader.timedRead(in, 20 + 20 + 8 + 4 + 2 + 0 + 2, 20 + 20 + 8 + 4 + 2 + 512 + 2);
         in.flip();
 
         byte[] bytes = new byte[20];
@@ -325,7 +341,7 @@ public class MSEHandshakeProcessor {
             int offset = in.position();
             in.position(in.limit());
             in.limit(in.capacity());
-            new DataReader(encryptedChannel, receiveTimeout).read(in, min, limit);
+            new DataReader(encryptedChannel, receiveTimeout).timedRead(in, min, limit);
             in.flip();
             in.position(offset);
         }
