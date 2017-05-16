@@ -6,7 +6,7 @@ import java.util.Arrays;
 
 class BigIntegers {
 
-    static byte[] toByteArray(BigInteger i, int byteCount) {
+    static byte[] encodeUnsigned(BigInteger i, int byteCount) {
         if (byteCount < 1) {
             throw new IllegalArgumentException("Invalid number of bytes: " + byteCount);
         }
@@ -17,7 +17,8 @@ class BigIntegers {
         }
         if (bytes.length > byteCount) {
             throw new IllegalStateException("Value truncation");
-        } else if (bytes.length < byteCount) {
+        }
+        if (bytes.length < byteCount) {
             byte[] bytesCopy = bytes;
             bytes = new byte[byteCount];
             System.arraycopy(bytesCopy, 0, bytes, (bytes.length - bytesCopy.length), bytesCopy.length);
@@ -25,39 +26,27 @@ class BigIntegers {
         return bytes;
     }
 
-    static BigInteger fromBytes(ByteBuffer buffer, int byteCount) {
-        if (byteCount < 1) {
-            throw new IllegalArgumentException("Invalid number of bytes: " + byteCount);
-        } else if (buffer.remaining() < byteCount) {
-            throw new IllegalStateException("Insufficient bytes in buffer: " + buffer.remaining() + ", requested: " + byteCount);
+    static BigInteger decodeUnsigned(ByteBuffer buffer, int length) {
+        if (length < 1) {
+            throw new IllegalArgumentException("Invalid number of bytes: " + length);
+        } else if (buffer.remaining() < length) {
+            throw new IllegalStateException("Insufficient bytes in buffer: " + buffer.remaining() + ", requested: " + length);
         }
         // strip leading zeros
         byte b;
         int i = 0;
-        while ((b = buffer.get()) == 0 && ++i < byteCount)
+        while ((b = buffer.get()) == 0 && ++i < length)
             ;
 
         // all bytes were zeros
-        if (i == byteCount) {
+        if (i == length) {
             return BigInteger.ZERO;
         }
 
-        byte[] bytes;
-        int len = byteCount - i;
-        if (b < 0) {
-            // high bit is set, need to prepend a leading zero, so that the number is treated as positive
-            bytes = new byte[len + 1];
-            bytes[1] = b;
-            if (len > 1) {
-                buffer.get(bytes, 2, len - 1);
-            }
-        } else {
-            bytes = new byte[byteCount];
-            bytes[0] = b;
-            if (len > 1) {
-                buffer.get(bytes, 1, len - 1);
-            }
-        }
-        return new BigInteger(bytes);
+        int len = length - i;
+        byte[] bytes = new byte[len];
+        bytes[0] = b;
+        buffer.get(bytes, 1, len - 1);
+        return new BigInteger(1, bytes);
     }
 }

@@ -70,9 +70,7 @@ public class MSECipher {
         try {
             cipher = Cipher.getInstance(transformation);
             cipher.init(mode, key);
-            if (mode == Cipher.ENCRYPT_MODE) {
-                cipher.doFinal(new byte[1024]); // discard first 1024 bytes
-            }
+            cipher.update(new byte[1024]); // discard first 1024 bytes
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

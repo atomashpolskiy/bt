@@ -12,10 +12,14 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.SocketChannel;
+import java.time.Duration;
 import java.util.Objects;
 
 class PeerConnectionFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionFactory.class);
+
+    // TODO: this should be configurable
+    private static final Duration socketTimeout = Duration.ofSeconds(30);
 
     private SocketChannelFactory socketChannelFactory;
     private MSEHandshakeProcessor cryptoHandshakeProcessor;
@@ -69,6 +73,9 @@ class PeerConnectionFactory {
         }
 
         channel.configureBlocking(false);
+        channel.socket().setSoTimeout((int) socketTimeout.toMillis());
+        channel.socket().setSoLinger(false, 0);
+
         MessageReaderWriter readerWriter = incoming ?
                 cryptoHandshakeProcessor.negotiateIncoming(peer, channel)
                 : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId);

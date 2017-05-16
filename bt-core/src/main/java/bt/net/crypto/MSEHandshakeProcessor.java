@@ -106,7 +106,7 @@ public class MSEHandshakeProcessor {
         // receive peer's public key
         reader.read(in, keyGenerator.getKeySize(), keyGenerator.getKeySize() + paddingMaxLength);
         in.flip();
-        BigInteger peerPublicKey = BigIntegers.fromBytes(in, keyGenerator.getKeySize());
+        BigInteger peerPublicKey = BigIntegers.decodeUnsigned(in, keyGenerator.getKeySize());
         in.clear(); // ignore padding
 
         // calculate shared secret S
@@ -116,14 +116,14 @@ public class MSEHandshakeProcessor {
         MessageDigest digest = getDigest("SHA-1");
         // - HASH('req1', S)
         digest.update("req1".getBytes("ASCII"));
-        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySize()));
+        digest.update(BigIntegers.encodeUnsigned(S, keyGenerator.getKeySize()));
         out.put(digest.digest());
         // - HASH('req2', SKEY) xor HASH('req3', S)
         digest.update("req2".getBytes("ASCII"));
         digest.update(torrentId.getBytes());
         byte[] b1 = digest.digest();
         digest.update("req3".getBytes("ASCII"));
-        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySize()));
+        digest.update(BigIntegers.encodeUnsigned(S, keyGenerator.getKeySize()));
         byte[] b2 = digest.digest();
         out.put(xor(b1, b2));
         // write
@@ -131,7 +131,7 @@ public class MSEHandshakeProcessor {
         channel.write(out);
         out.clear();
 
-        MSECipher cipher = MSECipher.forInitiator(BigIntegers.toByteArray(S, keyGenerator.getKeySize()), torrentId);
+        MSECipher cipher = MSECipher.forInitiator(BigIntegers.encodeUnsigned(S, keyGenerator.getKeySize()), torrentId);
         ByteChannel encryptedChannel = new EncryptedChannel(channel, cipher.getDecryptionCipher(), cipher.getEncryptionCipher());
         // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
         out.put(VC);
@@ -141,8 +141,7 @@ public class MSEHandshakeProcessor {
         out.put(padding);
         // - ENCRYPT(IA)
         // do not write IA (initial payload data) for now, wait for encryption negotiation
-        out.put((byte) 0); // IA length = 0
-        out.put((byte) 0);
+        out.putShort((short) 0); // IA length = 0
         out.flip();
         encryptedChannel.write(out);
         out.clear();
@@ -240,7 +239,7 @@ public class MSEHandshakeProcessor {
             throw new IllegalStateException("Less than " + keyGenerator.getKeySize() + " bytes received");
         }
 
-        BigInteger peerPublicKey = BigIntegers.fromBytes(in, keyGenerator.getKeySize());
+        BigInteger peerPublicKey = BigIntegers.decodeUnsigned(in, keyGenerator.getKeySize());
         in.clear(); // ignore padding
 
         // 2. B->A: Diffie Hellman Yb, PadB
@@ -265,7 +264,7 @@ public class MSEHandshakeProcessor {
         // - HASH('req1', S)
         in.get(bytes); // read S hash
         digest.update("req1".getBytes("ASCII"));
-        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySize()));
+        digest.update(BigIntegers.encodeUnsigned(S, keyGenerator.getKeySize()));
         byte[] req1hash = digest.digest();
         if (!Arrays.equals(req1hash, bytes)) {
             throw new IllegalStateException("Shared secret does not match");
@@ -274,7 +273,7 @@ public class MSEHandshakeProcessor {
         in.get(bytes); // read SKEY/S hash
         Torrent requestedTorrent = null;
         digest.update("req3".getBytes("ASCII"));
-        digest.update(BigIntegers.toByteArray(S, keyGenerator.getKeySize()));
+        digest.update(BigIntegers.encodeUnsigned(S, keyGenerator.getKeySize()));
         byte[] b2 = digest.digest();
         for (Torrent torrent : torrentRegistry.getTorrents()) {
             digest.update("req2".getBytes("ASCII"));
@@ -299,7 +298,7 @@ public class MSEHandshakeProcessor {
             throw new IllegalStateException("Unsupported/inactive torrent requested");
         }
 
-        MSECipher cipher = MSECipher.forReceiver(BigIntegers.toByteArray(S, keyGenerator.getKeySize()), requestedTorrent.getTorrentId());
+        MSECipher cipher = MSECipher.forReceiver(BigIntegers.encodeUnsigned(S, keyGenerator.getKeySize()), requestedTorrent.getTorrentId());
         ByteChannel encryptedChannel = new EncryptedChannel(channel, cipher.getDecryptionCipher(), cipher.getEncryptionCipher());
 
         // derypt encrypted leftovers from step #3
@@ -361,7 +360,7 @@ public class MSEHandshakeProcessor {
         out.put(VC);
         out.put(getCryptoProvideBitfield(negotiatedEncryptionPolicy));
         byte[] padding = getZeroPadding(512);
-        out.put(Protocols.getShortBytes(padding.length));
+        out.putShort((short) padding.length);
         out.put(padding);
         out.flip();
         encryptedChannel.write(out);

@@ -1,6 +1,7 @@
 package bt.net.crypto;
 
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -65,7 +66,7 @@ class MSEKeyPairGenerator {
             if (encoded == null) {
                 synchronized (lock) {
                     if (encoded == null) {
-                        encoded = BigIntegers.toByteArray(value, PUBLIC_KEY_BYTES);
+                        encoded = BigIntegers.encodeUnsigned(value, PUBLIC_KEY_BYTES);
                     }
                 }
             }
@@ -93,7 +94,7 @@ class MSEKeyPairGenerator {
             for (int i = 0; i < len; i++) {
                 bytes[i] = (byte) r.nextInt(256);
             }
-            return new BigInteger(bytes);
+            return BigIntegers.decodeUnsigned(ByteBuffer.wrap(bytes), 20);
         }
 
         MSEPublicKey getPublicKey() {
