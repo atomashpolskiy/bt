@@ -2,6 +2,7 @@ package bt.net.crypto;
 
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
+import bt.net.ByteChannelReader;
 import bt.net.DefaultMessageReader;
 import bt.net.DefaultMessageWriter;
 import bt.net.DelegatingMessageReaderWriter;
@@ -35,9 +36,10 @@ import java.util.function.Supplier;
 public class MSEHandshakeProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(MSEHandshakeProcessor.class);
 
-    private static final Duration receiveTimeout = Duration.ofSeconds(30);
+    private static final Duration receiveTimeout = Duration.ofSeconds(10);
+    private static final Duration waitBetweenReads = Duration.ofSeconds(1);
     private static final int paddingMaxLength = 512;
-    private static final byte[] VC = new byte[8];
+    private static final byte[] VC_RAW_BYTES = new byte[8];
 
     private final MSEKeyPairGenerator keyGenerator;
     private final TorrentRegistry torrentRegistry;
@@ -91,7 +93,7 @@ public class MSEHandshakeProcessor {
             return createReaderWriter(peer, channel, in, out);
         }
 
-        DataReader reader = new DataReader(channel, receiveTimeout);
+        ByteChannelReader reader = new ByteChannelReader(channel, receiveTimeout, waitBetweenReads);
 
         // 1. A->B: Diffie Hellman Ya, PadA
         // send our public key
@@ -136,7 +138,7 @@ public class MSEHandshakeProcessor {
         MSECipher cipher = MSECipher.forInitiator(BigIntegers.encodeUnsigned(S, keyGenerator.getKeySize()), torrentId);
         ByteChannel encryptedChannel = new EncryptedChannel(channel, cipher.getDecryptionCipher(), cipher.getEncryptionCipher());
         // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
-        out.put(VC);
+        out.put(VC_RAW_BYTES);
         out.put(getCryptoProvideBitfield(localEncryptionPolicy));
         byte[] padding = getZeroPadding(512);
         out.put(Protocols.getShortBytes(padding.length));
@@ -149,21 +151,47 @@ public class MSEHandshakeProcessor {
         out.clear();
 
         // 4. B->A:
-        DataReader encryptedReader = new DataReader(encryptedChannel, receiveTimeout);
         // - ENCRYPT(VC, crypto_select, len(padD), padD)
-        int phase2Min = VC.length + 4/*crypto_select*/ + 2/*padding_len*/;
+        byte[] encryptedVC;
+        {
+            MSECipher throwawayCipher = MSECipher.forInitiator(BigIntegers.encodeUnsigned(S, keyGenerator.getKeySize()), torrentId);
+            try {
+                encryptedVC = throwawayCipher.getDecryptionCipher().doFinal(VC_RAW_BYTES);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to encrypt VC", e);
+            }
+        }
+        // synchronize on the incoming stream of data
+        int phase2Min = encryptedVC.length + 4/*crypto_select*/ + 2/*padding_len*/;
         // account for (phase1Limit - phase1Read) in case the padding from phase1 arrives out of order
         int phase2Limit = (phase1Limit - phase1Read) + phase2Min + paddingMaxLength;
 
         int initpos = in.position();
-        int phase2Read = encryptedReader.timedSync(in, phase2Min, phase2Limit, VC);
+        // use plaintext reader because encryption stream is not synced yet and will potentially produce garbage
+        int phase2Read = reader.timedSync(in, phase2Min, phase2Limit, encryptedVC);
         int matchpos = in.position();
 
+        // the rest of the data is known to be encrypted
+        ByteChannelReader encryptedReader = new ByteChannelReader(encryptedChannel, receiveTimeout, waitBetweenReads);
+        // but we need to align the incoming (decrypting) cipher
+        // for the number of encrypted bytes that have already arrived
+        // and decrypt these bytes in the incoming data buffer for later processing
         in.limit(initpos + phase2Read);
-        if (in.remaining() < (phase2Min - VC.length)) {
+        {
+            cipher.getDecryptionCipher().update(new byte[VC_RAW_BYTES.length]);
+            byte[] encryptedData = new byte[in.remaining()];
+            in.get(encryptedData);
+            in.position(matchpos);
+            byte[] decryptedData = cipher.getDecryptionCipher().update(encryptedData);
+            in.put(decryptedData);
+            in.position(matchpos);
+        }
+
+        // we may still need to receive some handshake data (e.g. padding), that is arriving later than expected
+        if (in.remaining() < (phase2Min - encryptedVC.length)) {
             int lim = in.limit();
             in.limit(in.capacity());
-            int read = encryptedReader.timedRead(in, (phase2Min - VC.length), (phase2Min - VC.length) + paddingMaxLength);
+            int read = encryptedReader.timedRead(in, (phase2Min - encryptedVC.length), (phase2Min - encryptedVC.length) + paddingMaxLength);
             in.position(matchpos);
             in.limit(lim + read);
         }
@@ -183,6 +211,7 @@ public class MSEHandshakeProcessor {
             in.position(pos);
         }
 
+        // account for the upper layer protocol data that has already arrived
         in.position(in.position() + theirPadding);
         in.compact();
         in.position(0);
@@ -226,7 +255,7 @@ public class MSEHandshakeProcessor {
 
         ByteBuffer in = ByteBuffer.allocateDirect(bufferSize);
         ByteBuffer out = ByteBuffer.allocateDirect(bufferSize);
-        DataReader reader = new DataReader(channel, receiveTimeout);
+        ByteChannelReader reader = new ByteChannelReader(channel, receiveTimeout, waitBetweenReads);
 
         // 1. A->B: Diffie Hellman Ya, PadA
         // receive initiator's public key
@@ -341,14 +370,14 @@ public class MSEHandshakeProcessor {
             int offset = in.position();
             in.position(in.limit());
             in.limit(in.capacity());
-            new DataReader(encryptedChannel, receiveTimeout).timedRead(in, min, limit);
+            new ByteChannelReader(encryptedChannel, receiveTimeout, waitBetweenReads).timedRead(in, min, limit);
             in.flip();
             in.position(offset);
         }
 
         byte[] theirVC = new byte[8];
         in.get(theirVC);
-        if (!Arrays.equals(VC, theirVC)) {
+        if (!Arrays.equals(VC_RAW_BYTES, theirVC)) {
             throw new IllegalStateException("Invalid VC: "+ Arrays.toString(theirVC));
         }
 
@@ -370,10 +399,16 @@ public class MSEHandshakeProcessor {
         in.limit(in.position() + initialPayloadLength);
         in.compact();
 
+        // emulate high latency -- padding arriving later than expected
+//        out.put(new byte[100]);
+//        out.flip();
+//        channel.write(out);
+//        out.clear();
+
         // 4. B->A:
         // - ENCRYPT(VC, crypto_select, len(padD), padD)
         // - ENCRYPT2(Payload Stream)
-        out.put(VC);
+        out.put(VC_RAW_BYTES);
         out.put(getCryptoProvideBitfield(negotiatedEncryptionPolicy));
         byte[] padding = getZeroPadding(512);
         out.putShort((short) padding.length);

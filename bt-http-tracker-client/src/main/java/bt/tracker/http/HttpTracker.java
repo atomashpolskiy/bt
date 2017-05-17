@@ -143,7 +143,9 @@ public class HttpTracker implements Tracker {
         }
 
         buf.append("&port=");
-        buf.append(encryptionPolicy == EncryptionPolicy.REQUIRE_ENCRYPTED ? 0 : peer.getPort());
+        // this does not work with some trackers, resulting in a failure response: "missing port"
+//        buf.append(encryptionPolicy == EncryptionPolicy.REQUIRE_ENCRYPTED ? 0 : peer.getPort());
+        buf.append(peer.getPort());
 
         buf.append("&uploaded=");
         buf.append(requestBuilder.getUploaded());
