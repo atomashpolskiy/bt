@@ -7,7 +7,6 @@ import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
 import bt.peerexchange.PeerExchangeConfig;
 import bt.peerexchange.PeerExchangeModule;
-import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.runtime.Config;
 import org.junit.Rule;
@@ -59,10 +58,22 @@ public class PeerExchange_IT extends BaseBtTest {
         ConcurrentMap<Peer, Set<Peer>> discoveredPeers = new ConcurrentHashMap<>();
 
         swarm.getSeeders().forEach(seeder ->
-                seeder.getHandle().startAsync(state -> discoveredPeers.put(seeder.getPeer(), state.getConnectedPeers()), 1000));
+                seeder.getHandle().startAsync(state -> {
+                    Set<Peer> peerPeers = discoveredPeers.get(seeder.getPeer());
+                    if (peerPeers == null) {
+                        peerPeers = ConcurrentHashMap.newKeySet();
+                        Set<Peer> existing = discoveredPeers.putIfAbsent(seeder.getPeer(), peerPeers);
+                        if (existing != null) {
+                            peerPeers = existing;
+                        }
+                    }
+                    peerPeers.addAll(state.getConnectedPeers());
+                }, 1000));
 
         try {
-            Thread.sleep(10000L);
+            // TODO: MSE negotitation requires some time,
+            // so had to increase the test running time in order for all peers to collect info about the swarm
+            Thread.sleep(20000L);
         } catch (InterruptedException e) {
             throw new RuntimeException("Test unexpectedly interrupted", e);
         }
@@ -73,18 +84,13 @@ public class PeerExchange_IT extends BaseBtTest {
         assertTrue(discoveredPeers.keySet().containsAll(swarmPeers));
         for (Set<Peer> peerPeers : discoveredPeers.values()) {
             for (Peer swarmPeer : swarmPeers) {
-                assertContainsPeerWithOrWithoutId(peerPeers, swarmPeer);
+                assertContainsPeer(peerPeers, swarmPeer);
             }
         }
     }
 
-    private static void assertContainsPeerWithOrWithoutId(Collection<Peer> peers, Peer peer) {
-        if (peer.getPeerId().isPresent()) {
-            Peer peerWithoutId = new InetPeer(peer.getInetAddress(), peer.getPort());
-            assertTrue(peers.contains(peer) || peers.contains(peerWithoutId));
-        } else {
-            assertTrue(peers.contains(peer));
-        }
+    private static void assertContainsPeer(Collection<Peer> peers, Peer peer) {
+        assertTrue(peers.contains(peer));
     }
 
     /**

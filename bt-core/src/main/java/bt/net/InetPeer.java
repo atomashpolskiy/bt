@@ -114,18 +114,21 @@ public class InetPeer implements Peer {
         return address.hashCode();
     }
 
+    /**
+     * Compares peers by address, regardless of the particular classes.
+     */
     @Override
     public boolean equals(Object object) {
         if (object == this) {
             return true;
         }
 
-        if (object == null || !(object instanceof InetPeer)) {
+        if (object == null || !Peer.class.isAssignableFrom(object.getClass())) {
             return false;
         }
 
-        InetPeer that = (InetPeer) object;
-        return address.equals(that.address);
+        Peer that = (Peer) object;
+        return address.equals(that.getInetSocketAddress());
     }
 
     @Override
