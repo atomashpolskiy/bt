@@ -1,12 +1,27 @@
-package bt.net.crypto;
+package bt.net;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-class BigIntegers {
+/**
+ * Utility class that provides convenient shortcuts
+ * for working with java.math.BigInteger as if it was unsigned
+ *
+ * @since 1.2
+ */
+public class BigIntegers {
 
-    static byte[] encodeUnsigned(BigInteger i, int byteCount) {
+    /**
+     * Encode an arbitrary big integer to its' binary representation,
+     * without unnecessary leading zeros that are used in two's-complement form.
+     *
+     * @param i Arbitrary big integer
+     * @param byteCount Number of bytes to use for encoding
+     * @return Byte array containing the binary representation of the big integer left-padded with zeros if necessary
+     * @since 1.2
+     */
+    public static byte[] encodeUnsigned(BigInteger i, int byteCount) {
         if (byteCount < 1) {
             throw new IllegalArgumentException("Invalid number of bytes: " + byteCount);
         }
@@ -26,7 +41,15 @@ class BigIntegers {
         return bytes;
     }
 
-    static BigInteger decodeUnsigned(ByteBuffer buffer, int length) {
+    /**
+     * Decode an unsigned big integer from the provided buffer.
+     * Leading zeros are stripped.
+     *
+     * @param length Number of bytes to read from the buffer; may include leading zeros
+     * @return Non-negative big integer
+     * @since 1.2
+     */
+    public static BigInteger decodeUnsigned(ByteBuffer buffer, int length) {
         if (length < 1) {
             throw new IllegalArgumentException("Invalid number of bytes: " + length);
         } else if (buffer.remaining() < length) {

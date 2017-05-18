@@ -1,17 +1,30 @@
-package bt.net.crypto;
+package bt.net;
 
 import javax.crypto.Cipher;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
 
-class EncryptedChannel implements ByteChannel {
+/**
+ * Decorates a byte channel with encryption
+ *
+ * @since 1.2
+ */
+public class EncryptedChannel implements ByteChannel {
 
     private final ByteChannel delegate;
     private final Cipher cipherIn;
     private final Cipher cipherOut;
 
-    EncryptedChannel(ByteChannel delegate, Cipher cipherIn, Cipher cipherOut) {
+    /**
+     * Create an encrypted byte channel.
+     *
+     * @param delegate Delegate byte channel
+     * @param cipherIn Cipher for decrypting incoming data
+     * @param cipherOut Cipher for encrypting outgoing data
+     * @since 1.2
+     */
+    public EncryptedChannel(ByteChannel delegate, Cipher cipherIn, Cipher cipherOut) {
         this.delegate = delegate;
         this.cipherIn = cipherIn;
         this.cipherOut = cipherOut;

@@ -1,14 +1,26 @@
 package bt.net.crypto;
 
 import bt.metainfo.TorrentId;
+import bt.net.BigIntegers;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+/**
+ * RC4-drop1024 stream cipher, used in Message Stream Encryption protocol.
+ *
+ * Ciphers that are returned by {@link #getEncryptionCipher()} and {@link #getDecryptionCipher()}
+ * will be different, depending on which of the factory methods was used to build an instance of this class:
+ * - connection initiating side should use {@link #forInitiator(BigInteger, TorrentId)} factory method
+ * - receiver of connection request should use {@link #forReceiver(BigInteger, TorrentId)} factory method
+ *
+ * @since 1.2
+ */
 public class MSECipher {
 
     private static final String transformation = "ARCFOUR/ECB/NoPadding";
@@ -16,27 +28,52 @@ public class MSECipher {
     private final Cipher incomingCipher;
     private final Cipher outgoingCipher;
 
-    public static MSECipher forInitiator(byte[] S, TorrentId torrentId) {
+    /**
+     * Create MSE cipher for connection initiator
+     *
+     * @param S Shared secret
+     * @param torrentId Torrent id
+     * @return MSE cipher configured for use by connection initiator
+     * @since 1.2
+     */
+    public static MSECipher forInitiator(BigInteger S, TorrentId torrentId) {
         return new MSECipher(S, torrentId, true);
     }
 
-    public static MSECipher forReceiver(byte[] S, TorrentId torrentId) {
+    /**
+     * Create MSE cipher for receiver of the connection request
+     *
+     * @param S Shared secret
+     * @param torrentId Torrent id
+     * @return MSE cipher configured for use by receiver of the connection request
+     * @since 1.2
+     */
+    public static MSECipher forReceiver(BigInteger S, TorrentId torrentId) {
         return new MSECipher(S, torrentId, false);
     }
 
-    private MSECipher(byte[] S, TorrentId torrentId, boolean initiator) {
-        Key initiatorKey = getInitiatorEncryptionKey(S, torrentId.getBytes());
-        Key receiverKey = getReceiverEncryptionKey(S, torrentId.getBytes());
+    private MSECipher(BigInteger S, TorrentId torrentId, boolean initiator) {
+        byte[] Sbytes = BigIntegers.encodeUnsigned(S, MSEKeyPairGenerator.PUBLIC_KEY_BYTES);
+        Key initiatorKey = getInitiatorEncryptionKey(Sbytes, torrentId.getBytes());
+        Key receiverKey = getReceiverEncryptionKey(Sbytes, torrentId.getBytes());
         Key outgoingKey = initiator ? initiatorKey : receiverKey;
         Key incomingKey = initiator ? receiverKey : initiatorKey;
         this.incomingCipher = createCipher(Cipher.DECRYPT_MODE, transformation, incomingKey);
         this.outgoingCipher = createCipher(Cipher.ENCRYPT_MODE, transformation, outgoingKey);
     }
 
+    /**
+     * @return Cipher for encrypting outgoing data
+     * @since 1.2
+     */
     public Cipher getEncryptionCipher() {
         return outgoingCipher;
     }
 
+    /**
+     * @return Cipher for decrypting incoming data
+     * @since 1.2
+     */
     public Cipher getDecryptionCipher() {
         return incomingCipher;
     }

@@ -1,5 +1,7 @@
 package bt.net.crypto;
 
+import bt.net.BigIntegers;
+
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.KeyPair;
@@ -17,7 +19,8 @@ class MSEKeyPairGenerator {
                                     "E485B576625E7EC6F44C42E9A63A36210000000000090563", 16);
 
     private static final BigInteger G = BigInteger.valueOf(2);
-    private static final int PUBLIC_KEY_BYTES = 96;
+
+    static final int PUBLIC_KEY_BYTES = 96;
 
     KeyPair generateKeyPair() {
         MSEPrivateKey privateKey = new MSEPrivateKey();
@@ -25,7 +28,7 @@ class MSEKeyPairGenerator {
         return new KeyPair(publicKey, privateKey);
     }
 
-    int getKeySize() {
+    int getPublicKeySize() {
         return PUBLIC_KEY_BYTES;
     }
 
@@ -36,7 +39,7 @@ class MSEKeyPairGenerator {
         throw new IllegalArgumentException("Unsupported key type: " + privateKey.getClass().getName());
     }
 
-    static class MSEPublicKey implements PublicKey {
+    private static class MSEPublicKey implements PublicKey {
 
         private final BigInteger value;
         private volatile byte[] encoded;
@@ -74,7 +77,7 @@ class MSEKeyPairGenerator {
         }
     }
 
-    static class MSEPrivateKey implements PrivateKey {
+    private static class MSEPrivateKey implements PrivateKey {
 
         private final BigInteger value;
         private volatile MSEPublicKey publicKey;

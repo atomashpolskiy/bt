@@ -18,10 +18,21 @@ class ReadByBlockChannel implements ReadableByteChannel {
     private int readCount;
     private int currentBlockIndex;
 
+    /**
+     * @param dataList Collection of data blocks that this channel will be reading
+     *                 (in the same order as they should be read)
+     */
     ReadByBlockChannel(List<byte[]> dataList) {
         this.data = new LinkedList<>(dataList);
     }
 
+    /**
+     * Reads a block of data into the provided buffer. If there is insufficient space for a whole block,
+     * then it will be split into two blocks, the first part will be put into the buffer,
+     * and the second part will be used on subsequent read(s).
+     *
+     * @return Number of bytes read or -1 in the end of stream has been reached (no data blocks left)
+     */
     @Override
     public int read(ByteBuffer dst) throws IOException {
         StringBuilder s = new StringBuilder("Read #" + readCount);

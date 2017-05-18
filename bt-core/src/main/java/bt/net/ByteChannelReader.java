@@ -4,23 +4,64 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.time.Duration;
+import java.util.Objects;
+import java.util.Optional;
 
 public class ByteChannelReader {
 
     private final ReadableByteChannel channel;
-    private final Duration timeout;
-    private final Duration waitBetweenReads;
+    private final Optional<Duration> timeout;
+    private final Optional<Duration> waitBetweenReads;
+    private final int min;
+    private final int limit;
 
-    public ByteChannelReader(ReadableByteChannel channel, Duration timeout, Duration waitBetweenReads) {
-        this.channel = channel;
-        this.timeout = timeout;
-        this.waitBetweenReads = waitBetweenReads;
+    public static ByteChannelReader forChannel(ReadableByteChannel channel) {
+        return new ByteChannelReader(channel, Optional.empty(), Optional.empty(), 0, Integer.MAX_VALUE);
     }
 
-    public int timedSync(ByteBuffer buf, int min, int limit, byte[] pattern) throws IOException {
-        checkArguments(buf, min, limit);
-        if (pattern.length == 0) {
-            throw new IllegalArgumentException("Empty pattern");
+    public ByteChannelReader withTimeout(Duration timeout) {
+        return new ByteChannelReader(channel, Optional.of(timeout), waitBetweenReads, min, limit);
+    }
+
+    public ByteChannelReader waitBetweenReads(Duration waitBetweenReads) {
+        return new ByteChannelReader(channel, timeout, Optional.of(waitBetweenReads), min, limit);
+    }
+
+    public ByteChannelReader readExactly(int bytes) {
+        return new ByteChannelReader(channel, timeout, waitBetweenReads, bytes, bytes);
+    }
+
+    public ByteChannelReader readAtLeast(int minBytes) {
+        return new ByteChannelReader(channel, timeout, waitBetweenReads, minBytes, limit);
+    }
+
+    public ByteChannelReader readNoMoreThan(int maxBytes) {
+        return new ByteChannelReader(channel, timeout, waitBetweenReads, min, maxBytes);
+    }
+
+    public ByteChannelReader readBetween(int minBytes, int maxBytes) {
+        return new ByteChannelReader(channel, timeout, waitBetweenReads, minBytes, maxBytes);
+    }
+
+    private ByteChannelReader(ReadableByteChannel channel,
+                              Optional<Duration> timeout,
+                              Optional<Duration> waitBetweenReads,
+                              int min,
+                              int limit) {
+        if (min < 0 || limit < 0 || limit < min) {
+            throw new IllegalArgumentException("Illegal arguments: min (" + min + "), limit (" + limit + ")");
+        }
+        this.channel = Objects.requireNonNull(channel);
+        this.timeout = timeout;
+        this.waitBetweenReads = waitBetweenReads;
+        this.min = min;
+        this.limit = limit;
+    }
+
+    public int sync(ByteBuffer buf, byte[] syncToken) throws IOException {
+        ensureSufficientSpace(buf);
+        if (syncToken.length == 0) {
+            throw new IllegalArgumentException("Empty synchronization token");
         }
 
         int searchpos = buf.position(), origlim = buf.limit();
@@ -29,8 +70,8 @@ public class ByteChannelReader {
         long t1 = System.currentTimeMillis();
         int readTotal = 0;
         int read;
-        long timeoutMillis = timeout.toMillis();
-        long waitBetweenReadsMillis = waitBetweenReads.toMillis();
+        long timeoutMillis = getTimeoutMillis();
+        long waitBetweenReadsMillis = getWaitBetweenReadsMillis();
         do {
             read = channel.read(buf);
             if (read < 0) {
@@ -44,19 +85,19 @@ public class ByteChannelReader {
                     int pos = buf.position();
                     buf.flip();
                     buf.position(searchpos);
-                    if (buf.remaining() >= pattern.length) {
-                        if (Buffers.searchPattern(buf, pattern)) {
+                    if (buf.remaining() >= syncToken.length) {
+                        if (Buffers.searchPattern(buf, syncToken)) {
                             found = true;
                             matchpos = buf.position();
                         } else {
-                            searchpos = pos - pattern.length + 1;
+                            searchpos = pos - syncToken.length + 1;
                         }
                     }
                     buf.limit(origlim);
                     buf.position(pos);
                 }
             }
-            if (found && readTotal >= min) {
+            if (found && min > 0 && readTotal >= min) {
                 break;
             }
             if (waitBetweenReadsMillis > 0) {
@@ -78,18 +119,14 @@ public class ByteChannelReader {
         return readTotal;
     }
 
-    public int timedRead(ByteBuffer buf, int min, int limit) throws IOException {
-        return read(channel, buf, timeout, min, limit);
-    }
-
-    private int read(ReadableByteChannel channel, ByteBuffer buf, Duration timeout, int min, int limit) throws IOException {
-        checkArguments(buf, min, limit);
+    public int read(ByteBuffer buf) throws IOException {
+        ensureSufficientSpace(buf);
 
         long t1 = System.currentTimeMillis();
         int readTotal = 0;
         int read;
-        long timeoutMillis = timeout.toMillis();
-        long waitBetweenReadsMillis = waitBetweenReads.toMillis();
+        long timeoutMillis = getTimeoutMillis();
+        long waitBetweenReadsMillis = getWaitBetweenReadsMillis();
         do {
             read = channel.read(buf);
             if (read < 0) {
@@ -99,7 +136,7 @@ public class ByteChannelReader {
             }
             if (readTotal > limit) {
                 throw new IllegalStateException("More than " + limit + " bytes received: " + readTotal);
-            } else if (readTotal >= min) {
+            } else if (min > 0 && readTotal >= min) {
                 break;
             }
             if (waitBetweenReadsMillis > 0) {
@@ -118,12 +155,17 @@ public class ByteChannelReader {
         return readTotal;
     }
 
-    private void checkArguments(ByteBuffer buf, int min, int limit) {
-        if (min < 0 || limit < 0 || limit < min) {
-            throw new IllegalArgumentException("Illegal arguments: min (" + min + "), limit (" + limit + ")");
-        }
-        if (buf.remaining() < limit) {
-            throw new IllegalArgumentException("Insufficient space in buffer: " + buf.remaining() + ", required: " + limit);
+    private long getTimeoutMillis() {
+        return timeout.isPresent()? timeout.get().toMillis() : 0;
+    }
+
+    private long getWaitBetweenReadsMillis() {
+        return waitBetweenReads.isPresent()? waitBetweenReads.get().toMillis() : 0;
+    }
+
+    private void ensureSufficientSpace(ByteBuffer buf) {
+        if (buf.remaining() < min) {
+            throw new IllegalArgumentException("Insufficient space in buffer: " + buf.remaining() + ", required at least: " + min);
         }
     }
 }

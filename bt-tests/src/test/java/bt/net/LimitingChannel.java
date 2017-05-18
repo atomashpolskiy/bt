@@ -11,17 +11,29 @@ class LimitingChannel implements ReadableByteChannel {
     private final boolean endWithEOF;
     private int currentLimitIndex;
 
+    /**
+     * Create a channel that will return -1 (EOF) when the number of reads exceeds the amount of limits
+     *
+     * @param delegate Data channel
+     * @param limits List of buffer limits to set for i-th read from this channel
+     */
     static LimitingChannel withEOF(ReadableByteChannel delegate, int[] limits) {
         return new LimitingChannel(delegate, limits, true);
     }
 
+    /**
+     * Create a channel that will continuously return 0 when the number of reads exceeds the amount of limits
+     *
+     * @param delegate Data channel
+     * @param limits List of buffer limits to set for i-th read from this channel
+     */
     LimitingChannel(ReadableByteChannel delegate, int[] limits) {
         this(delegate, limits, false);
     }
 
     /**
-     * @param delegate
-     * @param limits
+     * @param delegate Data channel
+     * @param limits List of buffer limits to set for i-th read from this channel
      * @param endWithEOF return EOF for {@code limits.length}-th call
      */
     private LimitingChannel(ReadableByteChannel delegate, int[] limits, boolean endWithEOF) {

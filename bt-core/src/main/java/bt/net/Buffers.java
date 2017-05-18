@@ -3,7 +3,10 @@ package bt.net;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-class Buffers {
+/**
+ * @since 1.2
+ */
+public class Buffers {
 
     /**
      * Searches for the first pattern match in the provided buffer.
@@ -13,8 +16,9 @@ class Buffers {
      *   of the matching subrange (probably equal to buffer's limit)
      *
      * @return true if pattern was found in the provided buffer
+     * @since 1.2
      */
-    static boolean searchPattern(ByteBuffer buf, byte[] pattern) {
+    public static boolean searchPattern(ByteBuffer buf, byte[] pattern) {
         if (pattern.length == 0) {
             throw new IllegalArgumentException("Empty pattern");
         } else if (buf.remaining() < pattern.length) {

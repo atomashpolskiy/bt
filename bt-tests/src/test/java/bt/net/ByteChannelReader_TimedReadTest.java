@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,6 +16,7 @@ import static org.junit.Assert.assertEquals;
 
 public class ByteChannelReader_TimedReadTest {
 
+    private static final Duration receiveTimeout = Duration.ofMillis(10);
     private static final Duration waitBetweenReads = Duration.ofMillis(0);
 
     @Test
@@ -22,10 +24,10 @@ public class ByteChannelReader_TimedReadTest {
         ReadByBlockChannel channel = createChannelWithTestData();
         int[] limits = new int[] {10, 20, 30, 40, 50};
         LimitingChannel limitedChannel = new LimitingChannel(channel, limits);
-        ByteChannelReader reader = new ByteChannelReader(limitedChannel, Duration.ofSeconds(1), waitBetweenReads);
+        ByteChannelReader reader = testReader(limitedChannel);
         ByteBuffer buf = ByteBuffer.allocate(100);
 
-        int read = reader.timedRead(buf, 50, 50);
+        int read = reader.readExactly(50).read(buf);
         assertEquals(50, read);
         assertEquals(50, buf.position());
 
@@ -40,10 +42,10 @@ public class ByteChannelReader_TimedReadTest {
         ReadByBlockChannel channel = createChannelWithTestData();
         int[] limits = new int[] {10, 20, 100, 125, 160, 160, 230, 230, 300};
         LimitingChannel limitedChannel = new LimitingChannel(channel, limits);
-        ByteChannelReader reader = new ByteChannelReader(limitedChannel, Duration.ofSeconds(1), waitBetweenReads);
+        ByteChannelReader reader = testReader(limitedChannel);
         ByteBuffer buf = ByteBuffer.allocate(300);
 
-        int read = reader.timedRead(buf, 300, 300);
+        int read = reader.readExactly(300).read(buf);
         assertEquals(300, read);
         assertEquals(buf.limit(), buf.position());
 
@@ -62,12 +64,12 @@ public class ByteChannelReader_TimedReadTest {
         ReadByBlockChannel channel = createChannelWithTestData();
         int[] limits = new int[] {10, 20, 30, 40, 50};
         LimitingChannel limitedChannel = new LimitingChannel(channel, limits);
-        ByteChannelReader reader = new ByteChannelReader(limitedChannel, Duration.ofMillis(100), waitBetweenReads);
+        ByteChannelReader reader = testReader(limitedChannel);
         ByteBuffer buf = ByteBuffer.allocate(100);
 
         assertExceptionWithMessage(it -> {
             try {
-                return reader.timedRead(buf, 60, 60);
+                return reader.readExactly(60).read(buf);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -79,12 +81,12 @@ public class ByteChannelReader_TimedReadTest {
         ReadByBlockChannel channel = createChannelWithTestData();
         int[] limits = new int[] {10, 20, 40};
         LimitingChannel limitedChannel = new LimitingChannel(channel, limits);
-        ByteChannelReader reader = new ByteChannelReader(limitedChannel, Duration.ofMillis(100), waitBetweenReads);
+        ByteChannelReader reader = testReader(limitedChannel);
         ByteBuffer buf = ByteBuffer.allocate(100);
 
         assertExceptionWithMessage(it -> {
             try {
-                return reader.timedRead(buf, 30, 30);
+                return reader.readExactly(30).read(buf);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -96,12 +98,12 @@ public class ByteChannelReader_TimedReadTest {
         ReadByBlockChannel channel = createChannelWithTestData();
         int[] limits = new int[] {10, 20, 30, 40, 50};
         LimitingChannel limitedChannel = LimitingChannel.withEOF(channel, limits);
-        ByteChannelReader reader = new ByteChannelReader(limitedChannel, Duration.ofMillis(100), waitBetweenReads);
+        ByteChannelReader reader = testReader(limitedChannel);
         ByteBuffer buf = ByteBuffer.allocate(100);
 
         assertExceptionWithMessage(it -> {
             try {
-                return reader.timedRead(buf, 60, 60);
+                return reader.readExactly(60).read(buf);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -118,5 +120,9 @@ public class ByteChannelReader_TimedReadTest {
 
         List<byte[]> data = new ArrayList<>(Arrays.asList(part0, part1, part2));
         return new ReadByBlockChannel(data);
+    }
+
+    private static ByteChannelReader testReader(ReadableByteChannel channel) {
+        return ByteChannelReader.forChannel(channel).withTimeout(receiveTimeout).waitBetweenReads(waitBetweenReads);
     }
 }
