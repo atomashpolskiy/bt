@@ -13,6 +13,7 @@ bt.net.extended
 bt.peer
 bt.peerexchange
 bt.protocol
+bt.protocol.crypto
 bt.protocol.extended
 bt.protocol.handler
 bt.runtime
