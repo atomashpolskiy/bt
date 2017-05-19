@@ -37,13 +37,16 @@ public class PeerExchange_IT extends BaseBtTest {
                 public Duration getPeerDiscoveryInterval() {
                     return Duration.ofSeconds(1);
                 }
+                @Override
+                public Duration getTrackerQueryInterval() {
+                    return Duration.ofMillis(100);
+                }
             })
             .module(new PeerExchangeModule(new PeerExchangeConfig() {
                 @Override
                 public Duration getMinMessageInterval() {
-                    return Duration.ofSeconds(1);
+                    return Duration.ofMillis(100);
                 }
-
                 @Override
                 public int getMinEventsPerMessage() {
                     return 1;
@@ -71,9 +74,7 @@ public class PeerExchange_IT extends BaseBtTest {
                 }, 1000));
 
         try {
-            // TODO: MSE negotitation requires some time,
-            // so had to increase the test running time in order for all peers to collect info about the swarm
-            Thread.sleep(20000L);
+            Thread.sleep(10000L);
         } catch (InterruptedException e) {
             throw new RuntimeException("Test unexpectedly interrupted", e);
         }
