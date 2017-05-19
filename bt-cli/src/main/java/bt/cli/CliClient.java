@@ -3,6 +3,7 @@ package bt.cli;
 import bt.Bt;
 import bt.data.Storage;
 import bt.data.file.FileSystemStorage;
+import bt.protocol.crypto.EncryptionPolicy;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 import bt.runtime.Config;
@@ -63,6 +64,11 @@ public class CliClient  {
             @Override
             public int getNumOfHashingThreads() {
                 return Runtime.getRuntime().availableProcessors();
+            }
+
+            @Override
+            public EncryptionPolicy getEncryptionPolicy() {
+                return options.enforceEncryption()? EncryptionPolicy.REQUIRE_ENCRYPTED : EncryptionPolicy.PREFER_PLAINTEXT;
             }
         };
 
