@@ -9,7 +9,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.function.Consumer;
 
-public class DefaultMessageWriter implements Consumer<Message> {
+/**
+ * Encodes and writes messages to a byte channel.
+ *
+ * Note that this class is not a part of the public API and is subject to change.
+ *
+ * @since 1.2
+ */
+class DefaultMessageWriter implements Consumer<Message> {
 
     private static final int WRITE_ATTEMPTS = 10;
 
@@ -18,12 +25,28 @@ public class DefaultMessageWriter implements Consumer<Message> {
 
     private final ByteBuffer buffer;
 
+    /**
+     * Create a message writer with a private buffer
+     *
+     * @param channel Writable byte channel
+     * @param messageHandler Message encoder
+     * @param bufferSize Size of the internal buffer, that will be used to store encoded but not yet sent messages.
+     * @since 1.2
+     */
     public DefaultMessageWriter(WritableByteChannel channel,
                                 MessageHandler<Message> messageHandler,
                                 int bufferSize) {
         this(channel, messageHandler, ByteBuffer.allocateDirect(bufferSize));
     }
 
+    /**
+     * Create a message writer with the provided buffer
+     *
+     * @param channel Writable byte channel
+     * @param messageHandler Message encoder
+     * @param buffer Buffer, that will be used to store encoded but not yet sent messages.
+     * @since 1.2
+     */
     public DefaultMessageWriter(WritableByteChannel channel,
                                 MessageHandler<Message> messageHandler,
                                 ByteBuffer buffer) {

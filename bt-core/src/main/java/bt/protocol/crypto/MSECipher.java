@@ -1,11 +1,9 @@
-package bt.net.crypto;
+package bt.protocol.crypto;
 
 import bt.metainfo.TorrentId;
-import bt.net.BigIntegers;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.security.Key;
 import java.security.MessageDigest;
@@ -16,8 +14,8 @@ import java.security.NoSuchAlgorithmException;
  *
  * Ciphers that are returned by {@link #getEncryptionCipher()} and {@link #getDecryptionCipher()}
  * will be different, depending on which of the factory methods was used to build an instance of this class:
- * - connection initiating side should use {@link #forInitiator(BigInteger, TorrentId)} factory method
- * - receiver of connection request should use {@link #forReceiver(BigInteger, TorrentId)} factory method
+ * - connection initiating side should use {@link #forInitiator(byte[], TorrentId)} factory method
+ * - receiver of connection request should use {@link #forReceiver(byte[], TorrentId)} factory method
  *
  * @since 1.2
  */
@@ -36,7 +34,7 @@ public class MSECipher {
      * @return MSE cipher configured for use by connection initiator
      * @since 1.2
      */
-    public static MSECipher forInitiator(BigInteger S, TorrentId torrentId) {
+    public static MSECipher forInitiator(byte[] S, TorrentId torrentId) {
         return new MSECipher(S, torrentId, true);
     }
 
@@ -48,14 +46,13 @@ public class MSECipher {
      * @return MSE cipher configured for use by receiver of the connection request
      * @since 1.2
      */
-    public static MSECipher forReceiver(BigInteger S, TorrentId torrentId) {
+    public static MSECipher forReceiver(byte[] S, TorrentId torrentId) {
         return new MSECipher(S, torrentId, false);
     }
 
-    private MSECipher(BigInteger S, TorrentId torrentId, boolean initiator) {
-        byte[] Sbytes = BigIntegers.encodeUnsigned(S, MSEKeyPairGenerator.PUBLIC_KEY_BYTES);
-        Key initiatorKey = getInitiatorEncryptionKey(Sbytes, torrentId.getBytes());
-        Key receiverKey = getReceiverEncryptionKey(Sbytes, torrentId.getBytes());
+    private MSECipher(byte[] S, TorrentId torrentId, boolean initiator) {
+        Key initiatorKey = getInitiatorEncryptionKey(S, torrentId.getBytes());
+        Key receiverKey = getReceiverEncryptionKey(S, torrentId.getBytes());
         Key outgoingKey = initiator ? initiatorKey : receiverKey;
         Key incomingKey = initiator ? receiverKey : initiatorKey;
         this.incomingCipher = createCipher(Cipher.DECRYPT_MODE, transformation, incomingKey);

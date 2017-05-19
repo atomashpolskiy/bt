@@ -68,7 +68,7 @@ public class PeerRegistry implements IPeerRegistry {
         ScheduledExecutorService executor =
                 Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "bt.peer.peer-collector"));
         lifecycleBinder.onStartup("Schedule periodic peer lookup", () -> executor.scheduleAtFixedRate(
-                this::collectAndVisitPeers, 1, peerDiscoveryInterval.getSeconds(), TimeUnit.SECONDS));
+                this::collectAndVisitPeers, 1, peerDiscoveryInterval.toMillis(), TimeUnit.MILLISECONDS));
         lifecycleBinder.onShutdown("Shutdown peer lookup scheduler", executor::shutdownNow);
     }
 

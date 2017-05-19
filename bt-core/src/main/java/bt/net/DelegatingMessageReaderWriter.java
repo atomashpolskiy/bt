@@ -6,7 +6,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class DelegatingMessageReaderWriter implements MessageReaderWriter {
+class DelegatingMessageReaderWriter implements MessageReaderWriter {
 
     private final Supplier<Message> reader;
     private final Consumer<Message> writer;

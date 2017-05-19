@@ -11,7 +11,14 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-public class DefaultMessageReader implements Supplier<Message> {
+/**
+ * Reads and decodes peer messages from a byte channel.
+ *
+ * Note that this class is not a part of the public API and is subject to change.
+ *
+ * @since 1.2
+ */
+class DefaultMessageReader implements Supplier<Message> {
 
     private final ReadableByteChannel channel;
     private final MessageHandler<Message> messageHandler;
@@ -24,6 +31,16 @@ public class DefaultMessageReader implements Supplier<Message> {
 
     private int dataOffset;
 
+    /**
+     * Create a message reader with a private buffer
+     *
+     * @param peer Remote peer
+     * @param channel Readable byte channel
+     * @param messageHandler Message decoder
+     * @param bufferSize Size of the internal buffer, that will be used to store
+     *                   partially received messages until the remaining data arrives
+     * @since 1.2
+     */
     public DefaultMessageReader(Peer peer,
                                 ReadableByteChannel channel,
                                 MessageHandler<Message> messageHandler,
@@ -31,6 +48,17 @@ public class DefaultMessageReader implements Supplier<Message> {
         this(peer, channel, messageHandler, ByteBuffer.allocateDirect(bufferSize));
     }
 
+    /**
+     * Create a message reader with the provided buffer.
+     * Data that is between position 0 and current buffer's position will be decoded first.
+     *
+     * @param peer Remote peer
+     * @param channel Readable byte channel
+     * @param messageHandler Message decoder
+     * @param buffer Buffer, that will be used to store
+     *               partially received messages until the remaining data arrives
+     * @since 1.2
+     */
     public DefaultMessageReader(Peer peer,
                                 ReadableByteChannel channel,
                                 MessageHandler<Message> messageHandler,

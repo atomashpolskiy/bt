@@ -1,7 +1,6 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
-import bt.net.crypto.MSEHandshakeProcessor;
 import bt.protocol.Message;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.protocol.handler.MessageHandler;
@@ -73,10 +72,7 @@ class PeerConnectionFactory {
         MessageReaderWriter readerWriter = incoming ?
                 cryptoHandshakeProcessor.negotiateIncoming(peer, channel)
                 : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId);
-        // TODO:
-        // 1. pre-fill buffer with data that has already been received during the MSE handshake (i.e. IA)
-        // 2. for outgoing connections, check local config ("alwaysNegotiateEncryption") and peer options
-        // 3. for incoming connections, detect by first bytes if peer uses plaintext or MSE
+
         return new DefaultPeerConnection(peer, channel, readerWriter);
     }
 

@@ -1,4 +1,4 @@
-package bt.net.crypto;
+package bt.net;
 
 import bt.net.BigIntegers;
 

@@ -107,7 +107,7 @@ public class ByteChannelReader {
                     throw new RuntimeException("Interrupted while waiting for data", e);
                 }
             }
-        } while (System.currentTimeMillis() - t1 <= timeoutMillis);
+        } while (timeoutMillis == 0 || (System.currentTimeMillis() - t1 <= timeoutMillis));
 
         if (readTotal < min) {
             throw new IllegalStateException("Less than " + min + " bytes received: " + readTotal);
@@ -146,7 +146,7 @@ public class ByteChannelReader {
                     throw new RuntimeException("Interrupted while waiting for data", e);
                 }
             }
-        } while (System.currentTimeMillis() - t1 <= timeoutMillis);
+        } while ((min > 0 && timeoutMillis == 0) || (System.currentTimeMillis() - t1 <= timeoutMillis));
 
         if (readTotal < min) {
             throw new IllegalStateException("Less than " + min + " bytes received: " + readTotal);

@@ -1,20 +1,13 @@
-package bt.net.crypto;
+package bt.net;
 
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.net.BigIntegers;
-import bt.net.ByteChannelReader;
-import bt.net.DefaultMessageReader;
-import bt.net.DefaultMessageWriter;
-import bt.net.DelegatingMessageReaderWriter;
-import bt.net.EncryptedChannel;
-import bt.net.MessageReaderWriter;
-import bt.net.Peer;
 import bt.protocol.DecodingContext;
 import bt.protocol.Handshake;
 import bt.protocol.Message;
 import bt.protocol.Protocols;
 import bt.protocol.crypto.EncryptionPolicy;
+import bt.protocol.crypto.MSECipher;
 import bt.protocol.handler.MessageHandler;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
@@ -36,7 +29,12 @@ import java.util.Random;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class MSEHandshakeProcessor {
+/**
+ * Implements Message Stream Encryption protocol negotiation.
+ *
+ * This class is not a part of the public API and is subject to change.
+ */
+class MSEHandshakeProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(MSEHandshakeProcessor.class);
 
     private static final Duration receiveTimeout = Duration.ofSeconds(10);
@@ -50,7 +48,7 @@ public class MSEHandshakeProcessor {
     private final EncryptionPolicy localEncryptionPolicy;
     private final int bufferSize;
 
-    public MSEHandshakeProcessor(TorrentRegistry torrentRegistry,
+    MSEHandshakeProcessor(TorrentRegistry torrentRegistry,
                                  MessageHandler<Message> messageHandler,
                                  EncryptionPolicy localEncryptionPolicy,
                                  int bufferSize) {
@@ -61,7 +59,7 @@ public class MSEHandshakeProcessor {
         this.bufferSize = bufferSize;
     }
 
-    public MessageReaderWriter negotiateOutgoing(Peer peer, ByteChannel channel, TorrentId torrentId) throws IOException {
+    MessageReaderWriter negotiateOutgoing(Peer peer, ByteChannel channel, TorrentId torrentId) throws IOException {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Negotiating encryption for outgoing connection: {}", peer);
         }
@@ -91,7 +89,10 @@ public class MSEHandshakeProcessor {
         ByteBuffer in = ByteBuffer.allocateDirect(bufferSize);
         ByteBuffer out = ByteBuffer.allocateDirect(bufferSize);
 
-        if (peerEncryptionPolicy == EncryptionPolicy.REQUIRE_PLAINTEXT) {
+        if (peerEncryptionPolicy == EncryptionPolicy.REQUIRE_PLAINTEXT ||
+                (peerEncryptionPolicy == EncryptionPolicy.PREFER_PLAINTEXT &&
+                        (localEncryptionPolicy == EncryptionPolicy.PREFER_PLAINTEXT
+                                || localEncryptionPolicy == EncryptionPolicy.REQUIRE_PLAINTEXT))) {
             // if peer requires plaintext and we support it, then do not negotiate encryption and use plaintext right away
             return createReaderWriter(peer, channel, in, out);
         }
@@ -138,7 +139,8 @@ public class MSEHandshakeProcessor {
         channel.write(out);
         out.clear();
 
-        MSECipher cipher = MSECipher.forInitiator(S, torrentId);
+        byte[] Sbytes = BigIntegers.encodeUnsigned(S, MSEKeyPairGenerator.PUBLIC_KEY_BYTES);
+        MSECipher cipher = MSECipher.forInitiator(Sbytes, torrentId);
         ByteChannel encryptedChannel = new EncryptedChannel(channel, cipher.getDecryptionCipher(), cipher.getEncryptionCipher());
         // - ENCRYPT(VC, crypto_provide, len(PadC), PadC, len(IA))
         out.put(VC_RAW_BYTES);
@@ -157,7 +159,7 @@ public class MSEHandshakeProcessor {
         // - ENCRYPT(VC, crypto_select, len(padD), padD)
         byte[] encryptedVC;
         {
-            MSECipher throwawayCipher = MSECipher.forInitiator(S, torrentId);
+            MSECipher throwawayCipher = MSECipher.forInitiator(Sbytes, torrentId);
             try {
                 encryptedVC = throwawayCipher.getDecryptionCipher().doFinal(VC_RAW_BYTES);
             } catch (Exception e) {
@@ -239,7 +241,7 @@ public class MSEHandshakeProcessor {
         }
     }
 
-    public MessageReaderWriter negotiateIncoming(Peer peer, ByteChannel channel) throws IOException {
+    MessageReaderWriter negotiateIncoming(Peer peer, ByteChannel channel) throws IOException {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Negotiating encryption for incoming connection: {}", peer);
         }
@@ -280,7 +282,6 @@ public class MSEHandshakeProcessor {
         }
         // TODO: can this be done without knowing the protocol specifics? (KeepAlive can be especially misleading: 0x00 0x00 0x00 0x00)
         if (consumed > 0 && context.getMessage() instanceof Handshake) {
-            in.position(0); // reset buffer (message will be decoded once again by the upper layer)
             // decoding was successful, can use plaintext (if supported)
             assertPolicyIsCompatible(EncryptionPolicy.REQUIRE_PLAINTEXT);
             return createReaderWriter(peer, channel, in, out);
@@ -360,7 +361,8 @@ public class MSEHandshakeProcessor {
             throw new IllegalStateException("Unsupported/inactive torrent requested");
         }
 
-        MSECipher cipher = MSECipher.forReceiver(S, requestedTorrent.getTorrentId());
+        byte[] Sbytes = BigIntegers.encodeUnsigned(S, MSEKeyPairGenerator.PUBLIC_KEY_BYTES);
+        MSECipher cipher = MSECipher.forReceiver(Sbytes, requestedTorrent.getTorrentId());
         ByteChannel encryptedChannel = new EncryptedChannel(channel, cipher.getDecryptionCipher(), cipher.getEncryptionCipher());
         ByteChannelReader encryptedReader = reader(encryptedChannel);
 
