@@ -50,7 +50,7 @@ If a peer's policy is PREFER_PLAINTEXT and local policy is either REQUIRE_PLAINT
 
 For incoming connections an automatic protocol detection is performed. If the first 20 incoming bytes are the standard BitTorrent handshake prefix, and local policy is compatible with REQUIRE_PLAINTEXT (i.e. is not REQUIRE_ENCRYPTED), then MSE negotiation will not be performed, and a standard connection will be established.
 
-In all other cases Bt will make an attempt to negote encryption, and the final protocol will or will not be selected based on the following rules:
+In all other cases Bt will make an attempt to negotiate encryption, and the final protocol will or will not be selected based on the following rules:
 
 * for outgoing connections Bt will offer support for either plaintext or encryption or both (depending on local policy); peer will either select the policy that suits her or terminate the connection
 * outgoing connection to a peer that does not support MSE negotiation (unlikely, but still happens in the wild) will be terminated by the peer and currently<sup>*</sup> will not be reattempted via standard BitTorrent protocol
@@ -67,7 +67,7 @@ In all other cases Bt will make an attempt to negote encryption, and the final p
 
 ### **Advertising support for encryption to peers**
 
-Support for encryption can be advertised by the following means: HTTP tracker announce request, MSE crypto_provide bitfield, extended handshake. Bt uses them appropriately as indicated in the table below:
+Support for encryption can be advertised by the following means: HTTP tracker announce request, MSE `crypto_provide` bitfield, extended handshake. Bt uses them appropriately as indicated in the table below:
 
 | Local policy      | HTTP tracker query | MSE crypto_provide | Extended handshake |
 |-------------------|--------------------|--------------------|--------------------|
