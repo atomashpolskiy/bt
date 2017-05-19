@@ -6,6 +6,7 @@ import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEString;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
+import bt.protocol.crypto.EncryptionPolicy;
 import bt.protocol.extended.ExtendedMessage;
 import bt.tracker.CompactPeerInfo;
 import bt.tracker.CompactPeerInfo.AddressType;
@@ -28,6 +29,8 @@ class PeerExchange extends ExtendedMessage {
     private static final String ADDED_IPV6_FLAGS_KEY = "added6.f";
     private static final String DROPPED_IPV4_KEY = "dropped";
     private static final String DROPPED_IPV6_KEY = "dropped6";
+
+    private static final int CRYPTO_FLAG = 0x01;
 
     public static Builder builder() {
         return new Builder();
@@ -66,7 +69,7 @@ class PeerExchange extends ExtendedMessage {
     private static void extractPeers(byte[] peers, byte[] flags, AddressType addressType, Collection<Peer> destination) {
         byte[] cryptoFlags = new byte[flags.length];
         for (int i = 0; i < flags.length; i++) {
-            cryptoFlags[i] = (byte) (flags[i] & 0x01);
+            cryptoFlags[i] = (byte) (flags[i] & CRYPTO_FLAG);
         }
         new CompactPeerInfo(peers, addressType, cryptoFlags).iterator().forEachRemaining(destination::add);
     }
@@ -101,8 +104,14 @@ class PeerExchange extends ExtendedMessage {
 
         if (message == null) {
             message = new BEMap(null, new HashMap<String, BEObject<?>>() {{
-                put(ADDED_IPV4_KEY, encodePeers(filterByAddressType(added, AddressType.IPV4)));
-                put(ADDED_IPV6_KEY, encodePeers(filterByAddressType(added, AddressType.IPV6)));
+                Collection<Peer> inet4Peers = filterByAddressType(added, AddressType.IPV4);
+                Collection<Peer> inet6Peers = filterByAddressType(added, AddressType.IPV6);
+
+                put(ADDED_IPV4_KEY, encodePeers(inet4Peers));
+                put(ADDED_IPV4_FLAGS_KEY, encodePeerOptions(inet4Peers));
+                put(ADDED_IPV6_KEY, encodePeers(inet6Peers));
+                put(ADDED_IPV6_FLAGS_KEY, encodePeerOptions(inet6Peers));
+
                 put(DROPPED_IPV4_KEY, encodePeers(filterByAddressType(dropped, AddressType.IPV4)));
                 put(DROPPED_IPV6_KEY, encodePeers(filterByAddressType(dropped, AddressType.IPV6)));
             }});
@@ -129,6 +138,20 @@ class PeerExchange extends ExtendedMessage {
                 // won't happen
                 throw new BtException("Unexpected I/O exception", e);
             }
+        }
+        return new BEString(bos.toByteArray());
+    }
+
+    private static BEString encodePeerOptions(Collection<Peer> peers) {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        for (Peer peer : peers) {
+            byte options = 0;
+            EncryptionPolicy encryptionPolicy = peer.getOptions().getEncryptionPolicy();
+            if (encryptionPolicy == EncryptionPolicy.PREFER_ENCRYPTED
+                    || encryptionPolicy == EncryptionPolicy.REQUIRE_ENCRYPTED) {
+                options |= CRYPTO_FLAG;
+            }
+            bos.write(options);
         }
         return new BEString(bos.toByteArray());
     }
