@@ -13,12 +13,13 @@ This module contains a simple CLI launcher for **Bt**.
 ```
 $ java -jar target/bt-launcher.jar
 
-Option (* = required)  Description                               
----------------------  -----------                               
--?, -h, --help                                                   
--S, --sequential       Download sequentially                     
-* -d, --dir <File>     Target download location                  
-* -f, --file <File>    Torrent metainfo file                     
+Option (* = required)  Description
+---------------------  -----------
+-?, -h, --help
+-S, --sequential       Download sequentially
+* -d, --dir <File>     Target download location
+-e, --encrypted        Enforce encryption for all connections
+* -f, --file <File>    Torrent metainfo file
 -s, --seed             Continue to seed when download is complete
 ```
 
@@ -28,7 +29,11 @@ Option (* = required)  Description
 $ java -jar target/bt-launcher.jar -f /path/to/torrent -d /save/to/here
 ```
 
+Add `-e` flag to encrypt all peer connections.
+
 Add `-S` flag to download the data in sequential order (e.g. for streaming content).
+
+Add `-s` flag to continue seeding after torrent has been downloaded.
 
 ### Key bindings
 

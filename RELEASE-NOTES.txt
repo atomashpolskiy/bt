@@ -8,7 +8,7 @@ Release: 1.2
 Date:
 ----------------------------------
 Changes/New Features:
-
+* Message Stream Encryption
 
 
 Bug Fixes/Improvements:

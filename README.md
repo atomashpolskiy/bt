@@ -12,14 +12,6 @@
 
 [CLI Launcher](https://github.com/atomashpolskiy/bt/tree/master/bt-cli)
 
-## Support and feedback
-
-Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new features and BEPs to be added. You have the following options to share your ideas, receive help or report bugs:
-
-* open a new  [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
-* post your question on the [Bt forum](https://groups.google.com/forum/#!forum/bttorrent)
-* join the [Gitter chat](https://gitter.im/bt-java/general)
-
 ## List of supported BEPs
 
 * [BEP-3: The BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html)
@@ -32,6 +24,15 @@ Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new featu
 * [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
 * [BEP-27: Private Torrents](http://bittorrent.org/beps/bep_0027.html)
 * [BEP-41: UDP Tracker Protocol Extensions](http://bittorrent.org/beps/bep_0041.html)
+* [Message Stream Encryption](http://wiki.vuze.com/w/Message_Stream_Encryption)
+
+## Support and feedback
+
+Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new features and BEPs to be added. You have the following options to share your ideas, receive help or report bugs:
+
+* open a new  [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
+* post your question on the [Bt forum](https://groups.google.com/forum/#!forum/bttorrent)
+* join the [Gitter chat](https://gitter.im/bt-java/general)
 
 ## Release 1.1
 
