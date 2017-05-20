@@ -2,6 +2,7 @@
 layout: page
 title: Message Encryption
 permalink: /encryption/
+order: 3
 ---
 
 # **Overview**

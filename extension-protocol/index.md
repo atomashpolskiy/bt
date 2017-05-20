@@ -2,6 +2,7 @@
 layout: page
 title: Extension protocol
 permalink: /extension-protocol/
+order: 2
 ---
 
 [Extension Protocol](http://www.bittorrent.org/beps/bep_0010.html) is the preferred way of building custom messaging on top of BitTorrent. There is a bunch of well-known messages: `ut_pex` ([Peer Exchange](http://www.bittorrent.org/beps/bep_0011.html)), `ut_metadata` ([magnet: links](http://www.bittorrent.org/beps/bep_0009.html)), and others. Bt provides a simple way to utilize the same mechanism to create custom protocols.
@@ -147,11 +148,10 @@ Now it's time to make use of the new message and create a messaging agent that w
 
 The interesting thing here is that messaging agents do not need to have any specific Java type. Any object can act as a message consumer/producer. The rules are as follows:
  
-To act as a message consumer (i.e. to receive messages) the object may declare any number of methods, annotated with `@Consumes`, that have the following signature: `<T extends Message> (T message, MessageContext context):V`.
-
+* To act as a message consumer (i.e. to receive messages) the object may declare any number of methods, annotated with `@Consumes`, that have the following signature: `<T extends Message> (T message, MessageContext context):V`.
 `T` can be any message type (using generic `Message` type is also allowed and lets you create "generic" consumers that receive all kinds of messages).
 
-To act as a message producer (i.e. to send messages) the object may declare any number of methods, annotated with `@Produces`, that have the following signature:  `(Consumer<Message> messageConsumer, MessageContext context):V`.
+* To act as a message producer (i.e. to send messages) the object may declare any number of methods, annotated with `@Produces`, that have the following signature:  `(Consumer<Message> messageConsumer, MessageContext context):V`.
 
 There is no restriction on the number of methods - only names have to be different - so a single object may be responsible for consuming and producing messages of several different types.
 
@@ -243,7 +243,7 @@ import java.util.Set;
 public class Main {
 
     private static final int[] ports = new int[] {6891, 6892};
-    private static final Set<Peer> peers = new HashSet<Peer>() {{
+    private static final Set<Peer> peers = new HashSet<Peer>() { {
         for (int port : ports) {
             add(new InetPeer(new InetSocketAddress(port)));
         }
@@ -286,7 +286,7 @@ public class Main {
 }
 ```
 
-Here we create two clients that will listen on ports 6891 and 6892. You may also notice that there is another module that is being contributed: `MockModule`. It's a simple collection of mock classes that will allow us to run this example without an actual torrenting session.
+Here we create two clients that will listen on ports 6891 and 6892. You may also notice that there is another module that is being contributed: `MockModule`. It's a simple collection of stubs that will allow us to run this example without an actual torrenting session.
 
 When run, the program will launch two Bt clients and wait for a little bit, while the clients exchange `YourIP` messages. In standard output you should see something like this:
 
@@ -309,4 +309,8 @@ Process finished with exit code 0
 
 # **Conclusion**
 
-In this brief tutorial we demonstrated how to use IoC modules and contributions to extend and customize Bt library. And it's important to note that it's not something that is intended to be used by library users only. It's the core design principle that underlies all Bt code. In fact such essential parts of Bt as HTTP tracker integration, Peer Exchange, DHT and Extension Protocol itself are not hard-wired into the core, but rather contributed via the very same Guice modules and contribution methods. Such modularity is what makes Bt really shine.
+In this brief tutorial we demonstrated how to use IoC modules and contributions to extend and customize Bt library. 
+
+It's important to note that it's not something that is intended to be used by library users only. It's the core design principle that underlies all Bt code. 
+
+In fact such essential parts of Bt as HTTP tracker integration, Peer Exchange, DHT and Extension Protocol itself are not hard-wired into the core, but rather contributed via the very same Guice modules and contribution methods. Such modularity is what makes Bt really shine.

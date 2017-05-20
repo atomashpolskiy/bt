@@ -2,6 +2,7 @@
 layout: page
 title: IoC and Customization
 permalink: /custom/
+order: 1
 ---
 
 # **IoC container**

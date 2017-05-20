@@ -2,6 +2,7 @@
 layout: page
 title: A Brief Introduction
 permalink: /intro/
+order: 0
 ---
 
 # **Setup**
