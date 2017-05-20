@@ -36,8 +36,8 @@ public class YourIPMessageHandler implements MessageHandler<YourIP> {
         buffer.get(payload);
         try (BEParser parser = new BEParser(payload)) {
             BEMap message = parser.readMap();
-            String text = new String(message.getValue().get(YourIP.addressField()).getContent(), Charset.forName("UTF-8"));
-            context.setMessage(new YourIP(text));
+            String address = new String(message.getValue().get(YourIP.addressField()).getContent(), Charset.forName("UTF-8"));
+            context.setMessage(new YourIP(address));
             return message.getContent().length;
         }
     }
