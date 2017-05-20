@@ -52,8 +52,9 @@ public class YourIP extends ExtendedMessage {
     }
 
     void writeTo(OutputStream out) throws IOException {
-        BEMap message = new BEMap(null, new HashMap<String, BEObject<?>>() {{
-            put(addressField, new BEString(address.getBytes(Charset.forName("UTF-8"))));
+        byte[] bytes = address.getBytes(Charset.forName("UTF-8"));
+        BEMap message = new BEMap(null, new HashMap<String, BEObject<?>>() { {
+            put(addressField, new BEString(bytes));
         }});
         message.writeTo(out);
     }
@@ -101,7 +102,10 @@ public class YourIPMessageHandler implements MessageHandler<YourIP> {
         buffer.get(payload);
         try (BEParser parser = new BEParser(payload)) {
             BEMap message = parser.readMap();
-            String address = new String(message.getValue().get(YourIP.addressField()).getContent(), Charset.forName("UTF-8"));
+            String address = new String(
+                message.getValue().get(YourIP.addressField()).getContent(), 
+                Charset.forName("UTF-8"));
+
             context.setMessage(new YourIP(address));
             return message.getContent().length;
         }
@@ -139,7 +143,8 @@ public class YourIPModule implements Module {
 
     @Override
     public void configure(Binder binder) {
-        ProtocolModule.contributeExtendedMessageHandler(binder).addBinding(YourIP.id()).to(YourIPMessageHandler.class);
+        ProtocolModule.contributeExtendedMessageHandler(binder)
+            .addBinding(YourIP.id()).to(YourIPMessageHandler.class);
     }
 }
 ```
@@ -175,8 +180,10 @@ public class YourIPMessenger {
 
     @Consumes
     public void consume(YourIP message, MessageContext context) {
-        System.out.println("I am " + peerRegistry.getLocalPeer() +
-                ", for peer " + context.getPeer() + " my external address is " + message.getAddress());
+        System.out.println(
+            "I am " + peerRegistry.getLocalPeer() +
+            ", for peer " + context.getPeer() + 
+            " my external address is " + message.getAddress());
     }
 
     @Produces
@@ -214,8 +221,11 @@ public class YourIPModule implements Module {
 
     @Override
     public void configure(Binder binder) {
-        ProtocolModule.contributeExtendedMessageHandler(binder).addBinding(YourIP.id()).to(YourIPMessageHandler.class);
-        ServiceModule.contributeMessagingAgent(binder).addBinding().to(YourIPMessenger.class);
+        ProtocolModule.contributeExtendedMessageHandler(binder)
+            .addBinding(YourIP.id()).to(YourIPMessageHandler.class);
+            
+        ServiceModule.contributeMessagingAgent(binder)
+            .addBinding().to(YourIPMessenger.class);
     }
 }
 ```
@@ -291,18 +301,43 @@ Here we create two clients that will listen on ports 6891 and 6892. You may also
 When run, the program will launch two Bt clients and wait for a little bit, while the clients exchange `YourIP` messages. In standard output you should see something like this:
 
 ```
-[bt.net.pool.incoming-acceptor] INFO bt.net.PeerConnectionPool - Opening server channel for incoming connections @ /192.168.1.2:6892
-[bt.net.pool.incoming-acceptor] INFO bt.net.PeerConnectionPool - Opening server channel for incoming connections @ /192.168.1.2:6891
-I am /192.168.1.2:6891, for peer 0.0.0.0/0.0.0.0:6892 my external address is /192.168.1.2:49677
-I am /192.168.1.2:6892, for peer /192.168.1.2:49677 my external address is 0.0.0.0/0.0.0.0:6892
-I am /192.168.1.2:6892, for peer 0.0.0.0/0.0.0.0:6891 my external address is /192.168.1.2:49674
-I am /192.168.1.2:6891, for peer /192.168.1.2:49674 my external address is 0.0.0.0/0.0.0.0:6891
-I am /192.168.1.2:6892, for peer 0.0.0.0/0.0.0.0:6892 my external address is /192.168.1.2:49675
-I am /192.168.1.2:6891, for peer /192.168.1.2:49676 my external address is 0.0.0.0/0.0.0.0:6891
-I am /192.168.1.2:6891, for peer 0.0.0.0/0.0.0.0:6891 my external address is /192.168.1.2:49676
-I am /192.168.1.2:6892, for peer /192.168.1.2:49675 my external address is 0.0.0.0/0.0.0.0:6892
-[bt.net.pool.incoming-acceptor] ERROR bt.net.PeerConnectionPool - Unexpected I/O error when listening to the incoming channel @ /192.168.1.2:6892: java.nio.channels.AsynchronousCloseException
-[bt.net.pool.incoming-acceptor] ERROR bt.net.PeerConnectionPool - Unexpected I/O error when listening to the incoming channel @ /192.168.1.2:6891: java.nio.channels.AsynchronousCloseException
+[bt.net.pool.incoming-acceptor] INFO bt.net.PeerConnectionPool 
+    - Opening server channel for incoming connections @ /192.168.1.2:6892
+    
+[bt.net.pool.incoming-acceptor] INFO bt.net.PeerConnectionPool 
+    - Opening server channel for incoming connections @ /192.168.1.2:6891
+    
+I am /192.168.1.2:6891, for peer 0.0.0.0/0.0.0.0:6892 
+    my external address is /192.168.1.2:49677
+    
+I am /192.168.1.2:6892, for peer /192.168.1.2:49677 
+    my external address is 0.0.0.0/0.0.0.0:6892
+    
+I am /192.168.1.2:6892, for peer 0.0.0.0/0.0.0.0:6891 
+    my external address is /192.168.1.2:49674
+    
+I am /192.168.1.2:6891, for peer /192.168.1.2:49674 
+    my external address is 0.0.0.0/0.0.0.0:6891
+    
+I am /192.168.1.2:6892, for peer 0.0.0.0/0.0.0.0:6892 
+    my external address is /192.168.1.2:49675
+    
+I am /192.168.1.2:6891, for peer /192.168.1.2:49676 
+    my external address is 0.0.0.0/0.0.0.0:6891
+    
+I am /192.168.1.2:6891, for peer 0.0.0.0/0.0.0.0:6891 
+    my external address is /192.168.1.2:49676
+    
+I am /192.168.1.2:6892, for peer /192.168.1.2:49675 
+    my external address is 0.0.0.0/0.0.0.0:6892
+    
+[bt.net.pool.incoming-acceptor] ERROR bt.net.PeerConnectionPool 
+    - Unexpected I/O error when listening to the incoming channel 
+      @ /192.168.1.2:6892: java.nio.channels.AsynchronousCloseException
+      
+[bt.net.pool.incoming-acceptor] ERROR bt.net.PeerConnectionPool 
+    - Unexpected I/O error when listening to the incoming channel 
+    @ /192.168.1.2:6891: java.nio.channels.AsynchronousCloseException
 
 Process finished with exit code 0
 ```
