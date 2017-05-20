@@ -62,10 +62,6 @@ public class YourIP extends ExtendedMessage {
 
 Second, we need a handler that will perform serialization of a message into a binary form and deserialization of a binary representation into an object. 
 
-Because our message already knows how to serialize itself, the `encode(Message, ByteBuffer)` method will only be responsible for checking that the I/O buffer has sufficient space available. 
-
-Note that `readMessageType(ByteBuffer)` method (which is called upon receiving a new message) does not actually check the contents of the buffer. Extension protocol has already taken care of that, and we can safely assume that the received message is really `YourIP`.
-
 ```java
 package yourip;
 
@@ -123,6 +119,10 @@ public class YourIPMessageHandler implements MessageHandler<YourIP> {
 }
 ```
 
+Because our message already knows how to serialize itself, the `encode(Message, ByteBuffer)` method will only be responsible for checking that the I/O buffer has sufficient space available. 
+
+Note that `readMessageType(ByteBuffer)` method (which is called upon receiving a new message) does not actually check the contents of the buffer. Extension protocol has already taken care of that, and we can safely assume that the received message is really `YourIP`.
+
 As described in [IoC and Customization](../custom), the easiest way to add a custom message is to use a contribution method. In order to use a contribution method (or adding something into the IoC container in general) we'll need to create a custom Guice module.
 
 For now, the only contribution we need to do is register a custom message handler for a literal message ID. Peers will exchange information on what types of messages they support during the extended handshake.
@@ -145,15 +145,6 @@ public class YourIPModule implements Module {
 ```
 
 Now it's time to make use of the new message and create a messaging agent that will consume and produce messages of this particular type.
-
-The interesting thing here is that messaging agents do not need to have any specific Java type. Any object can act as a message consumer/producer. The rules are as follows:
- 
-* To act as a message consumer (i.e. to receive messages) the object may declare any number of methods, annotated with `@Consumes`, that have the following signature: `<T extends Message> (T message, MessageContext context):V`.
-`T` can be any message type (using generic `Message` type is also allowed and lets you create "generic" consumers that receive all kinds of messages).
-
-* To act as a message producer (i.e. to send messages) the object may declare any number of methods, annotated with `@Produces`, that have the following signature:  `(Consumer<Message> messageConsumer, MessageContext context):V`.
-
-There is no restriction on the number of methods - only names have to be different - so a single object may be responsible for consuming and producing messages of several different types.
 
 ```java
 package yourip;
@@ -199,6 +190,15 @@ public class YourIPMessenger {
     }
 }
 ```
+
+The interesting thing here is that messaging agents do not need to have any specific Java type. Any object can act as a message consumer/producer. The rules are as follows:
+ 
+* To act as a message consumer (i.e. to receive messages) the object may declare any number of methods, annotated with `@Consumes`, that have the following signature: `<T extends Message> (T message, MessageContext context):V`.
+`T` can be any message type (using generic `Message` type is also allowed and lets you create "generic" consumers that receive all kinds of messages).
+
+* To act as a message producer (i.e. to send messages) the object may declare any number of methods, annotated with `@Produces`, that have the following signature:  `(Consumer<Message> messageConsumer, MessageContext context):V`.
+
+There is no restriction on the number of methods - only names have to be different - so a single object may be responsible for consuming and producing messages of several different types.
 
 Messaging agents are also contributed via a dedicated method in `ProtocolModule`, so let's update our module's code:
 
