@@ -1,6 +1,6 @@
 ---
 layout: page
-title: Extensions and Customization
+title: IoC and customization
 permalink: /custom/
 ---
 
