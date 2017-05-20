@@ -33,6 +33,7 @@
         <module>bt-core</module>
         <module>bt-http-tracker-client</module>
         <module>bt-tests</module>
+        <module>examples</module>
     </modules>
 
     <properties>
@@ -183,6 +184,11 @@
                     <groupId>org.sonatype.plugins</groupId>
                     <artifactId>nexus-staging-maven-plugin</artifactId>
                     <version>1.6.7</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>2.8.2</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

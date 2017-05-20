@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/atomashpolskiy/bt.svg?branch=master)](https://travis-ci.org/atomashpolskiy/bt) [![codecov](https://img.shields.io/codecov/c/github/atomashpolskiy/bt/master.svg)](https://codecov.io/gh/atomashpolskiy/bt) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/) [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](http://atomashpolskiy.github.io/bt/javadoc/latest/) [![Join the chat at https://gitter.im/bt-java/general](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/bt-java/general?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/atomashpolskiy/bt.svg?branch=master)](https://travis-ci.org/atomashpolskiy/bt) [![codecov](https://img.shields.io/codecov/c/github/atomashpolskiy/bt/master.svg)](https://codecov.io/gh/atomashpolskiy/bt) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/) [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](http://atomashpolskiy.github.io/bt/javadoc/latest/)
 
 **Bt** is a modern BitTorrent library in Java 8, perfect choice for both enterprise and home usage and experimentation. It offers good performance, reliability and is highly customizable. With Bt you can create a production-grade torrent client in a matter of minutes. Bt is still in its' early days, but is actively developed and designed with stability and maintainability in mind.
 
@@ -32,7 +32,6 @@ Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new featu
 
 * open a new  [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
 * post your question on the [Bt forum](https://groups.google.com/forum/#!forum/bttorrent)
-* join the [Gitter chat](https://gitter.im/bt-java/general)
 
 ## Release 1.1
 
