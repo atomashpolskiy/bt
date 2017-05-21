@@ -308,28 +308,16 @@ When run, the program will launch two Bt clients and wait for a little bit, whil
     - Opening server channel for incoming connections @ /192.168.1.2:6891
     
 I am /192.168.1.2:6891, for peer 0.0.0.0/0.0.0.0:6892 
-    my external address is /192.168.1.2:49677
+    my external address is /192.168.1.2:49666
     
-I am /192.168.1.2:6892, for peer /192.168.1.2:49677 
+I am /192.168.1.2:6892, for peer /192.168.1.2:49666 
     my external address is 0.0.0.0/0.0.0.0:6892
     
 I am /192.168.1.2:6892, for peer 0.0.0.0/0.0.0.0:6891 
-    my external address is /192.168.1.2:49674
+    my external address is /192.168.1.2:49665
     
-I am /192.168.1.2:6891, for peer /192.168.1.2:49674 
+I am /192.168.1.2:6891, for peer /192.168.1.2:49665 
     my external address is 0.0.0.0/0.0.0.0:6891
-    
-I am /192.168.1.2:6892, for peer 0.0.0.0/0.0.0.0:6892 
-    my external address is /192.168.1.2:49675
-    
-I am /192.168.1.2:6891, for peer /192.168.1.2:49676 
-    my external address is 0.0.0.0/0.0.0.0:6891
-    
-I am /192.168.1.2:6891, for peer 0.0.0.0/0.0.0.0:6891 
-    my external address is /192.168.1.2:49676
-    
-I am /192.168.1.2:6892, for peer /192.168.1.2:49675 
-    my external address is 0.0.0.0/0.0.0.0:6892
     
 [bt.net.pool.incoming-acceptor] ERROR bt.net.PeerConnectionPool 
     - Unexpected I/O error when listening to the incoming channel 
