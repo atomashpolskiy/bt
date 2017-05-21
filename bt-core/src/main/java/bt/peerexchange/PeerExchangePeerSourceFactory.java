@@ -158,7 +158,9 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
                 Queue<PeerEvent> torrentPeerEvents = getPeerEvents(messageContext.getTorrentId().get());
                 for (PeerEvent event : torrentPeerEvents) {
                     if (event.getInstant() - lastSentPEXMessageToPeer >= 0) {
-                        events.add(event);
+                        if (!event.getPeer().equals(peer)) {
+                            events.add(event);
+                        }
                     }
                     if (events.size() >= maxEventsPerMessage) {
                         break;
