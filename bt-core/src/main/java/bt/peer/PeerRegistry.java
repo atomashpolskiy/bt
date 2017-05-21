@@ -112,6 +112,9 @@ public class PeerRegistry implements IPeerRegistry {
             if (peerSource.update()) {
                 Collection<Peer> discoveredPeers = peerSource.getPeers();
                 for (Peer peer : discoveredPeers) {
+                    if (isLocal(peer)) {
+                        continue;
+                    }
                     cache.registerPeer(peer);
                     for (Consumer<Peer> consumer : peerConsumers) {
                         try {
@@ -125,6 +128,10 @@ public class PeerRegistry implements IPeerRegistry {
         } catch (Exception e) {
             LOGGER.error("Error when querying peer source: " + peerSource, e);
         }
+    }
+
+    private boolean isLocal(Peer peer) {
+        return peer.getInetAddress().isAnyLocalAddress() && localPeer.getPort() == peer.getPort();
     }
 
     @Override
