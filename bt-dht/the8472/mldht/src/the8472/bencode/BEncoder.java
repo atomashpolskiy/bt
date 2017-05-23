@@ -52,7 +52,7 @@ public class BEncoder {
 			encodeMap((Map<String, Object>) o);
 			return;
 		}
-		
+
 		if(o instanceof List) {
 			encodeList((List<Object>) o);
 			return;
@@ -102,9 +102,21 @@ public class BEncoder {
 			w.writeTo(buf);
 			return;
 		}
+
+		if(o instanceof Stream) {
+			encodeStream((Stream<Object>) o);
+			return;
+		}
 		
 		throw new RuntimeException("unknown object to encode " + o);
 	}
+
+	private void encodeStream(Stream<Object> l) {
+		buf.put((byte) 'l');
+		l.forEach(this::encodeInternal);
+		buf.put((byte) 'e');
+	}
+
 	
 	private void encodeList(List<Object> l) {
 		buf.put((byte) 'l');

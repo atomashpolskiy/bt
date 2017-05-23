@@ -18,7 +18,6 @@
     <modules>
         <module>bt-dht</module>
         <module>the8472/mldht</module>
-        <module>the8472/mldht/ed25519-java</module>
     </modules>
 
     <properties>

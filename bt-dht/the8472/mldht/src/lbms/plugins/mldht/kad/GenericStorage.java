@@ -136,7 +136,7 @@ public class GenericStorage {
 			return pubkey != null;
 		}
 		
-		public static final EdDSAParameterSpec spec = EdDSANamedCurveTable.getByName("ed25519-sha-512");
+		public static final EdDSAParameterSpec spec = EdDSANamedCurveTable.getByName("Ed25519");
 		
 		public boolean validateSig()  {
 			try {

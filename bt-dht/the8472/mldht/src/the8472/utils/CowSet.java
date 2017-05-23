@@ -64,11 +64,15 @@ public class CowSet<E> implements Set<E> {
 
 	@Override
 	public boolean add(E e) {
+		if(backingStore.containsKey(e))
+			return false;
 		return update(m -> m.putIfAbsent(e, Boolean.TRUE) == null);
 	}
 
 	@Override
 	public boolean remove(Object o) {
+		if(!backingStore.containsKey(o))
+			return false;
 		return update(m -> m.keySet().remove(o));
 	}
 
@@ -79,7 +83,13 @@ public class CowSet<E> implements Set<E> {
 
 	@Override
 	public boolean addAll(Collection<? extends E> c) {
-		throw new UnsupportedOperationException("not implemented");
+		return update(m -> {
+			boolean added = false;
+			for (E e : c) {
+				added |= m.put(e, Boolean.TRUE) == null;
+			}
+			return added;
+		});
 	}
 
 	@Override

@@ -18,4 +18,4 @@ OPTO="-XX:+AggressiveOpts -XX:MaxInlineLevel=12 -XX:+TrustFinalNonStaticFields -
 PERF_EVENTS="-XX:+PreserveFramePointer"
 
 
-( java $UNLOCK $PROFILER $GC $DEBUG "${LOG[@]}" $OPTO $PERF_EVENTS -cp "$DIR/../target/*" the8472.mldht.Launcher & ) &
+( java $UNLOCK $PROFILER $GC $DEBUG "${LOG[@]}" $OPTO $PERF_EVENTS -cp "$DIR/../target/*:$DIR/../target/dependency/*" the8472.mldht.Launcher & ) &

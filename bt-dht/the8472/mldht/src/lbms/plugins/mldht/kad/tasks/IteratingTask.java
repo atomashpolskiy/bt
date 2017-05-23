@@ -40,6 +40,9 @@ public abstract class IteratingTask extends TargetedTask {
 	protected void logClosest() {
 		Key farthest = closest.tail();
 		
+		if(!DHT.isLogLevelEnabled(LogLevel.Verbose))
+			return;
+		
 		DHT.log(this.toString() + "\n" +
 
 				"Task "+ getTaskID() +"  done " + counts + " " + closest + "\n" + targetKey + "\n" + closestDebug()  + "\n" +

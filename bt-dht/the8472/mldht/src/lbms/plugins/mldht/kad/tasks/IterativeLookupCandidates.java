@@ -2,6 +2,8 @@ package lbms.plugins.mldht.kad.tasks;
 
 import static java.lang.Math.max;
 
+import the8472.utils.CowSet;
+
 import lbms.plugins.mldht.kad.IDMismatchDetector;
 import lbms.plugins.mldht.kad.KBucketEntry;
 import lbms.plugins.mldht.kad.Key;
@@ -11,6 +13,7 @@ import lbms.plugins.mldht.kad.RPCState;
 import lbms.plugins.mldht.kad.SpamThrottle;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -66,7 +69,7 @@ public class IterativeLookupCandidates {
 	class LookupGraphNode {
 		final KBucketEntry e;
 		Set<LookupGraphNode> sources = new CopyOnWriteArraySet<>();
-		Set<LookupGraphNode> returnedNodes = ConcurrentHashMap.newKeySet();
+		Set<LookupGraphNode> returnedNodes = new CowSet<>();
 		List<RPCCall> calls = new CopyOnWriteArrayList<>();
 		boolean tainted;
 		boolean acceptedResponse;
@@ -92,11 +95,11 @@ public class IterativeLookupCandidates {
 		}
 		
 		int nonSuccessfulDescendantCalls() {
-			return (int) Math.ceil(returnedNodes.stream().filter(LookupGraphNode::callsNotSuccessful).mapToDouble(node -> 1.0 / Math.max(node.sources.size(), 1)).sum());
+			return (int) Math.ceil(returnedNodes.isEmpty() ? 0 : returnedNodes.stream().filter(LookupGraphNode::callsNotSuccessful).mapToDouble(node -> 1.0 / Math.max(node.sources.size(), 1)).sum());
 		}
 		
-		void addChild(LookupGraphNode toAdd) {
-			returnedNodes.add(toAdd);
+		void addChildren(Collection<LookupGraphNode> toAdd) {
+			returnedNodes.addAll(toAdd);
 		}
 		
 		KBucketEntry toKbe() {
@@ -191,6 +194,8 @@ public class IterativeLookupCandidates {
 		
 		LookupGraphNode sourceNode = source != null ? candidates.get(source) : null;
 		
+		List<LookupGraphNode> children = new ArrayList<>();
+		
 		for(KBucketEntry e : entries) {
 			if(!dedup.add(e.getID()) || !dedup.add(e.getAddress().getAddress()))
 				continue;
@@ -218,12 +223,13 @@ public class IterativeLookupCandidates {
 				return node;
 			});
 			
-			if(sourceNode != null)
-				sourceNode.addChild(newNode);
-
+			children.add(newNode);
 			
 		}
 		
+		if(sourceNode != null)
+			sourceNode.addChildren(children);
+
 		
 	}
 	
@@ -278,7 +284,7 @@ public class IterativeLookupCandidates {
 			return false;
 
 		// skip retransmits if we previously got a response but from the wrong socket address
-		if(node.calls.stream().anyMatch(RPCCall::hasSocketMismatch))
+		if(!node.calls.isEmpty() && node.calls.stream().anyMatch(RPCCall::hasSocketMismatch))
 			return false;
 		
 		

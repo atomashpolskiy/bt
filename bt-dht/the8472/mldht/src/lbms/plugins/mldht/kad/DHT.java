@@ -57,6 +57,7 @@ import lbms.plugins.mldht.utils.NIOConnectionManager;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.UncheckedIOException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -1193,7 +1194,12 @@ public class DHT implements DHTBase {
 		w.append(stats.toString());
 		w.append("-----------------------\n");
 		w.append("Routing table\n");
-		w.append(node.toString() + "\n");
+		try {
+			node.buildDiagnistics(w);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+		w.append('\n');
 		w.append("-----------------------\n");
 		w.append("RPC Servers\n");
 		for(RPCServer srv : serverManager.getAllServers())

@@ -83,11 +83,7 @@ public class ResponseTimeoutFilter {
 		public void onStall(RPCCall c) {}
 		
 		public void onResponse(RPCCall c, MessageBase rsp) {
-			 update(c.getRTT());
-			 if((updateCount++ & 0x0f) == 0) {
-				 newSnapshot();
-				 decay();
-			 }
+			 updateAndRecalc(c.getRTT());
 		}
 	};
 	
@@ -100,7 +96,15 @@ public class ResponseTimeoutFilter {
 		call.addListener(listener);
 	}
 	
-	void update(long newRTT) {
+	public void updateAndRecalc(long newRTT) {
+		update(newRTT);
+		if ((updateCount++ & 0x0f) == 0) {
+			newSnapshot();
+			decay();
+		}
+	}
+	
+	public void update(long newRTT) {
 		int bin = (int) (newRTT - MIN_BIN)/BIN_SIZE;
 		bin = Math.max(Math.min(bin, bins.length-1), 0);
 		

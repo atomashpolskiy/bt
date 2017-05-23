@@ -44,8 +44,15 @@ public class Launcher {
 	
 	private ConfigReader configReader;
 
-	DHTConfiguration config = new DHTConfiguration() {
+	class XmlConfig implements DHTConfiguration {
 		
+		int port;
+		boolean multihoming;
+		
+		void update() {
+			port = configReader.getLong("//core/port").orElse(49001L).intValue();
+			multihoming = configReader.getBoolean("//core/multihoming").orElse(true);
+		}
 
 		
 		@Override
@@ -65,14 +72,16 @@ public class Launcher {
 
 		@Override
 		public int getListeningPort() {
-			return configReader.getLong("//core/port").orElse(49001L).intValue();
+			return port;
 		}
 
 		@Override
 		public boolean allowMultiHoming() {
-			return configReader.getBoolean("//core/multihoming").orElse(true);
+			return multihoming;
 		}
-	};
+	}
+	
+	XmlConfig config = new XmlConfig();
 
 	List<DHT> dhts = new ArrayList<>();
 
@@ -101,6 +110,9 @@ public class Launcher {
 
 
 	protected void start() throws Exception {
+		config.update();
+		configReader.addChangeCallback(config::update);
+		
 		Arrays.asList(DHT.DHTtype.values()).stream().filter(t -> !this.isIPVersionDisabled(t.PREFERRED_ADDRESS_TYPE)).forEach(type -> {
 			dhts.add(new DHT(type));
 		});

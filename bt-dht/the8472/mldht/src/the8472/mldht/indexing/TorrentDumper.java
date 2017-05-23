@@ -39,8 +39,6 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.DirectoryNotEmptyException;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -488,6 +486,7 @@ public class TorrentDumper implements Component {
 			log(e);
 		}
 
+		/*
 		// 0 -> stats, 1 -> {failed|initial|prio}, 2 -> 00, 3 -> 00/00
 		try (Stream<Path> st = Files.find(statsDir, 3, (p, attr) -> attr.isDirectory())) {
 			st.filter(d -> {
@@ -507,7 +506,7 @@ public class TorrentDumper implements Component {
 			});
 		} catch (UncheckedIOException | IOException e) {
 			log(e);
-		}
+		}*/
 
 			
 		
@@ -524,6 +523,12 @@ public class TorrentDumper implements Component {
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
+		if(sub.isEmpty())
+			try {
+				Files.delete(p);
+			} catch (IOException e) {
+				// ignore, it's an opportunistic delete
+			}
 		Collections.shuffle(sub);
 		return sub.stream();
 	}
@@ -551,10 +556,15 @@ public class TorrentDumper implements Component {
 	}
 	
 	Stream<FetchStats> filesToFetchers(Stream<Path> st) {
+		Set<Key> skip = skipSet();
+		
 		ThreadLocal<ByteBuffer> bufProvider = new ThreadLocal<>();
 		bufProvider.set(ByteBuffer.allocateDirect(MAX_STAT_FILE_SIZE));
 		
-		return st.map(p -> {
+		return st.filter(p -> {
+			Key k = new Key(p.getFileName().toString().substring(0, 40));
+			return !skip.contains(k);
+		}).map(p -> {
 			try(FileChannel ch = FileChannel.open(p, StandardOpenOption.READ)) {
 				ByteBuffer buf = bufProvider.get();
 				buf.clear();
@@ -578,6 +588,17 @@ public class TorrentDumper implements Component {
 	Runnable singleThreadedPrefetch = SerializedTaskExecutor.onceMore(this::prefetch);
 	
 	
+	Set<Key> skipSet() {
+		Set<Key> dedup = new HashSet<>();
+		
+		dedup.addAll(activeTasks.keySet());
+		synchronized (toFetchNext) {
+			toFetchNext.stream().map(FetchStats::getK).forEach(dedup::add);
+		}
+		
+		return dedup;
+	}
+	
 	void prefetch() {
 		synchronized (toFetchNext) {
 			if(toFetchNext.size() >=  maxFetches() / 2)
@@ -585,12 +606,7 @@ public class TorrentDumper implements Component {
 		}
 
 		
-		Set<Key> dedup = new HashSet<>();
-		
-		dedup.addAll(activeTasks.keySet());
-		synchronized (toFetchNext) {
-			toFetchNext.stream().map(FetchStats::getK).forEach(dedup::add);
-		}
+		Set<Key> dedup = skipSet();
 		
 		
 		try {
@@ -611,8 +627,6 @@ public class TorrentDumper implements Component {
 							toFetchNext.add(e);
 						}
 					});
-					
-					
 					
 				};
 			}
@@ -735,7 +749,7 @@ public class TorrentDumper implements Component {
 	void diagnostics() {
 		try {
 			FileIO.writeAndAtomicMove(storageDir.resolve("dumper.log"), (p) -> {
-				p.format("Fetcher:%n established: %d%n sockets: %d %n%n", fetcher.openConnections(), fetcher.socketcount());
+				p.format("Fetcher:%n established: %d%n sockets: %d%n%n adaptive timeout:%n%s %n%n", fetcher.openConnections(), fetcher.socketcount(), fetcher.adaptiveConnectTimeoutHistogram());
 				
 				p.format("FetchTasks: %d %n", activeCount.get());
 				activeTasks.values().forEach(ft -> {
