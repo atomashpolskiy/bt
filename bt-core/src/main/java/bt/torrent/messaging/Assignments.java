@@ -2,7 +2,7 @@ package bt.torrent.messaging;
 
 import bt.net.Peer;
 import bt.runtime.Config;
-import bt.torrent.Bitfield;
+import bt.data.Bitfield;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.selector.PieceSelector;
 import org.slf4j.Logger;

@@ -1,12 +1,22 @@
 package bt.net;
 
+import bt.peer.PeerOptions;
+
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.Optional;
 
 /**
+ * Represents a peer, accessible on the Internet.
+ *
  * @since 1.0
  */
 public interface Peer {
+
+    /**
+     * @since 1.2
+     */
+    InetSocketAddress getInetSocketAddress();
 
     /**
      * @return Peer Internet address.
@@ -14,9 +24,6 @@ public interface Peer {
      */
     InetAddress getInetAddress();
 
-    // TODO: probably need an additional property isReachable()
-    // to distinguish between outbound and inbound connections
-    // and to not send unreachable peers via PEX
     /**
      * @return Peer port.
      * @since 1.0
@@ -24,8 +31,14 @@ public interface Peer {
     int getPort();
 
     /**
-     * @return Optional peer ID.
+     * @return Optional peer ID
      * @since 1.0
      */
     Optional<PeerId> getPeerId();
+
+    /**
+     * @return Peer options and preferences
+     * @since 1.2
+     */
+    PeerOptions getOptions();
 }

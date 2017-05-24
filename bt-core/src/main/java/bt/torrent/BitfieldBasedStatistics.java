@@ -1,7 +1,8 @@
 package bt.torrent;
 
+import bt.data.Bitfield;
 import bt.net.Peer;
-import bt.torrent.Bitfield.PieceStatus;
+import bt.data.Bitfield.PieceStatus;
 
 import java.util.Map;
 import java.util.Optional;
@@ -65,7 +66,7 @@ public class BitfieldBasedStatistics implements PieceStatistics {
             }
         }
 
-        bitfield.markComplete(pieceIndex);
+        bitfield.markVerified(pieceIndex);
         pieceTotals[pieceIndex]++;
     }
 

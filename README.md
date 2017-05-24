@@ -1,6 +1,6 @@
-[![Build Status](https://travis-ci.org/atomashpolskiy/bt.svg?branch=master)](https://travis-ci.org/atomashpolskiy/bt) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/) [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](http://atomashpolskiy.github.io/bt/javadoc/latest/) [![Join the chat at https://gitter.im/bt-java/general](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/bt-java/general?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/atomashpolskiy/bt.svg?branch=master)](https://travis-ci.org/atomashpolskiy/bt) [![codecov](https://img.shields.io/codecov/c/github/atomashpolskiy/bt/master.svg)](https://codecov.io/gh/atomashpolskiy/bt) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/) [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](http://atomashpolskiy.github.io/bt/javadoc/latest/)
 
-**Bt** is a lightweight framework for P2P-lovers and enthusiastic BitTorrent researchers, perfect choice for light enterprise and home usage and experimentation. It offers good performance, reliability and is highly customizable. With Bt you can create a production-grade BitTorrent client in a matter of minutes. Bt is still in its' early days, but is actively developed and designed with stability and maintainability in mind.
+**Bt** is a modern BitTorrent library in Java 8, perfect choice for both enterprise and home usage and experimentation. It offers good performance, reliability and is highly customizable. With Bt you can create a production-grade torrent client in a matter of minutes. Bt is still in its' early days, but is actively developed and designed with stability and maintainability in mind.
 
 ## Quick Links
 
@@ -11,14 +11,6 @@
 [JavaDoc](http://atomashpolskiy.github.io/bt/javadoc/latest/) (based on the latest commit in _**master**_)
 
 [CLI Launcher](https://github.com/atomashpolskiy/bt/tree/master/bt-cli)
-
-## Support and feedback
-
-Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new features and BEPs to be added. You have the following options to share your ideas, receive help or report bugs:
-
-* open a new  [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
-* post your question on the [Bt forum](https://groups.google.com/forum/#!forum/bttorrent)
-* join the [Gitter chat](https://gitter.im/bt-java/general)
 
 ## List of supported BEPs
 
@@ -32,6 +24,14 @@ Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new featu
 * [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
 * [BEP-27: Private Torrents](http://bittorrent.org/beps/bep_0027.html)
 * [BEP-41: UDP Tracker Protocol Extensions](http://bittorrent.org/beps/bep_0041.html)
+* [Message Stream Encryption](http://wiki.vuze.com/w/Message_Stream_Encryption)
+
+## Support and feedback
+
+Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new features and BEPs to be added. You have the following options to share your ideas, receive help or report bugs:
+
+* open a new  [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
+* post your question on the [Bt forum](https://groups.google.com/forum/#!forum/bttorrent)
 
 ## Release 1.1
 

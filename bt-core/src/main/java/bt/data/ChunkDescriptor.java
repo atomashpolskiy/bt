@@ -22,82 +22,22 @@ import bt.metainfo.Torrent;
  *
  * @since 1.0
  */
-public interface ChunkDescriptor {
+public interface ChunkDescriptor extends BlockSet {
 
     /**
-     * Check if this chunk is empty, incomplete, complete or complete-and-verified.
+     * Expected hash of this chunk's contents as indicated in torrent file.
      *
-     * @return Status of this chunk
-     * @since 1.0
+     * @return Expected hash of this chunk's contents; used to verify integrity of chunk's data
+     *
+     * @since 1.2
      */
-    DataStatus getStatus();
+    byte[] getChecksum();
 
     /**
-     * @return Chunk size in bytes
-     * @since 1.0
-     */
-    long getSize();
-
-    /**
-     * Get the total number of blocks in this chunk.
+     * Get chunk's data accessor.
      *
-     * @return Total number of blocks in this chunk.
-     * @since 1.0
+     * @return Chunk's data accessor
+     * @since 1.2
      */
-    int getBlockCount();
-
-    /**
-     * Get the size of a block in this chunk.
-     *
-     * <p>Note that the last block might be smaller due to truncation
-     * (i.e. when the chunk's size is not a factor of the size of a block).
-     *
-     * @return Block size
-     * @since 1.0
-     */
-    long getBlockSize();
-
-    /**
-     * Check if a block is complete and verified.
-     *
-     * @param blockIndex Index of a block in this chunk
-     *                   (0-based, maximum value is <code>{@link #getBlockCount()} - 1</code>)
-     * @return true if block is complete and verified.
-     * @since 1.0
-     */
-    boolean isBlockVerified(int blockIndex);
-
-    /**
-     * Reads a block of data.
-     * <p>Implementations must throw an exception, if
-     * <blockquote>
-     * <code>offset &gt; {@link #getSize()} - length</code>
-     * </blockquote>
-     *
-     * @param offset Offset from the beginning of this chunk (0-based)
-     * @param length Requested block length
-     * @since 1.0
-     */
-    byte[] readBlock(long offset, int length);
-
-    /**
-     * Writes a block of data.
-     * <p>Implementations must throw an exception, if
-     * <blockquote>
-     * <code>offset &gt; {@link #getSize()} - block.length</code>
-     * </blockquote>
-     *
-     * @param block A block to write
-     * @param offset Offset from the beginning of this chunk (0-based)
-     * @since 1.0
-     */
-    void writeBlock(byte[] block, long offset);
-
-    /**
-     * Check integrity of this chunk.
-     *
-     * @return true if this chunk is complete and succesfully verified
-     * @since 1.0
-     */
-    boolean verify();
+    DataRange getData();
 }

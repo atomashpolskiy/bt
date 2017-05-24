@@ -1,7 +1,11 @@
 package bt.module;
 
+import bt.data.ChunkVerifier;
 import bt.data.DataDescriptorFactory;
+import bt.data.DefaultChunkVerifier;
 import bt.data.IDataDescriptorFactory;
+import bt.data.digest.Digester;
+import bt.data.digest.JavaSecurityDigester;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.MetadataService;
 import bt.net.IMessageDispatcher;
@@ -113,14 +117,27 @@ public class ServiceModule implements Module {
 
     @Provides
     @Singleton
-    public IDataDescriptorFactory provideDataDescriptorFactory(Config config) {
-        return new DataDescriptorFactory(config.getTransferBlockSize(), config.getNumOfHashingThreads());
+    public Digester provideDigester() {
+        int step = 2 << 22; // 8 MB
+        return new JavaSecurityDigester("SHA-1", step);
     }
 
     @Provides
     @Singleton
-    public IDataWorkerFactory provideDataWorkerFactory(IRuntimeLifecycleBinder lifecycleBinder) {
-        return new DataWorkerFactory(lifecycleBinder, config.getMaxIOQueueSize());
+    public ChunkVerifier provideVerifier(Config config, Digester digester) {
+        return new DefaultChunkVerifier(digester, config.getNumOfHashingThreads());
+    }
+
+    @Provides
+    @Singleton
+    public IDataDescriptorFactory provideDataDescriptorFactory(Config config, ChunkVerifier verifier) {
+        return new DataDescriptorFactory(verifier, config.getTransferBlockSize());
+    }
+
+    @Provides
+    @Singleton
+    public IDataWorkerFactory provideDataWorkerFactory(IRuntimeLifecycleBinder lifecycleBinder, ChunkVerifier verifier) {
+        return new DataWorkerFactory(lifecycleBinder, verifier, config.getMaxIOQueueSize());
     }
 
     @Provides

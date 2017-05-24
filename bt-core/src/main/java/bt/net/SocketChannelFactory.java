@@ -7,12 +7,16 @@ import java.net.SocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
+import java.time.Duration;
 
 /**
  * Provides the basic capabilities
  * for establishing inbound and outbound connections.
  */
 class SocketChannelFactory {
+
+    // TODO: this should be configurable
+    private static final Duration socketTimeout = Duration.ofSeconds(30);
 
     private InetAddress localAddress;
     private int localPort;
@@ -38,11 +42,11 @@ class SocketChannelFactory {
      * @since 1.0
      */
     public SocketChannel getChannel(InetAddress inetAddress, int port) throws IOException {
-
         InetSocketAddress remoteAddress = new InetSocketAddress(inetAddress, port);
         SocketChannel outgoingChannel = selector.openSocketChannel();
+        outgoingChannel.socket().setSoTimeout((int) socketTimeout.toMillis());
+        outgoingChannel.socket().setSoLinger(false, 0);
         outgoingChannel.connect(remoteAddress);
-        outgoingChannel.configureBlocking(false);
         return outgoingChannel;
     }
 

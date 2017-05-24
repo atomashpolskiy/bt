@@ -4,6 +4,7 @@ import bt.data.Storage;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 
+import java.util.Collection;
 import java.util.Optional;
 
 /**
@@ -12,6 +13,14 @@ import java.util.Optional;
  * @since 1.0
  */
 public interface TorrentRegistry {
+
+    /**
+     * Get all torrents, that have been registered in the runtime.
+     *
+     * @return All registered torrents
+     * @since 1.2
+     */
+    Collection<Torrent> getTorrents();
 
     /**
      * Get a torrent with a given torrent ID, if exists.

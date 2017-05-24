@@ -4,6 +4,7 @@ import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.net.Peer;
 import bt.peer.IPeerRegistry;
+import bt.protocol.crypto.EncryptionPolicy;
 import bt.service.IdentityService;
 import bt.tracker.SecretKey;
 import bt.tracker.Tracker;
@@ -41,6 +42,7 @@ public class HttpTracker implements Tracker {
     private URI baseUri;
     private IdentityService idService;
     private IPeerRegistry peerRegistry;
+    private EncryptionPolicy encryptionPolicy;
     private HttpClient httpClient;
     private CommonsHttpResponseHandler httpResponseHandler;
 
@@ -51,7 +53,10 @@ public class HttpTracker implements Tracker {
      * @param idService Identity service
      * @since 1.0
      */
-    public HttpTracker(String trackerUrl, IdentityService idService, IPeerRegistry peerRegistry) {
+    public HttpTracker(String trackerUrl,
+                       IdentityService idService,
+                       IPeerRegistry peerRegistry,
+                       EncryptionPolicy encryptionPolicy) {
         try {
             this.baseUri = new URI(trackerUrl);
         } catch (URISyntaxException e) {
@@ -60,6 +65,7 @@ public class HttpTracker implements Tracker {
 
         this.idService = idService;
         this.peerRegistry = peerRegistry;
+        this.encryptionPolicy = encryptionPolicy;
         this.httpClient = HttpClients.createMinimal();
         this.httpResponseHandler = new CommonsHttpResponseHandler(new bt.tracker.http.HttpResponseHandler());
 
@@ -121,7 +127,6 @@ public class HttpTracker implements Tracker {
     }
 
     private String buildQuery(TrackerRequestType eventType, TrackerRequestBuilder requestBuilder) throws Exception {
-
         StringBuilder buf = new StringBuilder();
 
         buf.append("info_hash=");
@@ -137,9 +142,10 @@ public class HttpTracker implements Tracker {
             buf.append(inetAddress.getHostAddress());
         }
 
-        int port = peer.getPort();
         buf.append("&port=");
-        buf.append(port);
+        // this does not work with some trackers, resulting in a failure response: "missing port"
+//        buf.append(encryptionPolicy == EncryptionPolicy.REQUIRE_ENCRYPTED ? 0 : peer.getPort());
+        buf.append(peer.getPort());
 
         buf.append("&uploaded=");
         buf.append(requestBuilder.getUploaded());
@@ -186,6 +192,21 @@ public class HttpTracker implements Tracker {
             }
             default: {
                 throw new BtException("Unexpected event type: " + eventType.name().toLowerCase());
+            }
+        }
+
+        switch (encryptionPolicy) {
+            case PREFER_PLAINTEXT: {
+                buf.append("&supportcrypto=1");
+                break;
+            }
+            case PREFER_ENCRYPTED:
+            case REQUIRE_ENCRYPTED: {
+                buf.append("&requirecrypto=1");
+                break;
+            }
+            default: {
+                // do nothing
             }
         }
 

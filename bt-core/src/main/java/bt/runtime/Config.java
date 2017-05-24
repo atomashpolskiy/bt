@@ -1,5 +1,6 @@
 package bt.runtime;
 
+import bt.protocol.crypto.EncryptionPolicy;
 import bt.service.NetworkUtil;
 
 import java.net.InetAddress;
@@ -34,6 +35,7 @@ public class Config {
     private Duration unreachablePeerBanDuration;
     private int maxPendingConnectionRequests;
     private Duration timeoutedAssignmentPeerBanDuration;
+    private EncryptionPolicy encryptionPolicy;
 
     /**
      * Create a config with default parameters.
@@ -47,7 +49,7 @@ public class Config {
         this.peerConnectionRetryInterval = Duration.ofMinutes(5);
         this.peerConnectionRetryCount = 3;
         this.peerConnectionTimeout = Duration.ofSeconds(30);
-        this.peerHandshakeTimeout = Duration.ofSeconds(3);
+        this.peerHandshakeTimeout = Duration.ofSeconds(30);
         this.peerConnectionInactivityThreshold = Duration.ofMinutes(3);
         this.trackerQueryInterval = Duration.ofMinutes(5);
         this.maxPeerConnections = 500;
@@ -63,6 +65,7 @@ public class Config {
         this.unreachablePeerBanDuration = Duration.ofMinutes(30);
         this.maxPendingConnectionRequests = 50;
         this.timeoutedAssignmentPeerBanDuration = Duration.ofMinutes(1);
+        this.encryptionPolicy = EncryptionPolicy.PREFER_PLAINTEXT;
     }
 
     /**
@@ -94,6 +97,7 @@ public class Config {
         this.unreachablePeerBanDuration = config.getUnreachablePeerBanDuration();
         this.maxPendingConnectionRequests = config.getMaxPendingConnectionRequests();
         this.timeoutedAssignmentPeerBanDuration = config.getTimeoutedAssignmentPeerBanDuration();
+        this.encryptionPolicy = config.getEncryptionPolicy();
     }
 
     /**
@@ -457,5 +461,20 @@ public class Config {
      */
     public Duration getTimeoutedAssignmentPeerBanDuration() {
         return timeoutedAssignmentPeerBanDuration;
+    }
+
+    /**
+     * @param encryptionPolicy Message Stream Encryption policy
+     * @since 1.2
+     */
+    public void setEncryptionPolicy(EncryptionPolicy encryptionPolicy) {
+        this.encryptionPolicy = encryptionPolicy;
+    }
+
+    /**
+     * @since 1.2
+     */
+    public EncryptionPolicy getEncryptionPolicy() {
+        return encryptionPolicy;
     }
 }

@@ -6,7 +6,7 @@ import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.peer.IPeerRegistry;
 import bt.runtime.Config;
-import bt.torrent.Bitfield;
+import bt.data.Bitfield;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.ITorrentSessionFactory;
 import bt.torrent.TorrentDescriptor;

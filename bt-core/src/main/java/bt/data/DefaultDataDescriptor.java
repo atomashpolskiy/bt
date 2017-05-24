@@ -3,22 +3,12 @@ package bt.data;
 import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
-import bt.torrent.Bitfield;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 class DefaultDataDescriptor implements DataDescriptor {
@@ -33,26 +23,22 @@ class DefaultDataDescriptor implements DataDescriptor {
 
     private List<StorageUnit> storageUnits;
 
-    private int numOfHashingThreads;
+    private ChunkVerifier verifier;
 
     public DefaultDataDescriptor(Storage storage,
                                  Torrent torrent,
-                                 int transferBlockSize,
-                                 int numOfHashingThreads) {
+                                 ChunkVerifier verifier,
+                                 int transferBlockSize) {
         this.storage = storage;
         this.torrent = torrent;
-        this.numOfHashingThreads = numOfHashingThreads;
-
-        this.storageUnits = new ArrayList<>();
+        this.verifier = verifier;
 
         init(transferBlockSize);
     }
 
     private void init(long transferBlockSize) {
+        List<TorrentFile> files = torrent.getFiles();
 
-        List<TorrentFile> torrentFiles = torrent.getFiles();
-
-        int filesCount = torrentFiles.size();
         long totalSize = torrent.getSize();
         long chunkSize = torrent.getChunkSize();
 
@@ -60,175 +46,52 @@ class DefaultDataDescriptor implements DataDescriptor {
             transferBlockSize = chunkSize;
         }
 
-        int chunksTotal = (int) Math.ceil(totalSize / chunkSize);
-        List<Supplier<ChunkDescriptor>> suppliers = new ArrayList<>(chunksTotal + 1);
         Iterator<byte[]> chunkHashes = torrent.getChunkHashes().iterator();
-        this.storageUnits = torrentFiles.stream().map(f -> storage.getUnit(torrent, f)).collect(Collectors.toList());
-        StorageUnit[] files = storageUnits.toArray(new StorageUnit[storageUnits.size()]);
+        this.storageUnits = files.stream().map(f -> storage.getUnit(torrent, f)).collect(Collectors.toList());
 
-        long chunkOffset = 0,
-             totalSizeOfFiles = 0;
+        long limitInLastUnit = storageUnits.get(storageUnits.size() - 1).capacity();
+        DataRange data = new ReadWriteDataRange(storageUnits, 0, limitInLastUnit);
 
-        int firstFileInChunkIndex = 0;
+        int chunksTotal = (int) Math.ceil(totalSize / chunkSize);
+        List<ChunkDescriptor> chunks = new ArrayList<>(chunksTotal + 1);
 
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("Creating data descriptor for torrent: {}. " +
-                    "Total size: {}, number of files: {}, chunk size: {}, number of chunks: {}, transfer block size: {}.",
-                    torrent, totalSize, torrentFiles.size(), chunkSize, chunksTotal, transferBlockSize);
-        }
+        long off, lim;
+        long remaining = totalSize;
+        while (remaining > 0) {
+            off = chunks.size() * chunkSize;
+            lim = Math.min(chunkSize, remaining);
 
-        for (int currentFileIndex = 0; currentFileIndex < filesCount; currentFileIndex++) {
-            TorrentFile torrentFile = torrentFiles.get(currentFileIndex);
-            long fileSize = torrentFile.getSize();
-            totalSizeOfFiles += fileSize;
+            DataRange subrange = data.getSubrange(off, lim);
 
-            if (totalSizeOfFiles >= chunkSize) {
-                do {
-                    long limitInCurrentFile = chunkSize - (totalSizeOfFiles - fileSize);
-
-                    if (!chunkHashes.hasNext()) {
-                        // TODO: this should probably be handled in DefaultTorrent builder
-                        throw new BtException("Wrong number of chunk hashes in the torrent: too few");
-                    }
-
-                    StorageUnit[] chunkFiles = Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1);
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Creating chunk descriptor for torrent files: {}. " +
-                                "Offset in first file: {}, limit in last file: {}, block size: {}",
-                                Arrays.toString(chunkFiles), chunkOffset, limitInCurrentFile, transferBlockSize);
-                    }
-
-                    suppliers.add(createSupplier(chunkFiles, chunkOffset, limitInCurrentFile, chunkHashes.next(), transferBlockSize));
-
-                    firstFileInChunkIndex = currentFileIndex;
-                    chunkOffset = limitInCurrentFile;
-
-                    totalSizeOfFiles -= chunkSize;
-
-                // if surplus is bigger than the chunk size,
-                // then we need to catch up and create more than one chunk
-                } while (totalSizeOfFiles >= chunkSize);
-
-                if (totalSizeOfFiles > 0) {
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Bytes remaining in the current file: {}. Creating next chunk...", totalSizeOfFiles);
-                    }
-                } else if (totalSizeOfFiles == 0) {
-                    // no bytes left in the current file,
-                    // new chunk will begin with the next file
-                    firstFileInChunkIndex++;
-                    chunkOffset = 0;
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("No bytes remaining in the current file. Next chunk will begin in the next file.");
-                    }
-                }
+            if (!chunkHashes.hasNext()) {
+                throw new BtException("Wrong number of chunk hashes in the torrent: too few");
             }
-            if (currentFileIndex == filesCount - 1 && totalSizeOfFiles > 0) {
-                // create chunk for the remainder of the last file
-                StorageUnit[] chunkFiles = Arrays.copyOfRange(files, firstFileInChunkIndex, currentFileIndex + 1);
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Creating chunk descriptor for torrent files: {}. " +
-                            "Offset in first file: {}, limit in last file: {}, block size: {}",
-                            Arrays.toString(chunkFiles), chunkOffset, fileSize, transferBlockSize);
-                }
-                suppliers.add(createSupplier(chunkFiles, chunkOffset, fileSize, chunkHashes.next(), transferBlockSize));
-            }
+
+            chunks.add(buildChunkDescriptor(subrange, transferBlockSize, chunkHashes.next()));
+
+            remaining -= chunkSize;
         }
 
         if (chunkHashes.hasNext()) {
             throw new BtException("Wrong number of chunk hashes in the torrent: too many");
         }
 
-        this.chunkDescriptors = (numOfHashingThreads > 1) ? collectParallel(suppliers) :
-                suppliers.stream().map(Supplier::get).collect(Collectors.toList());
-        this.bitfield = new Bitfield(this.chunkDescriptors);
-
-        // try to purge all data that was loaded by the verifiers
-        System.gc();
+        this.bitfield = buildBitfield(chunks);
+        this.chunkDescriptors = chunks;
     }
 
-    private Supplier<ChunkDescriptor> createSupplier(StorageUnit[] files,
-                                                     long offset,
-                                                     long limit,
-                                                     byte[] checksum,
-                                                     long blockSize) {
-        return () -> new DefaultChunkDescriptor(files, offset, limit, checksum, blockSize, true);
+    private ChunkDescriptor buildChunkDescriptor(DataRange data, long blockSize, byte[] checksum) {
+        BlockDataRange blockData = new BlockDataRange(data, blockSize);
+        SynchronizedDataRange synchronizedData = new SynchronizedDataRange(blockData);
+        BlockSet synchronizedBlockSet = new SynchronizedBlockSet(blockData.getBlockSet());
+
+        return new DefaultChunkDescriptor(synchronizedData, synchronizedBlockSet, checksum);
     }
 
-    private List<ChunkDescriptor> collectParallel(List<Supplier<ChunkDescriptor>> suppliers) {
-        ChunkDescriptor[] descriptors = new ChunkDescriptor[suppliers.size()];
-
-        int n = numOfHashingThreads;
-        ExecutorService workers = Executors.newFixedThreadPool(n);
-
-        List<Future<?>> futures = new ArrayList<>();
-
-        int batchSize = suppliers.size() / n;
-        int i, limit = 0;
-        while ((i = limit) < suppliers.size()) {
-            if (futures.size() == n - 1) {
-                // assign the remaining bits to the last worker
-                limit = suppliers.size();
-            } else {
-                limit = i + batchSize;
-            }
-            futures.add(workers.submit(createWorker(descriptors, i, Math.min(suppliers.size(), limit), suppliers)));
-        }
-
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Verifying torrent data with {} workers", futures.size());
-        }
-
-        Set<Throwable> errors = ConcurrentHashMap.newKeySet();
-        futures.forEach(f -> {
-            try {
-                f.get();
-            } catch (Exception e) {
-                LOGGER.error("Unexpected error during verification of torrent data", e);
-                errors.add(e);
-            }
-        });
-
-        workers.shutdown();
-        while (!workers.isTerminated()) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                throw new BtException("Unexpectedly interrupted");
-            }
-        }
-
-        if (!errors.isEmpty()) {
-            throw new BtException("Failed to verify torrent data:" +
-                    errors.stream().map(this::errorToString).reduce(String::concat).get());
-        }
-
-        return Arrays.asList(descriptors);
-    }
-
-    private String errorToString(Throwable e) {
-        StringBuilder buf = new StringBuilder();
-        buf.append("\n");
-
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        PrintStream out = new PrintStream(bos);
-        e.printStackTrace(out);
-
-        buf.append(bos.toString());
-        return buf.toString();
-    }
-
-    private Runnable createWorker(ChunkDescriptor[] descriptors,
-                                  int from,
-                                  int to,
-                                  List<Supplier<ChunkDescriptor>> suppliers) {
-        return () -> {
-            int i = from;
-            while (i < to) {
-                descriptors[i] = suppliers.get(i).get();
-                i++;
-            }
-        };
+    private Bitfield buildBitfield(List<ChunkDescriptor> chunks) {
+        Bitfield bitfield = new Bitfield(chunks.size());
+        verifier.verify(chunks, bitfield);
+        return bitfield;
     }
 
     @Override

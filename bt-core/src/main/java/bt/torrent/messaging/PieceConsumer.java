@@ -4,7 +4,7 @@ import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
 import bt.protocol.Piece;
-import bt.torrent.Bitfield;
+import bt.data.Bitfield;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
@@ -43,6 +43,18 @@ public class PieceConsumer {
 
         // check that this block was requested in the first place
         if (!checkBlockIsExpected(peer, connectionState, piece)) {
+            return;
+        }
+
+        // discard blocks for pieces that have already been verified
+        if (bitfield.isVerified(piece.getPieceIndex())) {
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace(
+                        "Discarding received block because the chunk is already complete and verified: " +
+                        "piece index {" + piece.getPieceIndex() + "}, " +
+                        "offset {" + piece.getOffset() + "}, " +
+                        "length {" + piece.getBlock().length + "}");
+            }
             return;
         }
 

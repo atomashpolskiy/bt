@@ -16,6 +16,7 @@ public class Options {
     private static final OptionSpec<File> targetDirectoryOptionSpec;
     private static final OptionSpec<Void> shouldSeedOptionSpec;
     private static final OptionSpec<Void> sequentialOptionSpec;
+    private static final OptionSpec<Void> enforceEncryptionOptionSpec;
 
     private static final OptionParser parser;
 
@@ -36,6 +37,8 @@ public class Options {
         shouldSeedOptionSpec = parser.acceptsAll(Arrays.asList("s", "seed"), "Continue to seed when download is complete");
 
         sequentialOptionSpec = parser.acceptsAll(Arrays.asList("S", "sequential"), "Download sequentially");
+
+        enforceEncryptionOptionSpec = parser.acceptsAll(Arrays.asList("e", "encrypted"), "Enforce encryption for all connections");
     }
 
     /**
@@ -47,7 +50,8 @@ public class Options {
                 opts.valueOf(metainfoFileOptionSpec),
                 opts.valueOf(targetDirectoryOptionSpec),
                 opts.has(shouldSeedOptionSpec),
-                opts.has(sequentialOptionSpec));
+                opts.has(sequentialOptionSpec),
+                opts.has(enforceEncryptionOptionSpec));
     }
 
     public static void printHelp(OutputStream out) {
@@ -62,12 +66,18 @@ public class Options {
     private File targetDirectory;
     private boolean seedAfterDownloaded;
     private boolean sequential;
+    private boolean enforceEncryption;
 
-    public Options(File metainfoFile, File targetDirectory, boolean seedAfterDownloaded, boolean sequential) {
+    public Options(File metainfoFile,
+                   File targetDirectory,
+                   boolean seedAfterDownloaded,
+                   boolean sequential,
+                   boolean enforceEncryption) {
         this.metainfoFile = metainfoFile;
         this.targetDirectory = targetDirectory;
         this.seedAfterDownloaded = seedAfterDownloaded;
         this.sequential = sequential;
+        this.enforceEncryption = enforceEncryption;
     }
 
     public File getMetainfoFile() {
@@ -84,5 +94,9 @@ public class Options {
 
     public boolean downloadSequentially() {
         return sequential;
+    }
+
+    public boolean enforceEncryption() {
+        return enforceEncryption;
     }
 }

@@ -8,7 +8,7 @@ import bt.protocol.Cancel;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.Request;
-import bt.torrent.Bitfield;
+import bt.data.Bitfield;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
 import org.slf4j.Logger;
@@ -122,11 +122,11 @@ public class RequestProducer {
     private List<Request> buildRequests(int pieceIndex) {
         List<Request> requests = new ArrayList<>();
         ChunkDescriptor chunk = chunks.get(pieceIndex);
-        long chunkSize = chunk.getSize();
-        long blockSize = chunk.getBlockSize();
+        long chunkSize = chunk.getData().length();
+        long blockSize = chunk.blockSize();
 
-        for (int blockIndex = 0; blockIndex < chunk.getBlockCount(); blockIndex++) {
-            if (!chunk.isBlockVerified(blockIndex)) {
+        for (int blockIndex = 0; blockIndex < chunk.blockCount(); blockIndex++) {
+            if (!chunk.isPresent(blockIndex)) {
                 int offset = (int) (blockIndex * blockSize);
                 int length = (int) Math.min(blockSize, chunkSize - offset);
                 try {
@@ -138,8 +138,8 @@ public class RequestProducer {
             }
         }
         if (LOGGER.isTraceEnabled()) {
-            LOGGER.info("Built {} requests for piece #{} (size: {}, block size: {}, number of blocks: {}, status: {})",
-                    requests.size(), pieceIndex, chunkSize, blockSize, chunk.getBlockCount(), chunk.getStatus().name());
+            LOGGER.info("Built {} requests for piece #{} (size: {}, block size: {}, number of blocks: {})",
+                    requests.size(), pieceIndex, chunkSize, blockSize, chunk.blockCount());
         }
         return requests;
     }

@@ -4,6 +4,18 @@ For the latest information visit project web site:
 http://atomashpolskiy.github.io/bt/
 
 ----------------------------------
+Release: 1.2
+Date:
+----------------------------------
+Changes/New Features:
+* Message Stream Encryption
+
+
+Bug Fixes/Improvements:
+
+* Last block in a chunk is incorrectly marked as complete even when partially written
+
+----------------------------------
 Release: 1.1
 Date: 04/10/2017
 ----------------------------------

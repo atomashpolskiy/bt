@@ -1,54 +1,92 @@
 package bt.net;
 
+import bt.metainfo.TorrentId;
 import bt.protocol.Message;
+import bt.protocol.crypto.EncryptionPolicy;
 import bt.protocol.handler.MessageHandler;
+import bt.torrent.TorrentRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
+import java.util.Objects;
 
 class PeerConnectionFactory {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionFactory.class);
 
-    private MessageHandler<Message> messageHandler;
     private SocketChannelFactory socketChannelFactory;
-
-    private int maxTransferBlockSize;
+    private MSEHandshakeProcessor cryptoHandshakeProcessor;
 
     public PeerConnectionFactory(MessageHandler<Message> messageHandler,
                                  SocketChannelFactory socketChannelFactory,
-                                 int maxTransferBlockSize) {
-        this.messageHandler = messageHandler;
+                                 int maxTransferBlockSize,
+                                 TorrentRegistry torrentRegistry,
+                                 EncryptionPolicy encryptionPolicy) {
         this.socketChannelFactory = socketChannelFactory;
-        this.maxTransferBlockSize = maxTransferBlockSize;
+        this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(
+                torrentRegistry, messageHandler, encryptionPolicy, getBufferSize(maxTransferBlockSize));
     }
 
-    public DefaultPeerConnection createConnection(SocketChannel channel) throws IOException {
-
-        Peer peer = getPeerForAddress((InetSocketAddress) channel.getRemoteAddress());
-        return new DefaultPeerConnection(messageHandler, peer, channel, maxTransferBlockSize);
-    }
-
-    private Peer getPeerForAddress(InetSocketAddress address) {
-        return new InetPeer(address.getAddress(), address.getPort());
-    }
-
-    public DefaultPeerConnection createConnection(Peer peer) throws IOException {
-
-        if (peer == null) {
-            throw new NullPointerException("Peer is null");
+    private static int getBufferSize(long maxTransferBlockSize) {
+        if (maxTransferBlockSize > ((Integer.MAX_VALUE - 13) / 2)) {
+            throw new IllegalArgumentException("Transfer block size is too large: " + maxTransferBlockSize);
         }
+        return (int) (maxTransferBlockSize) * 2;
+    }
+
+    public DefaultPeerConnection createOutgoingConnection(Peer peer, TorrentId torrentId) throws IOException {
+        Objects.requireNonNull(peer);
 
         InetAddress inetAddress = peer.getInetAddress();
         int port = peer.getPort();
 
-        SocketChannel channel;
+        SocketChannel channel = null;
         try {
             channel = socketChannelFactory.getChannel(inetAddress, port);
+            return createConnection(peer, torrentId, channel, false);
         } catch (IOException e) {
-            throw new IOException("Failed to create peer connection @ " + inetAddress + ":" + port, e);
+            closeQuietly(channel);
+            throw new IOException("Failed to create peer connection (" + inetAddress + ":" + port + ")", e);
+        }
+    }
+
+    public DefaultPeerConnection createIncomingConnection(Peer peer, SocketChannel channel) throws IOException {
+        try {
+            return createConnection(peer, null, channel, true);
+        } catch (IOException e) {
+            closeQuietly(channel);
+            throw e;
+        }
+    }
+
+    private DefaultPeerConnection createConnection(Peer peer, TorrentId torrentId, SocketChannel channel, boolean incoming) throws IOException {
+        // sanity check
+        if (!incoming && torrentId == null) {
+            throw new IllegalStateException("Requested outgoing connection without torrent ID. Peer: " + peer);
         }
 
-        return new DefaultPeerConnection(messageHandler, peer, channel, maxTransferBlockSize);
+        channel.configureBlocking(false);
+
+        MessageReaderWriter readerWriter = incoming ?
+                cryptoHandshakeProcessor.negotiateIncoming(peer, channel)
+                : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId);
+
+        return new DefaultPeerConnection(peer, channel, readerWriter);
+    }
+
+    private void closeQuietly(SocketChannel channel) {
+        if (channel != null && channel.isOpen()) {
+            try {
+                channel.close();
+            } catch (IOException e1) {
+                try {
+                    LOGGER.warn("Failed to close outgoing channel: " + channel.getRemoteAddress(), e1);
+                } catch (IOException e2) {
+                    // ignore
+                }
+            }
+        }
     }
 }

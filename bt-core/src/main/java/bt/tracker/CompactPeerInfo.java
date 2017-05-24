@@ -3,8 +3,11 @@ package bt.tracker;
 import bt.BtException;
 import bt.net.InetPeer;
 import bt.net.Peer;
+import bt.peer.PeerOptions;
+import bt.protocol.crypto.EncryptionPolicy;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,6 +15,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Wrapper for binary representation of a list of peers,
@@ -65,6 +69,8 @@ public class CompactPeerInfo implements Iterable<Peer> {
     private final int addressLength;
 
     private final byte[] peers;
+    private final Optional<byte[]> cryptoFlags;
+
     private final List<Peer> peerList;
 
     /**
@@ -74,40 +80,55 @@ public class CompactPeerInfo implements Iterable<Peer> {
      * @since 1.0
      */
     public CompactPeerInfo(byte[] peers, AddressType addressType) {
+        this(peers, addressType, null);
+    }
 
+    /**
+     * Create a list of peers from its' binary representation,
+     * using the specified address type for decoding individual addresses.
+     *
+     * @param cryptoFlags Byte array, where each byte indicates
+     *                    whether the corresponding peer from {@code peers} supports MSE:
+     *                    1 if peer supports encryption, 0 otherwise.
+     * @since 1.2
+     */
+    public CompactPeerInfo(byte[] peers, AddressType addressType, byte[] cryptoFlags) {
         Objects.requireNonNull(peers);
         Objects.requireNonNull(addressType);
 
         int peerLength = addressType.length() + PORT_LENGTH;
         if (peers.length % peerLength != 0) {
-            throw new BtException("Invalid peers string (" + addressType.name() + ") -- length (" +
+            throw new IllegalArgumentException("Invalid peers string (" + addressType.name() + ") -- length (" +
                     peers.length + ") is not divisible by " + peerLength);
         }
-        addressLength = addressType.length();
+        int numOfPeers = peers.length / peerLength;
+        if (cryptoFlags != null && cryptoFlags.length != numOfPeers) {
+            throw new IllegalArgumentException("Number of peers (" + numOfPeers +
+                    ") is different from the number of crypto flags (" + cryptoFlags.length + ")");
+        }
+        this.addressLength = addressType.length();
         this.peers = peers;
+        this.cryptoFlags = Optional.ofNullable(cryptoFlags);
 
-        peerList = new ArrayList<>();
+        this.peerList = new ArrayList<>();
     }
 
     @Override
     public Iterator<Peer> iterator() {
-
         if (!peerList.isEmpty()) {
             return peerList.iterator();
         }
 
         return new Iterator<Peer>() {
-
-            private int i;
+            private int pos, index;
 
             @Override
             public boolean hasNext() {
-                return i < peers.length;
+                return pos < peers.length;
             }
 
             @Override
             public Peer next() {
-
                 if (!hasNext()) {
                     throw new NoSuchElementException("No more peers left");
                 }
@@ -116,8 +137,8 @@ public class CompactPeerInfo implements Iterable<Peer> {
                 InetAddress inetAddress;
                 int port;
 
-                from = i;
-                to = i = i + addressLength;
+                from = pos;
+                to = pos = pos + addressLength;
                 try {
                     inetAddress = InetAddress.getByAddress(Arrays.copyOfRange(peers, from, to));
                 } catch (UnknownHostException e) {
@@ -125,11 +146,19 @@ public class CompactPeerInfo implements Iterable<Peer> {
                 }
 
                 from = to;
-                to = i = i + PORT_LENGTH;
+                to = pos = pos + PORT_LENGTH;
                 port = (((peers[from] << 8) & 0xFF00) + (peers[to - 1] & 0x00FF));
 
-                Peer peer = new InetPeer(inetAddress, port);
+                InetSocketAddress addr = new InetSocketAddress(inetAddress, port);
+                PeerOptions options = PeerOptions.defaultOptions();
+                boolean requiresEncryption = cryptoFlags.isPresent() && cryptoFlags.get()[index] == 1;
+                if (requiresEncryption) {
+                    options = options.withEncryptionPolicy(EncryptionPolicy.PREFER_ENCRYPTED);
+                }
+                Peer peer = new InetPeer(addr, options);
                 peerList.add(peer);
+                index++;
+
                 return peer;
             }
         };

@@ -36,6 +36,7 @@ class HttpResponseHandler {
     private static final String COMPLETE_KEY = "complete";
     private static final String INCOMPLETE_KEY = "incomplete";
     private static final String PEERS_KEY = "peers";
+    private static final String CRYPTO_FLAGS_KEY = "crypto_flags";
 
     private BEObjectModel trackerResponseModel;
 
@@ -141,7 +142,12 @@ class HttpResponseHandler {
             }
 
             byte[] peers = cast(byte[].class, PEERS_KEY, responseMap.get(PEERS_KEY).getValue());
-            response.setPeers(new CompactPeerInfo(peers, AddressType.IPV4));
+            if (responseMap.get(CRYPTO_FLAGS_KEY) != null) {
+                byte[] cryptoFlags = cast(byte[].class, CRYPTO_FLAGS_KEY, responseMap.get(CRYPTO_FLAGS_KEY).getValue());
+                response.setPeers(new CompactPeerInfo(peers, AddressType.IPV4, cryptoFlags));
+            } else {
+                response.setPeers(new CompactPeerInfo(peers, AddressType.IPV4));
+            }
         }
 
         return response;

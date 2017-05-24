@@ -20,12 +20,9 @@ public class TestUtil {
         }
 
         assertNotNull(e);
-        assertContainsText(e.getMessage(), message);
-    }
-
-    public static void assertContainsText(String s, String text) {
-        if (!s.contains(text)) {
-            throw new RuntimeException("Expected string containing text: '" + text + "', but actual was: '" + s + "'");
+        if (e.getMessage() == null || !e.getMessage().contains(message)) {
+            throw new RuntimeException("Expected string containing text: '" + message +
+                    "', but actual was: '" + e.getMessage() + "'", e);
         }
     }
 }

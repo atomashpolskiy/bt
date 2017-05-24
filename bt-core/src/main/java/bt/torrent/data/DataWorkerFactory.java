@@ -1,5 +1,6 @@
 package bt.torrent.data;
 
+import bt.data.ChunkVerifier;
 import bt.data.DataDescriptor;
 import bt.service.IRuntimeLifecycleBinder;
 
@@ -10,15 +11,17 @@ import bt.service.IRuntimeLifecycleBinder;
 public class DataWorkerFactory implements IDataWorkerFactory {
 
     private IRuntimeLifecycleBinder lifecycleBinder;
+    private ChunkVerifier verifier;
     private int maxIOQueueSize;
 
-    public DataWorkerFactory(IRuntimeLifecycleBinder lifecycleBinder, int maxIOQueueSize) {
+    public DataWorkerFactory(IRuntimeLifecycleBinder lifecycleBinder, ChunkVerifier verifier, int maxIOQueueSize) {
         this.lifecycleBinder = lifecycleBinder;
+        this.verifier = verifier;
         this.maxIOQueueSize = maxIOQueueSize;
     }
 
     @Override
     public DataWorker createWorker(DataDescriptor dataDescriptor) {
-        return new DefaultDataWorker(lifecycleBinder, dataDescriptor, maxIOQueueSize);
+        return new DefaultDataWorker(lifecycleBinder, dataDescriptor, verifier, maxIOQueueSize);
     }
 }

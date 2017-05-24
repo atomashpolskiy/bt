@@ -2,6 +2,8 @@
 - model:
     type: dictionary
     exclusives:
+    # TODO: some trackers return failure reason together with interval and peers,
+    # which causes the validation to fail -- need to do something about it
       - "failure reason"
       - ["warning message", interval, "min interval", "tracker id", complete, incomplete, peers]
     entries:
@@ -13,4 +15,5 @@
       - {key: complete, type: integer, required: false}
       - {key: incomplete, type: integer, required: false}
       - {key: peers, type: string}
+      - {key: crypto_flags, type: string, required: false}
 

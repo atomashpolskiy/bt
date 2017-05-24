@@ -1,6 +1,5 @@
 package bt.torrent;
 
-import bt.data.ChunkDescriptor;
 import bt.data.DataDescriptor;
 import bt.metainfo.Torrent;
 import bt.tracker.AnnounceKey;
@@ -67,8 +66,6 @@ class DefaultTorrentDescriptor implements TorrentDescriptor {
         if (active) {
             return;
         }
-
-        dataDescriptor.getChunkDescriptors().forEach(ChunkDescriptor::verify);
 
         if (trackerOptional.isPresent()) {
             Tracker tracker = trackerOptional.get();

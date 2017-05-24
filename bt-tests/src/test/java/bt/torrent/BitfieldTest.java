@@ -1,5 +1,6 @@
 package bt.torrent;
 
+import bt.data.Bitfield;
 import bt.data.ChunkDescriptor;
 import org.junit.Test;
 
@@ -18,6 +19,9 @@ public class BitfieldTest extends BaseBitfieldTest {
         List<ChunkDescriptor> chunks = Arrays.asList(completeChunk, emptyChunk, emptyChunk, completeChunk,
                 emptyChunk, emptyChunk, emptyChunk, completeChunk);
         Bitfield bitfield = new Bitfield(chunks);
+        bitfield.markVerified(0);
+        bitfield.markVerified(3);
+        bitfield.markVerified(7);
 
         byte expectedBitfield = (byte) (1 + (0b1 << 4) + (0b1 << 7));
 

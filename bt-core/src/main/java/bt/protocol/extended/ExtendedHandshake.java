@@ -90,6 +90,17 @@ public final class ExtendedHandshake extends ExtendedMessage {
             data = new HashMap<>();
         }
 
+        public Builder property(String name, BEObject<?> value) {
+            Objects.requireNonNull(name);
+            if (MESSAGE_TYPE_MAPPING_KEY.equals(name)) {
+                throw new IllegalArgumentException("Property name is reserved: " + MESSAGE_TYPE_MAPPING_KEY);
+            }
+
+            Objects.requireNonNull(value);
+            data.put(name, value);
+            return this;
+        }
+
         /**
          * Adds a mapping between message type name and its' numeric ID.
          *
