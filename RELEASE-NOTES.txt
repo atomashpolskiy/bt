@@ -5,15 +5,19 @@ http://atomashpolskiy.github.io/bt/
 
 ----------------------------------
 Release: 1.2
-Date:
+Date: 05/24/2017
 ----------------------------------
 Changes/New Features:
-* Message Stream Encryption
 
+* Message Stream Encryption
+* Added API for retrieving the full list of registered torrents
 
 Bug Fixes/Improvements:
 
 * Last block in a chunk is incorrectly marked as complete even when partially written
+* Provide info on encryption support, local TCP port and version in extended handshake
+* Eliminate self-connections in tests
+* Don't specify the recipient of a PEX message in the list of added peers
 
 ----------------------------------
 Release: 1.1
