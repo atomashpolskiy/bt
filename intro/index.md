@@ -15,7 +15,7 @@ Declare the following dependencies in your project's **pom.xml**:
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-core</artifactId>
-    <version>1.1</version>
+    <version>${bt-version}</version>
 </dependency>
 <!-- for the sake of keeping the core with minimum number of 3-rd party 
      dependencies HTTP tracker support is shipped as a separate module;
@@ -23,7 +23,7 @@ Declare the following dependencies in your project's **pom.xml**:
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-http-tracker-client</artifactId>
-    <version>1.1</version>
+    <version>${bt-version}</version>
 </dependency>
 ```
 
@@ -102,7 +102,7 @@ The reason for not including HTTP tracker support in the core is that it depends
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-http-tracker-client</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>${bt-version}</version>
 </dependency>
 ```
 
