@@ -55,7 +55,6 @@
         <skip.integration.tests>false</skip.integration.tests>
         <jacoco.ut.exec>target/coverage-reports/jacoco-ut.exec</jacoco.ut.exec>
         <jacoco.it.exec>target/coverage-reports/jacoco-it.exec</jacoco.it.exec>
-        <jacoco.excludes>bt/test/**/*:bt/it/**/*:bt/cli/**/*:lbms/**/*:the8472/**/*</jacoco.excludes>
     </properties>
 
     <scm>
@@ -299,6 +298,15 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>bt/test/**/*</exclude>
+                                <exclude>bt/it/**/*</exclude>
+                                <exclude>bt/cli/**/*</exclude>
+                                <exclude>lbms/**/*</exclude>
+                                <exclude>the8472/**/*</exclude>
+                            </excludes>
+                        </configuration>
                         <executions>
                             <execution>
                                 <id>pre-unit</id>
@@ -319,9 +327,6 @@
                                 <configuration>
                                     <dataFile>${jacoco.ut.exec}</dataFile>
                                     <outputDirectory>${project.reporting.outputDirectory}/coverage/jacoco-ut</outputDirectory>
-                                    <excludes>
-                                        <exclude>${jacoco.excludes}</exclude>
-                                    </excludes>
                                 </configuration>
                             </execution>
                             <execution>
@@ -335,9 +340,6 @@
                                         <include>${jacoco.ut.exec}</include>
                                     </dataFileIncludes>
                                     <outputDirectory>${project.reporting.outputDirectory}/coverage/jacoco-ut-aggregate</outputDirectory>
-                                    <excludes>
-                                        <exclude>${jacoco.excludes}</exclude>
-                                    </excludes>
                                 </configuration>
                             </execution>
                             <execution>
@@ -360,9 +362,6 @@
                                 <configuration>
                                     <dataFile>${jacoco.it.exec}</dataFile>
                                     <outputDirectory>${project.reporting.outputDirectory}/coverage/jacoco-it</outputDirectory>
-                                    <excludes>
-                                        <exclude>${jacoco.excludes}</exclude>
-                                    </excludes>
                                 </configuration>
                             </execution>
                             <execution>
@@ -376,9 +375,6 @@
                                         <dataFileInclude>${jacoco.it.exec}</dataFileInclude>
                                     </dataFileIncludes>
                                     <outputDirectory>${project.reporting.outputDirectory}/coverage/jacoco-it-aggregate</outputDirectory>
-                                    <excludes>
-                                        <exclude>${jacoco.excludes}</exclude>
-                                    </excludes>
                                 </configuration>
                             </execution>
                         </executions>
