@@ -34,6 +34,7 @@
         <module>bt-http-tracker-client</module>
         <module>bt-dht</module>
         <module>bt-tests</module>
+        <module>bt-cli</module>
         <module>examples</module>
     </modules>
 
@@ -288,12 +289,6 @@
     </build>
 
     <profiles>
-        <profile>
-            <id>lgpl</id>
-            <modules>
-                <module>bt-cli</module>
-            </modules>
-        </profile>
         <profile>
             <id>codecov</id>
             <properties>

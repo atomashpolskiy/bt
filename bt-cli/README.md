@@ -4,11 +4,7 @@ This module contains a simple CLI launcher for **Bt**.
 
 ## Usage
 
-### Assemble the wrapper
-
-```mvn clean package -DskipTests=true``` from this module's directory or ```mvn clean package -DskipTests=true -Plgpl``` from project's root directory.
-
-### Print help
+### Available options
 
 ```
 $ java -jar target/bt-launcher.jar
@@ -43,7 +39,7 @@ Add `-s` flag to continue seeding after torrent has been downloaded.
 
 ### LGPL dependencies
 
-_Please note that this module includes bundled LGPL dependencies and can't be distributed or released to Maven Central in binary form.
+_Please note that this module includes bundled LGPL dependencies and can't be distributed or released to Maven Central in binary form under APL 2.0 license.
 To use this module, you will need to build it from sources manually._
 
 This product depends on 'Lanterna', a Java library for creating text-based terminal GUIs, which can be obtained at:

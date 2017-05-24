@@ -1,12 +1,10 @@
 [![Build Status](https://travis-ci.org/atomashpolskiy/bt.svg?branch=master)](https://travis-ci.org/atomashpolskiy/bt) [![codecov](https://img.shields.io/codecov/c/github/atomashpolskiy/bt/master.svg)](https://codecov.io/gh/atomashpolskiy/bt) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/) [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](http://atomashpolskiy.github.io/bt/javadoc/latest/)
 
-**Bt** is a modern BitTorrent library in Java 8, perfect choice for both enterprise and home usage and experimentation. It offers good performance, reliability and is highly customizable. With Bt you can create a production-grade torrent client in a matter of minutes. Bt is still in its' early days, but is actively developed and designed with stability and maintainability in mind.
+**Bt** is a modern full-featured BitTorrent library in Java 8. It offers good performance, reliability and is highly customizable. Bt is still in its' early days, but is actively developed and designed with stability and maintainability in mind.
 
 ## Quick Links
 
-[Website](http://atomashpolskiy.github.io/bt/)
-
-[Introduction](http://atomashpolskiy.github.io/bt/intro/) (contains a brief overview of **Bt** design and components)
+[Website](http://atomashpolskiy.github.io/bt/) (contains examples and tutorials)
 
 [JavaDoc](http://atomashpolskiy.github.io/bt/javadoc/latest/) (based on the latest commit in _**master**_)
 
@@ -15,7 +13,7 @@
 ## List of supported BEPs
 
 * [BEP-3: The BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html)
-* [BEP-5: DHT Protocol](http://bittorrent.org/beps/bep_0005.html) (available in [dht-experimental](https://github.com/atomashpolskiy/bt/tree/dht-experimental) branch)
+* [BEP-5: DHT Protocol](http://bittorrent.org/beps/bep_0005.html)
 * [BEP-10: Extension Protocol](http://bittorrent.org/beps/bep_0010.html)
 * [BEP-11: Peer Exchange (PEX)](http://bittorrent.org/beps/bep_0011.html)
 * [BEP-12: Multitracker metadata extension](http://bittorrent.org/beps/bep_0012.html)
@@ -26,44 +24,27 @@
 * [BEP-41: UDP Tracker Protocol Extensions](http://bittorrent.org/beps/bep_0041.html)
 * [Message Stream Encryption](http://wiki.vuze.com/w/Message_Stream_Encryption)
 
-## Support and feedback
-
-Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new features and BEPs to be added. You have the following options to share your ideas, receive help or report bugs:
-
-* open a new  [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
-* post your question on the [Bt forum](https://groups.google.com/forum/#!forum/bttorrent)
-
-## Release 1.1
-
-Release 1.1 includes a number of major performance and algorithmic improvements, critical bug fixes and API enhancements. Full list is available in [release notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.txt). **It's strongly recommended for all users to switch to 1.1.**
-
-## Support for BEP-5: DHT Protocol
-
-Available in [dht-experimental](https://github.com/atomashpolskiy/bt/tree/dht-experimental) branch. It's stable and already includes all changes from the 1.1 version.
-
 ## Building from source
 
-1) Clone the git repo:
+1) Clone:
 ```
 git clone https://github.com/atomashpolskiy/bt.git
 ```
 
-2) Checkout dht-experimental (if you'd like to have DHT support)
+2) Build:
 ```
-git checkout dht-experimental
-```
-
-3) Build
- ```
- mvn clean install -Plgpl -DskipTests=true
+cd bt
+mvn clean install -DskipTests=true
  ```
  
-4) Download with CLI wrapper or use as a library
+3) Download with [CLI launcher](https://github.com/atomashpolskiy/bt/tree/master/bt-cli) or use as a library:
 ```
 java -Xmx64m -jar bt-cli/target/bt-launcher.jar -f <path-to-torrent-file> -d <download-dir>
 ```
 
 ## Usage
+
+Most recent version available in Maven Central is **1.1**. DHT module is available in **1.2-SNAPSHOT** only, which you'll need to build manually. 
 
 Declare the following dependencies in your project’s **pom.xml**:
 
@@ -71,7 +52,7 @@ Declare the following dependencies in your project’s **pom.xml**:
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-core</artifactId>
-    <version>1.1</version>
+    <version>${bt-version}</version>
 </dependency>
 <!-- for the sake of keeping the core with minimum number of 3-rd party 
      dependencies HTTP tracker support is shipped as a separate module;
@@ -79,14 +60,13 @@ Declare the following dependencies in your project’s **pom.xml**:
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-http-tracker-client</artifactId>
-    <version>1.1</version>
+    <version>${bt-version}</version>
 </dependency>
-<!-- bt-dht will be available if you've built the project manually 
-     from dht-experimental branch-->
+<!-- bt-dht will be available if you've built the project manually -->
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-dht</artifactId>
-    <version>1.2-SNAPSHOT</version>
+    <version>${bt-version}</version>
 </dependency>
 ```
 
@@ -97,7 +77,7 @@ Declare the following dependencies in your project’s **pom.xml**:
 Config config = new Config() {
     @Override
     public int getNumOfHashingThreads() {
-        return 8;
+        return Runtime.getRuntime().availableProcessors() * 2;
     }
 };
 
@@ -162,3 +142,10 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 ### And much more...
 
 * _**check out [Release Notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.txt) for details!**_
+
+## Support and feedback
+
+Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new features and BEPs to be added. You have the following options to share your ideas, receive help or report bugs:
+
+* open a new  [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
+* post your question on the [Bt forum](https://groups.google.com/forum/#!forum/bttorrent)
