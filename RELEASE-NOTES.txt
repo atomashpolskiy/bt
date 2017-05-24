@@ -4,6 +4,16 @@ For the latest information visit project web site:
 http://atomashpolskiy.github.io/bt/
 
 ----------------------------------
+Release: 1.3
+Date:
+----------------------------------
+Changes/New Features:
+
+
+Bug Fixes/Improvements:
+
+
+----------------------------------
 Release: 1.2
 Date: 05/24/2017
 ----------------------------------

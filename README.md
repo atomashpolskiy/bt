@@ -44,7 +44,9 @@ java -Xmx64m -jar bt-cli/target/bt-launcher.jar -f <path-to-torrent-file> -d <do
 
 ## Usage
 
-Most recent version available in Maven Central is **1.1**. DHT module is available in **1.2-SNAPSHOT** only, which you'll need to build manually. 
+Most recent version available in Maven Central is **1.2**. 
+
+DHT module is available in **1.2** git tag (compatible with Bt 1.2 version) or **1.3-SNAPSHOT** (current master version), either of which should be built manually. 
 
 Declare the following dependencies in your project’s **pom.xml**:
 
