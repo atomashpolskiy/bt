@@ -55,7 +55,7 @@
         <skip.integration.tests>false</skip.integration.tests>
         <jacoco.ut.exec>target/coverage-reports/jacoco-ut.exec</jacoco.ut.exec>
         <jacoco.it.exec>target/coverage-reports/jacoco-it.exec</jacoco.it.exec>
-        <jacoco.excludes>bt/test/**/*:bt/it/**/*:bt/cli/**/*</jacoco.excludes>
+        <jacoco.excludes>bt/test/**/*:bt/it/**/*:bt/cli/**/*:lbms/**/*:the8472/**/*</jacoco.excludes>
     </properties>
 
     <scm>
