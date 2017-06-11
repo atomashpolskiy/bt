@@ -57,7 +57,7 @@ public class MagnetUri {
         }
 
         public Builder name(String displayName) {
-            this.displayName = displayName;
+            this.displayName = Objects.requireNonNull(displayName);
             return this;
         }
 
