@@ -75,7 +75,7 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
         TorrentWorker torrentWorker = new TorrentWorker(torrentId, bitfield, assignments,
                 pieceStatistics, messageDispatcher, peerWorkerFactory, config);
         TorrentSession session = new DefaultTorrentSession(connectionPool, torrentWorker,
-                torrentId, bitfield, config.getMaxPeerConnectionsPerTorrent());
+                torrent, bitfield, config.getMaxPeerConnectionsPerTorrent());
 
         peerRegistry.addPeerConsumer(torrentId, session::onPeerDiscovered);
         connectionPool.addConnectionListener(session);

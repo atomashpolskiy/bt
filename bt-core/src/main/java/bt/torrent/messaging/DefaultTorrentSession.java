@@ -1,6 +1,7 @@
 package bt.torrent.messaging;
 
 import bt.data.Bitfield;
+import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
@@ -23,7 +24,7 @@ import java.util.stream.Collectors;
 class DefaultTorrentSession implements TorrentSession {
 
     private IPeerConnectionPool connectionPool;
-    private TorrentId torrentId;
+    private Torrent torrent;
     private TorrentWorker worker;
     private TorrentSessionState sessionState;
 
@@ -32,11 +33,11 @@ class DefaultTorrentSession implements TorrentSession {
 
     public DefaultTorrentSession(IPeerConnectionPool connectionPool,
                                  TorrentWorker worker,
-                                 TorrentId torrentId,
+                                 Torrent torrent,
                                  Bitfield bitfield,
                                  int maxPeerConnectionsPerTorrent) {
         this.connectionPool = connectionPool;
-        this.torrentId = torrentId;
+        this.torrent = torrent;
         this.worker = worker;
         this.sessionState = new DefaultTorrentSessionState(bitfield);
         this.maxPeerConnectionsPerTorrent = maxPeerConnectionsPerTorrent;
@@ -49,7 +50,7 @@ class DefaultTorrentSession implements TorrentSession {
         // when some of the currently connected peers disconnects
         performSequentially(() -> {
             if (mightAddPeer(peer)) {
-                connectionPool.requestConnection(torrentId, peer);
+                connectionPool.requestConnection(torrent.getTorrentId(), peer);
             }
         });
     }
@@ -57,7 +58,7 @@ class DefaultTorrentSession implements TorrentSession {
     @Override
     public void onPeerConnected(TorrentId torrentId, Peer peer) {
         performSequentially(() -> {
-            if (mightAddPeer(peer) && this.torrentId.equals(torrentId)) {
+            if (mightAddPeer(peer) && torrent.getTorrentId().equals(torrentId)) {
                 worker.addPeer(peer);
             }
         });
@@ -83,8 +84,8 @@ class DefaultTorrentSession implements TorrentSession {
     }
 
     @Override
-    public TorrentId getTorrentId() {
-        return torrentId;
+    public Torrent getTorrent() {
+        return torrent;
     }
 
     @Override
