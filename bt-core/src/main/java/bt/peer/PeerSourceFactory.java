@@ -1,6 +1,7 @@
 package bt.peer;
 
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 
 /**
  * Factory of peer sources.
@@ -17,6 +18,17 @@ public interface PeerSourceFactory {
      * Implementations are free to return the same instance for all torrents.
      *
      * @since 1.0
+     * @deprecated since 1.3 in favor of {@link #getPeerSource(TorrentId)}
      */
-    PeerSource getPeerSource(Torrent torrent);
+    default PeerSource getPeerSource(Torrent torrent) {
+        return getPeerSource(torrent.getTorrentId());
+    }
+
+    /**
+     * Create a peer source for a given torrent.
+     * Implementations are free to return the same instance for all torrents.
+     *
+     * @since 1.3
+     */
+    PeerSource getPeerSource(TorrentId torrentId);
 }

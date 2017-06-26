@@ -144,10 +144,11 @@ public class ServiceModule implements Module {
     @Singleton
     public IPeerRegistry providePeerRegistry(IRuntimeLifecycleBinder lifecycleBinder,
                                              IdentityService idService,
+                                             TorrentRegistry torrentRegistry,
                                              ITrackerService trackerService,
                                              Set<PeerSourceFactory> peerSourceFactories) {
         return new PeerRegistry(
-                lifecycleBinder, idService, trackerService, peerSourceFactories,
+                lifecycleBinder, idService, torrentRegistry, trackerService, peerSourceFactories,
                 config.getAcceptorAddress(), config.getAcceptorPort(),
                 config.getPeerDiscoveryInterval(), config.getTrackerQueryInterval());
     }

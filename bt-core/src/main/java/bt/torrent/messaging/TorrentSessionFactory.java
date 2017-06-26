@@ -1,6 +1,7 @@
 package bt.torrent.messaging;
 
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.module.MessagingAgents;
 import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
@@ -60,7 +61,9 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
 
     @Override
     public TorrentSession createSession(Torrent torrent, TorrentSessionParams params) {
-        TorrentDescriptor descriptor = getTorrentDescriptor(torrent);
+        TorrentId torrentId = torrent.getTorrentId();
+
+        TorrentDescriptor descriptor = getTorrentDescriptor(torrentId);
         Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();
         BitfieldBasedStatistics pieceStatistics = new BitfieldBasedStatistics(bitfield);
         PieceSelector selector = createSelector(params, bitfield);
@@ -69,12 +72,12 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
         Assignments assignments = new Assignments(bitfield, selector, pieceStatistics, config);
         IPeerWorkerFactory peerWorkerFactory = createPeerWorkerFactory(descriptor, pieceStatistics, dataWorker);
 
-        TorrentWorker torrentWorker = new TorrentWorker(torrent.getTorrentId(), bitfield, assignments,
+        TorrentWorker torrentWorker = new TorrentWorker(torrentId, bitfield, assignments,
                 pieceStatistics, messageDispatcher, peerWorkerFactory, config);
         TorrentSession session = new DefaultTorrentSession(connectionPool, torrentWorker,
-                torrent, bitfield, config.getMaxPeerConnectionsPerTorrent());
+                torrentId, bitfield, config.getMaxPeerConnectionsPerTorrent());
 
-        peerRegistry.addPeerConsumer(torrent, session::onPeerDiscovered);
+        peerRegistry.addPeerConsumer(torrentId, session::onPeerDiscovered);
         connectionPool.addConnectionListener(session);
 
         return session;
@@ -92,9 +95,9 @@ public class TorrentSessionFactory implements ITorrentSessionFactory {
         return selector;
     }
 
-    private TorrentDescriptor getTorrentDescriptor(Torrent torrent) {
-        return torrentRegistry.getDescriptor(torrent)
-                .orElseThrow(() -> new IllegalStateException("Unknown torrent: " + torrent));
+    private TorrentDescriptor getTorrentDescriptor(TorrentId torrentId) {
+        return torrentRegistry.getDescriptor(torrentId)
+                .orElseThrow(() -> new IllegalStateException("Unknown torrent ID: " + torrentId));
     }
 
     private DataWorker createDataWorker(TorrentDescriptor descriptor) {

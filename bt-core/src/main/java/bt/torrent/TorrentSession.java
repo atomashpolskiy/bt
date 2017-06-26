@@ -1,6 +1,6 @@
 package bt.torrent;
 
-import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.net.PeerActivityListener;
 
 /**
@@ -12,9 +12,9 @@ public interface TorrentSession extends PeerActivityListener {
 
     /**
      * @return Torrent, that this session is processing
-     * @since 1.0
+     * @since 1.3
      */
-    Torrent getTorrent();
+    TorrentId getTorrentId();
 
     /**
      * @return Current state of torrent processing session

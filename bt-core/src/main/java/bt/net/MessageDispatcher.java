@@ -1,6 +1,6 @@
 package bt.net;
 
-import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.protocol.Message;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
@@ -87,12 +87,8 @@ public class MessageDispatcher implements IMessageDispatcher {
                         PeerConnection connection = pool.getConnection(peer);
                         if (connection != null && !connection.isClosed()) {
 
-                            Optional<Torrent> torrent = torrentRegistry.getTorrent(connection.getTorrentId());
-                            if (torrent.isPresent()) {
-                                Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrent.get());
-                                if (descriptor.isPresent() && !descriptor.get().isActive()) {
-                                    continue;
-                                }
+                            if (!isSupportedAndActive(connection.getTorrentId())) {
+                                continue;
                             }
 
                             Message message = null;
@@ -132,12 +128,8 @@ public class MessageDispatcher implements IMessageDispatcher {
                         PeerConnection connection = pool.getConnection(peer);
                         if (connection != null && !connection.isClosed()) {
 
-                            Optional<Torrent> torrent = torrentRegistry.getTorrent(connection.getTorrentId());
-                            if (torrent.isPresent()) {
-                                Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrent.get());
-                                if (descriptor.isPresent() && !descriptor.get().isActive()) {
-                                    continue;
-                                }
+                            if (!isSupportedAndActive(connection.getTorrentId())) {
+                                continue;
                             }
 
                             for (Supplier<Message> messageSupplier : suppliers) {
@@ -173,6 +165,13 @@ public class MessageDispatcher implements IMessageDispatcher {
         public void shutdown() {
             shutdown = true;
         }
+    }
+
+    private boolean isSupportedAndActive(TorrentId torrentId) {
+        Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrentId);
+        // it's OK if descriptor is not present -- torrent might be being fetched at the time
+        return torrentRegistry.getTorrentIds().contains(torrentId)
+                && (!descriptor.isPresent() || descriptor.get().isActive());
     }
 
     /**

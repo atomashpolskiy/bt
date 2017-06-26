@@ -98,8 +98,8 @@ public class CliClient  {
                 .selector(selector)
                 .build();
 
-        this.printer = SessionStatePrinter.createKeyInputAwarePrinter(
-                client.getSession().getTorrent(), keyBindings);
+//        this.printer = SessionStatePrinter.createKeyInputAwarePrinter(
+//                client.getSession().getTorrent(), keyBindings);
     }
 
     void resume() {

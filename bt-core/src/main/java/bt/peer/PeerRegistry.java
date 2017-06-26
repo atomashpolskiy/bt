@@ -1,11 +1,13 @@
 package bt.peer;
 
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.net.PeerId;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdentityService;
+import bt.torrent.TorrentRegistry;
 import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
 import org.slf4j.Logger;
@@ -38,14 +40,16 @@ public class PeerRegistry implements IPeerRegistry {
     private final Peer localPeer;
     private final PeerCache cache;
 
+    private TorrentRegistry torrentRegistry;
     private ITrackerService trackerService;
     private TrackerPeerSourceFactory trackerPeerSourceFactory;
     private Set<PeerSourceFactory> extraPeerSourceFactories;
 
-    private ConcurrentMap<Torrent, List<Consumer<Peer>>> peerConsumers;
+    private ConcurrentMap<TorrentId, List<Consumer<Peer>>> peerConsumers;
 
     public PeerRegistry(IRuntimeLifecycleBinder lifecycleBinder,
                         IdentityService idService,
+                        TorrentRegistry torrentRegistry,
                         ITrackerService trackerService,
                         Set<PeerSourceFactory> extraPeerSourceFactories,
                         InetAddress localPeerAddress,
@@ -57,8 +61,9 @@ public class PeerRegistry implements IPeerRegistry {
         this.localPeer = new InetPeer(localPeerAddress, localPeerPort, idService.getLocalPeerId());
         this.cache = new PeerCache();
 
+        this.torrentRegistry = torrentRegistry;
         this.trackerService = trackerService;
-        this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, lifecycleBinder, trackerQueryInterval);
+        this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, torrentRegistry, lifecycleBinder, trackerQueryInterval);
         this.extraPeerSourceFactories = extraPeerSourceFactories;
 
         createExecutor(lifecycleBinder, peerDiscoveryInterval);
@@ -73,13 +78,17 @@ public class PeerRegistry implements IPeerRegistry {
     }
 
     private void collectAndVisitPeers() {
-        peerConsumers.forEach((torrent, consumers) -> {
-            queryTracker(torrent, consumers);
+        peerConsumers.forEach((torrentId, consumers) -> {
+            Optional<Torrent> torrentOptional = torrentRegistry.getTorrent(torrentId);
+            if (torrentOptional.isPresent()) {
+                Torrent torrent = torrentOptional.get();
+                queryTracker(torrent, consumers);
+            }
 
             // disallow querying peer sources other than the tracker for private torrents
-            if (!torrent.isPrivate() && !extraPeerSourceFactories.isEmpty()) {
+            if ((!torrentOptional.isPresent() || !torrentOptional.get().isPrivate()) && !extraPeerSourceFactories.isEmpty()) {
                 extraPeerSourceFactories.forEach(factory ->
-                        queryPeerSource(factory.getPeerSource(torrent), consumers));
+                        queryPeerSource(factory.getPeerSource(torrentId), consumers));
             }
         });
     }
@@ -87,7 +96,7 @@ public class PeerRegistry implements IPeerRegistry {
     private void queryTracker(Torrent torrent, List<Consumer<Peer>> consumers) {
         Optional<AnnounceKey> announceKey = torrent.getAnnounceKey();
         if (announceKey.isPresent() && mightCreateTracker(announceKey.get())) {
-            queryPeerSource(trackerPeerSourceFactory.getPeerSource(torrent), consumers);
+            queryPeerSource(trackerPeerSourceFactory.getPeerSource(torrent.getTorrentId()), consumers);
         }
     }
 
@@ -146,10 +155,15 @@ public class PeerRegistry implements IPeerRegistry {
 
     @Override
     public void addPeerConsumer(Torrent torrent, Consumer<Peer> consumer) {
-        List<Consumer<Peer>> consumers = peerConsumers.get(torrent);
+        addPeerConsumer(torrent.getTorrentId(), consumer);
+    }
+
+    @Override
+    public void addPeerConsumer(TorrentId torrentId, Consumer<Peer> consumer) {
+        List<Consumer<Peer>> consumers = peerConsumers.get(torrentId);
         if (consumers == null) {
             consumers = new ArrayList<>();
-            List<Consumer<Peer>> existing = peerConsumers.putIfAbsent(torrent, consumers);
+            List<Consumer<Peer>> existing = peerConsumers.putIfAbsent(torrentId, consumers);
             if (existing != null) {
                 consumers = existing;
             }
@@ -160,7 +174,12 @@ public class PeerRegistry implements IPeerRegistry {
     // TODO: someone should call this after torrent is stopped/completed
     @Override
     public void removePeerConsumers(Torrent torrent) {
-        peerConsumers.remove(torrent);
+        removePeerConsumers(torrent.getTorrentId());
+    }
+
+    @Override
+    public void removePeerConsumers(TorrentId torrentId) {
+        peerConsumers.remove(torrentId);
     }
 
     private static class PeerCache {

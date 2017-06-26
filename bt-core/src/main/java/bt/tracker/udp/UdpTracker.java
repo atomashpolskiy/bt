@@ -1,6 +1,6 @@
 package bt.tracker.udp;
 
-import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdentityService;
 import bt.tracker.Tracker;
@@ -78,8 +78,8 @@ class UdpTracker implements Tracker {
     }
 
     @Override
-    public TrackerRequestBuilder request(Torrent torrent) {
-        return new TrackerRequestBuilder(torrent.getTorrentId()) {
+    public TrackerRequestBuilder request(TorrentId torrentId) {
+        return new TrackerRequestBuilder(torrentId) {
             @Override
             public TrackerResponse start() {
                 return announceEvent(EventType.START);

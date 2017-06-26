@@ -11,6 +11,7 @@ import com.google.inject.Inject;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -26,8 +27,9 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
     private IDataDescriptorFactory dataDescriptorFactory;
     private IRuntimeLifecycleBinder lifecycleBinder;
 
+    private Set<TorrentId> torrentIds;
     private ConcurrentMap<TorrentId, Torrent> torrents;
-    private ConcurrentMap<Torrent, TorrentDescriptor> descriptors;
+    private ConcurrentMap<TorrentId, TorrentDescriptor> descriptors;
 
     @Inject
     public AdhocTorrentRegistry(ITrackerService trackerService,
@@ -38,6 +40,7 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
         this.dataDescriptorFactory = dataDescriptorFactory;
         this.lifecycleBinder = lifecycleBinder;
 
+        this.torrentIds = ConcurrentHashMap.newKeySet();
         this.torrents = new ConcurrentHashMap<>();
         this.descriptors = new ConcurrentHashMap<>();
     }
@@ -48,21 +51,32 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
     }
 
     @Override
+    public Collection<TorrentId> getTorrentIds() {
+        return torrentIds;
+    }
+
+    @Override
     public Optional<Torrent> getTorrent(TorrentId torrentId) {
         return Optional.ofNullable(torrents.get(torrentId));
     }
 
     @Override
     public Optional<TorrentDescriptor> getDescriptor(Torrent torrent) {
-        return Optional.ofNullable(descriptors.get(torrent));
+        return Optional.ofNullable(descriptors.get(torrent.getTorrentId()));
+    }
+
+    @Override
+    public Optional<TorrentDescriptor> getDescriptor(TorrentId torrentId) {
+        return Optional.ofNullable(descriptors.get(torrentId));
     }
 
     @Override
     public TorrentDescriptor getOrCreateDescriptor(Torrent torrent, Storage storage) {
-        return getDescriptor(torrent).orElseGet(() -> {
+        TorrentId torrentId = torrent.getTorrentId();
+        return getDescriptor(torrentId).orElseGet(() -> {
             TorrentDescriptor descriptor = new DefaultTorrentDescriptor(trackerService, torrent,
                     dataDescriptorFactory.createDescriptor(torrent, storage));
-            TorrentDescriptor existing = descriptors.putIfAbsent(torrent, descriptor);
+            TorrentDescriptor existing = descriptors.putIfAbsent(torrentId, descriptor);
             if (existing != null) {
                 descriptor = existing;
             } else {
@@ -75,7 +89,10 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
                     }
                 });
             }
-            torrents.putIfAbsent(torrent.getTorrentId(), torrent);
+
+            torrentIds.add(torrentId);
+            torrents.putIfAbsent(torrentId, torrent);
+
             return descriptor;
         });
     }

@@ -1,6 +1,6 @@
 package bt.dht;
 
-import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.peer.PeerSource;
 import bt.peer.PeerSourceFactory;
 import bt.service.IRuntimeLifecycleBinder;
@@ -21,7 +21,7 @@ public class DHTPeerSourceFactory implements PeerSourceFactory {
     private DHTService dhtService;
     private ExecutorService executor;
 
-    private Map<Torrent, DHTPeerSource> peerSources;
+    private Map<TorrentId, DHTPeerSource> peerSources;
 
     @Inject
     public DHTPeerSourceFactory(IRuntimeLifecycleBinder lifecycleBinder,
@@ -34,11 +34,11 @@ public class DHTPeerSourceFactory implements PeerSourceFactory {
     }
 
     @Override
-    public PeerSource getPeerSource(Torrent torrent) {
-        DHTPeerSource peerSource = peerSources.get(torrent);
+    public PeerSource getPeerSource(TorrentId torrentId) {
+        DHTPeerSource peerSource = peerSources.get(torrentId);
         if (peerSource == null) {
-            peerSource = new DHTPeerSource(torrent, dhtService, executor);
-            DHTPeerSource existing = peerSources.putIfAbsent(torrent, peerSource);
+            peerSource = new DHTPeerSource(torrentId, dhtService, executor);
+            DHTPeerSource existing = peerSources.putIfAbsent(torrentId, peerSource);
             if (existing != null) {
                 peerSource = existing;
             }

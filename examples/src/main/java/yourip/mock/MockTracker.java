@@ -1,6 +1,6 @@
 package yourip.mock;
 
-import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
 import bt.tracker.TrackerResponse;
@@ -13,8 +13,8 @@ public class MockTracker implements Tracker {
     }
 
     @Override
-    public TrackerRequestBuilder request(Torrent torrent) {
-        return new TrackerRequestBuilder(torrent.getTorrentId()) {
+    public TrackerRequestBuilder request(TorrentId torrentId) {
+        return new TrackerRequestBuilder(torrentId) {
             @Override
             public TrackerResponse start() {
                 return MockTrackerResponse.instance();

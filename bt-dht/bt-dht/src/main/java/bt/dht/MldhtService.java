@@ -2,6 +2,7 @@ package bt.dht;
 
 import bt.BtException;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.service.IRuntimeLifecycleBinder;
@@ -126,11 +127,16 @@ class MldhtService implements DHTService {
 
     @Override
     public Stream<Peer> getPeers(Torrent torrent) {
+        return getPeers(torrent.getTorrentId());
+    }
+
+    @Override
+    public Stream<Peer> getPeers(TorrentId torrentId) {
         PeerLookupTask lookup;
         BlockingQueue<Peer> peers;
         try {
             dht.getServerManager().awaitActiveServer().get();
-            lookup = dht.createPeerLookup(torrent.getTorrentId().getBytes());
+            lookup = dht.createPeerLookup(torrentId.getBytes());
             peers = new LinkedBlockingQueue<>();
             lookup.setResultHandler((k, p) -> {
                 Peer peer = new InetPeer(p.getInetAddress(), p.getPort());

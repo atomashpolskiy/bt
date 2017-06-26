@@ -1,9 +1,7 @@
 package bt.net;
 
-import bt.BtException;
-import bt.metainfo.Torrent;
-import bt.protocol.Handshake;
 import bt.data.Bitfield;
+import bt.protocol.Handshake;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import com.google.inject.Inject;
@@ -30,12 +28,7 @@ public class BitfieldConnectionHandler implements HandshakeHandler {
 
     @Override
     public void processIncomingHandshake(PeerConnection connection, Handshake peerHandshake) {
-        Torrent torrent = torrentRegistry.getTorrent(connection.getTorrentId())
-                // this should not happen, because presence of requested torrent
-                // should have already been tested by other connection handlers
-                .orElseThrow(() -> new BtException("Unknown torrent ID"));
-
-        Optional<TorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
+        Optional<TorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(connection.getTorrentId());
         if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {
             Bitfield bitfield = descriptorOptional.get().getDataDescriptor().getBitfield();
 

@@ -156,7 +156,7 @@ public class SharedTrackerModule implements Module {
                     };
 
                     @Override
-                    public TrackerRequestBuilder request(Torrent torrent) {
+                    public TrackerRequestBuilder request(TorrentId torrentId) {
                         return requestBuilder;
                     }
                 };

@@ -1,7 +1,7 @@
 package bt.tracker;
 
 import bt.BtException;
-import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,32 +51,31 @@ class MultiTracker implements Tracker {
     }
 
     @Override
-    public TrackerRequestBuilder request(Torrent torrent) {
-
-        return new TrackerRequestBuilder(torrent.getTorrentId()) {
+    public TrackerRequestBuilder request(TorrentId torrentId) {
+        return new TrackerRequestBuilder(torrentId) {
 
             @Override
             public TrackerResponse start() {
-                return tryForAllTrackers(tracker -> getDelegate(tracker, torrent).start());
+                return tryForAllTrackers(tracker -> getDelegate(tracker, torrentId).start());
             }
 
             @Override
             public TrackerResponse stop() {
-                return tryForAllTrackers(tracker -> getDelegate(tracker, torrent).stop());
+                return tryForAllTrackers(tracker -> getDelegate(tracker, torrentId).stop());
             }
 
             @Override
             public TrackerResponse complete() {
-                return tryForAllTrackers(tracker -> getDelegate(tracker, torrent).complete());
+                return tryForAllTrackers(tracker -> getDelegate(tracker, torrentId).complete());
             }
 
             @Override
             public TrackerResponse query() {
-                return tryForAllTrackers(tracker -> getDelegate(tracker, torrent).query());
+                return tryForAllTrackers(tracker -> getDelegate(tracker, torrentId).query());
             }
 
-            private TrackerRequestBuilder getDelegate(Tracker tracker, Torrent torrent) {
-                TrackerRequestBuilder delegate = tracker.request(torrent);
+            private TrackerRequestBuilder getDelegate(Tracker tracker, TorrentId torrentId) {
+                TrackerRequestBuilder delegate = tracker.request(torrentId);
 
                 int downloaded = getDownloaded();
                 if (downloaded > 0) {
@@ -143,8 +142,8 @@ class MultiTracker implements Tracker {
         }
 
         @Override
-        public TrackerRequestBuilder request(Torrent torrent) {
-            return getDelegate().request(torrent);
+        public TrackerRequestBuilder request(TorrentId torrentId) {
+            return getDelegate().request(torrentId);
         }
 
         private Tracker getDelegate() {

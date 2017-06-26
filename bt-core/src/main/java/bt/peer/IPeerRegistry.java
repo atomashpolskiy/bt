@@ -1,9 +1,9 @@
 package bt.peer;
 
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.net.Peer;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 
@@ -35,13 +35,30 @@ public interface IPeerRegistry {
      * that are currently participating in this torrent.
      *
      * @since 1.0
+     * @deprecated since 1.3 in favor of {@link #addPeerConsumer(TorrentId, Consumer)}
      */
     void addPeerConsumer(Torrent torrent, Consumer<Peer> consumer);
+
+    /**
+     * Add a listener for new discovered peers
+     * that are currently participating in this torrent.
+     *
+     * @since 1.3
+     */
+    void addPeerConsumer(TorrentId torrentId, Consumer<Peer> consumer);
 
     /**
      * Remove all listeners for the given torrent.
      *
      * @since 1.0
+     * @deprecated since 1.3 in favor of {@link #removePeerConsumers(TorrentId)}
      */
     void removePeerConsumers(Torrent torrent);
+
+    /**
+     * Remove all listeners for the given torrent.
+     *
+     * @since 1.3
+     */
+    void removePeerConsumers(TorrentId torrentId);
 }

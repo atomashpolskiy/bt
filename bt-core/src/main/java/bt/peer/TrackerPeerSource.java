@@ -1,7 +1,7 @@
 package bt.peer;
 
 import bt.BtException;
-import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerResponse;
@@ -9,9 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 
@@ -20,15 +17,15 @@ class TrackerPeerSource extends ScheduledPeerSource {
     private static final Logger LOGGER = LoggerFactory.getLogger(TrackerPeerSource.class);
 
     private Tracker tracker;
-    private Torrent torrent;
+    private TorrentId torrentId;
     private Duration trackerQueryInterval;
 
     private volatile long lastRefreshed;
 
-    TrackerPeerSource(ExecutorService executor, Tracker tracker, Torrent torrent, Duration trackerQueryInterval) {
+    TrackerPeerSource(ExecutorService executor, Tracker tracker, TorrentId torrentId, Duration trackerQueryInterval) {
         super(executor);
         this.tracker = tracker;
-        this.torrent = torrent;
+        this.torrentId = torrentId;
         this.trackerQueryInterval = trackerQueryInterval;
     }
 
@@ -37,7 +34,7 @@ class TrackerPeerSource extends ScheduledPeerSource {
         if (System.currentTimeMillis() - lastRefreshed >= trackerQueryInterval.toMillis()) {
             TrackerResponse response;
             try {
-                response = tracker.request(torrent).query();
+                response = tracker.request(torrentId).query();
             } finally {
                 lastRefreshed = System.currentTimeMillis();
             }

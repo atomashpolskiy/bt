@@ -23,6 +23,14 @@ public interface TorrentRegistry {
     Collection<Torrent> getTorrents();
 
     /**
+     * Get all torrents, that have been registered in the runtime.
+     *
+     * @return All registered torrents
+     * @since 1.3
+     */
+    Collection<TorrentId> getTorrentIds();
+
+    /**
      * Get a torrent with a given torrent ID, if exists.
      *
      * @return {@link Optional#empty()} if this torrent ID is not known to the current runtime.
@@ -35,8 +43,17 @@ public interface TorrentRegistry {
      *
      * @return {@link Optional#empty()} if torrent descriptor hasn't been created yet.
      * @since 1.0
+     * @deprecated since 1.3 in favor of {@link #getDescriptor(TorrentId)}
      */
     Optional<TorrentDescriptor> getDescriptor(Torrent torrent);
+
+    /**
+     * Get a torrent descriptor for a given torrent, if exists.
+     *
+     * @return {@link Optional#empty()} if torrent descriptor hasn't been created yet.
+     * @since 1.3
+     */
+    Optional<TorrentDescriptor> getDescriptor(TorrentId torrentId);
 
     /**
      * Get an existing torrent descriptor for a given torrent

@@ -1,6 +1,5 @@
 package bt.net;
 
-import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.protocol.Handshake;
 import bt.protocol.IHandshakeFactory;
@@ -44,25 +43,23 @@ class IncomingHandshakeHandler implements ConnectionHandler {
             if (Handshake.class.equals(firstMessage.getClass())) {
 
                 Handshake peerHandshake = (Handshake) firstMessage;
-                Optional<Torrent> torrentOptional = torrentRegistry.getTorrent(peerHandshake.getTorrentId());
-                if (torrentOptional.isPresent()) {
-                    Torrent torrent = torrentOptional.get();
-                    Optional<TorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrent);
-                    if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {
-                        TorrentId torrentId = torrent.getTorrentId();
+                TorrentId torrentId = peerHandshake.getTorrentId();
+                Optional<TorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(torrentId);
+                // it's OK if descriptor is not present -- torrent might be being fetched at the time
+                if (torrentRegistry.getTorrentIds().contains(torrentId)
+                        && (!descriptorOptional.isPresent() || descriptorOptional.get().isActive())) {
 
-                        Handshake handshake = handshakeFactory.createHandshake(torrent.getTorrentId());
-                        handshakeHandlers.forEach(handler ->
-                                handler.processOutgoingHandshake(handshake));
+                    Handshake handshake = handshakeFactory.createHandshake(torrentId);
+                    handshakeHandlers.forEach(handler ->
+                            handler.processOutgoingHandshake(handshake));
 
-                        connection.postMessage(handshake);
-                        ((DefaultPeerConnection) connection).setTorrentId(torrentId);
+                    connection.postMessage(handshake);
+                    ((DefaultPeerConnection) connection).setTorrentId(torrentId);
 
-                        handshakeHandlers.forEach(handler ->
-                                handler.processIncomingHandshake(new WriteOnlyPeerConnection(connection), peerHandshake));
+                    handshakeHandlers.forEach(handler ->
+                            handler.processIncomingHandshake(new WriteOnlyPeerConnection(connection), peerHandshake));
 
-                        return true;
-                    }
+                    return true;
                 }
             } else {
                 if (LOGGER.isTraceEnabled()) {

@@ -1,7 +1,7 @@
 package bt.tracker.http;
 
 import bt.BtException;
-import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.peer.IPeerRegistry;
 import bt.protocol.crypto.EncryptionPolicy;
@@ -73,8 +73,8 @@ public class HttpTracker implements Tracker {
     }
 
     @Override
-    public TrackerRequestBuilder request(Torrent torrent) {
-        return new TrackerRequestBuilder(torrent.getTorrentId()) {
+    public TrackerRequestBuilder request(TorrentId torrentId) {
+        return new TrackerRequestBuilder(torrentId) {
             @Override
             public TrackerResponse start() {
                 return sendEvent(TrackerRequestType.START, this);

@@ -1,6 +1,5 @@
 package bt.tracker;
 
-import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,7 +31,7 @@ public class MultiTrackerTest {
     }
 
     private AnnounceKey announceKey;
-    private Torrent torrent;
+    private TorrentId torrentId;
     private ITrackerService trackerService;
     private List<Tracker> accessLog;
     private StoppableTracker tracker1, tracker2, tracker3, backup1, backup2;
@@ -44,16 +43,15 @@ public class MultiTrackerTest {
                 Arrays.asList(trackerUrl1, trackerUrl2, trackerUrl3),
                 Arrays.asList(backupUrl1, backupUrl2)));
 
-        torrent = mock(Torrent.class);
-        when(torrent.getTorrentId()).thenReturn(TorrentId.fromBytes(new byte[20]));
+        torrentId = TorrentId.fromBytes(new byte[20]);
 
         accessLog = new ArrayList<>();
 
-        tracker1 = new StoppableTracker(trackerUrl1, torrent, accessLog::add);
-        tracker2 = new StoppableTracker(trackerUrl2, torrent, accessLog::add);
-        tracker3 = new StoppableTracker(trackerUrl3, torrent, accessLog::add);
-        backup1 = new StoppableTracker(backupUrl1, torrent, accessLog::add);
-        backup2 = new StoppableTracker(backupUrl2, torrent, accessLog::add);
+        tracker1 = new StoppableTracker(trackerUrl1, torrentId, accessLog::add);
+        tracker2 = new StoppableTracker(trackerUrl2, torrentId, accessLog::add);
+        tracker3 = new StoppableTracker(trackerUrl3, torrentId, accessLog::add);
+        backup1 = new StoppableTracker(backupUrl1, torrentId, accessLog::add);
+        backup2 = new StoppableTracker(backupUrl2, torrentId, accessLog::add);
 
         trackerService = mock(ITrackerService.class);
         when(trackerService.getTracker(trackerUrl1)).thenReturn(tracker1);
@@ -68,7 +66,7 @@ public class MultiTrackerTest {
 
         MultiTracker tracker = new MultiTracker(trackerService, announceKey, false);
 
-        tracker.request(torrent).start();
+        tracker.request(torrentId).start();
         assertLogHasTrackers(tracker1);
     }
 
@@ -78,26 +76,26 @@ public class MultiTrackerTest {
         MultiTracker tracker = new MultiTracker(trackerService, announceKey, false);
 
         tracker1.shutdown();
-        tracker.request(torrent).start();
+        tracker.request(torrentId).start();
         assertLogHasTrackers(tracker1, tracker2);
 
         clearLog();
-        tracker.request(torrent).query();
+        tracker.request(torrentId).query();
         assertLogHasTrackers(tracker2);
 
         clearLog();
         tracker2.shutdown();
-        tracker.request(torrent).query();
+        tracker.request(torrentId).query();
         assertLogHasTrackers(tracker2, tracker1, tracker3);
 
         clearLog();
         tracker3.shutdown();
         tracker1.startup();
-        tracker.request(torrent).query();
+        tracker.request(torrentId).query();
         assertLogHasTrackers(tracker3, tracker2, tracker1);
 
         clearLog();
-        tracker.request(torrent).stop();
+        tracker.request(torrentId).stop();
         assertLogHasTrackers(tracker1);
     }
 
@@ -110,16 +108,16 @@ public class MultiTrackerTest {
         tracker2.shutdown();
         tracker3.shutdown();
 
-        tracker.request(torrent).start();
+        tracker.request(torrentId).start();
         assertLogHasTrackers(tracker1, tracker2, tracker3, backup1);
 
         clearLog();
         backup1.shutdown();
-        tracker.request(torrent).query();
+        tracker.request(torrentId).query();
         assertLogHasTrackers(tracker1, tracker2, tracker3, backup1, backup2);
 
         clearLog();
-        tracker.request(torrent).stop();
+        tracker.request(torrentId).stop();
         assertLogHasTrackers(tracker1, tracker2, tracker3, backup2);
     }
 
@@ -139,12 +137,12 @@ public class MultiTrackerTest {
         private TrackerRequestBuilder requestBuilder;
         private boolean shutdown;
 
-        public StoppableTracker(String url, Torrent torrent, Consumer<Tracker> accessLog) {
+        public StoppableTracker(String url, TorrentId torrentId, Consumer<Tracker> accessLog) {
 
             instance = this;
             this.url = url;
 
-            requestBuilder = new TrackerRequestBuilder(torrent.getTorrentId()) {
+            requestBuilder = new TrackerRequestBuilder(torrentId) {
                 @Override
                 public TrackerResponse start() {
                     return logAndResponse();
@@ -173,7 +171,7 @@ public class MultiTrackerTest {
         }
 
         @Override
-        public TrackerRequestBuilder request(Torrent torrent) {
+        public TrackerRequestBuilder request(TorrentId torrentId) {
             return requestBuilder;
         }
 

@@ -1,7 +1,6 @@
 package bt.peerexchange;
 
 import bt.BtException;
-import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
@@ -112,8 +111,8 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     }
 
     @Override
-    public PeerSource getPeerSource(Torrent torrent) {
-        return getOrCreatePeerSource(torrent.getTorrentId());
+    public PeerSource getPeerSource(TorrentId torrentId) {
+        return getOrCreatePeerSource(torrentId);
     }
 
     private PeerExchangePeerSource getOrCreatePeerSource(TorrentId torrentId) {

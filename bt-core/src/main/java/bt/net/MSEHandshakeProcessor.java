@@ -1,6 +1,5 @@
 package bt.net;
 
-import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.protocol.DecodingContext;
 import bt.protocol.Handshake;
@@ -334,35 +333,32 @@ class MSEHandshakeProcessor {
 
         // - HASH('req2', SKEY) xor HASH('req3', S)
         in.get(bytes); // read SKEY/S hash
-        Torrent requestedTorrent = null;
+        TorrentId requestedTorrent = null;
         digest.update("req3".getBytes("ASCII"));
         digest.update(BigIntegers.encodeUnsigned(S, keyGenerator.getPublicKeySize()));
         byte[] b2 = digest.digest();
-        for (Torrent torrent : torrentRegistry.getTorrents()) {
+        for (TorrentId torrentId : torrentRegistry.getTorrentIds()) {
             digest.update("req2".getBytes("ASCII"));
-            digest.update(torrent.getTorrentId().getBytes());
+            digest.update(torrentId.getBytes());
             byte[] b1 = digest.digest();
             if (Arrays.equals(xor(b1, b2), bytes)) {
-                requestedTorrent = torrent;
+                requestedTorrent = torrentId;
                 break;
             }
         }
         // check that torrent is supported and active
-        boolean err = false;
         if (requestedTorrent == null) {
-            err = true;
+            throw new IllegalStateException("Unsupported torrent requested");
         } else {
             Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(requestedTorrent);
-            if (!descriptor.isPresent() || !descriptor.get().isActive()) {
-                err = true;
+            if (descriptor.isPresent() && !descriptor.get().isActive()) {
+                // don't throw an exception if descriptor is not present -- torrent might be being fetched at the time
+                throw new IllegalStateException("Inactive torrent requested: " + requestedTorrent);
             }
-        }
-        if (err) {
-            throw new IllegalStateException("Unsupported/inactive torrent requested");
         }
 
         byte[] Sbytes = BigIntegers.encodeUnsigned(S, MSEKeyPairGenerator.PUBLIC_KEY_BYTES);
-        MSECipher cipher = MSECipher.forReceiver(Sbytes, requestedTorrent.getTorrentId());
+        MSECipher cipher = MSECipher.forReceiver(Sbytes, requestedTorrent);
         ByteChannel encryptedChannel = new EncryptedChannel(channel, cipher.getDecryptionCipher(), cipher.getEncryptionCipher());
         ByteChannelReader encryptedReader = reader(encryptedChannel);
 
