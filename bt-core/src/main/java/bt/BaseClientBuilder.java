@@ -196,7 +196,7 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
 
     private TorrentDescriptor getTorrentDescriptor(BtRuntime runtime, Torrent torrent) {
         TorrentRegistry torrentRegistry = runtime.service(TorrentRegistry.class);
-        return torrentRegistry.getOrCreateDescriptor(torrent, storage);
+        return torrentRegistry.register(torrent, storage);
     }
 
     private TorrentSessionParams getSessionParams() {

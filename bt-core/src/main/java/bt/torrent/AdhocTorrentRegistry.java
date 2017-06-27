@@ -72,6 +72,11 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
 
     @Override
     public TorrentDescriptor getOrCreateDescriptor(Torrent torrent, Storage storage) {
+        return register(torrent, storage);
+    }
+
+    @Override
+    public TorrentDescriptor register(Torrent torrent, Storage storage) {
         TorrentId torrentId = torrent.getTorrentId();
         return getDescriptor(torrentId).orElseGet(() -> {
             TorrentDescriptor descriptor = new DefaultTorrentDescriptor(trackerService, torrent,
