@@ -11,7 +11,11 @@ import bt.bencoding.model.BEString;
 import bt.bencoding.model.ValidationResult;
 import bt.bencoding.model.YamlBEObjectModelLoader;
 import bt.service.CryptoUtil;
+import bt.torrent.TorrentRegistry;
 import bt.tracker.AnnounceKey;
+import com.google.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,6 +26,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 /**
@@ -29,6 +36,7 @@ import java.util.stream.Collectors;
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
 public class MetadataService implements IMetadataService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MetadataService.class);
 
     private static final String ANNOUNCE_KEY = "announce";
     private static final String ANNOUNCE_LIST_KEY = "announce-list";
@@ -42,16 +50,21 @@ public class MetadataService implements IMetadataService {
     private static final String FILE_PATH_ELEMENTS_KEY = "path";
     private static final String PRIVATE_KEY = "private";
 
+    private TorrentRegistry torrentRegistry;
+    private ConcurrentMap<TorrentId, TorrentMetadata> metadataMap;
+
     private BEObjectModel torrentModel;
     private Charset defaultCharset;
 
-    public MetadataService() {
-
-        defaultCharset = Charset.forName("UTF-8");
+    @Inject
+    public MetadataService(TorrentRegistry torrentRegistry) {
+        this.torrentRegistry = torrentRegistry;
+        this.metadataMap = new ConcurrentHashMap<>();
+        this.defaultCharset = Charset.forName("UTF-8");
 
         try {
             try (InputStream in = MetadataService.class.getResourceAsStream("/metainfo.yml")) {
-                torrentModel = new YamlBEObjectModelLoader().load(in);
+                this.torrentModel = new YamlBEObjectModelLoader().load(in);
             }
         } catch (IOException e) {
             throw new BtException("Failed to create metadata service", e);
@@ -88,22 +101,23 @@ public class MetadataService implements IMetadataService {
         }
 
         DefaultTorrent torrent = new DefaultTorrent();
-        BEMap beMap = parser.readMap();
+        BEMap metadata = parser.readMap();
 
-        ValidationResult validationResult = torrentModel.validate(beMap);;
+        ValidationResult validationResult = torrentModel.validate(metadata);;
         if (!validationResult.isSuccess()) {
             throw new BtException("Validation failed for torrent metainfo: "
                     + Arrays.toString(validationResult.getMessages().toArray()));
         }
 
-        Map<String, BEObject<?>> root = beMap.getValue();
+        Map<String, BEObject<?>> root = metadata.getValue();
+        BEMap infoDictionary;
 
         try {
 
-            BEMap info = (BEMap) root.get(INFOMAP_KEY);
-            torrent.setTorrentId(TorrentId.fromBytes(CryptoUtil.getSha1Digest(info.getContent())));
+            infoDictionary = (BEMap) root.get(INFOMAP_KEY);
+            torrent.setTorrentId(TorrentId.fromBytes(CryptoUtil.getSha1Digest(infoDictionary.getContent())));
 
-            Map<String, BEObject<?>> infoMap = info.getValue();
+            Map<String, BEObject<?>> infoMap = infoDictionary.getValue();
 
             if (infoMap.get(TORRENT_NAME_KEY) != null) {
                 byte[] name = (byte[]) infoMap.get(TORRENT_NAME_KEY).getValue();
@@ -189,6 +203,48 @@ public class MetadataService implements IMetadataService {
         } catch (Exception e) {
             throw new BtException("Invalid metainfo format", e);
         }
+
+        saveMetadata(torrent.getTorrentId(), buildMetadata(metadata, infoDictionary));
+
         return torrent;
+    }
+
+    private TorrentMetadata buildMetadata(BEMap metadata, BEMap infoDictionary) {
+        return new BEncodedMetadata(metadata, infoDictionary);
+    }
+
+    private void saveMetadata(TorrentId torrentId, TorrentMetadata metadata) {
+        if (metadataMap.put(torrentId, metadata) != null) {
+            LOGGER.warn("Overwriting metadata for torrent ID: " + torrentId);
+        }
+    }
+
+    @Override
+    public TorrentMetadata getMetadata(Torrent torrent) {
+        return getExistingMetadata(torrent.getTorrentId()).orElseGet(() -> buildMetadata(torrent));
+    }
+
+    @Override
+    public Optional<TorrentMetadata> getMetadata(TorrentId torrentId) {
+        Optional<TorrentMetadata> metadata = getExistingMetadata(torrentId);
+        if (!metadata.isPresent()) {
+            Optional<Torrent> torrent = torrentRegistry.getTorrent(torrentId);
+            if (torrent.isPresent()) {
+                metadata = Optional.of(buildMetadata(torrent.get()));
+            }
+        }
+        return metadata;
+    }
+
+    private Optional<TorrentMetadata> getExistingMetadata(TorrentId torrentId) {
+        return Optional.ofNullable(metadataMap.get(torrentId));
+    }
+
+    /**
+     * Build ad-hoc metadata for a given torrent.
+     */
+    private TorrentMetadata buildMetadata(Torrent torrent) {
+        // TODO: implement creating metadata on demand based on the provided torrent
+        throw new UnsupportedOperationException();
     }
 }

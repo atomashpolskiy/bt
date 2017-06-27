@@ -2,6 +2,7 @@ package bt.metainfo;
 
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Optional;
 
 /**
  * Service for creating torrents from bencoded sources.
@@ -37,4 +38,22 @@ public interface IMetadataService {
      * @since 1.0
      */
     Torrent fromByteArray(byte[] bs);
+
+    /**
+     * Get torrent's metadata
+     *
+     * @param torrentId Torrent ID
+     * @return Torrent's metadata, if present
+     * @since 1.3
+     */
+    Optional<TorrentMetadata> getMetadata(TorrentId torrentId);
+
+    /**
+     * Get torrent's metadata
+     *
+     * @param torrent Torrent
+     * @return Torrent's metadata
+     * @since 1.3
+     */
+    TorrentMetadata getMetadata(Torrent torrent);
 }

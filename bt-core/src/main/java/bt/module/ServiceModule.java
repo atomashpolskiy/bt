@@ -102,6 +102,7 @@ public class ServiceModule implements Module {
         binder.bind(ApplicationService.class).to(ClasspathApplicationService.class).in(Singleton.class);
         binder.bind(IdentityService.class).to(VersionAwareIdentityService.class).in(Singleton.class);
         binder.bind(ITrackerService.class).to(TrackerService.class).in(Singleton.class);
+        binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
         binder.bind(TorrentRegistry.class).to(AdhocTorrentRegistry.class).in(Singleton.class);
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).in(Singleton.class);
         binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).in(Singleton.class);

@@ -1,6 +1,7 @@
 package bt.it.fixture;
 
 import bt.metainfo.MetadataService;
+import bt.torrent.TorrentRegistry;
 import org.junit.After;
 import org.junit.BeforeClass;
 
@@ -10,6 +11,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
+
+import static org.mockito.Mockito.mock;
 
 /**
  * Base class for Bt integration tests.
@@ -73,7 +76,7 @@ public class BaseBtTest {
     protected SwarmBuilder buildSwarm() {
         SwarmBuilder builder = new SwarmBuilder(getTestRoot(), getSingleFile());
         builder.module(new TestExecutorModule());
-        builder.torrentSupplier(() -> new MetadataService().fromUrl(METAINFO_URL));
+        builder.torrentSupplier(() -> new MetadataService(mock(TorrentRegistry.class)).fromUrl(METAINFO_URL));
         return builder;
     }
 
