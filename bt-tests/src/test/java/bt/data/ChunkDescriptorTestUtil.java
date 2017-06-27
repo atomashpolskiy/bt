@@ -1,5 +1,7 @@
 package bt.data;
 
+import bt.data.range.BlockRange;
+import bt.data.range.Ranges;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 import bt.tracker.AnnounceKey;
@@ -26,8 +28,8 @@ public class ChunkDescriptorTestUtil {
         long limitInLastUnit = units.get(units.size() - 1).capacity();
 
         DataRange data = new ReadWriteDataRange(units, offsetInFirstUnit, limitInLastUnit);
-        BlockDataRange blockData = new BlockDataRange(data, blockSize);
-        return new DefaultChunkDescriptor(blockData, blockData.getBlockSet(), new byte[20]);
+        BlockRange<DataRange> blockData = Ranges.blockRange(data, blockSize);
+        return new DefaultChunkDescriptor(Ranges.dataRange(blockData), blockData.getBlockSet(), new byte[20]);
     }
 
     public static List<StorageUnit> mockStorageUnits(long... capacities) {

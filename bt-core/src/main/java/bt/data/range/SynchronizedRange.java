@@ -1,16 +1,16 @@
-package bt.data;
+package bt.data.range;
 
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * Data range synchronized with a private or shared lock.
+ * Data range synchronized with a shared lock.
  *
  * @since 1.2
  */
-class SynchronizedDataRange implements DataRange {
+class SynchronizedRange<T extends Range<T>> implements Range<T>, DelegatingRange<T> {
 
-    private final DataRange delegate;
+    private final Range<T> delegate;
 
     /**
      * Shared lock for this range and all its' child subranges
@@ -22,7 +22,7 @@ class SynchronizedDataRange implements DataRange {
      *
      * @since 1.2
      */
-    SynchronizedDataRange(DataRange delegate) {
+    SynchronizedRange(Range<T> delegate) {
         this.delegate = delegate;
         this.lock = new ReentrantReadWriteLock();
     }
@@ -32,7 +32,7 @@ class SynchronizedDataRange implements DataRange {
      *
      * @since 1.2
      */
-    SynchronizedDataRange(DataRange delegate, ReadWriteLock lock) {
+    private SynchronizedRange(Range<T> delegate, ReadWriteLock lock) {
         this.delegate = delegate;
         this.lock = lock;
     }
@@ -50,21 +50,25 @@ class SynchronizedDataRange implements DataRange {
     /**
      * {@inheritDoc}
      *
+     * Child subrange shares the same lock as its' parent range.
+     *
      * @since 1.2
      */
     @Override
-    public DataRange getSubrange(long offset, long length) {
-        return new SynchronizedDataRange(delegate.getSubrange(offset, length), lock);
+    public SynchronizedRange<T> getSubrange(long offset, long length) {
+        return new SynchronizedRange<>(delegate.getSubrange(offset, length), lock);
     }
 
     /**
      * {@inheritDoc}
      *
+     * Child subrange shares the same lock as its' parent range.
+     *
      * @since 1.2
      */
     @Override
-    public DataRange getSubrange(long offset) {
-        return new SynchronizedDataRange(delegate.getSubrange(offset), lock);
+    public SynchronizedRange<T> getSubrange(long offset) {
+        return new SynchronizedRange<>(delegate.getSubrange(offset), lock);
     }
 
     /**
@@ -103,8 +107,16 @@ class SynchronizedDataRange implements DataRange {
         }
     }
 
+    /**
+     * @since 1.3
+     */
+    protected ReadWriteLock getLock() {
+        return lock;
+    }
+
+    @SuppressWarnings("unchecked")
     @Override
-    public void visitUnits(DataRangeVisitor visitor) {
-        delegate.visitUnits(visitor);
+    public T getDelegate() {
+        return (T) delegate;
     }
 }
