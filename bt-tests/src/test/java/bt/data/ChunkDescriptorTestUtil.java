@@ -66,36 +66,6 @@ public class ChunkDescriptorTestUtil {
         return file;
     }
 
-    /**
-     * Creates a periodical list of numbers from 1 to 9, starting with {@code start}
-     * and looping if {@code size} is greater than 9.
-     * @param size Length of the resulting array
-     * @param start Number between 1 and 9 inclusive; sequence starts with this number
-     * @return Array of numbers
-     */
-    public static byte[] sequence(int size, int start) {
-
-        if (start < 1 || start > 9) {
-            throw new RuntimeException("Illegal starting number (must be 1-9): " + start);
-        }
-
-        byte[] sequence = new byte[size];
-
-        byte b = (byte) (start - 1);
-        for (int i = 0; i < size; i++) {
-            if (++b == 10) {
-                b = 1;
-            }
-            sequence[i] = b;
-        }
-
-        return sequence;
-    }
-
-    public static byte[] sequence(int size) {
-        return sequence(size, 1);
-    }
-
     public static void assertFileHasContents(File file, byte[] expectedBytes) {
         byte[] actualBytes = readBytesFromFile(file, expectedBytes.length);
         assertArrayEquals(expectedBytes, actualBytes);

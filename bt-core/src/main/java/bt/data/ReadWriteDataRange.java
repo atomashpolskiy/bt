@@ -1,7 +1,5 @@
 package bt.data;
 
-import bt.BtException;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -131,13 +129,13 @@ class ReadWriteDataRange implements DataRange {
     @Override
     public ReadWriteDataRange getSubrange(long offset, long length) {
         if (length == 0) {
-            throw new BtException("Requested empty subrange, expected length of 1.." + length());
+            throw new IllegalArgumentException("Requested empty subrange, expected length of 1.." + length());
         }
         if (offset < 0 || length < 0) {
-            throw new BtException("Illegal arguments: offset (" + offset + "), length (" + length + ")");
+            throw new IllegalArgumentException("Illegal arguments: offset (" + offset + "), length (" + length + ")");
         }
         if (offset >= length()) {
-            throw new BtException("Offset is too large: " + offset + ", expected 0.." + (length() - 1));
+            throw new IllegalArgumentException("Offset is too large: " + offset + ", expected 0.." + (length() - 1));
         }
         if (offset == 0 && length == length()) {
             return this;
@@ -182,7 +180,7 @@ class ReadWriteDataRange implements DataRange {
 
         if (lastRequestedFileIndex >= units.size()) {
             // data in this chunk is insufficient to fulfill the block request
-            throw new BtException("Insufficient data (offset: " + offset + ", requested length: " + length + ")");
+            throw new IllegalArgumentException("Insufficient data (offset: " + offset + ", requested length: " + length + ")");
         }
         // if remaining is negative now, then we need to
         // strip off some data from the last file
@@ -191,7 +189,7 @@ class ReadWriteDataRange implements DataRange {
         if (lastRequestedFileIndex == units.size() - 1) {
             if (limitInLastRequestedFile > limitInLastUnit) {
                 // data in this chunk is insufficient to fulfill the block request
-                throw new BtException("Insufficient data (offset: " + offset + ", requested length: " + length + ")");
+                throw new IllegalArgumentException("Insufficient data (offset: " + offset + ", requested length: " + length + ")");
             }
         }
 
@@ -209,7 +207,7 @@ class ReadWriteDataRange implements DataRange {
     @Override
     public DataRange getSubrange(long offset) {
         if (offset < 0) {
-            throw new BtException("Illegal arguments: offset (" + offset + ")");
+            throw new IllegalArgumentException("Illegal arguments: offset (" + offset + ")");
         }
         return offset == 0 ? this : getSubrange(offset, length() - offset);
     }
@@ -230,12 +228,12 @@ class ReadWriteDataRange implements DataRange {
             public boolean visitUnit(StorageUnit unit, long off, long lim) {
                 long len = lim - off;
                 if (len > Integer.MAX_VALUE) {
-                    throw new BtException("Too much data requested");
+                    throw new IllegalStateException("Too much data requested");
                 }
 
                 if (((long) offsetInBlock) + len > Integer.MAX_VALUE) {
                     // overflow -- isn't supposed to happen unless the algorithm in range is incorrect
-                    throw new BtException("Integer overflow while constructing block");
+                    throw new IllegalStateException("Integer overflow while constructing block");
                 }
 
                 buffer.limit(offsetInBlock + (int) len);
@@ -269,7 +267,7 @@ class ReadWriteDataRange implements DataRange {
             public boolean visitUnit(StorageUnit unit, long off, long lim) {
                 long fileSize = lim - off;
                 if (fileSize > Integer.MAX_VALUE) {
-                    throw new BtException("Unexpected file size -- insufficient data in block");
+                    throw new IllegalStateException("Unexpected file size -- insufficient data in block");
                 }
 
                 limitInBlock = Math.min(buffer.capacity(), offsetInBlock + (int) fileSize);
