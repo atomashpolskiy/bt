@@ -31,9 +31,9 @@ public class ByteRange implements Range<ByteRange> {
      * @since 1.3
      */
     public ByteRange(byte[] bytes, int offset, int limit) {
-        long available = bytes.length;
+        int available = bytes.length;
         if (available == 0) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("Empty byte array");
         }
         checkOffsetAndLimit(offset, limit, available);
 
@@ -63,6 +63,10 @@ public class ByteRange implements Range<ByteRange> {
     @Override
     public ByteRange getSubrange(long offset, long length) {
         long available = length();
+        if (offset == 0 && length == available) {
+            return this;
+        }
+
         checkOffset(offset, available);
         checkLength(offset, length, available);
 
@@ -75,6 +79,10 @@ public class ByteRange implements Range<ByteRange> {
 
     @Override
     public ByteRange getSubrange(long offset) {
+        if (offset == 0) {
+            return this;
+        }
+
         checkOffset(offset, length());
 
         ByteBuffer copy = buffer.duplicate();
@@ -105,11 +113,11 @@ public class ByteRange implements Range<ByteRange> {
         buffer.position(position);
     }
 
-    private static void checkOffsetAndLimit(long offset, long limit, long available) {
+    private static void checkOffsetAndLimit(long offset, int limit, int available) {
         checkOffset(offset, available);
         checkLimit(limit, available);
         if (offset >= limit) {
-            throw new IllegalArgumentException("Offset is larger than limit (offset: " + offset + ", limit: " + limit + ")");
+            throw new IllegalArgumentException("Offset is larger than or equal to limit (offset: " + offset + ", limit: " + limit + ")");
         }
     }
 
@@ -136,7 +144,7 @@ public class ByteRange implements Range<ByteRange> {
         if (length < 0) {
             throw new IllegalArgumentException("Requested negative length: " + length);
         }
-        long maxlen = Math.min(available - offset + 1, Integer.MAX_VALUE - offset);
+        long maxlen = Math.min(available - offset, Integer.MAX_VALUE - offset);
         if (length == 0) {
             throw new IllegalArgumentException("Requested empty subrange, expected length of 1.." + maxlen);
         }

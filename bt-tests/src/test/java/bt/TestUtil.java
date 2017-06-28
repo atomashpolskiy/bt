@@ -18,9 +18,8 @@ public class TestUtil {
      * @since 1.0
      */
     public static void assertExceptionWithMessage(Function<?,?> function, String message) {
-
         if (message == null || message.isEmpty()) {
-            throw new RuntimeException("Empty message");
+            throw new RuntimeException("Invalid test case: empty message (will match everything)");
         }
 
         Exception e = null;
