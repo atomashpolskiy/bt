@@ -15,6 +15,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * @since 1.3
+ */
 public class MagnetUriParser {
     private static final Logger LOGGER = LoggerFactory.getLogger(MagnetUriParser.class);
 
@@ -29,6 +32,14 @@ public class MagnetUriParser {
         private static final String PEER = "x.pe";
     }
 
+    /**
+     * Create a magnet URI from its' string representation in BEP-9 format.
+     * Current limitations:
+     * - only v1 links are supported (xt=urn:btih:<info-hash>)
+     * - base32-encoded info hashes are not supported
+     *
+     * @since 1.3
+     */
     public MagnetUri parse(String uriString) {
         URI uri = URI.create(uriString);
 
@@ -46,7 +57,7 @@ public class MagnetUriParser {
             throw new IllegalStateException(String.format("Parameter '%s' has invalid number of values with prefix '%s': %s",
                     UriParams.TORRENT_ID, INFOHASH_PREFIX, infoHashes.size()));
         }
-        TorrentId torrentId = TorrentId.fromBytes(Protocols.fromHex(infoHashes.iterator().next()));
+        TorrentId torrentId = buildTorrentId(infoHashes.iterator().next());
         MagnetUri.Builder builder = MagnetUri.torrentId(torrentId);
 
         getOptionalParam(UriParams.DISPLAY_NAME, paramsMap).stream().findAny().ifPresent(builder::name);
@@ -95,6 +106,19 @@ public class MagnetUriParser {
     private List<String> getOptionalParam(String paramName,
                                           Map<String, List<String>> paramsMap) {
         return paramsMap.getOrDefault(paramName, Collections.emptyList());
+    }
+
+    private TorrentId buildTorrentId(String infoHash) {
+        byte[] bytes;
+        int len = infoHash.length();
+        if (len == 40) {
+            bytes = Protocols.fromHex(infoHash);
+        } else if (len == 32) {
+            throw new IllegalArgumentException("Base32 info hash not supported");
+        } else {
+            throw new IllegalArgumentException("Invalid info hash length: " + len);
+        }
+        return TorrentId.fromBytes(bytes);
     }
 
     private InetPeerAddress parsePeer(String value) throws Exception {

@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class UtMetadata extends ExtendedMessage {
-    enum Type {
+    public enum Type {
         REQUEST(0), DATA(1), REJECT(2);
 
         private final int id;
@@ -98,5 +98,14 @@ public class UtMetadata extends ExtendedMessage {
 
     public Optional<Integer> getTotalSize() {
         return totalSize;
+    }
+
+    @Override
+    public String toString() {
+        String s = "[" + this.getClass().getSimpleName() + "] type {" + type.name() + "}, piece index {" + pieceIndex + "}";
+        if (type == Type.DATA) {
+            s += ", data {" + data.get().length + " bytes}, total size {" + totalSize.get() + "}";
+        }
+        return s;
     }
 }
