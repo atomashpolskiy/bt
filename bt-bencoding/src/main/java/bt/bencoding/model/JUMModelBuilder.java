@@ -11,11 +11,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static bt.bencoding.model.ClassUtil.cast;
 import static bt.bencoding.model.ClassUtil.castList;
+import static bt.bencoding.model.ClassUtil.read;
 import static bt.bencoding.model.ClassUtil.readNotNull;
 
 /**
@@ -32,33 +34,49 @@ public class JUMModelBuilder implements BEObjectModelBuilder<Map> {
     private static final String MAP_ENTRY_KEY_KEY = "key";
     private static final String LIST_ELEMENTS_KEY = "elements";
 
+    // TODO: allow defining custom types in separate files and re-use
     @Override
     public BEObjectModel buildModel(Map map) {
+        // try reading custom object type and if it's not there resort to default types
+        return readObjectModel(map).orElseGet(() -> {
+            try {
+                String sourceType = readType(map);
+                switch (sourceType) {
+                    case "dictionary": {
+                        return buildMap(map);
+                    }
+                    case "list": {
+                        return buildList(map);
+                    }
+                    case "binary": {
+                        return new BEStringModel(true, Collections.emptyList());
+                    }
+                    case "string": {
+                        return new BEStringModel(false, Collections.emptyList());
+                    }
+                    case "integer": {
+                        return new BEIntegerModel(Collections.emptyList());
+                    }
+                    default: {
+                        throw new IllegalArgumentException("Unsupported BE type: " + sourceType);
+                    }
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to build BE model", e);
+            }
+        });
+    }
 
+    private Optional<BEObjectModel> readObjectModel(Map map) {
         try {
-            String sourceType = readType(map);
-            switch (sourceType) {
-                case "dictionary": {
-                    return buildMap(map);
-                }
-                case "list": {
-                    return buildList(map);
-                }
-                case "binary": {
-                    return new BEStringModel(true, Collections.emptyList());
-                }
-                case "string": {
-                    return new BEStringModel(false, Collections.emptyList());
-                }
-                case "integer": {
-                    return new BEIntegerModel(Collections.emptyList());
-                }
-                default: {
-                    throw new IllegalArgumentException("Unsupported BE type: " + sourceType);
-                }
+            Object objectModel = read(map, Object.class, TYPE_KEY);
+            if (objectModel == null || !Map.class.isAssignableFrom(objectModel.getClass())) {
+                return Optional.empty();
+            } else {
+                return Optional.of(buildModel((Map) objectModel));
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to build BE model", e);
+            throw new RuntimeException("Failed to read type", e);
         }
     }
 

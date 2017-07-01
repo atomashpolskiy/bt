@@ -1,10 +1,10 @@
---- # schema of a basic metainfo document
+--- # schema of the info dictionary
 - datatype: &file
     type: dictionary
     entries:
       - {key: length, type: integer}
       - {key: path, type: list, elements: {type: string}}
-- datatype: &infodict
+- model:
     type: dictionary
     exclusives:
       - length
@@ -16,16 +16,3 @@
       - {key: length, type: integer}
       - {key: files, type: list, elements: *file}
       - {key: private, type: integer, required: false}
-- model:
-    type: dictionary
-    entries:
-      - {key: announce, type: string}
-      - key: announce-list
-        required: false
-        type: list
-        elements:
-          type: list
-          elements:
-            type: string
-      - key: info
-        type: *infodict

@@ -10,6 +10,7 @@ import java.net.MalformedURLException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Optional;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -32,7 +33,20 @@ public class MetadataServiceTest {
         Torrent torrent = metadataService.fromUrl(MetadataServiceTest.class.getResource("single_file.torrent"));
 
         assertHasAttributes(torrent,
-                new AnnounceKey("http://jupiter.gx/ann"), "Arch-Uni-i686.iso", 524288L, 1766, 925892608L);
+                Optional.of(new AnnounceKey("http://jupiter.gx/ann")), "Arch-Uni-i686.iso", 524288L, 1766, 925892608L);
+
+        assertNotNull(torrent.getFiles());
+        assertEquals(1, torrent.getFiles().size());
+
+        // TODO: add check for the torrent file
+    }
+
+    @Test
+    public void testBuildTorrent_SingleFile_InfoDictionaryOnly() throws Exception {
+
+        Torrent torrent = metadataService.fromUrl(MetadataServiceTest.class.getResource("single_file_info_dictionary.bin"));
+
+        assertHasAttributes(torrent, Optional.empty(), "Arch-Uni-i686.iso", 524288L, 1766, 925892608L);
 
         assertNotNull(torrent.getFiles());
         assertEquals(1, torrent.getFiles().size());
@@ -50,7 +64,7 @@ public class MetadataServiceTest {
                     Collections.singletonList("http://jupiter.gx/ann"),
                     Collections.singletonList("http://jupiter.local/announce")
             ));
-            assertHasAttributes(torrent, announceKey, "BEWARE_BACH", 4194304L, 1329, 5573061611L);
+            assertHasAttributes(torrent, Optional.of(announceKey), "BEWARE_BACH", 4194304L, 1329, 5573061611L);
 
             assertNotNull(torrent.getFiles());
             assertEquals(6, torrent.getFiles().size());
@@ -61,11 +75,17 @@ public class MetadataServiceTest {
         // TODO: add checks for all torrent files
     }
 
-    private void assertHasAttributes(Torrent torrent, AnnounceKey announceKey, String name, long chunkSize,
-                                     int chunkHashesCount, long size) throws MalformedURLException {
+    private void assertHasAttributes(Torrent torrent,
+                                     Optional<AnnounceKey> announceKey,
+                                     String name,
+                                     long chunkSize,
+                                     int chunkHashesCount,
+                                     long size) throws MalformedURLException {
 
-        assertTrue(torrent.getAnnounceKey().isPresent());
-        assertEquals(announceKey, torrent.getAnnounceKey().get());
+        if (announceKey.isPresent()) {
+            assertTrue(torrent.getAnnounceKey().isPresent());
+            assertEquals(announceKey.get(), torrent.getAnnounceKey().get());
+        }
         assertEquals(name, torrent.getName());
         assertEquals(chunkSize, torrent.getChunkSize());
 

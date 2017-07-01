@@ -11,6 +11,15 @@ import java.util.Map;
 public class ClassUtil {
 
     /**
+     * @since 1.3
+     */
+    @SuppressWarnings("rawtypes")
+    public static <T> T read(Map map, Class<T> type, Object key) throws Exception {
+        Object value = map.get(key);
+        return (value == null) ? (T) value : cast(type, key, value);
+    }
+
+    /**
      * @since 1.0
      */
     @SuppressWarnings("rawtypes")

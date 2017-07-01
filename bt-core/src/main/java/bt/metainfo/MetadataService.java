@@ -54,6 +54,7 @@ public class MetadataService implements IMetadataService {
     private ConcurrentMap<TorrentId, TorrentMetadata> metadataMap;
 
     private BEObjectModel torrentModel;
+    private BEObjectModel infodictModel;
     private Charset defaultCharset;
 
     @Inject
@@ -65,6 +66,9 @@ public class MetadataService implements IMetadataService {
         try {
             try (InputStream in = MetadataService.class.getResourceAsStream("/metainfo.yml")) {
                 this.torrentModel = new YamlBEObjectModelLoader().load(in);
+            }
+            try (InputStream in = MetadataService.class.getResourceAsStream("/infodict.yml")) {
+                this.infodictModel = new YamlBEObjectModelLoader().load(in);
             }
         } catch (IOException e) {
             throw new BtException("Failed to create metadata service", e);
@@ -105,16 +109,18 @@ public class MetadataService implements IMetadataService {
 
         ValidationResult validationResult = torrentModel.validate(metadata);;
         if (!validationResult.isSuccess()) {
-            throw new BtException("Validation failed for torrent metainfo: "
-                    + Arrays.toString(validationResult.getMessages().toArray()));
+            ValidationResult infodictValidationResult = infodictModel.validate(metadata);
+            if (!infodictValidationResult.isSuccess()) {
+                throw new BtException("Validation failed for torrent metainfo:\n1. Standard torrent model: "
+                    + Arrays.toString(validationResult.getMessages().toArray())
+                        + "\n2. Standalone info dictionary model: " + Arrays.toString(infodictValidationResult.getMessages().toArray()));
+            }
         }
 
         Map<String, BEObject<?>> root = metadata.getValue();
-        BEMap infoDictionary;
+        BEMap infoDictionary = root.containsKey(INFOMAP_KEY) ? (BEMap) root.get(INFOMAP_KEY) : metadata;
 
         try {
-
-            infoDictionary = (BEMap) root.get(INFOMAP_KEY);
             torrent.setTorrentId(TorrentId.fromBytes(CryptoUtil.getSha1Digest(infoDictionary.getContent())));
 
             Map<String, BEObject<?>> infoMap = infoDictionary.getValue();
