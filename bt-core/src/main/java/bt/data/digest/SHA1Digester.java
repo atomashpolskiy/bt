@@ -9,7 +9,7 @@ public class SHA1Digester extends JavaSecurityDigester {
         return new SHA1Digester(step);
     }
 
-    public SHA1Digester(int step) {
+    private SHA1Digester(int step) {
         super("SHA-1", step);
     }
 }
