@@ -1,6 +1,7 @@
 package bt.test.protocol;
 
 import bt.protocol.DecodingContext;
+import bt.protocol.EncodingContext;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 
@@ -46,8 +47,8 @@ public class ProtocolTest {
     private final BiPredicate<Message, Message> defaultMatcher;
 
     ProtocolTest(MessageHandler<Message> protocol,
-                         Supplier<DecodingContext> decodingContextSupplier,
-                         Map<Class<? extends Message>, BiPredicate<?, ?>> matchers) {
+                 Supplier<DecodingContext> decodingContextSupplier,
+                 Map<Class<? extends Message>, BiPredicate<?, ?>> matchers) {
         this.protocol = protocol;
         this.decodingContextSupplier = decodingContextSupplier;
         this.matchers = matchers;
@@ -150,7 +151,7 @@ public class ProtocolTest {
         ByteBuffer out = ByteBuffer.allocate(expectedBytesConsumed);
         out.mark();
         assertTrue("Protocol failed to serialize message of length: " + expectedBytesConsumed,
-                protocol.encode(decodedMessage, out));
+                protocol.encode(new EncodingContext(null), decodedMessage, out));
         assertEquals(expectedBytesConsumed, out.position());
 
         byte[] encoded = new byte[expectedBytesConsumed];

@@ -448,7 +448,7 @@ class MSEHandshakeProcessor {
 
     private MessageReaderWriter createReaderWriter(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out) {
         Supplier<Message> reader = new DefaultMessageReader(peer, channel, messageHandler, in);
-        Consumer<Message> writer = new DefaultMessageWriter(channel, messageHandler, out);
+        Consumer<Message> writer = new DefaultMessageWriter(channel, peer, messageHandler, out);
         return new DelegatingMessageReaderWriter(reader, writer);
     }
 

@@ -3,6 +3,7 @@ package bt.peerexchange;
 import bt.bencoding.BEParser;
 import bt.bencoding.model.BEMap;
 import bt.protocol.DecodingContext;
+import bt.protocol.EncodingContext;
 import bt.protocol.handler.MessageHandler;
 
 import java.io.ByteArrayOutputStream;
@@ -43,7 +44,7 @@ class PeerExchangeMessageHandler implements MessageHandler<PeerExchange> {
     }
 
     @Override
-    public boolean encode(PeerExchange message, ByteBuffer buffer) {
+    public boolean encode(EncodingContext context, PeerExchange message, ByteBuffer buffer) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try {
             message.writeTo(bos);

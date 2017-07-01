@@ -2,6 +2,7 @@ package bt.net;
 
 import bt.metainfo.TorrentId;
 import bt.protocol.Bitfield;
+import bt.protocol.EncodingContext;
 import bt.protocol.Handshake;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
@@ -56,7 +57,7 @@ public class PeerConnectionTest {
         Peer peer = mock(Peer.class);
         MessageHandler<Message> messageHandler = TEST.getProtocol();
         Supplier<Message> reader = new DefaultMessageReader(peer, clientChannel, messageHandler, BUFFER_SIZE);
-        Consumer<Message> writer = new DefaultMessageWriter(clientChannel, messageHandler, BUFFER_SIZE);
+        Consumer<Message> writer = new DefaultMessageWriter(clientChannel, peer, messageHandler, BUFFER_SIZE);
         MessageReaderWriter readerWriter = new DelegatingMessageReaderWriter(reader, writer);
         PeerConnection connection = new DefaultPeerConnection(peer, clientChannel, readerWriter);
 
@@ -120,7 +121,7 @@ public class PeerConnectionTest {
 
         public void writeMessage(Message message) throws InvalidMessageException, IOException {
             ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-            assertTrue("Protocol failed to serialize message", TEST.getProtocol().encode(message, buffer));
+            assertTrue("Protocol failed to serialize message", TEST.getProtocol().encode(new EncodingContext(null), message, buffer));
             buffer.flip();
             synchronized (lock) {
                 clientSocket.write(buffer);

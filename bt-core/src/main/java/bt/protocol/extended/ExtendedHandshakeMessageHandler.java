@@ -7,6 +7,7 @@ import bt.bencoding.model.BEInteger;
 import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.net.Peer;
+import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.DecodingContext;
 import bt.protocol.handler.MessageHandler;
@@ -67,6 +68,11 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
         }
     }
 
+    Map<Integer, String> getPeerTypeMapping(Peer peer) {
+        Map<Integer, String> mapping = peerTypeMappings.get(peer);
+        return (mapping == null) ? Collections.emptyMap() : Collections.unmodifiableMap(mapping);
+    }
+
     private Map<Integer, String> mergeMappings(Map<Integer, String> existing, Map<String, BEObject> changes) {
 
         for (Map.Entry<String, BEObject> entry : changes.entrySet()) {
@@ -110,7 +116,7 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
     }
 
     @Override
-    public boolean encode(ExtendedHandshake message, ByteBuffer buffer) {
+    public boolean encode(EncodingContext context, ExtendedHandshake message, ByteBuffer buffer) {
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {

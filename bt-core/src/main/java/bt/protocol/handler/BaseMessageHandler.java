@@ -1,6 +1,7 @@
 package bt.protocol.handler;
 
 import bt.BtException;
+import bt.protocol.EncodingContext;
 import bt.protocol.Message;
 import bt.protocol.DecodingContext;
 import bt.protocol.StandardBittorrentProtocol;
@@ -22,7 +23,7 @@ import static bt.protocol.StandardBittorrentProtocol.MESSAGE_TYPE_SIZE;
 public abstract class BaseMessageHandler<T extends Message> implements MessageHandler<T> {
 
     @Override
-    public boolean encode(T message, ByteBuffer buffer) {
+    public boolean encode(EncodingContext context, T message, ByteBuffer buffer) {
 
         if (buffer.remaining() < MESSAGE_PREFIX_SIZE) {
             return false;
@@ -30,7 +31,7 @@ public abstract class BaseMessageHandler<T extends Message> implements MessageHa
 
         int begin = buffer.position();
         buffer.position(begin + MESSAGE_PREFIX_SIZE);
-        if (doEncode(message, buffer)) {
+        if (doEncode(context, message, buffer)) {
             int end = buffer.position();
             int payloadLength = end - begin - MESSAGE_PREFIX_SIZE;
             if (payloadLength < 0) {
@@ -51,6 +52,7 @@ public abstract class BaseMessageHandler<T extends Message> implements MessageHa
      * Encode the payload of a message (excluding message prefix -- see {@link StandardBittorrentProtocol#MESSAGE_PREFIX_SIZE})
      * and write it into the provided buffer.
      *
+     * @param context Encoding context
      * @param buffer Byte buffer to write to.
      *               Encoded message should be placed into the buffer starting with its current position.
      *               This method should check if the buffer has sufficient space available, and return false
@@ -58,9 +60,9 @@ public abstract class BaseMessageHandler<T extends Message> implements MessageHa
      *               After this method returns, the buffer's {@link Buffer#position()} is used
      *               to calculate the size of message's payload, which is then specified in the message's prefix.
      * @return true if message has been successfully encoded and fully written into the provided buffer
-     * @since 1.0
+     * @since 1.3
      */
-    protected abstract boolean doEncode(T message, ByteBuffer buffer);
+    protected abstract boolean doEncode(EncodingContext context, T message, ByteBuffer buffer);
 
     @Override
     public int decode(DecodingContext context, ByteBuffer buffer) {

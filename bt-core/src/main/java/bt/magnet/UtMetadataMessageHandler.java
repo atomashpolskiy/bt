@@ -5,6 +5,7 @@ import bt.bencoding.model.BEInteger;
 import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.protocol.DecodingContext;
+import bt.protocol.EncodingContext;
 import bt.protocol.handler.MessageHandler;
 
 import java.io.ByteArrayOutputStream;
@@ -21,7 +22,7 @@ public class UtMetadataMessageHandler implements MessageHandler<UtMetadata> {
     private final Collection<Class<? extends UtMetadata>> supportedTypes = Collections.singleton(UtMetadata.class);
 
     @Override
-    public boolean encode(UtMetadata message, ByteBuffer buffer) {
+    public boolean encode(EncodingContext context, UtMetadata message, ByteBuffer buffer) {
         boolean encoded = false;
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
             writeMessage(message, bos);

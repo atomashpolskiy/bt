@@ -2,6 +2,7 @@ package bt.protocol.extended;
 
 import bt.BtException;
 import bt.module.ExtendedMessageHandlers;
+import bt.protocol.EncodingContext;
 import bt.protocol.handler.BaseMessageHandler;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
@@ -34,7 +35,7 @@ public class ExtendedProtocol extends BaseMessageHandler<ExtendedMessage> {
 
     private static final int HANDSHAKE_TYPE_ID = 0;
 
-    private MessageHandler<ExtendedHandshake> extendedHandshakeHandler;
+    private ExtendedHandshakeMessageHandler extendedHandshakeHandler;
 
     private Map<Class<? extends ExtendedMessage>, MessageHandler<? extends ExtendedMessage>> handlers;
     private Map<String, Class<? extends ExtendedMessage>> uniqueTypes;
@@ -124,13 +125,13 @@ public class ExtendedProtocol extends BaseMessageHandler<ExtendedMessage> {
     }
 
     @Override
-    public boolean doEncode(ExtendedMessage message, ByteBuffer buffer) {
+    public boolean doEncode(EncodingContext context, ExtendedMessage message, ByteBuffer buffer) {
         Class<? extends Message> messageType = message.getClass();
-        return doEncode(message, messageType, buffer);
+        return doEncode(context, message, messageType, buffer);
     }
 
     @SuppressWarnings("unchecked")
-    private <T extends Message> boolean doEncode(Message message, Class<T> messageType, ByteBuffer buffer) {
+    private <T extends Message> boolean doEncode(EncodingContext context, Message message, Class<T> messageType, ByteBuffer buffer) {
 
         if (!buffer.hasRemaining()) {
             return false;
@@ -140,11 +141,23 @@ public class ExtendedProtocol extends BaseMessageHandler<ExtendedMessage> {
         if (ExtendedHandshake.class.equals(messageType)) {
             buffer.put((byte) HANDSHAKE_TYPE_ID);
         } else {
-            buffer.put(messageTypeMapping.getIdForTypeName(
-                    messageTypeMapping.getTypeNameForJavaType(messageType)).byteValue());
+            String typeName = messageTypeMapping.getTypeNameForJavaType(messageType);
+            if (typeName == null) {
+                throw new IllegalStateException("Unknown message type: " + messageType.getName());
+            }
+            Integer typeId = null;
+            for (Map.Entry<Integer, String> e : extendedHandshakeHandler.getPeerTypeMapping(context.getPeer()).entrySet()) {
+                if (e.getValue().equals(typeName)) {
+                    typeId = e.getKey();
+                }
+            }
+            if (typeId == null) {
+                throw new IllegalStateException("Peer does not support extension message: " + typeName);
+            }
+            buffer.put(typeId.byteValue());
         }
 
-        boolean encoded = ((MessageHandler<T>) handlers.get(messageType)).encode((T) message, buffer);
+        boolean encoded = ((MessageHandler<T>) handlers.get(messageType)).encode(context, (T) message, buffer);
         if (!encoded) {
             buffer.position(begin);
         }

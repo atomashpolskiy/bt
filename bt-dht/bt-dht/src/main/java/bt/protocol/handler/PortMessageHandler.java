@@ -2,6 +2,7 @@ package bt.protocol.handler;
 
 import bt.BtException;
 import bt.protocol.DecodingContext;
+import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Port;
 import bt.protocol.Protocols;
@@ -31,7 +32,7 @@ public final class PortMessageHandler extends UniqueMessageHandler<Port> {
     }
 
     @Override
-    public boolean doEncode(Port message, ByteBuffer buffer) {
+    public boolean doEncode(EncodingContext context, Port message, ByteBuffer buffer) {
         return writePort(message.getPort(), buffer);
     }
 

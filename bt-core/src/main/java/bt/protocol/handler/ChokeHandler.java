@@ -2,6 +2,7 @@ package bt.protocol.handler;
 
 import bt.protocol.Choke;
 import bt.protocol.DecodingContext;
+import bt.protocol.EncodingContext;
 
 import java.nio.ByteBuffer;
 
@@ -21,7 +22,7 @@ public final class ChokeHandler extends UniqueMessageHandler<Choke> {
     }
 
     @Override
-    public boolean doEncode(Choke message, ByteBuffer buffer) {
+    public boolean doEncode(EncodingContext context, Choke message, ByteBuffer buffer) {
         return true;
     }
 }

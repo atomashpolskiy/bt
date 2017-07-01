@@ -1,5 +1,6 @@
 package bt.protocol.handler;
 
+import bt.protocol.EncodingContext;
 import bt.protocol.Have;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.DecodingContext;
@@ -23,7 +24,7 @@ public final class HaveHandler extends UniqueMessageHandler<Have> {
     }
 
     @Override
-    public boolean doEncode(Have message, ByteBuffer buffer) {
+    public boolean doEncode(EncodingContext context, Have message, ByteBuffer buffer) {
         return writeHave(message.getPieceIndex(), buffer);
     }
 

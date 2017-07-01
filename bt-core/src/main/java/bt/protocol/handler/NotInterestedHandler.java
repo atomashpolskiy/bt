@@ -1,6 +1,7 @@
 package bt.protocol.handler;
 
 import bt.protocol.DecodingContext;
+import bt.protocol.EncodingContext;
 import bt.protocol.NotInterested;
 
 import java.nio.ByteBuffer;
@@ -21,7 +22,7 @@ public final class NotInterestedHandler extends UniqueMessageHandler<NotInterest
     }
 
     @Override
-    public boolean doEncode(NotInterested message, ByteBuffer buffer) {
+    public boolean doEncode(EncodingContext context, NotInterested message, ByteBuffer buffer) {
         return true;
     }
 }

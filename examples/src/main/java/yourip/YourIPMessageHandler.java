@@ -3,6 +3,7 @@ package yourip;
 import bt.bencoding.BEParser;
 import bt.bencoding.model.BEMap;
 import bt.protocol.DecodingContext;
+import bt.protocol.EncodingContext;
 import bt.protocol.handler.MessageHandler;
 
 import java.io.ByteArrayOutputStream;
@@ -15,7 +16,7 @@ import java.util.Collections;
 public class YourIPMessageHandler implements MessageHandler<YourIP> {
 
     @Override
-    public boolean encode(YourIP message, ByteBuffer buffer) {
+    public boolean encode(EncodingContext context, YourIP message, ByteBuffer buffer) {
         boolean encoded = false;
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
             message.writeTo(bos);

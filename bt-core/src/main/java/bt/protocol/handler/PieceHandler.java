@@ -1,5 +1,6 @@
 package bt.protocol.handler;
 
+import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.DecodingContext;
 import bt.protocol.Piece;
@@ -21,7 +22,7 @@ public final class PieceHandler extends UniqueMessageHandler<Piece> {
     }
 
     @Override
-    public boolean doEncode(Piece message, ByteBuffer buffer) {
+    public boolean doEncode(EncodingContext context, Piece message, ByteBuffer buffer) {
         return writePiece(message.getPieceIndex(), message.getOffset(), message.getBlock(), buffer);
     }
 

@@ -246,7 +246,7 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
 
     @SuppressWarnings("unchecked")
     @Override
-    public final boolean encode(Message message, ByteBuffer buffer) {
+    public final boolean encode(EncodingContext context, Message message, ByteBuffer buffer) {
 
         Objects.requireNonNull(buffer);
         Integer messageId = idMap.get(Objects.requireNonNull(message).getClass());
@@ -262,7 +262,7 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
         if (messageId == null) {
             throw new InvalidMessageException("Unknown message type: " + message.getClass().getSimpleName());
         }
-        return ((MessageHandler<Message>)handlers.get(messageId)).encode(message, buffer);
+        return ((MessageHandler<Message>)handlers.get(messageId)).encode(context, message, buffer);
     }
 
     // keep-alive: <len=0000>

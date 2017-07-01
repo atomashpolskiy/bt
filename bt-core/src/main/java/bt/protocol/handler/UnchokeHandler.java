@@ -1,6 +1,7 @@
 package bt.protocol.handler;
 
 import bt.protocol.DecodingContext;
+import bt.protocol.EncodingContext;
 import bt.protocol.Unchoke;
 
 import java.nio.ByteBuffer;
@@ -21,7 +22,7 @@ public final class UnchokeHandler extends UniqueMessageHandler<Unchoke> {
     }
 
     @Override
-    public boolean doEncode(Unchoke message, ByteBuffer buffer) {
+    public boolean doEncode(EncodingContext context, Unchoke message, ByteBuffer buffer) {
         return true;
     }
 }

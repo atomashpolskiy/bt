@@ -1,8 +1,9 @@
 package bt.protocol.handler;
 
+import bt.protocol.DecodingContext;
+import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
-import bt.protocol.DecodingContext;
 import bt.protocol.Protocol;
 
 import java.nio.ByteBuffer;
@@ -19,15 +20,16 @@ public interface MessageHandler<T extends Message> extends Protocol<T> {
     /**
      * Tries to encode the provided message and place the result into the byte buffer.
      *
+     * @param context Encoding context
      * @param buffer Byte buffer of arbitrary capacity.
      *               Encoded message should be placed into the buffer starting with its current position.
      *               Protocol should check if the buffer has sufficient space available, and return false
      *               if it's not the case.
      * @return true if message has been successfully encoded and fully written into the provided buffer
      * @throws InvalidMessageException if message type is not supported or the message is invalid
-     * @since 1.0
+     * @since 1.3
      */
-    boolean encode(T message, ByteBuffer buffer);
+    boolean encode(EncodingContext context, T message, ByteBuffer buffer);
 
     /**
      * Tries to decode message from the byte buffer. If decoding is successful, then the result is set

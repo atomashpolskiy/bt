@@ -1,6 +1,7 @@
 package bt.protocol.handler;
 
 import bt.protocol.Cancel;
+import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.DecodingContext;
 
@@ -23,7 +24,7 @@ public final class CancelHandler extends UniqueMessageHandler<Cancel> {
     }
 
     @Override
-    public boolean doEncode(Cancel message, ByteBuffer buffer) {
+    public boolean doEncode(EncodingContext context, Cancel message, ByteBuffer buffer) {
         return writeCancel(message.getPieceIndex(), message.getOffset(), message.getLength(), buffer);
     }
 

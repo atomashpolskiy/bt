@@ -2,6 +2,7 @@ package bt.protocol.handler;
 
 import bt.protocol.Bitfield;
 import bt.protocol.DecodingContext;
+import bt.protocol.EncodingContext;
 
 import java.nio.ByteBuffer;
 
@@ -17,7 +18,7 @@ public final class BitfieldHandler extends UniqueMessageHandler<Bitfield> {
     }
 
     @Override
-    public boolean doEncode(Bitfield message, ByteBuffer buffer) {
+    public boolean doEncode(EncodingContext context, Bitfield message, ByteBuffer buffer) {
         if (buffer.remaining() < message.getBitfield().length) {
             return false;
         }

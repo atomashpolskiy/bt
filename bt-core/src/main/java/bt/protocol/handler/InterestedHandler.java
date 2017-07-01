@@ -1,5 +1,6 @@
 package bt.protocol.handler;
 
+import bt.protocol.EncodingContext;
 import bt.protocol.Interested;
 import bt.protocol.DecodingContext;
 
@@ -21,7 +22,7 @@ public final class InterestedHandler extends UniqueMessageHandler<Interested> {
     }
 
     @Override
-    public boolean doEncode(Interested message, ByteBuffer buffer) {
+    public boolean doEncode(EncodingContext context, Interested message, ByteBuffer buffer) {
         return true;
     }
 }

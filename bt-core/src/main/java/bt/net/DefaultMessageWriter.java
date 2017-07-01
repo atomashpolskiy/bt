@@ -1,6 +1,7 @@
 package bt.net;
 
 import bt.BtException;
+import bt.protocol.EncodingContext;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 
@@ -21,6 +22,7 @@ class DefaultMessageWriter implements Consumer<Message> {
     private static final int WRITE_ATTEMPTS = 10;
 
     private final WritableByteChannel channel;
+    private final EncodingContext context;
     private final MessageHandler<Message> messageHandler;
 
     private final ByteBuffer buffer;
@@ -29,28 +31,33 @@ class DefaultMessageWriter implements Consumer<Message> {
      * Create a message writer with a private buffer
      *
      * @param channel Writable byte channel
+     * @param peer Peer
      * @param messageHandler Message encoder
      * @param bufferSize Size of the internal buffer, that will be used to store encoded but not yet sent messages.
-     * @since 1.2
+     * @since 1.3
      */
     public DefaultMessageWriter(WritableByteChannel channel,
+                                Peer peer,
                                 MessageHandler<Message> messageHandler,
                                 int bufferSize) {
-        this(channel, messageHandler, ByteBuffer.allocateDirect(bufferSize));
+        this(channel, peer, messageHandler, ByteBuffer.allocateDirect(bufferSize));
     }
 
     /**
      * Create a message writer with the provided buffer
      *
      * @param channel Writable byte channel
+     * @param peer Peer
      * @param messageHandler Message encoder
      * @param buffer Buffer, that will be used to store encoded but not yet sent messages.
      * @since 1.2
      */
     public DefaultMessageWriter(WritableByteChannel channel,
+                                Peer peer,
                                 MessageHandler<Message> messageHandler,
                                 ByteBuffer buffer) {
         this.channel = channel;
+        this.context = new EncodingContext(peer);
         this.messageHandler = messageHandler;
         this.buffer = buffer;
     }
@@ -66,7 +73,7 @@ class DefaultMessageWriter implements Consumer<Message> {
     }
 
     protected boolean writeToBuffer(Message message, ByteBuffer buffer) {
-        return messageHandler.encode(message, buffer);
+        return messageHandler.encode(context, message, buffer);
     }
 
     private void writeMessageFromBuffer() {
