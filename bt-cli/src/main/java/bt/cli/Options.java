@@ -13,6 +13,7 @@ import java.util.Arrays;
 public class Options {
 
     private static final OptionSpec<File> metainfoFileOptionSpec;
+    private static final OptionSpec<String> magnetUriOptionSpec;
     private static final OptionSpec<File> targetDirectoryOptionSpec;
     private static final OptionSpec<Void> shouldSeedOptionSpec;
     private static final OptionSpec<Void> sequentialOptionSpec;
@@ -27,8 +28,10 @@ public class Options {
             }
         };
         metainfoFileOptionSpec = parser.acceptsAll(Arrays.asList("f", "file"), "Torrent metainfo file")
-                .withRequiredArg().ofType(File.class)
-                .required();
+                .withRequiredArg().ofType(File.class);
+
+        magnetUriOptionSpec = parser.acceptsAll(Arrays.asList("m", "magnet"), "Magnet URI")
+                .withRequiredArg().ofType(String.class);
 
         targetDirectoryOptionSpec = parser.acceptsAll(Arrays.asList("d", "dir"), "Target download location")
                 .withRequiredArg().ofType(File.class)
@@ -48,6 +51,7 @@ public class Options {
         OptionSet opts = parser.parse(args);
         return new Options(
                 opts.valueOf(metainfoFileOptionSpec),
+                opts.valueOf(magnetUriOptionSpec),
                 opts.valueOf(targetDirectoryOptionSpec),
                 opts.has(shouldSeedOptionSpec),
                 opts.has(sequentialOptionSpec),
@@ -63,17 +67,20 @@ public class Options {
     }
 
     private File metainfoFile;
+    private String magnetUri;
     private File targetDirectory;
     private boolean seedAfterDownloaded;
     private boolean sequential;
     private boolean enforceEncryption;
 
     public Options(File metainfoFile,
+                   String magnetUri,
                    File targetDirectory,
                    boolean seedAfterDownloaded,
                    boolean sequential,
                    boolean enforceEncryption) {
         this.metainfoFile = metainfoFile;
+        this.magnetUri = magnetUri;
         this.targetDirectory = targetDirectory;
         this.seedAfterDownloaded = seedAfterDownloaded;
         this.sequential = sequential;
@@ -82,6 +89,10 @@ public class Options {
 
     public File getMetainfoFile() {
         return metainfoFile;
+    }
+
+    public String getMagnetUri() {
+        return magnetUri;
     }
 
     public File getTargetDirectory() {
