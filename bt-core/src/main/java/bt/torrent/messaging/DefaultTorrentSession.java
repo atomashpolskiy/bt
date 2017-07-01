@@ -2,16 +2,21 @@ package bt.torrent.messaging;
 
 import bt.data.Bitfield;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
+import bt.net.PeerActivityListener;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
+import bt.tracker.AnnounceKey;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -21,27 +26,37 @@ import java.util.stream.Collectors;
  *<p><b>Note that this class implements a service.
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
-class DefaultTorrentSession implements TorrentSession {
+class DefaultTorrentSession implements TorrentSession, PeerActivityListener {
 
-    private IPeerConnectionPool connectionPool;
-    private Torrent torrent;
-    private TorrentWorker worker;
-    private TorrentSessionState sessionState;
+    private final IPeerConnectionPool connectionPool;
+    private final TorrentId torrentId;
+    private final TorrentWorker worker;
+    private final DefaultTorrentSessionState sessionState;
 
-    private int maxPeerConnectionsPerTorrent;
+    private volatile Optional<Torrent> torrent;
+
+    private final int maxPeerConnectionsPerTorrent;
     private final AtomicBoolean condition;
 
     public DefaultTorrentSession(IPeerConnectionPool connectionPool,
                                  TorrentWorker worker,
-                                 Torrent torrent,
-                                 Bitfield bitfield,
+                                 TorrentId torrentId,
                                  int maxPeerConnectionsPerTorrent) {
         this.connectionPool = connectionPool;
-        this.torrent = torrent;
+        this.torrentId = torrentId;
         this.worker = worker;
-        this.sessionState = new DefaultTorrentSessionState(bitfield);
+        this.sessionState = new DefaultTorrentSessionState();
+        this.torrent = Optional.empty();
         this.maxPeerConnectionsPerTorrent = maxPeerConnectionsPerTorrent;
         this.condition = new AtomicBoolean(false);
+    }
+
+    void setTorrent(Torrent torrent) {
+        this.torrent = Optional.of(torrent);
+    }
+
+    void setBitfield(Bitfield bitfield) {
+        this.sessionState.setBitfield(bitfield);
     }
 
     @Override
@@ -50,7 +65,7 @@ class DefaultTorrentSession implements TorrentSession {
         // when some of the currently connected peers disconnects
         performSequentially(() -> {
             if (mightAddPeer(peer)) {
-                connectionPool.requestConnection(torrent.getTorrentId(), peer);
+                connectionPool.requestConnection(torrentId, peer);
             }
         });
     }
@@ -58,7 +73,7 @@ class DefaultTorrentSession implements TorrentSession {
     @Override
     public void onPeerConnected(TorrentId torrentId, Peer peer) {
         performSequentially(() -> {
-            if (mightAddPeer(peer) && torrent.getTorrentId().equals(torrentId)) {
+            if (mightAddPeer(peer) && this.torrentId.equals(torrentId)) {
                 worker.addPeer(peer);
             }
         });
@@ -85,12 +100,65 @@ class DefaultTorrentSession implements TorrentSession {
 
     @Override
     public Torrent getTorrent() {
-        return torrent;
+        return torrent.orElse(StubTorrent.instance());
+    }
+
+    @Override
+    public TorrentId getTorrentId() {
+        return torrentId;
     }
 
     @Override
     public TorrentSessionState getState() {
         return sessionState;
+    }
+
+    private static class StubTorrent implements Torrent {
+        private static final StubTorrent instance = new StubTorrent();
+
+        static StubTorrent instance() {
+            return instance;
+        }
+
+        @Override
+        public Optional<AnnounceKey> getAnnounceKey() {
+            return Optional.empty();
+        }
+
+        @Override
+        public TorrentId getTorrentId() {
+            return TorrentId.fromBytes(new byte[20]);
+        }
+
+        @Override
+        public String getName() {
+            return "";
+        }
+
+        @Override
+        public long getChunkSize() {
+            return 0;
+        }
+
+        @Override
+        public Iterable<byte[]> getChunkHashes() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public long getSize() {
+            return 0;
+        }
+
+        @Override
+        public List<TorrentFile> getFiles() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public boolean isPrivate() {
+            return false;
+        }
     }
 
     private class DefaultTorrentSessionState implements TorrentSessionState {
@@ -113,23 +181,26 @@ class DefaultTorrentSession implements TorrentSession {
          */
         private volatile AtomicLong uploadedToDisconnected;
 
-        private Bitfield localBitfield;
+        private volatile Optional<Bitfield> localBitfield;
 
-        DefaultTorrentSessionState(Bitfield localBitfield) {
-            this.localBitfield = localBitfield;
+        DefaultTorrentSessionState() {
             this.recentAmountsForConnectedPeers = new HashMap<>();
             this.downloadedFromDisconnected = new AtomicLong();
             this.uploadedToDisconnected = new AtomicLong();
         }
 
+        void setBitfield(Bitfield bitfield) {
+            this.localBitfield = Optional.of(bitfield);
+        }
+
         @Override
         public int getPiecesTotal() {
-            return localBitfield.getPiecesTotal();
+            return localBitfield.isPresent() ? localBitfield.get().getPiecesTotal() : 1;
         }
 
         @Override
         public int getPiecesRemaining() {
-            return localBitfield.getPiecesRemaining();
+            return localBitfield.isPresent() ? localBitfield.get().getPiecesRemaining() : 1;
         }
 
         @Override
