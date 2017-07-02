@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-class DefaultMessageRouter implements MessageRouter {
+public class DefaultMessageRouter implements MessageRouter {
 
     private MessagingAgentCompiler compiler;
 
@@ -25,11 +25,11 @@ class DefaultMessageRouter implements MessageRouter {
     // quick and dirty!
     private List<Runnable> changes;
 
-    DefaultMessageRouter() {
+    public DefaultMessageRouter() {
         this(Collections.emptyList());
     }
 
-    DefaultMessageRouter(Collection<Object> messagingAgents) {
+    public DefaultMessageRouter(Collection<Object> messagingAgents) {
         this.compiler = new MessagingAgentCompiler();
 
         this.genericConsumers = new ArrayList<>();

@@ -5,8 +5,10 @@ import bt.processor.ProcessingContext;
 import bt.processor.ProcessingStage;
 import bt.runtime.BtClient;
 import bt.torrent.TorrentDescriptor;
+import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
+import bt.torrent.stub.StubSession;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -24,10 +26,10 @@ import java.util.function.Consumer;
  */
 class DefaultClient<C extends ProcessingContext> implements BtClient {
 
+    private TorrentRegistry torrentRegistry;
+
     private ProcessingStage<C> processor;
     private C context;
-    private TorrentDescriptor delegate;
-    private TorrentSession session;
     private Optional<CompletableFuture<?>> future;
     private Optional<Consumer<TorrentSessionState>> listener;
     private Optional<ScheduledFuture<?>> listenerFuture;
@@ -35,17 +37,17 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
     private ExecutorService executor;
     private ScheduledExecutorService listenerExecutor;
 
+    private volatile boolean started;
+
     /**
      * @since 1.0
      */
     public DefaultClient(ExecutorService executor,
-                         TorrentDescriptor delegate,
-                         TorrentSession session,
+                         TorrentRegistry torrentRegistry,
                          ProcessingStage<C> processor,
                          C context) {
+        this.torrentRegistry = torrentRegistry;
         this.executor = executor;
-        this.delegate = delegate;
-        this.session = session;
         this.processor = processor;
         this.context = context;
 
@@ -56,37 +58,41 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
 
     @Override
     public CompletableFuture<?> startAsync(Consumer<TorrentSessionState> listener, long period) {
-        if (delegate.isActive()) {
+        if (started) {
             throw new BtException("Can't start -- already running");
         }
+        started = true;
 
         this.listenerExecutor = Executors.newSingleThreadScheduledExecutor();
         this.listener = Optional.of(listener);
         this.listenerFuture = Optional.of(listenerExecutor.scheduleAtFixedRate(
-                () -> listener.accept(session.getState()),
+                () -> listener.accept(getSession().getState()),
                 period, period, TimeUnit.MILLISECONDS));
 
-        return startAsync();
+        return doStartAsync();
     }
 
     @Override
     public CompletableFuture<?> startAsync() {
-        if (delegate.isActive()) {
+        if (started) {
             throw new BtException("Can't start -- already running");
         }
+        started = true;
 
+        return doStartAsync();
+    }
+
+    private CompletableFuture<?> doStartAsync() {
         CompletableFuture<?> future = doStart();
         this.future = Optional.of(future);
         return future;
     }
 
     private CompletableFuture<?> doStart() {
-        delegate.start();
-
         CompletableFuture<?> future = CompletableFuture.runAsync(
                 () -> ChainProcessor.execute(processor, context), executor);
 
-        future.whenComplete((r, t) -> listener.ifPresent(listener -> listener.accept(session.getState())))
+        future.whenComplete((r, t) -> listener.ifPresent(listener -> listener.accept(getSession().getState())))
                 .whenComplete((r, t) -> listenerFuture.ifPresent(listener -> listener.cancel(true)))
                 .whenComplete((r, t) -> listenerExecutor.shutdownNow());
 
@@ -98,7 +104,9 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
     @Override
     public void stop() {
         try {
-            delegate.stop();
+            context.getTorrentId().ifPresent(torrentId -> {
+                torrentRegistry.getDescriptor(torrentId).ifPresent(TorrentDescriptor::stop);
+            });
         } finally {
             future.ifPresent(future -> future.complete(null));
         }
@@ -106,11 +114,11 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
 
     @Override
     public TorrentSession getSession() {
-        return session;
+        return context.getSession().orElse(StubSession.instance());
     }
 
     @Override
     public boolean isStarted() {
-        return delegate.isActive();
+        return started;
     }
 }

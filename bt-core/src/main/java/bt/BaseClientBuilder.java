@@ -5,19 +5,16 @@ import bt.magnet.MagnetUri;
 import bt.magnet.MagnetUriParser;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
-import bt.metainfo.TorrentId;
 import bt.module.ClientExecutor;
 import bt.processor.ProcessingContext;
 import bt.processor.ProcessingStage;
 import bt.processor.ProcessorFactory;
+import bt.processor.magnet.MagnetContext;
 import bt.processor.torrent.TorrentContext;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
-import bt.torrent.ITorrentSessionFactory;
 import bt.torrent.PieceSelectionStrategy;
-import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
-import bt.torrent.TorrentSession;
 import bt.torrent.selector.PieceSelector;
 import bt.torrent.selector.RarestFirstSelector;
 import bt.torrent.selector.SelectorAdapter;
@@ -219,14 +216,19 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
     }
 
     private BtClient buildClient(BtRuntime runtime, Supplier<Torrent> torrentSupplier) {
-        Torrent torrent = torrentSupplier.get(); // TODO: remove this
-        TorrentDescriptor descriptor = register(torrent.getTorrentId());
-        TorrentSession session = createSession(torrent.getTorrentId());
+        TorrentContext context = new TorrentContext(pieceSelector, storage, torrentSupplier);
 
-        TorrentContext context = new TorrentContext(torrent.getTorrentId(), pieceSelector, session, storage, torrentSupplier);
+        return new RuntimeAwareClient(runtime, new DefaultClient<>(getExecutor(runtime),
+                runtime.service(TorrentRegistry.class), processor(TorrentContext.class), context));
+    }
 
-        return new RuntimeAwareClient(runtime, new DefaultClient<>(
-                getExecutor(runtime), descriptor, session, processor(TorrentContext.class), context));
+    private BtClient buildClient(BtRuntime runtime, MagnetUri magnetUri) {
+        // TODO: build session with MagnetUri instead of just torrent ID
+        // in order to fully utilize display_name, bootstrap trackers and peers
+        MagnetContext context = new MagnetContext(magnetUri, pieceSelector, storage);
+
+        return new RuntimeAwareClient(runtime, new DefaultClient<>(getExecutor(runtime),
+                runtime.service(TorrentRegistry.class), processor(MagnetContext.class), context));
     }
 
     private <C extends ProcessingContext> ProcessingStage<C> processor(Class<C> contextType) {
@@ -235,23 +237,6 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
             throw new IllegalStateException("No processors found for context type: " + contextType.getName());
         }
         return processor;
-    }
-
-    private BtClient buildClient(BtRuntime runtime, MagnetUri magnetUri) {
-        // TODO: build session with MagnetUri instead of just torrent ID
-        // in order to fully utilize display_name, bootstrap trackers and peers
-        TorrentDescriptor descriptor = register(magnetUri.getTorrentId());
-        TorrentSession session = createSession(magnetUri.getTorrentId());
-
-        return new RuntimeAwareClient(runtime, new DefaultClient(getExecutor(runtime), descriptor, session, null, null));
-    }
-
-    private TorrentSession createSession(TorrentId torrentId) {
-        return getRuntime().service(ITorrentSessionFactory.class).createSession(torrentId);
-    }
-
-    private TorrentDescriptor register(TorrentId torrentId) {
-        return getRuntime().service(TorrentRegistry.class).register(torrentId);
     }
 
     private ExecutorService getExecutor(BtRuntime runtime) {

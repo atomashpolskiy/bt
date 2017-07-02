@@ -26,11 +26,9 @@ import bt.service.IdentityService;
 import bt.service.RuntimeLifecycleBinder;
 import bt.service.VersionAwareIdentityService;
 import bt.torrent.AdhocTorrentRegistry;
-import bt.torrent.ITorrentSessionFactory;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.data.DataWorkerFactory;
 import bt.torrent.data.IDataWorkerFactory;
-import bt.torrent.messaging.TorrentSessionFactory;
 import bt.tracker.ITrackerService;
 import bt.tracker.TrackerFactory;
 import bt.tracker.TrackerService;
@@ -109,7 +107,6 @@ public class ServiceModule implements Module {
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).in(Singleton.class);
         binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).in(Singleton.class);
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
-        binder.bind(ITorrentSessionFactory.class).to(TorrentSessionFactory.class).in(Singleton.class);
         binder.bind(ProcessorFactory.class).to(TorrentProcessorFactory.class).in(Singleton.class);
 
         // TODO: register a shutdown hook in the runtime

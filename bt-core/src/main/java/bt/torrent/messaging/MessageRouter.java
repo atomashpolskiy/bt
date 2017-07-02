@@ -4,7 +4,7 @@ import bt.protocol.Message;
 
 import java.util.function.Consumer;
 
-interface MessageRouter {
+public interface MessageRouter {
 
     void consume(Message message, MessageContext context);
 

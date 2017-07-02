@@ -1,5 +1,6 @@
 package bt.processor.torrent;
 
+import bt.metainfo.Torrent;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
 
@@ -11,6 +12,8 @@ public class FetchTorrentStage extends BaseProcessingStage<TorrentContext> {
 
     @Override
     protected void doExecute(TorrentContext context) {
-        context.setTorrent(context.getTorrentSupplier().get());
+        Torrent torrent = context.getTorrentSupplier().get();
+        context.setTorrentId(torrent.getTorrentId());
+        context.setTorrent(torrent);
     }
 }

@@ -9,11 +9,11 @@ import java.util.Optional;
  *<p><b>Note that this class implements a service.
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
-class PeerWorkerFactory implements IPeerWorkerFactory {
+public class PeerWorkerFactory implements IPeerWorkerFactory {
 
-    private DefaultMessageRouter router;
+    private MessageRouter router;
 
-    PeerWorkerFactory(DefaultMessageRouter router) {
+    public PeerWorkerFactory(MessageRouter router) {
         this.router = router;
     }
 

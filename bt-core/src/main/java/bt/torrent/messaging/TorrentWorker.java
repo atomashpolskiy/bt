@@ -1,5 +1,6 @@
 package bt.torrent.messaging;
 
+import bt.data.Bitfield;
 import bt.metainfo.TorrentId;
 import bt.net.IMessageDispatcher;
 import bt.net.Peer;
@@ -8,7 +9,6 @@ import bt.protocol.Interested;
 import bt.protocol.Message;
 import bt.protocol.NotInterested;
 import bt.runtime.Config;
-import bt.data.Bitfield;
 import bt.torrent.BitfieldBasedStatistics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Supplier;
 
 /**
  * Manages peer workers.
@@ -39,50 +40,54 @@ public class TorrentWorker {
     private static final Duration UPDATE_ASSIGNMENTS_MANDATORY_INTERVAL = Duration.ofSeconds(5);
 
     private TorrentId torrentId;
-    private Bitfield bitfield;
-    private Assignments assignments;
-    private BitfieldBasedStatistics pieceStatistics;
     private IMessageDispatcher dispatcher;
     private Config config;
 
     private IPeerWorkerFactory peerWorkerFactory;
     private ConcurrentMap<Peer, PieceAnnouncingPeerWorker> peerMap;
-
-    private long lastUpdatedAssignments;
-
+    private final int MAX_CONCURRENT_ACTIVE_CONNECTIONS;
     private Map<Peer, Long> timeoutedPeers;
     private Queue<Peer> disconnectedPeers;
     private Map<Peer, Message> interestUpdates;
+    private long lastUpdatedAssignments;
 
-    private final int MAX_CONCURRENT_ACTIVE_CONNECTIONS;
+    private Supplier<Bitfield> bitfieldSupplier;
+    private Supplier<Assignments> assignmentsSupplier;
+    private Supplier<BitfieldBasedStatistics> statisticsSupplier;
 
     public TorrentWorker(TorrentId torrentId,
                          IMessageDispatcher dispatcher,
                          IPeerWorkerFactory peerWorkerFactory,
+                         Supplier<Bitfield> bitfieldSupplier,
+                         Supplier<Assignments> assignmentsSupplier,
+                         Supplier<BitfieldBasedStatistics> statisticsSupplier,
                          Config config) {
         this.torrentId = torrentId;
         this.dispatcher = dispatcher;
-        this.peerWorkerFactory = peerWorkerFactory;
         this.config = config;
 
+        this.peerWorkerFactory = peerWorkerFactory;
         this.peerMap = new ConcurrentHashMap<>();
+        this.MAX_CONCURRENT_ACTIVE_CONNECTIONS = config.getMaxConcurrentlyActivePeerConnectionsPerTorrent();
         this.timeoutedPeers = new ConcurrentHashMap<>();
         this.disconnectedPeers = new LinkedBlockingQueue<>();
         this.interestUpdates = new ConcurrentHashMap<>();
 
-        this.MAX_CONCURRENT_ACTIVE_CONNECTIONS = config.getMaxConcurrentlyActivePeerConnectionsPerTorrent();
+        this.bitfieldSupplier = bitfieldSupplier;
+        this.assignmentsSupplier = assignmentsSupplier;
+        this.statisticsSupplier = statisticsSupplier;
     }
 
-    public void setBitfield(Bitfield bitfield) {
-        this.bitfield = bitfield;
+    private Bitfield getBitfield() {
+        return bitfieldSupplier.get();
     }
 
-    public void setAssignments(Assignments assignments) {
-        this.assignments = assignments;
+    private Assignments getAssignments() {
+        return assignmentsSupplier.get();
     }
 
-    public void setPieceStatistics(BitfieldBasedStatistics pieceStatistics) {
-        this.pieceStatistics = pieceStatistics;
+    private BitfieldBasedStatistics getStatistics() {
+        return statisticsSupplier.get();
     }
 
     /**
@@ -111,12 +116,15 @@ public class TorrentWorker {
         PieceAnnouncingPeerWorker worker = getWorker(peer);
 
         Message message;
+        Bitfield bitfield = getBitfield();
+        Assignments assignments = getAssignments();
+
         if (bitfield != null && assignments != null && (bitfield.getPiecesRemaining() > 0 || assignments.count() > 0)) {
-            inspectAssignment(peer);
-            if (shouldUpdateAssignments()) {
-                processDisconnectedPeers();
+            inspectAssignment(peer, assignments);
+            if (shouldUpdateAssignments(assignments)) {
+                processDisconnectedPeers(assignments, getStatistics());
                 processTimeoutedPeers();
-                updateAssignments();
+                updateAssignments(assignments);
             }
             Message interestUpdate = interestUpdates.remove(peer);
             message = (interestUpdate == null) ? worker.get() : interestUpdate;
@@ -131,7 +139,7 @@ public class TorrentWorker {
         return Objects.requireNonNull(peerMap.get(peer), "Unknown peer: " + peer);
     }
 
-    private void inspectAssignment(Peer peer) {
+    private void inspectAssignment(Peer peer, Assignments assignments) {
         ConnectionState connectionState = getWorker(peer).getConnectionState();
         Assignment assignment = assignments.get(peer);
         boolean shouldAssign;
@@ -172,7 +180,7 @@ public class TorrentWorker {
                 }
             }
         } else if (shouldAssign) {
-            if (mightCreateMoreAssignments()) {
+            if (mightCreateMoreAssignments(assignments)) {
                 Optional<Assignment> newAssignment = assignments.assign(peer);
                 if (newAssignment.isPresent()) {
                     newAssignment.get().start(connectionState);
@@ -181,17 +189,17 @@ public class TorrentWorker {
         }
     }
 
-    private boolean shouldUpdateAssignments() {
+    private boolean shouldUpdateAssignments(Assignments assignments) {
         return (timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_OPTIONAL_INTERVAL.toMillis()
-                    && mightUseMoreAssignees())
+                    && mightUseMoreAssignees(assignments))
             || timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_MANDATORY_INTERVAL.toMillis();
     }
 
-    private boolean mightUseMoreAssignees() {
+    private boolean mightUseMoreAssignees(Assignments assignments) {
         return assignments.workersCount() < MAX_CONCURRENT_ACTIVE_CONNECTIONS;
     }
 
-    private boolean mightCreateMoreAssignments() {
+    private boolean mightCreateMoreAssignments(Assignments assignments) {
         return assignments.count() < MAX_CONCURRENT_ACTIVE_CONNECTIONS;
     }
 
@@ -199,7 +207,7 @@ public class TorrentWorker {
         return System.currentTimeMillis() - lastUpdatedAssignments;
     }
 
-    private void processDisconnectedPeers() {
+    private void processDisconnectedPeers(Assignments assignments, BitfieldBasedStatistics statistics) {
         Peer disconnectedPeer;
         while ((disconnectedPeer = disconnectedPeers.poll()) != null) {
             if (assignments != null) {
@@ -212,8 +220,8 @@ public class TorrentWorker {
                 }
             }
             timeoutedPeers.remove(disconnectedPeer);
-            if (pieceStatistics != null) {
-                pieceStatistics.removeBitfield(disconnectedPeer);
+            if (statistics != null) {
+                statistics.removeBitfield(disconnectedPeer);
             }
         }
     }
@@ -228,7 +236,7 @@ public class TorrentWorker {
         }
     }
 
-    private void updateAssignments() {
+    private void updateAssignments(Assignments assignments) {
         interestUpdates.clear();
 
         Set<Peer> ready = new HashSet<>();

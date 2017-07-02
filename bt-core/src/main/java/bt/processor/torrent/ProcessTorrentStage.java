@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 
-public class ProcessTorrentStage extends BaseProcessingStage<TorrentContext> {
+public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessingStage<C> {
 
     private TorrentRegistry torrentRegistry;
     private IDataWorkerFactory dataWorkerFactory;
@@ -34,7 +34,7 @@ public class ProcessTorrentStage extends BaseProcessingStage<TorrentContext> {
     private ExecutorService executor;
     private Config config;
 
-    public ProcessTorrentStage(ProcessingStage<TorrentContext> next,
+    public ProcessTorrentStage(ProcessingStage<C> next,
                                TorrentRegistry torrentRegistry,
                                IDataWorkerFactory dataWorkerFactory,
                                ITrackerService trackerService,
@@ -49,8 +49,9 @@ public class ProcessTorrentStage extends BaseProcessingStage<TorrentContext> {
     }
 
     @Override
-    protected void doExecute(TorrentContext context) {
-        TorrentDescriptor descriptor = getDescriptor(context.getTorrentId());
+    protected void doExecute(C context) {
+        TorrentDescriptor descriptor = getDescriptor(context.getTorrentId().get());
+        descriptor.start();
 
         Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();
         BitfieldBasedStatistics pieceStatistics = new BitfieldBasedStatistics(bitfield);
@@ -59,24 +60,24 @@ public class ProcessTorrentStage extends BaseProcessingStage<TorrentContext> {
         DataWorker dataWorker = createDataWorker(descriptor);
         Assignments assignments = new Assignments(bitfield, selector, pieceStatistics, config);
 
-        context.getSession().registerMessagingAgent(GenericConsumer.consumer());
-        context.getSession().registerMessagingAgent(new BitfieldConsumer(bitfield, pieceStatistics));
-        context.getSession().registerMessagingAgent(new PieceConsumer(bitfield, dataWorker));
-        context.getSession().registerMessagingAgent(new PeerRequestConsumer(dataWorker));
-        context.getSession().registerMessagingAgent(new RequestProducer(descriptor.getDataDescriptor()));
+        context.getRouter().registerMessagingAgent(GenericConsumer.consumer());
+        context.getRouter().registerMessagingAgent(new BitfieldConsumer(bitfield, pieceStatistics));
+        context.getRouter().registerMessagingAgent(new PieceConsumer(bitfield, dataWorker));
+        context.getRouter().registerMessagingAgent(new PeerRequestConsumer(dataWorker));
+        context.getRouter().registerMessagingAgent(new RequestProducer(descriptor.getDataDescriptor()));
 
-        context.getTorrentWorker().setBitfield(bitfield);
-        context.getTorrentWorker().setAssignments(assignments);
-        context.getTorrentWorker().setPieceStatistics(pieceStatistics);
+        context.setBitfield(bitfield);
+        context.setAssignments(assignments);
+        context.setPieceStatistics(pieceStatistics);
 
-        TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, context.getTorrent());
+        TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, context.getTorrent().get());
         announcer.start();
 
         CompletableFuture.runAsync(() -> {
             while (descriptor.isActive()) {
                 try {
                     Thread.sleep(1000);
-                    if (context.getSession().getState().getPiecesRemaining() == 0) {
+                    if (context.getSession().get().getState().getPiecesRemaining() == 0) {
                         descriptor.complete();
                         announcer.complete();
                         return;
@@ -98,6 +99,7 @@ public class ProcessTorrentStage extends BaseProcessingStage<TorrentContext> {
         // TODO: misbehaving... but currently no way to know if runtime automatic shutdown was disabled
         // previously this was called via BtRuntime -> BtClient -> TorrentDescriptor
 //        announcer.stop();
+        descriptor.stop();
     }
 
     private TorrentDescriptor getDescriptor(TorrentId torrentId) {
