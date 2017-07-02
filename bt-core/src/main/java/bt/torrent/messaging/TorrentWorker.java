@@ -57,18 +57,10 @@ class TorrentWorker {
     private final int MAX_CONCURRENT_ACTIVE_CONNECTIONS;
 
     public TorrentWorker(TorrentId torrentId,
-                         Bitfield bitfield,
-                         Assignments assignments,
-                         BitfieldBasedStatistics pieceStatistics,
                          IMessageDispatcher dispatcher,
-                         IPeerWorkerFactory peerWorkerFactory,
                          Config config) {
         this.torrentId = torrentId;
-        this.bitfield = bitfield;
-        this.assignments = assignments;
-        this.pieceStatistics = pieceStatistics;
         this.dispatcher = dispatcher;
-        this.peerWorkerFactory = peerWorkerFactory;
         this.config = config;
 
         this.peerMap = new ConcurrentHashMap<>();
@@ -77,6 +69,22 @@ class TorrentWorker {
         this.interestUpdates = new ConcurrentHashMap<>();
 
         this.MAX_CONCURRENT_ACTIVE_CONNECTIONS = config.getMaxConcurrentlyActivePeerConnectionsPerTorrent();
+    }
+
+    void setBitfield(Bitfield bitfield) {
+        this.bitfield = bitfield;
+    }
+
+    void setAssignments(Assignments assignments) {
+        this.assignments = assignments;
+    }
+
+    void setPieceStatistics(BitfieldBasedStatistics pieceStatistics) {
+        this.pieceStatistics = pieceStatistics;
+    }
+
+    void setPeerWorkerFactory(IPeerWorkerFactory peerWorkerFactory) {
+        this.peerWorkerFactory = peerWorkerFactory;
     }
 
     /**
@@ -105,7 +113,7 @@ class TorrentWorker {
         PieceAnnouncingPeerWorker worker = getWorker(peer);
 
         Message message;
-        if (bitfield.getPiecesRemaining() > 0 || assignments.count() > 0) {
+        if (bitfield != null && (bitfield.getPiecesRemaining() > 0 || assignments.count() > 0)) {
             inspectAssignment(peer);
             if (shouldUpdateAssignments()) {
                 processDisconnectedPeers();
@@ -196,15 +204,19 @@ class TorrentWorker {
     private void processDisconnectedPeers() {
         Peer disconnectedPeer;
         while ((disconnectedPeer = disconnectedPeers.poll()) != null) {
-            Assignment assignment = assignments.get(disconnectedPeer);
-            if (assignment != null) {
-                assignments.remove(assignment);
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Peer assignment removed due to DISCONNECT: peer {}, assignment {}", disconnectedPeer, assignment);
+            if (assignments != null) {
+                Assignment assignment = assignments.get(disconnectedPeer);
+                if (assignment != null) {
+                    assignments.remove(assignment);
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Peer assignment removed due to DISCONNECT: peer {}, assignment {}", disconnectedPeer, assignment);
+                    }
                 }
             }
             timeoutedPeers.remove(disconnectedPeer);
-            pieceStatistics.removeBitfield(disconnectedPeer);
+            if (pieceStatistics != null) {
+                pieceStatistics.removeBitfield(disconnectedPeer);
+            }
         }
     }
 

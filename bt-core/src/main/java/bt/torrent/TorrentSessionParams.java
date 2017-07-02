@@ -1,5 +1,6 @@
 package bt.torrent;
 
+import bt.data.Storage;
 import bt.torrent.selector.PieceSelector;
 
 /**
@@ -11,6 +12,7 @@ public class TorrentSessionParams {
 
     private PieceSelectionStrategy selectionStrategy;
     private PieceSelector selector;
+    private Storage storage;
 
     /**
      * Set preferred piece selection strategy.
@@ -46,5 +48,22 @@ public class TorrentSessionParams {
      */
     public PieceSelector getPieceSelector() {
         return selector;
+    }
+
+    /**
+     * Set storage.
+     *
+     * @since 1.3
+     */
+    public void setStorage(Storage storage) {
+        this.storage = storage;
+    }
+
+    /**
+     * @see #setStorage(Storage)
+     * @since 1.3
+     */
+    public Storage getStorage() {
+        return storage;
     }
 }

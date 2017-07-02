@@ -29,7 +29,8 @@ public class BitfieldConnectionHandler implements HandshakeHandler {
     @Override
     public void processIncomingHandshake(PeerConnection connection, Handshake peerHandshake) {
         Optional<TorrentDescriptor> descriptorOptional = torrentRegistry.getDescriptor(connection.getTorrentId());
-        if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()) {
+        if (descriptorOptional.isPresent() && descriptorOptional.get().isActive()
+                && descriptorOptional.get().getDataDescriptor() != null) {
             Bitfield bitfield = descriptorOptional.get().getDataDescriptor().getBitfield();
 
             if (bitfield.getPiecesComplete() > 0) {

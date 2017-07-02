@@ -1,5 +1,6 @@
 package bt.module;
 
+import bt.magnet.UtMetadataMessageHandler;
 import bt.net.BitfieldConnectionHandler;
 import bt.net.ConnectionHandlerFactory;
 import bt.net.HandshakeHandler;
@@ -95,6 +96,9 @@ public class ProtocolModule implements Module {
                 .addBinding(ExtendedProtocol.EXTENDED_MESSAGE_ID).to(ExtendedProtocol.class);
 
         binder.bind(ExtendedHandshake.class).toProvider(ExtendedHandshakeProvider.class).in(Singleton.class);
+
+        ProtocolModule.contributeExtendedMessageHandler(binder)
+                .addBinding("ut_metadata").to(UtMetadataMessageHandler.class);
     }
 
     @Provides

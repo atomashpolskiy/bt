@@ -1,7 +1,7 @@
 package bt.torrent;
 
-import bt.data.Storage;
 import bt.data.IDataDescriptorFactory;
+import bt.data.Storage;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.service.IRuntimeLifecycleBinder;
@@ -10,6 +10,7 @@ import com.google.inject.Inject;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,12 +48,12 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
 
     @Override
     public Collection<Torrent> getTorrents() {
-        return torrents.values();
+        return Collections.unmodifiableCollection(torrents.values());
     }
 
     @Override
     public Collection<TorrentId> getTorrentIds() {
-        return torrentIds;
+        return Collections.unmodifiableCollection(torrentIds);
     }
 
     @Override
@@ -78,25 +79,59 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
     @Override
     public TorrentDescriptor register(Torrent torrent, Storage storage) {
         TorrentId torrentId = torrent.getTorrentId();
-        return getDescriptor(torrentId).orElseGet(() -> {
+        Optional<TorrentDescriptor> descriptorOptional = getDescriptor(torrentId);
+        if (descriptorOptional.isPresent()) {
+            TorrentDescriptor descriptor = descriptorOptional.get();
+            if (descriptor.getDataDescriptor() == null) {
+                descriptor.setDataDescriptor(dataDescriptorFactory.createDescriptor(torrent, storage));
+            }
+            return descriptor;
+        } else {
             TorrentDescriptor descriptor = new DefaultTorrentDescriptor(trackerService, torrent,
                     dataDescriptorFactory.createDescriptor(torrent, storage));
             TorrentDescriptor existing = descriptors.putIfAbsent(torrentId, descriptor);
             if (existing != null) {
                 descriptor = existing;
             } else {
+                torrentIds.add(torrentId);
+                torrents.putIfAbsent(torrentId, torrent);
+
                 final TorrentDescriptor tDescriptor = descriptor;
                 lifecycleBinder.onShutdown("Closing torrent data descriptor: " + tDescriptor.getDataDescriptor().toString(), () -> {
-                    try {
-                        tDescriptor.getDataDescriptor().close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    if (tDescriptor.getDataDescriptor() != null) {
+                        try {
+                            tDescriptor.getDataDescriptor().close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 });
             }
+            return descriptor;
+        }
+    }
 
-            torrentIds.add(torrentId);
-            torrents.putIfAbsent(torrentId, torrent);
+    @Override
+    public TorrentDescriptor register(TorrentId torrentId) {
+        return getDescriptor(torrentId).orElseGet(() -> {
+            TorrentDescriptor descriptor = new DefaultTorrentDescriptor();
+            TorrentDescriptor existing = descriptors.putIfAbsent(torrentId, descriptor);
+            if (existing != null) {
+                descriptor = existing;
+            } else {
+                torrentIds.add(torrentId);
+
+                final TorrentDescriptor tDescriptor = descriptor;
+                lifecycleBinder.onShutdown("Closing torrent data descriptor", () -> {
+                    if (tDescriptor.getDataDescriptor() != null) {
+                        try {
+                            tDescriptor.getDataDescriptor().close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            }
 
             return descriptor;
         });

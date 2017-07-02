@@ -1,8 +1,11 @@
 package bt;
 
 import bt.data.Storage;
+import bt.magnet.MagnetUri;
+import bt.magnet.MagnetUriParser;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.module.ClientExecutor;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
@@ -31,8 +34,8 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
 
     private Storage storage;
 
-    private URL torrentUrl;
     private Supplier<Torrent> torrentSupplier;
+    private MagnetUri magnetUri;
 
     private PieceSelectionStrategy pieceSelectionStrategy;
     private PieceSelector pieceSelector;
@@ -66,9 +69,14 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
      */
     @SuppressWarnings("unchecked")
     public B torrent(URL torrentUrl) {
-        this.torrentUrl = Objects.requireNonNull(torrentUrl, "Missing torrent file URL");
-        this.torrentSupplier = null;
+        Objects.requireNonNull(torrentUrl, "Missing torrent file URL");
+        this.torrentSupplier = () -> fetchTorrentFromUrl(torrentUrl);
+        this.magnetUri = null;
         return (B) this;
+    }
+
+    private Torrent fetchTorrentFromUrl(URL metainfoUrl) {
+        return getRuntime().service(IMetadataService.class).fromUrl(metainfoUrl);
     }
 
     /**
@@ -80,7 +88,35 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
     @SuppressWarnings("unchecked")
     public B torrent(Supplier<Torrent> torrentSupplier) {
         this.torrentSupplier = Objects.requireNonNull(torrentSupplier, "Missing torrent supplier");
-        this.torrentUrl = null;
+        this.magnetUri = null;
+        return (B) this;
+    }
+
+    /**
+     * Set magnet URI in BEP-9 format
+     *
+     * @param magnetUri Magnet URI
+     * @see MagnetUriParser
+     * @since 1.3
+     */
+    @SuppressWarnings("unchecked")
+    public B magnet(String magnetUri) {
+        this.magnetUri = new MagnetUriParser().parse(magnetUri);
+        this.torrentSupplier = null;
+        return (B) this;
+    }
+
+    /**
+     * Set magnet URI
+     *
+     * @param magnetUri Magnet URI
+     * @see MagnetUriParser
+     * @since 1.3
+     */
+    @SuppressWarnings("unchecked")
+    public B magnet(MagnetUri magnetUri) {
+        this.magnetUri = Objects.requireNonNull(magnetUri, "Missing magnet URI");
+        this.torrentSupplier = null;
         return (B) this;
     }
 
@@ -157,46 +193,44 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
     /**
      * @since 1.1
      */
+    protected abstract BtRuntime getRuntime();
+
+    /**
+     * @since 1.1
+     */
     public BtClient build() {
         Objects.requireNonNull(storage, "Missing data storage");
 
         BtRuntime runtime = getRuntime();
         Objects.requireNonNull(runtime, "Missing runtime");
 
-        Supplier<Torrent> torrentSupplier;
-        if (torrentUrl == null) {
-            torrentSupplier = Objects.requireNonNull(this.torrentSupplier, "Missing torrent supplier or torrent URL");
+        Supplier<BtClient> clientSupplier;
+        if (torrentSupplier != null) {
+            clientSupplier = () -> buildClient(runtime, torrentSupplier);
+        } else if (this.magnetUri != null) {
+            clientSupplier = () -> buildClient(runtime, magnetUri);
         } else {
-            torrentSupplier = () -> fetchTorrentFromUrl(runtime, torrentUrl);
+            throw new IllegalStateException("Missing torrent supplier, torrent URL or magnet URI");
         }
 
-        Supplier<BtClient> clientSupplier = () -> buildClient(runtime, torrentSupplier);
         return shouldInitEagerly ? clientSupplier.get() : new LazyClient(clientSupplier);
     }
 
-    /**
-     * @since 1.1
-     */
-    protected abstract BtRuntime getRuntime();
-
     private BtClient buildClient(BtRuntime runtime, Supplier<Torrent> torrentSupplier) {
         Torrent torrent = torrentSupplier.get();
-        TorrentDescriptor descriptor = getTorrentDescriptor(runtime, torrent);
-
-        ITorrentSessionFactory torrentSessionFactory = runtime.service(ITorrentSessionFactory.class);
-        TorrentSession session = torrentSessionFactory.createSession(torrent, getSessionParams());
+        TorrentDescriptor descriptor = register(torrent.getTorrentId());
+        TorrentSession session = createSession(torrent, getSessionParams());
 
         return new RuntimeAwareClient(runtime, new DefaultClient(getExecutor(runtime), descriptor, session));
     }
 
-    private Torrent fetchTorrentFromUrl(BtRuntime runtime, URL metainfoUrl) {
-        IMetadataService metadataService = runtime.service(IMetadataService.class);
-        return metadataService.fromUrl(metainfoUrl);
-    }
+    private BtClient buildClient(BtRuntime runtime, MagnetUri magnetUri) {
+        // TODO: build session with MagnetUri instead of just torrent ID
+        // in order to fully utilize display_name, bootstrap trackers and peers
+        TorrentDescriptor descriptor = register(magnetUri.getTorrentId());
+        TorrentSession session = createSession(magnetUri.getTorrentId(), getSessionParams());
 
-    private TorrentDescriptor getTorrentDescriptor(BtRuntime runtime, Torrent torrent) {
-        TorrentRegistry torrentRegistry = runtime.service(TorrentRegistry.class);
-        return torrentRegistry.register(torrent, storage);
+        return new RuntimeAwareClient(runtime, new DefaultClient(getExecutor(runtime), descriptor, session));
     }
 
     private TorrentSessionParams getSessionParams() {
@@ -206,7 +240,20 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
         } else {
             params.setSelectionStrategy(pieceSelectionStrategy);
         }
+        params.setStorage(storage);
         return params;
+    }
+
+    private TorrentSession createSession(Torrent torrent, TorrentSessionParams sessionParams) {
+        return getRuntime().service(ITorrentSessionFactory.class).createSession(torrent, sessionParams);
+    }
+
+    private TorrentSession createSession(TorrentId torrentId, TorrentSessionParams sessionParams) {
+        return getRuntime().service(ITorrentSessionFactory.class).createSession(torrentId, sessionParams);
+    }
+
+    private TorrentDescriptor register(TorrentId torrentId) {
+        return getRuntime().service(TorrentRegistry.class).register(torrentId);
     }
 
     private ExecutorService getExecutor(BtRuntime runtime) {

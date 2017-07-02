@@ -10,12 +10,7 @@ import bt.protocol.NotInterested;
 import bt.protocol.Piece;
 import bt.protocol.Unchoke;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Deque;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -30,50 +25,19 @@ class RoutingPeerWorker implements PeerWorker {
 
     private ConnectionState connectionState;
 
+    private MessageRouter router;
     private MessageContext context;
 
-    private List<MessageConsumer<Message>> genericConsumers;
-    private Map<Class<?>, Collection<MessageConsumer<?>>> typedMessageConsumers;
-    private List<MessageProducer> messageProducers;
     private Deque<Message> outgoingMessages;
 
     private Choker choker;
 
-    public RoutingPeerWorker(Peer peer,
-                             Optional<TorrentId> torrentId,
-                             List<MessageConsumer<?>> messageConsumers,
-                             List<MessageProducer> messageProducers) {
+    public RoutingPeerWorker(Peer peer, Optional<TorrentId> torrentId, MessageRouter router) {
         this.connectionState = new ConnectionState();
+        this.router = router;
         this.context = new MessageContext(torrentId, peer, connectionState);
-        this.messageProducers = messageProducers;
         this.outgoingMessages = new LinkedBlockingDeque<>();
         this.choker = Choker.choker();
-
-        initConsumers(messageConsumers);
-    }
-
-    @SuppressWarnings("unchecked")
-    private void initConsumers(List<MessageConsumer<?>> messageConsumers) {
-
-        List<MessageConsumer<Message>> genericConsumers = new ArrayList<>();
-        Map<Class<?>, Collection<MessageConsumer<?>>> typedMessageConsumers = new HashMap<>();
-
-        messageConsumers.forEach(consumer -> {
-            Class<?> consumedType = consumer.getConsumedType();
-            if (Message.class.equals(consumedType)) {
-                genericConsumers.add((MessageConsumer<Message>) consumer);
-            } else {
-                Collection<MessageConsumer<?>> consumers = typedMessageConsumers.get(consumedType);
-                if (consumers == null) {
-                    consumers = new ArrayList<>();
-                    typedMessageConsumers.put(consumedType, consumers);
-                }
-                consumers.add(consumer);
-            }
-        });
-
-        this.genericConsumers = genericConsumers;
-        this.typedMessageConsumers = typedMessageConsumers;
     }
 
     @Override
@@ -83,24 +47,8 @@ class RoutingPeerWorker implements PeerWorker {
 
     @Override
     public void accept(Message message) {
-        doAccept(message);
-    }
-
-    private <T extends Message> void doAccept(T message) {
-        genericConsumers.forEach(consumer -> {
-            consumer.consume(message, context);
-            updateConnection();
-        });
-
-        Collection<MessageConsumer<?>> consumers = typedMessageConsumers.get(message.getClass());
-        if (consumers != null) {
-            consumers.forEach(consumer -> {
-                @SuppressWarnings("unchecked")
-                MessageConsumer<T> typedConsumer = (MessageConsumer<T>) consumer;
-                typedConsumer.consume(message, context);
-                updateConnection();
-            });
-        }
+        router.consume(message, context);
+        updateConnection();
     }
 
     private void postMessage(Message message) {
@@ -128,10 +76,8 @@ class RoutingPeerWorker implements PeerWorker {
     @Override
     public Message get() {
         if (outgoingMessages.isEmpty()) {
-            messageProducers.forEach(producer -> {
-                producer.produce(this::postMessage, context);
-                updateConnection();
-            });
+            router.produce(this::postMessage, context);
+            updateConnection();
         }
         return postProcessOutgoingMessage(outgoingMessages.poll());
     }

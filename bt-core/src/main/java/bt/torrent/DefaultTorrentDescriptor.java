@@ -20,12 +20,16 @@ class DefaultTorrentDescriptor implements TorrentDescriptor {
     }
 
     private Optional<Tracker> trackerOptional;
-    private Torrent torrent;
-    private DataDescriptor dataDescriptor;
+    private Torrent torrent; // TODO: this can be null in case with magnets
+    private DataDescriptor dataDescriptor; // TODO: this can be null in case with magnets
 
     private volatile boolean active;
 
-    public DefaultTorrentDescriptor(ITrackerService trackerService, Torrent torrent, DataDescriptor dataDescriptor) {
+    DefaultTorrentDescriptor() {
+        this.trackerOptional = Optional.empty();
+    }
+
+    DefaultTorrentDescriptor(ITrackerService trackerService, Torrent torrent, DataDescriptor dataDescriptor) {
         this.trackerOptional = Optional.ofNullable(createTracker(trackerService, torrent));
         this.torrent = torrent;
         this.dataDescriptor = dataDescriptor;
@@ -132,5 +136,10 @@ class DefaultTorrentDescriptor implements TorrentDescriptor {
     @Override
     public DataDescriptor getDataDescriptor() {
         return dataDescriptor;
+    }
+
+    @Override
+    public void setDataDescriptor(DataDescriptor dataDescriptor) {
+        this.dataDescriptor = dataDescriptor;
     }
 }

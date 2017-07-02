@@ -38,8 +38,12 @@ public interface TorrentDescriptor {
     void complete();
 
     /**
-     * @return Torrent data descriptor
+     * @return Torrent data descriptor or null, if it hasn't been created yet
      * @since 1.0
+     * @deprecated since 1.3
      */
+    @Deprecated
     DataDescriptor getDataDescriptor();
+
+    void setDataDescriptor(DataDescriptor dataDescriptor);
 }

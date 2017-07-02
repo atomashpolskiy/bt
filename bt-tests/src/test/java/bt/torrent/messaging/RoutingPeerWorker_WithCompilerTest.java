@@ -37,7 +37,8 @@ public class RoutingPeerWorker_WithCompilerTest {
             add(p1);
         }};
 
-        IPeerWorkerFactory peerWorkerFactory = new PeerWorkerFactory(agents);
+        MessageRouter router = new MessageRouter(agents);
+        IPeerWorkerFactory peerWorkerFactory = new PeerWorkerFactory(router);
         this.peerWorker = peerWorkerFactory.createPeerWorker(mock(Peer.class));
     }
 

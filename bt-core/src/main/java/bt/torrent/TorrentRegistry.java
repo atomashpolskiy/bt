@@ -77,4 +77,6 @@ public interface TorrentRegistry {
      * @since 1.3
      */
     TorrentDescriptor register(Torrent torrent, Storage storage);
+
+    TorrentDescriptor register(TorrentId torrentId);
 }

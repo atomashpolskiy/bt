@@ -1,6 +1,7 @@
 package bt.cli;
 
 import bt.Bt;
+import bt.BtClientBuilder;
 import bt.data.Storage;
 import bt.data.file.FileSystemStorage;
 import bt.dht.DHTConfig;
@@ -92,11 +93,19 @@ public class CliClient  {
         PieceSelector selector = options.downloadSequentially() ?
                 SequentialSelector.sequential() : RarestFirstSelector.randomizedRarest();
 
-        this.client = Bt.client(runtime)
+        BtClientBuilder clientBuilder = Bt.client(runtime)
                 .storage(storage)
-                .torrent(toUrl(options.getMetainfoFile()))
-                .selector(selector)
-                .build();
+                .selector(selector);
+
+        if (options.getMetainfoFile() != null) {
+            clientBuilder = clientBuilder.torrent(toUrl(options.getMetainfoFile()));
+        } else if (options.getMagnetUri() != null) {
+            clientBuilder = clientBuilder.magnet(options.getMagnetUri());
+        } else {
+            throw new IllegalStateException("Torrent file or magnet URI is required");
+        }
+
+        this.client = clientBuilder.build();
 
         this.printer = SessionStatePrinter.createKeyInputAwarePrinter(
                 client.getSession().getTorrent(), keyBindings);
