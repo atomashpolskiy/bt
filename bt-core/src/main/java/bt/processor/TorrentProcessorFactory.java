@@ -1,10 +1,12 @@
 package bt.processor;
 
+import bt.metainfo.IMetadataService;
 import bt.module.ClientExecutor;
 import bt.module.MessagingAgents;
 import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.peer.IPeerRegistry;
+import bt.processor.magnet.FetchMetadataStage;
 import bt.processor.magnet.MagnetContext;
 import bt.processor.torrent.FetchTorrentStage;
 import bt.processor.torrent.InitializeTorrentStage;
@@ -32,6 +34,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
     private IPeerConnectionPool connectionPool;
     private IMessageDispatcher messageDispatcher;
     private Set<Object> messagingAgents;
+    private IMetadataService metadataService;
     private Config config;
 
     private final Map<Class<?>, ProcessingStage<?>> processors;
@@ -45,6 +48,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
                                    IPeerConnectionPool connectionPool,
                                    IMessageDispatcher messageDispatcher,
                                    @MessagingAgents Set<Object> messagingAgents,
+                                   IMetadataService metadataService,
                                    Config config) {
         this.torrentRegistry = torrentRegistry;
         this.dataWorkerFactory = dataWorkerFactory;
@@ -54,6 +58,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         this.connectionPool = connectionPool;
         this.messageDispatcher = messageDispatcher;
         this.messagingAgents = messagingAgents;
+        this.metadataService = metadataService;
         this.config = config;
 
         this.processors = processors();
@@ -85,10 +90,12 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
     private ProcessingStage<MagnetContext> createMagnetProcessor() {
 
-        ProcessingStage<MagnetContext> stage2 = new ProcessTorrentStage<>(null, torrentRegistry,
+        ProcessingStage<MagnetContext> stage3 = new ProcessTorrentStage<>(null, torrentRegistry,
                 dataWorkerFactory, trackerService, executor, config);
 
-        ProcessingStage<MagnetContext> stage1 = new RegisterTorrentStage<>(stage2, torrentRegistry);
+        ProcessingStage<MagnetContext> stage2 = new RegisterTorrentStage<>(stage3, torrentRegistry);
+
+        ProcessingStage<MagnetContext> stage1 = new FetchMetadataStage(stage2, metadataService, torrentRegistry);
 
         ProcessingStage<MagnetContext> stage0 = new InitializeTorrentStage<>(stage1, torrentRegistry, peerRegistry,
                 connectionPool, messageDispatcher, messagingAgents, config);

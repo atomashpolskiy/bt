@@ -16,13 +16,13 @@ public class ChainProcessor {
     private static <C extends ProcessingContext> ProcessingStage<C> doExecute(ProcessingStage<C> stage, C context) {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace(String.format("Processing next stage: torrent ID (%s), stage (%s)",
-                    context.getTorrentId(), stage.getClass().getName()));
+                    context.getTorrentId().orElse(null), stage.getClass().getName()));
         }
         try {
             return stage.execute(context);
         } catch (Throwable e) {
             LOGGER.error(String.format("Processing failed with error: torrent ID (%s), stage (%s)",
-                    context.getTorrentId(), stage.getClass().getName()), e);
+                    context.getTorrentId().orElse(null), stage.getClass().getName()), e);
             throw e;
         }
     }

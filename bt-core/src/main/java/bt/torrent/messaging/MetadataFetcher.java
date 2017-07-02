@@ -191,10 +191,11 @@ public class MetadataFetcher {
         return queue;
     }
 
-    public void waitForCompletion() {
+    public Torrent fetchTorrent() {
         synchronized (torrent) {
             try {
                 torrent.wait();
+                return torrent.get();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

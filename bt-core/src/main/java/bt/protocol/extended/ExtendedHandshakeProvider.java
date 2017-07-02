@@ -76,6 +76,8 @@ public class ExtendedHandshakeProvider implements Provider<ExtendedHandshake> {
 
         builder.property(TCPPORT_PROPERTY, new BEInteger(null, BigInteger.valueOf(tcpAcceptorPort)));
 
+        // TODO: metadata_size
+
         String version;
         try {
             version = getVersion();
