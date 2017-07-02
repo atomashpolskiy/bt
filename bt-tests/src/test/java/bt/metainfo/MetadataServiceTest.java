@@ -1,7 +1,6 @@
 package bt.metainfo;
 
 import bt.bencoding.BtParseException;
-import bt.torrent.TorrentRegistry;
 import bt.tracker.AnnounceKey;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,7 +15,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
 
 public class MetadataServiceTest {
 
@@ -24,7 +22,7 @@ public class MetadataServiceTest {
 
     @Before
     public void setUp() {
-        metadataService = new MetadataService(mock(TorrentRegistry.class));
+        metadataService = new MetadataService();
     }
 
     @Test

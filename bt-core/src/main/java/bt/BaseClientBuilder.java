@@ -8,7 +8,9 @@ import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.module.ClientExecutor;
 import bt.processor.ChainProcessor;
+import bt.processor.ProcessingContext;
 import bt.processor.ProcessingStage;
+import bt.processor.ProcessorFactory;
 import bt.processor.torrent.FetchTorrentStage;
 import bt.processor.torrent.ProcessTorrentStage;
 import bt.processor.torrent.RegisterTorrentStage;
@@ -223,21 +225,22 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
 
     private BtClient buildClient(BtRuntime runtime, Supplier<Torrent> torrentSupplier) {
         Torrent torrent = torrentSupplier.get();
-        TorrentDescriptor descriptor = register(torrent, storage);
+        TorrentDescriptor descriptor = register(torrent.getTorrentId());
         TorrentSession session = createSession(torrent.getTorrentId());
 
-        TorrentRegistry torrentRegistry = runtime.service(TorrentRegistry.class);
-        IDataWorkerFactory dataWorkerFactory = runtime.service(IDataWorkerFactory.class);
+        TorrentContext context = new TorrentContext(torrent.getTorrentId(), pieceSelector, session, storage, torrentSupplier);
 
-        ProcessingStage<TorrentContext> stage2 = new ProcessTorrentStage(null, torrentRegistry,
-                dataWorkerFactory, runtime.getConfig());
-        ProcessingStage<TorrentContext> stage1 = new FetchTorrentStage(stage2, torrentSupplier);
-
-        TorrentContext context = new TorrentContext(torrent.getTorrentId(), pieceSelector, session, storage);
-
-        Runnable processor = () -> ChainProcessor.execute(stage1, context);
+        Runnable processor = () -> ChainProcessor.execute(processor(TorrentContext.class), context);
 
         return new RuntimeAwareClient(runtime, new DefaultClient(getExecutor(runtime), processor, descriptor, session));
+    }
+
+    private <C extends ProcessingContext> ProcessingStage<C> processor(Class<C> contextType) {
+        ProcessingStage<C> processor = getRuntime().service(ProcessorFactory.class).processor(contextType);
+        if (processor == null) {
+            throw new IllegalStateException("No processors found for context type: " + contextType.getName());
+        }
+        return processor;
     }
 
     private BtClient buildClient(BtRuntime runtime, MagnetUri magnetUri) {

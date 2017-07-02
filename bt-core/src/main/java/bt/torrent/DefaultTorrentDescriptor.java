@@ -138,8 +138,7 @@ class DefaultTorrentDescriptor implements TorrentDescriptor {
         return dataDescriptor;
     }
 
-    @Override
-    public void setDataDescriptor(DataDescriptor dataDescriptor) {
+    void setDataDescriptor(DataDescriptor dataDescriptor) {
         this.dataDescriptor = dataDescriptor;
     }
 }

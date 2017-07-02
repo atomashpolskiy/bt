@@ -44,6 +44,4 @@ public interface TorrentDescriptor {
      */
     @Deprecated
     DataDescriptor getDataDescriptor();
-
-    void setDataDescriptor(DataDescriptor dataDescriptor);
 }

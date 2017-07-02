@@ -11,9 +11,7 @@ import bt.bencoding.model.BEString;
 import bt.bencoding.model.ValidationResult;
 import bt.bencoding.model.YamlBEObjectModelLoader;
 import bt.service.CryptoUtil;
-import bt.torrent.TorrentRegistry;
 import bt.tracker.AnnounceKey;
-import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,9 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 /**
@@ -50,17 +45,11 @@ public class MetadataService implements IMetadataService {
     private static final String FILE_PATH_ELEMENTS_KEY = "path";
     private static final String PRIVATE_KEY = "private";
 
-    private TorrentRegistry torrentRegistry;
-    private ConcurrentMap<TorrentId, TorrentMetadata> metadataMap;
-
     private BEObjectModel torrentModel;
     private BEObjectModel infodictModel;
     private Charset defaultCharset;
 
-    @Inject
-    public MetadataService(TorrentRegistry torrentRegistry) {
-        this.torrentRegistry = torrentRegistry;
-        this.metadataMap = new ConcurrentHashMap<>();
+    public MetadataService() {
         this.defaultCharset = Charset.forName("UTF-8");
 
         try {
@@ -210,47 +199,6 @@ public class MetadataService implements IMetadataService {
             throw new BtException("Invalid metainfo format", e);
         }
 
-        saveMetadata(torrent.getTorrentId(), buildMetadata(metadata, infoDictionary));
-
         return torrent;
-    }
-
-    private TorrentMetadata buildMetadata(BEMap metadata, BEMap infoDictionary) {
-        return new BEncodedMetadata(metadata, infoDictionary);
-    }
-
-    private void saveMetadata(TorrentId torrentId, TorrentMetadata metadata) {
-        if (metadataMap.put(torrentId, metadata) != null) {
-            LOGGER.warn("Overwriting metadata for torrent ID: " + torrentId);
-        }
-    }
-
-    @Override
-    public TorrentMetadata getMetadata(Torrent torrent) {
-        return getExistingMetadata(torrent.getTorrentId()).orElseGet(() -> buildMetadata(torrent));
-    }
-
-    @Override
-    public Optional<TorrentMetadata> getMetadata(TorrentId torrentId) {
-        Optional<TorrentMetadata> metadata = getExistingMetadata(torrentId);
-        if (!metadata.isPresent()) {
-            Optional<Torrent> torrent = torrentRegistry.getTorrent(torrentId);
-            if (torrent.isPresent()) {
-                metadata = Optional.of(buildMetadata(torrent.get()));
-            }
-        }
-        return metadata;
-    }
-
-    private Optional<TorrentMetadata> getExistingMetadata(TorrentId torrentId) {
-        return Optional.ofNullable(metadataMap.get(torrentId));
-    }
-
-    /**
-     * Build ad-hoc metadata for a given torrent.
-     */
-    private TorrentMetadata buildMetadata(Torrent torrent) {
-        // TODO: implement creating metadata on demand based on the provided torrent
-        throw new UnsupportedOperationException();
     }
 }

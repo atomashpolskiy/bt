@@ -78,5 +78,12 @@ public interface TorrentRegistry {
      */
     TorrentDescriptor register(Torrent torrent, Storage storage);
 
+    /**
+     * Get an existing torrent descriptor for a given torrent ID
+     * or create a new one if it does not exist.
+     *
+     * @return Torrent descriptor
+     * @since 1.3
+     */
     TorrentDescriptor register(TorrentId torrentId);
 }

@@ -15,6 +15,8 @@ import bt.net.PeerConnectionPool;
 import bt.peer.IPeerRegistry;
 import bt.peer.PeerRegistry;
 import bt.peer.PeerSourceFactory;
+import bt.processor.ProcessorFactory;
+import bt.processor.TorrentProcessorFactory;
 import bt.runtime.Config;
 import bt.service.ApplicationService;
 import bt.service.ClasspathApplicationService;
@@ -108,6 +110,7 @@ public class ServiceModule implements Module {
         binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).in(Singleton.class);
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
         binder.bind(ITorrentSessionFactory.class).to(TorrentSessionFactory.class).in(Singleton.class);
+        binder.bind(ProcessorFactory.class).to(TorrentProcessorFactory.class).in(Singleton.class);
 
         // TODO: register a shutdown hook in the runtime
         binder.bind(ExecutorService.class).annotatedWith(ClientExecutor.class)

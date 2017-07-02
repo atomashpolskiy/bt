@@ -8,6 +8,8 @@ import bt.torrent.TorrentSession;
 import bt.torrent.messaging.TorrentWorker;
 import bt.torrent.selector.PieceSelector;
 
+import java.util.function.Supplier;
+
 public class TorrentContext implements ProcessingContext {
 
     private TorrentId torrentId;
@@ -15,15 +17,18 @@ public class TorrentContext implements ProcessingContext {
     private PieceSelector pieceSelector;
     private TorrentSession session;
     private Storage storage;
+    private Supplier<Torrent> torrentSupplier;
 
     public TorrentContext(TorrentId torrentId,
                           PieceSelector pieceSelector,
                           TorrentSession session,
-                          Storage storage) {
+                          Storage storage,
+                          Supplier<Torrent> torrentSupplier) {
         this.torrentId = torrentId;
         this.pieceSelector = pieceSelector;
         this.session = session;
         this.storage = storage;
+        this.torrentSupplier = torrentSupplier;
     }
 
     @Override
@@ -53,5 +58,9 @@ public class TorrentContext implements ProcessingContext {
 
     public Storage getStorage() {
         return storage;
+    }
+
+    public Supplier<Torrent> getTorrentSupplier() {
+        return torrentSupplier;
     }
 }
