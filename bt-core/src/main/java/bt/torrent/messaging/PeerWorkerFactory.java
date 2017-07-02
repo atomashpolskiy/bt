@@ -11,9 +11,9 @@ import java.util.Optional;
  */
 class PeerWorkerFactory implements IPeerWorkerFactory {
 
-    private MessageRouter router;
+    private DefaultMessageRouter router;
 
-    PeerWorkerFactory(MessageRouter router) {
+    PeerWorkerFactory(DefaultMessageRouter router) {
         this.router = router;
     }
 

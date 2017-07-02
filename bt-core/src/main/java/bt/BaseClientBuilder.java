@@ -7,6 +7,12 @@ import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.module.ClientExecutor;
+import bt.processor.ChainProcessor;
+import bt.processor.ProcessingStage;
+import bt.processor.torrent.FetchTorrentStage;
+import bt.processor.torrent.ProcessTorrentStage;
+import bt.processor.torrent.RegisterTorrentStage;
+import bt.processor.torrent.TorrentContext;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 import bt.torrent.ITorrentSessionFactory;
@@ -14,9 +20,10 @@ import bt.torrent.PieceSelectionStrategy;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentSession;
-import bt.torrent.TorrentSessionParams;
+import bt.torrent.data.IDataWorkerFactory;
 import bt.torrent.selector.PieceSelector;
 import bt.torrent.selector.RarestFirstSelector;
+import bt.torrent.selector.SelectorAdapter;
 import bt.torrent.selector.SequentialSelector;
 import com.google.inject.Key;
 
@@ -37,7 +44,6 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
     private Supplier<Torrent> torrentSupplier;
     private MagnetUri magnetUri;
 
-    private PieceSelectionStrategy pieceSelectionStrategy;
     private PieceSelector pieceSelector;
 
     private boolean shouldInitEagerly;
@@ -128,8 +134,8 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
      */
     @SuppressWarnings("unchecked")
     public B selector(PieceSelectionStrategy pieceSelectionStrategy) {
-        this.pieceSelectionStrategy = Objects.requireNonNull(pieceSelectionStrategy, "Missing piece selection strategy");
-        this.pieceSelector = null;
+        Objects.requireNonNull(pieceSelectionStrategy, "Missing piece selection strategy");
+        this.pieceSelector = new SelectorAdapter(pieceSelectionStrategy);
         return (B) this;
     }
 
@@ -141,7 +147,6 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
     @SuppressWarnings("unchecked")
     public B selector(PieceSelector pieceSelector) {
         this.pieceSelector = Objects.requireNonNull(pieceSelector, "Missing piece selector");
-        this.pieceSelectionStrategy = null;
         return (B) this;
     }
 
@@ -218,38 +223,38 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
 
     private BtClient buildClient(BtRuntime runtime, Supplier<Torrent> torrentSupplier) {
         Torrent torrent = torrentSupplier.get();
-        TorrentDescriptor descriptor = register(torrent.getTorrentId());
-        TorrentSession session = createSession(torrent, getSessionParams());
+        TorrentDescriptor descriptor = register(torrent, storage);
+        TorrentSession session = createSession(torrent.getTorrentId());
 
-        return new RuntimeAwareClient(runtime, new DefaultClient(getExecutor(runtime), descriptor, session));
+        TorrentRegistry torrentRegistry = runtime.service(TorrentRegistry.class);
+        IDataWorkerFactory dataWorkerFactory = runtime.service(IDataWorkerFactory.class);
+
+        ProcessingStage<TorrentContext> stage2 = new ProcessTorrentStage(null, torrentRegistry,
+                dataWorkerFactory, runtime.getConfig());
+        ProcessingStage<TorrentContext> stage1 = new FetchTorrentStage(stage2, torrentSupplier);
+
+        TorrentContext context = new TorrentContext(torrent.getTorrentId(), pieceSelector, session, storage);
+
+        Runnable processor = () -> ChainProcessor.execute(stage1, context);
+
+        return new RuntimeAwareClient(runtime, new DefaultClient(getExecutor(runtime), processor, descriptor, session));
     }
 
     private BtClient buildClient(BtRuntime runtime, MagnetUri magnetUri) {
         // TODO: build session with MagnetUri instead of just torrent ID
         // in order to fully utilize display_name, bootstrap trackers and peers
         TorrentDescriptor descriptor = register(magnetUri.getTorrentId());
-        TorrentSession session = createSession(magnetUri.getTorrentId(), getSessionParams());
+        TorrentSession session = createSession(magnetUri.getTorrentId());
 
-        return new RuntimeAwareClient(runtime, new DefaultClient(getExecutor(runtime), descriptor, session));
+        return new RuntimeAwareClient(runtime, new DefaultClient(getExecutor(runtime), () -> {}, descriptor, session));
     }
 
-    private TorrentSessionParams getSessionParams() {
-        TorrentSessionParams params = new TorrentSessionParams();
-        if (pieceSelector != null) {
-            params.setPieceSelector(pieceSelector);
-        } else {
-            params.setSelectionStrategy(pieceSelectionStrategy);
-        }
-        params.setStorage(storage);
-        return params;
+    private TorrentSession createSession(TorrentId torrentId) {
+        return getRuntime().service(ITorrentSessionFactory.class).createSession(torrentId);
     }
 
-    private TorrentSession createSession(Torrent torrent, TorrentSessionParams sessionParams) {
-        return getRuntime().service(ITorrentSessionFactory.class).createSession(torrent, sessionParams);
-    }
-
-    private TorrentSession createSession(TorrentId torrentId, TorrentSessionParams sessionParams) {
-        return getRuntime().service(ITorrentSessionFactory.class).createSession(torrentId, sessionParams);
+    private TorrentDescriptor register(Torrent torrent, Storage storage) {
+        return getRuntime().service(TorrentRegistry.class).register(torrent, storage);
     }
 
     private TorrentDescriptor register(TorrentId torrentId) {

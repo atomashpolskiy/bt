@@ -18,7 +18,7 @@ public class GenericConsumer {
 
     private static final GenericConsumer instance = new GenericConsumer();
 
-    static GenericConsumer consumer() {
+    public static GenericConsumer consumer() {
         return instance;
     }
 

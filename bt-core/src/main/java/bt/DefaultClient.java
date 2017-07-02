@@ -25,6 +25,7 @@ class DefaultClient implements BtClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultClient.class);
 
+    private Runnable processor;
     private TorrentDescriptor delegate;
     private TorrentSession session;
     private Optional<CompletableFuture<?>> future;
@@ -37,8 +38,9 @@ class DefaultClient implements BtClient {
     /**
      * @since 1.0
      */
-    public DefaultClient(ExecutorService executor, TorrentDescriptor delegate, TorrentSession session) {
+    public DefaultClient(ExecutorService executor, Runnable processor, TorrentDescriptor delegate, TorrentSession session) {
         this.executor = executor;
+        this.processor = processor;
         this.delegate = delegate;
         this.session = session;
         this.future = Optional.empty();
@@ -75,6 +77,7 @@ class DefaultClient implements BtClient {
     private CompletableFuture<?> doStart() {
         delegate.start();
 
+        executor.submit(processor);
         CompletableFuture<?> future = CompletableFuture.runAsync(() -> {
             while (delegate.isActive()) {
                 try {

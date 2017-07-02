@@ -18,7 +18,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
-class Assignments {
+public class Assignments {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Assignments.class);
 
@@ -36,7 +36,7 @@ class Assignments {
 
     private Random random;
 
-    Assignments(Bitfield bitfield, PieceSelector selector, BitfieldBasedStatistics pieceStatistics, Config config) {
+    public Assignments(Bitfield bitfield, PieceSelector selector, BitfieldBasedStatistics pieceStatistics, Config config) {
         this.bitfield = bitfield;
         this.selector = selector;
         this.pieceStatistics = pieceStatistics;

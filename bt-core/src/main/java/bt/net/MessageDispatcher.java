@@ -87,26 +87,24 @@ public class MessageDispatcher implements IMessageDispatcher {
                         PeerConnection connection = pool.getConnection(peer);
                         if (connection != null && !connection.isClosed()) {
 
-                            if (!isSupportedAndActive(connection.getTorrentId())) {
-                                continue;
-                            }
+                            if (isSupportedAndActive(connection.getTorrentId())) {
+                                Message message = null;
+                                try {
+                                    message = connection.readMessageNow();
+                                } catch (Exception e) {
+                                    LOGGER.error("Error when reading message from peer: " + peer, e);
+                                    iter.remove();
+                                    suppliers.remove(peer);
+                                }
 
-                            Message message = null;
-                            try {
-                                message = connection.readMessageNow();
-                            } catch (Exception e) {
-                                LOGGER.error("Error when reading message from peer: " + peer, e);
-                                iter.remove();
-                                suppliers.remove(peer);
-                            }
-
-                            if (message != null) {
-                                loopControl.incrementProcessed();
-                                for (Consumer<Message> messageConsumer : consumers) {
-                                    try {
-                                        messageConsumer.accept(message);
-                                    } catch (Exception e) {
-                                        LOGGER.warn("Error in message consumer", e);
+                                if (message != null) {
+                                    loopControl.incrementProcessed();
+                                    for (Consumer<Message> messageConsumer : consumers) {
+                                        try {
+                                            messageConsumer.accept(message);
+                                        } catch (Exception e) {
+                                            LOGGER.warn("Error in message consumer", e);
+                                        }
                                     }
                                 }
                             }
@@ -128,26 +126,24 @@ public class MessageDispatcher implements IMessageDispatcher {
                         PeerConnection connection = pool.getConnection(peer);
                         if (connection != null && !connection.isClosed()) {
 
-                            if (!isSupportedAndActive(connection.getTorrentId())) {
-                                continue;
-                            }
-
-                            for (Supplier<Message> messageSupplier : suppliers) {
-                                Message message = null;
-                                try {
-                                    message = messageSupplier.get();
-                                } catch (Exception e) {
-                                    LOGGER.warn("Error in message supplier", e);
-                                }
-
-                                if (message != null) {
-                                    loopControl.incrementProcessed();
+                            if (isSupportedAndActive(connection.getTorrentId())) {
+                                for (Supplier<Message> messageSupplier : suppliers) {
+                                    Message message = null;
                                     try {
-                                        connection.postMessage(message);
+                                        message = messageSupplier.get();
                                     } catch (Exception e) {
-                                        LOGGER.error("Error when writing message", e);
-                                        iter.remove();
-                                        consumers.remove(peer);
+                                        LOGGER.warn("Error in message supplier", e);
+                                    }
+
+                                    if (message != null) {
+                                        loopControl.incrementProcessed();
+                                        try {
+                                            connection.postMessage(message);
+                                        } catch (Exception e) {
+                                            LOGGER.error("Error when writing message", e);
+                                            iter.remove();
+                                            consumers.remove(peer);
+                                        }
                                     }
                                 }
                             }

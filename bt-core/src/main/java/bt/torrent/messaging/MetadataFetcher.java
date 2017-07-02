@@ -7,6 +7,8 @@ import bt.data.range.ByteRange;
 import bt.data.range.Range;
 import bt.data.range.Ranges;
 import bt.magnet.UtMetadata;
+import bt.metainfo.IMetadataService;
+import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.protocol.Message;
@@ -37,10 +39,12 @@ public class MetadataFetcher {
     private volatile Range<?> metadata;
     private volatile BlockSet metadataBlocks;
 
-    private final TorrentId torrentId;
-    private final AtomicReference<Consumer<byte[]>> finishedCallback;
+    private IMetadataService metadataService;
 
-    public MetadataFetcher(TorrentId torrentId, Consumer<byte[]> finishedCallback) {
+    private final TorrentId torrentId;
+    private final AtomicReference<Torrent> torrent;
+
+    public MetadataFetcher(IMetadataService metadataService, TorrentId torrentId) {
         this.outboundMessages = new ConcurrentHashMap<>();
         this.peersWithoutMetadata = new ConcurrentHashMap<>();
 
@@ -48,8 +52,10 @@ public class MetadataFetcher {
         this.requestedPeers = ConcurrentHashMap.newKeySet();
         this.requestedFirstPeers = new ConcurrentHashMap<>();
 
+        this.metadataService = metadataService;
+
         this.torrentId = Objects.requireNonNull(torrentId);
-        this.finishedCallback = new AtomicReference<>(Objects.requireNonNull(finishedCallback));
+        this.torrent = new AtomicReference<>();
     }
 
     @Consumes
@@ -81,15 +87,28 @@ public class MetadataFetcher {
 
     @Produces
     public void produce(Consumer<Message> messageConsumer, MessageContext context) {
-        if (finishedCallback.get() != null && metadataBlocks != null && metadataBlocks.isComplete()) {
+        if (torrent.get() != null) {
+            return;
+        }
+
+        if (metadataBlocks != null && metadataBlocks.isComplete()) {
             byte[] digest = SHA1Digester.rolling(8000000).digest(metadata);
             if (Arrays.equals(digest, torrentId.getBytes())) {
-                Consumer<byte[]> cb = finishedCallback.get();
-                finishedCallback.set(null);
-                cb.accept(metadata.getBytes());
+                try {
+                    synchronized (torrent) {
+                        torrent.set(metadataService.fromByteArray(metadata.getBytes()));
+                        torrent.notifyAll();
+                    }
+                } catch (Exception e){
+                    metadata = null;
+                    metadataBlocks = null;
+                    throw e;
+                }
                 return;
             } else {
                 // TODO: restart
+                metadata = null;
+                metadataBlocks = null;
                 throw new IllegalStateException("Metadata fetched, but hash does not match the torrent ID");
             }
         }
@@ -170,6 +189,16 @@ public class MetadataFetcher {
             }
         }
         return queue;
+    }
+
+    public void waitForCompletion() {
+        synchronized (torrent) {
+            try {
+                torrent.wait();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
 //    private boolean mightRequestMetadata(Peer peer) {

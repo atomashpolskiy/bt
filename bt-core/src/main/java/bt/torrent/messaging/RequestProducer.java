@@ -36,7 +36,7 @@ public class RequestProducer {
     private Bitfield bitfield;
     private List<ChunkDescriptor> chunks;
 
-    RequestProducer(DataDescriptor dataDescriptor) {
+    public RequestProducer(DataDescriptor dataDescriptor) {
         this.bitfield = dataDescriptor.getBitfield();
         this.chunks = dataDescriptor.getChunkDescriptors();
     }

@@ -2,6 +2,7 @@ package bt.torrent;
 
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
+import bt.torrent.messaging.TorrentWorker;
 
 /**
  * Torrent processing session.
@@ -40,4 +41,11 @@ public interface TorrentSession {
      * @since 1.0
      */
     TorrentSessionState getState();
+
+    void registerMessagingAgent(Object agent);
+
+    void unregisterMessagingAgent(Object agent);
+
+    // temp
+    TorrentWorker getTorrentWorker();
 }

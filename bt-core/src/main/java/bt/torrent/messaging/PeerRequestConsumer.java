@@ -32,7 +32,7 @@ public class PeerRequestConsumer {
     private DataWorker dataWorker;
     private Map<Peer, Queue<BlockRead>> completedRequests;
 
-    PeerRequestConsumer(DataWorker dataWorker) {
+    public PeerRequestConsumer(DataWorker dataWorker) {
         this.dataWorker = dataWorker;
         this.completedRequests = new ConcurrentHashMap<>();
     }

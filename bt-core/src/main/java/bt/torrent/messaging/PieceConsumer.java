@@ -30,7 +30,7 @@ public class PieceConsumer {
     private DataWorker dataWorker;
     private ConcurrentLinkedQueue<BlockWrite> completedBlocks;
 
-    PieceConsumer(Bitfield bitfield, DataWorker dataWorker) {
+    public PieceConsumer(Bitfield bitfield, DataWorker dataWorker) {
         this.bitfield = bitfield;
         this.dataWorker = dataWorker;
         this.completedBlocks = new ConcurrentLinkedQueue<>();

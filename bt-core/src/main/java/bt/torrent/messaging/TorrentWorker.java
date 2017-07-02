@@ -31,7 +31,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  *
  * @since 1.0
  */
-class TorrentWorker {
+public class TorrentWorker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TorrentWorker.class);
 
@@ -58,9 +58,11 @@ class TorrentWorker {
 
     public TorrentWorker(TorrentId torrentId,
                          IMessageDispatcher dispatcher,
+                         IPeerWorkerFactory peerWorkerFactory,
                          Config config) {
         this.torrentId = torrentId;
         this.dispatcher = dispatcher;
+        this.peerWorkerFactory = peerWorkerFactory;
         this.config = config;
 
         this.peerMap = new ConcurrentHashMap<>();
@@ -71,20 +73,16 @@ class TorrentWorker {
         this.MAX_CONCURRENT_ACTIVE_CONNECTIONS = config.getMaxConcurrentlyActivePeerConnectionsPerTorrent();
     }
 
-    void setBitfield(Bitfield bitfield) {
+    public void setBitfield(Bitfield bitfield) {
         this.bitfield = bitfield;
     }
 
-    void setAssignments(Assignments assignments) {
+    public void setAssignments(Assignments assignments) {
         this.assignments = assignments;
     }
 
-    void setPieceStatistics(BitfieldBasedStatistics pieceStatistics) {
+    public void setPieceStatistics(BitfieldBasedStatistics pieceStatistics) {
         this.pieceStatistics = pieceStatistics;
-    }
-
-    void setPeerWorkerFactory(IPeerWorkerFactory peerWorkerFactory) {
-        this.peerWorkerFactory = peerWorkerFactory;
     }
 
     /**
@@ -113,7 +111,7 @@ class TorrentWorker {
         PieceAnnouncingPeerWorker worker = getWorker(peer);
 
         Message message;
-        if (bitfield != null && (bitfield.getPiecesRemaining() > 0 || assignments.count() > 0)) {
+        if (bitfield != null && assignments != null && (bitfield.getPiecesRemaining() > 0 || assignments.count() > 0)) {
             inspectAssignment(peer);
             if (shouldUpdateAssignments()) {
                 processDisconnectedPeers();

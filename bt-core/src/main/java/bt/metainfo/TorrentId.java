@@ -1,6 +1,7 @@
 package bt.metainfo;
 
 import bt.BtException;
+import bt.protocol.Protocols;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -66,6 +67,6 @@ public class TorrentId {
 
     @Override
     public String toString() {
-        return Arrays.toString(torrentId);
+        return Protocols.toHex(torrentId);
     }
 }

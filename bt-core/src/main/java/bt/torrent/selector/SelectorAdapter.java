@@ -23,6 +23,16 @@ public class SelectorAdapter implements PieceSelector {
      * Wraps the provided selection strategy as a selector.
      *
      * @param strategy Piece selection strategy
+     * @since 1.3
+     */
+    public SelectorAdapter(PieceSelectionStrategy strategy) {
+        this(strategy, i -> true);
+    }
+
+    /**
+     * Wraps the provided selection strategy as a selector.
+     *
+     * @param strategy Piece selection strategy
      * @param validator Selection validator
      * @since 1.1
      */

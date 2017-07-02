@@ -14,19 +14,17 @@ public interface ITorrentSessionFactory {
      * Create a session for a given torrent.
      *
      * @param torrent Torrent (must be registered in {@link TorrentRegistry})
-     * @param params Torrent-specific parameters and configuration
      * @return Torrent session
-     * @since 1.0
+     * @since 1.3
      */
-    TorrentSession createSession(Torrent torrent, TorrentSessionParams params);
+    TorrentSession createSession(Torrent torrent);
 
     /**
      * Create a session for a given torrent ID.
      *
      * @param torrentId Torrent ID (must be registered {@link TorrentRegistry})
-     * @param params Torrent-specific parameters and configuration
      * @return Torrent session
      * @since 1.3
      */
-    TorrentSession createSession(TorrentId torrentId, TorrentSessionParams params);
+    TorrentSession createSession(TorrentId torrentId);
 }

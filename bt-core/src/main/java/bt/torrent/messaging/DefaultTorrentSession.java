@@ -1,12 +1,13 @@
 package bt.torrent.messaging;
 
-import bt.data.Bitfield;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
 import bt.net.PeerActivityListener;
+import bt.torrent.TorrentDescriptor;
+import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
 import bt.tracker.AnnounceKey;
@@ -30,33 +31,30 @@ class DefaultTorrentSession implements TorrentSession, PeerActivityListener {
 
     private final IPeerConnectionPool connectionPool;
     private final TorrentId torrentId;
+    private final MessageRouter router;
     private final TorrentWorker worker;
     private final DefaultTorrentSessionState sessionState;
 
-    private volatile Optional<Torrent> torrent;
+    private final TorrentRegistry torrentRegistry;
 
     private final int maxPeerConnectionsPerTorrent;
     private final AtomicBoolean condition;
 
     public DefaultTorrentSession(IPeerConnectionPool connectionPool,
+                                 TorrentRegistry torrentRegistry,
+                                 MessageRouter router,
                                  TorrentWorker worker,
                                  TorrentId torrentId,
+                                 TorrentDescriptor descriptor,
                                  int maxPeerConnectionsPerTorrent) {
         this.connectionPool = connectionPool;
+        this.torrentRegistry = torrentRegistry;
+        this.router = router;
         this.torrentId = torrentId;
         this.worker = worker;
-        this.sessionState = new DefaultTorrentSessionState();
-        this.torrent = Optional.empty();
+        this.sessionState = new DefaultTorrentSessionState(descriptor);
         this.maxPeerConnectionsPerTorrent = maxPeerConnectionsPerTorrent;
         this.condition = new AtomicBoolean(false);
-    }
-
-    void setTorrent(Torrent torrent) {
-        this.torrent = Optional.of(torrent);
-    }
-
-    void setBitfield(Bitfield bitfield) {
-        this.sessionState.setBitfield(bitfield);
     }
 
     @Override
@@ -100,7 +98,7 @@ class DefaultTorrentSession implements TorrentSession, PeerActivityListener {
 
     @Override
     public Torrent getTorrent() {
-        return torrent.orElse(StubTorrent.instance());
+        return torrentRegistry.getTorrent(torrentId).orElse(StubTorrent.instance());
     }
 
     @Override
@@ -111,6 +109,21 @@ class DefaultTorrentSession implements TorrentSession, PeerActivityListener {
     @Override
     public TorrentSessionState getState() {
         return sessionState;
+    }
+
+    @Override
+    public void registerMessagingAgent(Object agent) {
+        router.registerMessagingAgent(agent);
+    }
+
+    @Override
+    public void unregisterMessagingAgent(Object agent) {
+        router.unregisterMessagingAgent(agent);
+    }
+
+    @Override
+    public TorrentWorker getTorrentWorker() {
+        return worker;
     }
 
     private static class StubTorrent implements Torrent {
@@ -181,27 +194,31 @@ class DefaultTorrentSession implements TorrentSession, PeerActivityListener {
          */
         private volatile AtomicLong uploadedToDisconnected;
 
-        private volatile Optional<Bitfield> localBitfield;
+        private final TorrentDescriptor descriptor;
 
-        DefaultTorrentSessionState() {
+        DefaultTorrentSessionState(TorrentDescriptor descriptor) {
             this.recentAmountsForConnectedPeers = new HashMap<>();
             this.downloadedFromDisconnected = new AtomicLong();
             this.uploadedToDisconnected = new AtomicLong();
-            this.localBitfield = Optional.empty();
-        }
-
-        void setBitfield(Bitfield bitfield) {
-            this.localBitfield = Optional.of(bitfield);
+            this.descriptor = descriptor;
         }
 
         @Override
         public int getPiecesTotal() {
-            return localBitfield.isPresent() ? localBitfield.get().getPiecesTotal() : 1;
+            if (descriptor.getDataDescriptor() != null) {
+                return descriptor.getDataDescriptor().getBitfield().getPiecesTotal();
+            } else {
+                return 1;
+            }
         }
 
         @Override
         public int getPiecesRemaining() {
-            return localBitfield.isPresent() ? localBitfield.get().getPiecesRemaining() : 1;
+            if (descriptor.getDataDescriptor() != null) {
+                return descriptor.getDataDescriptor().getBitfield().getPiecesRemaining();
+            } else {
+                return 1;
+            }
         }
 
         @Override

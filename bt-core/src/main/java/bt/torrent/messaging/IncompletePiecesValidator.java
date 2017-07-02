@@ -4,11 +4,11 @@ import bt.data.Bitfield;
 
 import java.util.function.Predicate;
 
-class IncompletePiecesValidator implements Predicate<Integer> {
+public class IncompletePiecesValidator implements Predicate<Integer> {
 
     private Bitfield bitfield;
 
-    IncompletePiecesValidator(Bitfield bitfield) {
+    public IncompletePiecesValidator(Bitfield bitfield) {
         this.bitfield = bitfield;
     }
 

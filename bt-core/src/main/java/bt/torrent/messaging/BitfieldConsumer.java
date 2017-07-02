@@ -19,7 +19,7 @@ public class BitfieldConsumer {
     private bt.data.Bitfield bitfield;
     private BitfieldBasedStatistics pieceStatistics;
 
-    BitfieldConsumer(bt.data.Bitfield bitfield, BitfieldBasedStatistics pieceStatistics) {
+    public BitfieldConsumer(bt.data.Bitfield bitfield, BitfieldBasedStatistics pieceStatistics) {
         this.bitfield = bitfield;
         this.pieceStatistics = pieceStatistics;
     }
