@@ -187,6 +187,7 @@ class DefaultTorrentSession implements TorrentSession, PeerActivityListener {
             this.recentAmountsForConnectedPeers = new HashMap<>();
             this.downloadedFromDisconnected = new AtomicLong();
             this.uploadedToDisconnected = new AtomicLong();
+            this.localBitfield = Optional.empty();
         }
 
         void setBitfield(Bitfield bitfield) {
