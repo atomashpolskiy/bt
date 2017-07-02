@@ -1,11 +1,12 @@
 package bt;
 
+import bt.processor.ChainProcessor;
+import bt.processor.ProcessingContext;
+import bt.processor.ProcessingStage;
 import bt.runtime.BtClient;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -21,11 +22,10 @@ import java.util.function.Consumer;
  *
  * @since 1.0
  */
-class DefaultClient implements BtClient {
+class DefaultClient<C extends ProcessingContext> implements BtClient {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultClient.class);
-
-    private Runnable processor;
+    private ProcessingStage<C> processor;
+    private C context;
     private TorrentDescriptor delegate;
     private TorrentSession session;
     private Optional<CompletableFuture<?>> future;
@@ -38,11 +38,17 @@ class DefaultClient implements BtClient {
     /**
      * @since 1.0
      */
-    public DefaultClient(ExecutorService executor, Runnable processor, TorrentDescriptor delegate, TorrentSession session) {
+    public DefaultClient(ExecutorService executor,
+                         TorrentDescriptor delegate,
+                         TorrentSession session,
+                         ProcessingStage<C> processor,
+                         C context) {
         this.executor = executor;
-        this.processor = processor;
         this.delegate = delegate;
         this.session = session;
+        this.processor = processor;
+        this.context = context;
+
         this.future = Optional.empty();
         this.listener = Optional.empty();
         this.listenerFuture = Optional.empty();
@@ -77,21 +83,8 @@ class DefaultClient implements BtClient {
     private CompletableFuture<?> doStart() {
         delegate.start();
 
-        executor.submit(processor);
-        CompletableFuture<?> future = CompletableFuture.runAsync(() -> {
-            while (delegate.isActive()) {
-                try {
-                    Thread.sleep(1000);
-                    if (session.getState().getPiecesRemaining() == 0) {
-                        delegate.complete();
-                    }
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                } catch (Throwable e) {
-                    LOGGER.warn("Unexpected error", e);
-                }
-            }
-        }, executor);
+        CompletableFuture<?> future = CompletableFuture.runAsync(
+                () -> ChainProcessor.execute(processor, context), executor);
 
         future.whenComplete((r, t) -> listener.ifPresent(listener -> listener.accept(session.getState())))
                 .whenComplete((r, t) -> listenerFuture.ifPresent(listener -> listener.cancel(true)))

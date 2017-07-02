@@ -1,6 +1,5 @@
 package bt.it.fixture;
 
-import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.peer.IPeerRegistry;
@@ -12,6 +11,7 @@ import bt.tracker.TrackerResponse;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 
@@ -94,15 +94,17 @@ public class SharedTrackerModule implements Module {
 
     private static class PeerTrackerService implements ITrackerService {
 
-        private Peer peer;
+        private final Provider<IPeerRegistry> peerRegistryProvider;
+        private volatile IPeerRegistry peerRegistry;
+
         private PeerFilter peerFilter;
         private ConcurrentMap<URL, Tracker> trackers;
 
         @Inject
-        PeerTrackerService(IPeerRegistry peerRegistry, PeerFilter peerFilter) {
-            peer = peerRegistry.getLocalPeer();
+        PeerTrackerService(Provider<IPeerRegistry> peerRegistryProvider, PeerFilter peerFilter) {
+            this.peerRegistryProvider = peerRegistryProvider;
             this.peerFilter = peerFilter;
-            trackers = new ConcurrentHashMap<>();
+            this.trackers = new ConcurrentHashMap<>();
         }
 
         @Override
@@ -129,13 +131,13 @@ public class SharedTrackerModule implements Module {
 
                                 @Override
                                 public TrackerResponse start() {
-                                    knownPeersService.addPeer(trackerUrl, peer);
+                                    knownPeersService.addPeer(trackerUrl, getLocalPeer());
                                     return queryPeers();
                                 }
 
                                 @Override
                                 public TrackerResponse stop() {
-                                    knownPeersService.removePeer(trackerUrl, peer);
+                                    knownPeersService.removePeer(trackerUrl, getLocalPeer());
                                     return TrackerResponse.ok();
                                 }
 
@@ -151,7 +153,7 @@ public class SharedTrackerModule implements Module {
 
                                 private TrackerResponse queryPeers() {
                                     return new StartResponse(peerFilter.filterPeers(
-                                            peer, knownPeersService.getPeersSnapshot(trackerUrl)));
+                                            getLocalPeer(), knownPeersService.getPeersSnapshot(trackerUrl)));
                                 }
                     };
 
@@ -168,6 +170,17 @@ public class SharedTrackerModule implements Module {
                 }
             }
             return tracker;
+        }
+
+        private Peer getLocalPeer() {
+            if (peerRegistry == null) {
+                synchronized (peerRegistryProvider) {
+                    if (peerRegistry == null) {
+                        peerRegistry = peerRegistryProvider.get();
+                    }
+                }
+            }
+            return peerRegistry.getLocalPeer();
         }
 
         @Override

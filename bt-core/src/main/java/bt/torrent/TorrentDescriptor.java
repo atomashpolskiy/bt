@@ -40,8 +40,6 @@ public interface TorrentDescriptor {
     /**
      * @return Torrent data descriptor or null, if it hasn't been created yet
      * @since 1.0
-     * @deprecated since 1.3
      */
-    @Deprecated
     DataDescriptor getDataDescriptor();
 }
