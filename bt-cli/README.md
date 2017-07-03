@@ -15,7 +15,8 @@ Option (* = required)  Description
 -S, --sequential       Download sequentially
 * -d, --dir <File>     Target download location
 -e, --encrypted        Enforce encryption for all connections
-* -f, --file <File>    Torrent metainfo file
+-f, --file <File>      Torrent metainfo file
+-m, --magnet           Magnet URI
 -s, --seed             Continue to seed when download is complete
 ```
 
