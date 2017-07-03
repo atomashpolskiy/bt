@@ -7,11 +7,12 @@ import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.peer.IPeerRegistry;
 import bt.processor.magnet.FetchMetadataStage;
+import bt.processor.magnet.InitializeMagnetTorrentProcessingStage;
 import bt.processor.magnet.MagnetContext;
 import bt.processor.torrent.FetchTorrentStage;
-import bt.processor.torrent.InitializeTorrentStage;
+import bt.processor.torrent.CreateSessionStage;
+import bt.processor.torrent.InitializeTorrentProcessingStage;
 import bt.processor.torrent.ProcessTorrentStage;
-import bt.processor.torrent.RegisterTorrentStage;
 import bt.processor.torrent.TorrentContext;
 import bt.runtime.Config;
 import bt.torrent.TorrentRegistry;
@@ -75,12 +76,12 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
     private ProcessingStage<TorrentContext> createTorrentProcessor() {
 
-        ProcessingStage<TorrentContext> stage3 = new ProcessTorrentStage<>(null, torrentRegistry,
-                dataWorkerFactory, trackerService, executor, config);
+        ProcessingStage<TorrentContext> stage3 = new ProcessTorrentStage<>(null, torrentRegistry, trackerService, executor);
 
-        ProcessingStage<TorrentContext> stage2 = new RegisterTorrentStage<>(stage3, torrentRegistry);
+        ProcessingStage<TorrentContext> stage2 = new InitializeTorrentProcessingStage<>(stage3, torrentRegistry,
+                dataWorkerFactory, config);
 
-        ProcessingStage<TorrentContext> stage1 = new InitializeTorrentStage<>(stage2, torrentRegistry, peerRegistry,
+        ProcessingStage<TorrentContext> stage1 = new CreateSessionStage<>(stage2, torrentRegistry, peerRegistry,
                 connectionPool, messageDispatcher, messagingAgents, config);
 
         ProcessingStage<TorrentContext> stage0 = new FetchTorrentStage(stage1);
@@ -90,14 +91,14 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
     private ProcessingStage<MagnetContext> createMagnetProcessor() {
 
-        ProcessingStage<MagnetContext> stage3 = new ProcessTorrentStage<>(null, torrentRegistry,
-                dataWorkerFactory, trackerService, executor, config);
+        ProcessingStage<MagnetContext> stage3 = new ProcessTorrentStage<>(null, torrentRegistry, trackerService, executor);
 
-        ProcessingStage<MagnetContext> stage2 = new RegisterTorrentStage<>(stage3, torrentRegistry);
+        ProcessingStage<MagnetContext> stage2 = new InitializeMagnetTorrentProcessingStage(stage3, torrentRegistry,
+                dataWorkerFactory, config);
 
         ProcessingStage<MagnetContext> stage1 = new FetchMetadataStage(stage2, metadataService, torrentRegistry);
 
-        ProcessingStage<MagnetContext> stage0 = new InitializeTorrentStage<>(stage1, torrentRegistry, peerRegistry,
+        ProcessingStage<MagnetContext> stage0 = new CreateSessionStage<>(stage1, torrentRegistry, peerRegistry,
                 connectionPool, messageDispatcher, messagingAgents, config);
 
         return stage0;

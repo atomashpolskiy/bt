@@ -22,7 +22,7 @@ import bt.torrent.messaging.TorrentWorker;
 import java.util.Set;
 import java.util.function.Supplier;
 
-public class InitializeTorrentStage<C extends TorrentContext> extends BaseProcessingStage<C> {
+public class CreateSessionStage<C extends TorrentContext> extends BaseProcessingStage<C> {
 
     private TorrentRegistry torrentRegistry;
     private IPeerRegistry peerRegistry;
@@ -31,13 +31,13 @@ public class InitializeTorrentStage<C extends TorrentContext> extends BaseProces
     private Set<Object> messagingAgents;
     private Config config;
 
-    public InitializeTorrentStage(ProcessingStage<C> next,
-                                  TorrentRegistry torrentRegistry,
-                                  IPeerRegistry peerRegistry,
-                                  IPeerConnectionPool connectionPool,
-                                  IMessageDispatcher messageDispatcher,
-                                  Set<Object> messagingAgents,
-                                  Config config) {
+    public CreateSessionStage(ProcessingStage<C> next,
+                              TorrentRegistry torrentRegistry,
+                              IPeerRegistry peerRegistry,
+                              IPeerConnectionPool connectionPool,
+                              IMessageDispatcher messageDispatcher,
+                              Set<Object> messagingAgents,
+                              Config config) {
         super(next);
         this.torrentRegistry = torrentRegistry;
         this.peerRegistry = peerRegistry;

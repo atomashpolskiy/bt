@@ -16,6 +16,7 @@ import bt.protocol.extended.ExtendedHandshake;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Queue;
@@ -28,13 +29,16 @@ import java.util.function.Consumer;
 
 public class MetadataFetcher {
     private static final int BLOCK_SIZE = 16384;
+    private static final int MAX_METADATA_SIZE = 2 * 1024 * 1024; // 2MB
+    private static final Duration FIRST_BLOCK_ARRIVAL_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration WAIT_BEFORE_REREQUESTING_AFTER_REJECT = Duration.ofSeconds(10);
 
     private final ConcurrentMap<Peer, Queue<Message>> outboundMessages;
     private final ConcurrentMap<Peer, Long> peersWithoutMetadata;
 
     private final Set<Peer> supportingPeers;
-    private final Set<Peer> requestedPeers;
     private final ConcurrentMap<Peer, Long> requestedFirstPeers;
+    private final Set<Peer> requestedAllPeers;
 
     private volatile Range<?> metadata;
     private volatile BlockSet metadataBlocks;
@@ -42,6 +46,8 @@ public class MetadataFetcher {
     private IMetadataService metadataService;
 
     private final TorrentId torrentId;
+
+    // set immediately after metadata has been fetched and verified
     private final AtomicReference<Torrent> torrent;
 
     public MetadataFetcher(IMetadataService metadataService, TorrentId torrentId) {
@@ -49,8 +55,8 @@ public class MetadataFetcher {
         this.peersWithoutMetadata = new ConcurrentHashMap<>();
 
         this.supportingPeers = ConcurrentHashMap.newKeySet();
-        this.requestedPeers = ConcurrentHashMap.newKeySet();
         this.requestedFirstPeers = new ConcurrentHashMap<>();
+        this.requestedAllPeers = ConcurrentHashMap.newKeySet();
 
         this.metadataService = metadataService;
 
@@ -71,17 +77,53 @@ public class MetadataFetcher {
     @Consumes
     public void consume(UtMetadata message, MessageContext context) {
         Peer peer = context.getPeer();
+        // being lenient herer and not checking if the peer advertised ut_metadata support
         switch (message.getType()) {
             case REQUEST: {
-                // reject all requests as we don't have the full metadata yet
-                getOutboundMessages(peer).add(UtMetadata.reject(message.getPieceIndex()));
+                // TODO: spam protection
+                processMetadataRequest(peer, message.getPieceIndex());
             }
             case DATA: {
-                saveData(message.getPieceIndex(), message.getTotalSize().get(), message.getData().get());
+                int totalSize = message.getTotalSize().get();
+                if (totalSize >= MAX_METADATA_SIZE) {
+                    throw new IllegalStateException("Declared metadata size is too large: " + totalSize +
+                            "; max allowed is " + MAX_METADATA_SIZE);
+                }
+                processMetadataBlock(message.getPieceIndex(), totalSize, message.getData().get());
             }
             case REJECT: {
                 peersWithoutMetadata.put(peer, System.currentTimeMillis());
             }
+        }
+    }
+
+    private void processMetadataRequest(Peer peer, int pieceIndex) {
+        Message response;
+        if (torrent.get() == null) {
+            // reject all requests as we don't have the full metadata yet
+            response = UtMetadata.reject(pieceIndex);
+        } else {
+            if (pieceIndex >= metadataBlocks.blockCount()) {
+                throw new IllegalArgumentException("Invalid piece index: " + pieceIndex +
+                        "; expected 0.." + metadataBlocks.blockCount());
+            }
+            // last piece may be smaller than the rest
+            int blockLength = (pieceIndex == metadataBlocks.blockCount() - 1) ? (int) metadataBlocks.lastBlockSize() : BLOCK_SIZE;
+            byte[] data = metadata.getSubrange(pieceIndex * BLOCK_SIZE, blockLength).getBytes();
+            response = UtMetadata.data(pieceIndex, (int) metadata.length(), data);
+        }
+        getOutboundMessages(peer).add(response);
+    }
+
+    private void processMetadataBlock(int pieceIndex, int totalSize, byte[] data) {
+        if (metadata == null) {
+            BlockRange<ByteRange> range = Ranges.blockRange(new ByteRange(new byte[totalSize]), BLOCK_SIZE);
+            metadata = Ranges.synchronizedRange(range);
+            metadataBlocks = Ranges.synchronizedBlockSet(range.getBlockSet());
+        }
+
+        if (!metadataBlocks.isPresent(pieceIndex)) {
+            metadata.getSubrange(pieceIndex * BLOCK_SIZE).putBytes(data);
         }
     }
 
@@ -97,16 +139,19 @@ public class MetadataFetcher {
                 try {
                     synchronized (torrent) {
                         torrent.set(metadataService.fromByteArray(metadata.getBytes()));
+                        requestedFirstPeers.clear();
+                        requestedAllPeers.clear();
                         torrent.notifyAll();
+                        return;
                     }
-                } catch (Exception e){
+                } catch (Exception e) {
                     metadata = null;
                     metadataBlocks = null;
                     throw e;
                 }
-                return;
             } else {
-                // TODO: restart
+                // restart the process
+                // TODO: terminate peer connections that the metadata was fetched from?
                 metadata = null;
                 metadataBlocks = null;
                 throw new IllegalStateException("Metadata fetched, but hash does not match the torrent ID");
@@ -115,67 +160,28 @@ public class MetadataFetcher {
 
         Peer peer = context.getPeer();
         if (supportingPeers.contains(peer)) {
-            if (metadataBlocks != null) {
-                if (!requestedPeers.contains(peer)) {
-                    requestedPeers.add(peer);
-                    for (int i = 0; i < metadataBlocks.blockCount(); i++) {
+            if (peersWithoutMetadata.containsKey(peer)) {
+                if ((System.currentTimeMillis() - peersWithoutMetadata.get(peer)) >= WAIT_BEFORE_REREQUESTING_AFTER_REJECT.toMillis()) {
+                    peersWithoutMetadata.remove(peer);
+                }
+            }
+
+            if (!peersWithoutMetadata.containsKey(peer)) {
+                if (metadataBlocks == null) {
+                    if (!requestedFirstPeers.containsKey(peer) ||
+                            (System.currentTimeMillis() - requestedFirstPeers.get(peer) > FIRST_BLOCK_ARRIVAL_TIMEOUT.toMillis())) {
+                        requestedFirstPeers.put(peer, System.currentTimeMillis());
+                        messageConsumer.accept(UtMetadata.request(0));
+                    }
+                } else if (!requestedAllPeers.contains(peer)) {
+                    requestedAllPeers.add(peer);
+                    // TODO: larger metadata should be handled in more intelligent way
+                    // starting with block #1 because by now we should have already received block #0
+                    for (int i = 1; i < metadataBlocks.blockCount(); i++) {
                         messageConsumer.accept(UtMetadata.request(i));
                     }
                 }
-            } else {
-                if (!requestedFirstPeers.containsKey(peer) || (System.currentTimeMillis() - requestedFirstPeers.get(peer) > 10000)) {
-                    requestedFirstPeers.put(peer, System.currentTimeMillis());
-                    messageConsumer.accept(UtMetadata.request(0));
-                }
             }
-        }
-
-//        if (mightRequestMetadata(peer)) {
-//            nextRequest().ifPresent(messageConsumer::accept);
-//        }
-    }
-
-//    private Optional<Message> nextRequest() {
-//        Message message = null;
-//        if (metadata == null) {
-//            // we don't have anything yet, so let's request the very first piece
-//            message = UtMetadata.request(0);
-//        } else if (!metadataBlocks.isComplete()) {
-//            Optional<Integer> nextPiece = selectNextPiece();
-//            if (nextPiece.isPresent()) {
-//                message = UtMetadata.request(nextPiece.get());
-//            }
-//        }
-//        return Optional.ofNullable(message);
-//    }
-//
-//    private Optional<Integer> selectNextPiece() {
-//        if (pieces == null) {
-//            PieceStatistics fakeStatistics = new PieceStatistics() {
-//                @Override
-//                public int getCount(int pieceIndex) {
-//                    return 1;
-//                }
-//
-//                @Override
-//                public int getPiecesTotal() {
-//                    return metadataBlocks.blockCount();
-//                }
-//            };
-//            pieces = SequentialSelector.sequential().getNextPieces(fakeStatistics);
-//        }
-//        return pieces.findFirst();
-//    }
-
-    private void saveData(int pieceIndex, int totalSize, byte[] data) {
-        if (metadata == null) {
-            BlockRange<ByteRange> range = Ranges.blockRange(new ByteRange(new byte[totalSize]), BLOCK_SIZE);
-            metadata = Ranges.synchronizedRange(range);
-            metadataBlocks = Ranges.synchronizedBlockSet(range.getBlockSet());
-        }
-
-        if (!metadataBlocks.isPresent(pieceIndex)) {
-            metadata.getSubrange(pieceIndex * BLOCK_SIZE).putBytes(data);
         }
     }
 
@@ -192,22 +198,17 @@ public class MetadataFetcher {
     }
 
     public Torrent fetchTorrent() {
-        synchronized (torrent) {
-            try {
-                torrent.wait();
-                return torrent.get();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+        if (torrent.get() == null) {
+            synchronized (torrent) {
+                if (torrent.get() == null) {
+                    try {
+                        torrent.wait();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
             }
         }
+        return torrent.get();
     }
-
-//    private boolean mightRequestMetadata(Peer peer) {
-//        Long lastRejected = peersWithoutMetadata.get(peer);
-//        boolean mightRequest = lastRejected == null || (System.currentTimeMillis() - lastRejected >= 30000);
-//        if (mightRequest) {
-//            peersWithoutMetadata.remove(peer);
-//        }
-//        return mightRequest;
-//    }
 }

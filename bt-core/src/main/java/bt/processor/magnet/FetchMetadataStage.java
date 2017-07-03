@@ -7,6 +7,7 @@ import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
+import bt.torrent.messaging.BitfieldCollectingConsumer;
 import bt.torrent.messaging.MetadataFetcher;
 
 public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
@@ -25,18 +26,19 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
     @Override
     protected void doExecute(MagnetContext context) {
         TorrentId torrentId = context.getMagnetUri().getTorrentId();
-        getDescriptor(torrentId).start();
 
         MetadataFetcher metadataFetcher = new MetadataFetcher(metadataService, torrentId);
-
         context.getRouter().registerMessagingAgent(metadataFetcher);
 
-        // TODO: need to also receive Bitfields and Haves (without validation for the number of pieces...)
+        // need to also receive Bitfields and Haves (without validation for the number of pieces...)
+        BitfieldCollectingConsumer bitfieldConsumer = new BitfieldCollectingConsumer();
+        context.getRouter().registerMessagingAgent(bitfieldConsumer);
 
+        getDescriptor(torrentId).start();
         Torrent torrent = metadataFetcher.fetchTorrent();
         context.setTorrent(torrent);
 
-        context.getRouter().unregisterMessagingAgent(metadataFetcher);
+        context.setBitfieldConsumer(bitfieldConsumer);
     }
 
     private TorrentDescriptor getDescriptor(TorrentId torrentId) {
