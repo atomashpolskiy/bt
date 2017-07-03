@@ -13,14 +13,14 @@ public class Ranges {
     /**
      * @since 1.3
      */
-    public static <T extends Range<T>> BlockRange<T> blockRange(Range<T> range, long blockSize) {
+    public static <T extends Range<T>> BlockRange<T> blockRange(T range, long blockSize) {
         return new BlockRange<>(range, blockSize);
     }
 
     /**
      * @since 1.3
      */
-    public static <T extends Range<T>> Range<T> synchronizedRange(Range<T> range) {
+    public static <T extends Range<T>> Range<T> synchronizedRange(T range) {
         return new SynchronizedRange<>(range);
     }
 
