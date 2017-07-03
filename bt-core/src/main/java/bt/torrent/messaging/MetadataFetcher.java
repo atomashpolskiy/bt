@@ -40,7 +40,7 @@ public class MetadataFetcher {
     private final ConcurrentMap<Peer, Long> requestedFirstPeers;
     private final Set<Peer> requestedAllPeers;
 
-    private volatile Range<?> metadata;
+    private volatile Range<BlockRange<ByteRange>> metadata;
     private volatile BlockSet metadataBlocks;
 
     private IMetadataService metadataService;
