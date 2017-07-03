@@ -14,6 +14,7 @@
 
 * [BEP-3: The BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html)
 * [BEP-5: DHT Protocol](http://bittorrent.org/beps/bep_0005.html)
+* [BEP-9: Extension for Peers to Send Metadata Files](http://bittorrent.org/beps/bep_0009.html)
 * [BEP-10: Extension Protocol](http://bittorrent.org/beps/bep_0010.html)
 * [BEP-11: Peer Exchange (PEX)](http://bittorrent.org/beps/bep_0011.html)
 * [BEP-12: Multitracker metadata extension](http://bittorrent.org/beps/bep_0012.html)

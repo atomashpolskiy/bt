@@ -7,11 +7,20 @@ http://atomashpolskiy.github.io/bt/
 Release: 1.3
 Date:
 ----------------------------------
+Official BEPs:
+
+* BEP-9: Extension for Peers to Send Metadata Files
+
 Changes/New Features:
 
+* Added ByteRange for working with binary ranges based on byte arrays and byte buffers
+* Support creating torrents from binary representation of info dictionary
 
 Bug Fixes/Improvements:
 
+* Introduced notion of torrent processing chain
+* Fixed bug in extended protocol (invalid message type id mapping for peers) that sometimes prevented peers from receiving extended messages from Bt
+* Reduced dependency on the presence of a torrent; using torrent ID where possible
 
 ----------------------------------
 Release: 1.2

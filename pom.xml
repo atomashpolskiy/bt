@@ -261,6 +261,9 @@
                             <goal>aggregate</goal>
                         </goals>
                         <phase>site</phase>
+                        <configuration>
+                            <excludePackageNames>lbms.*:the8472.*</excludePackageNames>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
