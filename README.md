@@ -35,7 +35,7 @@ git clone https://github.com/atomashpolskiy/bt.git
 2) Build:
 ```
 cd bt
-mvn clean install -DskipTests=true
+mvn clean install -DskipTests
  ```
  
 3) Download with [CLI launcher](https://github.com/atomashpolskiy/bt/tree/master/bt-cli) or use as a library:
