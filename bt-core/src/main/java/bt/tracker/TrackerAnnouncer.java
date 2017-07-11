@@ -6,6 +6,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
+/**
+ * @since 1.3
+ */
 public class TrackerAnnouncer {
     private static final Logger LOGGER = LoggerFactory.getLogger(TrackerAnnouncer.class);
 

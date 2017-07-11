@@ -5,13 +5,14 @@ import bt.peer.PeerOptions;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * @since 1.0
  */
 public class InetPeer implements Peer {
 
-    private InetSocketAddress address;
+    private Supplier<InetSocketAddress> addressSupplier;
     private Optional<PeerId> peerId;
 
     private final PeerOptions options;
@@ -27,7 +28,14 @@ public class InetPeer implements Peer {
      * @since 1.2
      */
     public InetPeer(InetSocketAddress address) {
-        this(address, null, PeerOptions.defaultOptions());
+        this(() -> address, null, PeerOptions.defaultOptions());
+    }
+
+    /**
+     * @since 1.3
+     */
+    public InetPeer(InetPeerAddress addressHolder) {
+        this(addressHolder::getAddress, null, PeerOptions.defaultOptions());
     }
 
     /**
@@ -41,7 +49,14 @@ public class InetPeer implements Peer {
      * @since 1.0
      */
     public InetPeer(InetSocketAddress address, PeerOptions options) {
-        this(address, null, options);
+        this(() -> address, null, options);
+    }
+
+    /**
+     * @since 1.3
+     */
+    public InetPeer(InetPeerAddress addressHolder, PeerOptions options) {
+        this(addressHolder::getAddress, null, options);
     }
 
     /**
@@ -55,21 +70,39 @@ public class InetPeer implements Peer {
      * @since 1.2
      */
     public InetPeer(InetSocketAddress address, PeerId peerId) {
-        this(address, peerId, PeerOptions.defaultOptions());
+        this(() -> address, peerId, PeerOptions.defaultOptions());
+    }
+
+    /**
+     * @since 1.3
+     */
+    public InetPeer(InetPeerAddress addressHolder, PeerId peerId) {
+        this(addressHolder::getAddress, peerId, PeerOptions.defaultOptions());
     }
 
     /**
      * @since 1.0
      */
     public InetPeer(InetAddress inetAddress, int port, PeerId peerId, PeerOptions options) {
-        this(createAddress(inetAddress, port), peerId, options);
+        this(() -> createAddress(inetAddress, port), peerId, options);
     }
 
     /**
      * @since 1.2
      */
     public InetPeer(InetSocketAddress address, PeerId peerId, PeerOptions options) {
-        this.address = address;
+        this(() -> address, peerId, options);
+    }
+
+    /**
+     * @since 1.3
+     */
+    public InetPeer(InetPeerAddress addressHolder, PeerId peerId, PeerOptions options) {
+        this(addressHolder::getAddress, peerId, options);
+    }
+
+    private InetPeer(Supplier<InetSocketAddress> addressSupplier, PeerId peerId, PeerOptions options) {
+        this.addressSupplier = addressSupplier;
         this.peerId = Optional.ofNullable(peerId);
         this.options = options;
     }
@@ -83,12 +116,12 @@ public class InetPeer implements Peer {
 
     @Override
     public InetSocketAddress getInetSocketAddress() {
-        return address;
+        return addressSupplier.get();
     }
 
     @Override
     public InetAddress getInetAddress() {
-        return address.getAddress();
+        return addressSupplier.get().getAddress();
     }
 
     // TODO: probably need an additional property isReachable()
@@ -96,7 +129,7 @@ public class InetPeer implements Peer {
     // and to not send unreachable peers via PEX
     @Override
     public int getPort() {
-        return address.getPort();
+        return addressSupplier.get().getPort();
     }
 
     @Override
@@ -111,7 +144,7 @@ public class InetPeer implements Peer {
 
     @Override
     public int hashCode() {
-        return address.hashCode();
+        return addressSupplier.get().hashCode();
     }
 
     /**
@@ -128,11 +161,11 @@ public class InetPeer implements Peer {
         }
 
         Peer that = (Peer) object;
-        return address.equals(that.getInetSocketAddress());
+        return addressSupplier.get().equals(that.getInetSocketAddress());
     }
 
     @Override
     public String toString() {
-        return address.toString();
+        return addressSupplier.get().toString();
     }
 }

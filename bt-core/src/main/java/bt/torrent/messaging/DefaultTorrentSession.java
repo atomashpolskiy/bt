@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  *<p><b>Note that this class implements a service.
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
-public class DefaultTorrentSession implements TorrentSession, PeerActivityListener {
+public class DefaultTorrentSession implements TorrentSession {
 
     private final IPeerConnectionPool connectionPool;
     private final TorrentId torrentId;

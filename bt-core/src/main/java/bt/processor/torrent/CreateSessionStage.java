@@ -11,6 +11,7 @@ import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
+import bt.torrent.TorrentSession;
 import bt.torrent.messaging.Assignments;
 import bt.torrent.messaging.DefaultMessageRouter;
 import bt.torrent.messaging.DefaultTorrentSession;
@@ -61,7 +62,7 @@ public class CreateSessionStage<C extends TorrentContext> extends BaseProcessing
         TorrentWorker torrentWorker = new TorrentWorker(torrentId, messageDispatcher, peerWorkerFactory,
                 bitfieldSupplier, assignmentsSupplier, statisticsSupplier, config);
 
-        DefaultTorrentSession session = new DefaultTorrentSession(connectionPool, torrentRegistry, torrentWorker, torrentId,
+        TorrentSession session = new DefaultTorrentSession(connectionPool, torrentRegistry, torrentWorker, torrentId,
                 descriptor, config.getMaxPeerConnectionsPerTorrent());
 
         peerRegistry.addPeerConsumer(torrentId, session::onPeerDiscovered);

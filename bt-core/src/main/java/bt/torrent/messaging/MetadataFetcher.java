@@ -43,7 +43,7 @@ public class MetadataFetcher {
     private volatile Range<BlockRange<ByteRange>> metadata;
     private volatile BlockSet metadataBlocks;
 
-    private IMetadataService metadataService;
+    private final IMetadataService metadataService;
 
     private final TorrentId torrentId;
 
