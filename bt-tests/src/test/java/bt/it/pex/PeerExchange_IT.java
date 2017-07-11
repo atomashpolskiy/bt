@@ -74,7 +74,7 @@ public class PeerExchange_IT extends BaseBtTest {
                 }, 1000));
 
         try {
-            Thread.sleep(10000L);
+            Thread.sleep(20000L);
         } catch (InterruptedException e) {
             throw new RuntimeException("Test unexpectedly interrupted", e);
         }
