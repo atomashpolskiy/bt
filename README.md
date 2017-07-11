@@ -150,5 +150,5 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 
 Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new features and BEPs to be added. You have the following options to share your ideas, receive help or report bugs:
 
-* open a new  [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
+* open a new [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
 * post your question on the [Bt forum](https://groups.google.com/forum/#!forum/bttorrent)
