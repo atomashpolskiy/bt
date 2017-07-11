@@ -21,7 +21,8 @@ Bug Fixes/Improvements:
 * Introduced notion of torrent processing chain
 * Fixed bug in extended protocol (invalid message type id mapping for peers) that sometimes prevented peers from receiving extended messages from Bt
 * Reduced dependency on the presence of a torrent; using torrent ID where possible
-* Query peers for active torrents only
+* Lookup peers for active torrents only
+* Support HTTPS trackers
 
 ----------------------------------
 Release: 1.2
