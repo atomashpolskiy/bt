@@ -7,7 +7,7 @@ branches:
 os:
 - linux
 script:
-- mvn -Darguments="-Xmx128m" clean -U install -Pcodecov 2>&1 | grep -Ev 'DEBUG|TRACE'
+- mvn clean -U install -Pcodecov 2>&1 | grep -Ev 'DEBUG|TRACE'
 after_success:
 - mvn site
 - .travis/publish-javadoc.sh
