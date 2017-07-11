@@ -10,6 +10,7 @@ import bt.torrent.TorrentSession;
 import bt.torrent.messaging.Assignments;
 import bt.torrent.messaging.MessageRouter;
 import bt.torrent.selector.PieceSelector;
+import bt.tracker.TrackerAnnouncer;
 
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -28,6 +29,7 @@ public class TorrentContext implements ProcessingContext {
     private volatile Bitfield bitfield;
     private volatile Assignments assignments;
     private volatile BitfieldBasedStatistics pieceStatistics;
+    private volatile TrackerAnnouncer announcer;
 
     public TorrentContext(PieceSelector pieceSelector,
                           Storage storage,
@@ -108,5 +110,13 @@ public class TorrentContext implements ProcessingContext {
 
     public void setPieceStatistics(BitfieldBasedStatistics pieceStatistics) {
         this.pieceStatistics = pieceStatistics;
+    }
+
+    public TrackerAnnouncer getAnnouncer() {
+        return announcer;
+    }
+
+    public void setAnnouncer(TrackerAnnouncer announcer) {
+        this.announcer = announcer;
     }
 }

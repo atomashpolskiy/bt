@@ -9,8 +9,9 @@ import bt.peer.IPeerRegistry;
 import bt.processor.magnet.FetchMetadataStage;
 import bt.processor.magnet.InitializeMagnetTorrentProcessingStage;
 import bt.processor.magnet.MagnetContext;
-import bt.processor.torrent.FetchTorrentStage;
+import bt.processor.magnet.ProcessMagnetTorrentStage;
 import bt.processor.torrent.CreateSessionStage;
+import bt.processor.torrent.FetchTorrentStage;
 import bt.processor.torrent.InitializeTorrentProcessingStage;
 import bt.processor.torrent.ProcessTorrentStage;
 import bt.processor.torrent.TorrentContext;
@@ -91,12 +92,12 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
     private ProcessingStage<MagnetContext> createMagnetProcessor() {
 
-        ProcessingStage<MagnetContext> stage3 = new ProcessTorrentStage<>(null, torrentRegistry, trackerService, executor);
+        ProcessingStage<MagnetContext> stage3 = new ProcessMagnetTorrentStage(null, torrentRegistry, trackerService, executor);
 
         ProcessingStage<MagnetContext> stage2 = new InitializeMagnetTorrentProcessingStage(stage3, torrentRegistry,
                 dataWorkerFactory, config);
 
-        ProcessingStage<MagnetContext> stage1 = new FetchMetadataStage(stage2, metadataService, torrentRegistry);
+        ProcessingStage<MagnetContext> stage1 = new FetchMetadataStage(stage2, metadataService, torrentRegistry, trackerService);
 
         ProcessingStage<MagnetContext> stage0 = new CreateSessionStage<>(stage1, torrentRegistry, peerRegistry,
                 connectionPool, messageDispatcher, messagingAgents, config);

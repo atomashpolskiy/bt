@@ -7,11 +7,14 @@ import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.tracker.ITrackerService;
 import bt.tracker.TrackerAnnouncer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessingStage<C> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProcessTorrentStage.class);
 
     private TorrentRegistry torrentRegistry;
     private ITrackerService trackerService;
@@ -30,37 +33,88 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
     @Override
     protected void doExecute(C context) {
         TorrentDescriptor descriptor = getDescriptor(context.getTorrentId().get());
-
         TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, context.getTorrent().get());
-        announcer.start();
+        context.setAnnouncer(announcer);
 
-        CompletableFuture.runAsync(() -> {
+        start(context);
+
+        CompletableFuture<Void> future;
+
+        future = CompletableFuture.runAsync(() -> {
             while (descriptor.isActive()) {
                 try {
                     Thread.sleep(1000);
                     if (context.getSession().get().getState().getPiecesRemaining() == 0) {
                         descriptor.complete();
-                        announcer.complete();
                         return;
                     }
                 } catch (InterruptedException e) {
+                    finish(context);
                     throw new RuntimeException(e);
                 }
             }
-        }, executor).thenRunAsync(() -> {
+        }, executor);
+
+        future = future.thenRunAsync(() -> {
+            // might have been stopped externally before the torrent was actually completed
+            if (context.getSession().get().getState().getPiecesRemaining() == 0) {
+                complete(context);
+            }
+        }, executor);
+
+        future = future.thenRunAsync(() -> {
             while (descriptor.isActive()) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
+                    finish(context);
                     throw new RuntimeException(e);
                 }
             }
-        }).join();
+        }, executor);
 
+        future.join();
+
+        finish(context);
+    }
+
+    private void start(C context) {
+        try {
+            onStarted(context);
+        } catch (Exception e) {
+            LOGGER.error("Unexpected error", e);
+        }
+    }
+
+    protected void onStarted(C context) {
+        context.getAnnouncer().start();
+    }
+
+    private void complete(C context) {
+        try {
+            onCompleted(context);
+        } catch (Exception e) {
+            LOGGER.error("Unexpected error", e);
+        }
+    }
+
+    protected void onCompleted(C context) {
+        context.getAnnouncer().complete();
+    }
+
+    private void finish(C context) {
+        try {
+            onFinished(context);
+        } catch (Exception e) {
+            LOGGER.error("Unexpected error", e);
+        }
+    }
+
+    protected void onFinished(C context) {
         // TODO: misbehaving... but currently no way to know if runtime automatic shutdown was disabled
         // previously this was called via BtRuntime -> BtClient -> TorrentDescriptor
 //        announcer.stop();
-        descriptor.stop();
+        getDescriptor(context.getTorrentId().get()).stop();
     }
 
     private TorrentDescriptor getDescriptor(TorrentId torrentId) {

@@ -13,6 +13,8 @@ import bt.torrent.TorrentRegistry;
 import bt.torrent.messaging.BitfieldCollectingConsumer;
 import bt.torrent.messaging.MetadataFetcher;
 import bt.tracker.AnnounceKey;
+import bt.tracker.ITrackerService;
+import bt.tracker.TrackerAnnouncer;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,13 +26,16 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
 
     private IMetadataService metadataService;
     private TorrentRegistry torrentRegistry;
+    private ITrackerService trackerService;
 
     public FetchMetadataStage(ProcessingStage<MagnetContext> next,
                               IMetadataService metadataService,
-                              TorrentRegistry torrentRegistry) {
+                              TorrentRegistry torrentRegistry,
+                              ITrackerService trackerService) {
         super(next);
         this.metadataService = metadataService;
         this.torrentRegistry = torrentRegistry;
+        this.trackerService = trackerService;
     }
 
     @Override
@@ -53,6 +58,11 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
         Torrent torrent = metadataFetcher.fetchTorrent();
         Optional<AnnounceKey> announceKey = createAnnounceKey(context.getMagnetUri());
         torrent = amendTorrent(torrent, context.getMagnetUri().getDisplayName(), announceKey);
+        if (announceKey.isPresent()) {
+            TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, torrent);
+            announcer.start();
+        }
+
         context.setTorrent(torrent);
 
         context.setBitfieldConsumer(bitfieldConsumer);
