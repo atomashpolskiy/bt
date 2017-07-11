@@ -7,6 +7,7 @@ import bt.net.Peer;
 import bt.net.PeerId;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdentityService;
+import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
@@ -79,16 +80,19 @@ public class PeerRegistry implements IPeerRegistry {
 
     private void collectAndVisitPeers() {
         peerConsumers.forEach((torrentId, consumers) -> {
-            Optional<Torrent> torrentOptional = torrentRegistry.getTorrent(torrentId);
-            if (torrentOptional.isPresent()) {
-                Torrent torrent = torrentOptional.get();
-                queryTracker(torrent, consumers);
-            }
+            Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrentId);
+            if (descriptor.isPresent() && descriptor.get().isActive()) {
+                Optional<Torrent> torrentOptional = torrentRegistry.getTorrent(torrentId);
+                if (torrentOptional.isPresent()) {
+                    Torrent torrent = torrentOptional.get();
+                    queryTracker(torrent, consumers);
+                }
 
-            // disallow querying peer sources other than the tracker for private torrents
-            if ((!torrentOptional.isPresent() || !torrentOptional.get().isPrivate()) && !extraPeerSourceFactories.isEmpty()) {
-                extraPeerSourceFactories.forEach(factory ->
-                        queryPeerSource(factory.getPeerSource(torrentId), consumers));
+                // disallow querying peer sources other than the tracker for private torrents
+                if ((!torrentOptional.isPresent() || !torrentOptional.get().isPrivate()) && !extraPeerSourceFactories.isEmpty()) {
+                    extraPeerSourceFactories.forEach(factory ->
+                            queryPeerSource(factory.getPeerSource(torrentId), consumers));
+                }
             }
         });
     }
