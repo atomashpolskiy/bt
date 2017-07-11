@@ -106,9 +106,7 @@ public class CliClient  {
         }
 
         this.client = clientBuilder.build();
-
-        this.printer = SessionStatePrinter.createKeyInputAwarePrinter(
-                client.getSession().getTorrent(), keyBindings);
+        this.printer = SessionStatePrinter.createKeyInputAwarePrinter(() -> client.getSession().getTorrent(), keyBindings);
     }
 
     void resume() {

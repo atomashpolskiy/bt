@@ -1,14 +1,24 @@
 package bt.processor.magnet;
 
+import bt.magnet.MagnetUri;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
+import bt.net.InetPeer;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.messaging.BitfieldCollectingConsumer;
 import bt.torrent.messaging.MetadataFetcher;
+import bt.tracker.AnnounceKey;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
 
@@ -35,7 +45,14 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
         context.getRouter().registerMessagingAgent(bitfieldConsumer);
 
         getDescriptor(torrentId).start();
+
+        context.getMagnetUri().getPeerAddresses().forEach(address -> {
+            context.getSession().get().onPeerDiscovered(new InetPeer(address));
+        });
+
         Torrent torrent = metadataFetcher.fetchTorrent();
+        Optional<AnnounceKey> announceKey = createAnnounceKey(context.getMagnetUri());
+        torrent = amendTorrent(torrent, context.getMagnetUri().getDisplayName(), announceKey);
         context.setTorrent(torrent);
 
         context.setBitfieldConsumer(bitfieldConsumer);
@@ -44,5 +61,71 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
     private TorrentDescriptor getDescriptor(TorrentId torrentId) {
         return torrentRegistry.getDescriptor(torrentId)
                 .orElseThrow(() -> new IllegalStateException("No descriptor present for torrent ID: " + torrentId));
+    }
+
+    private Optional<AnnounceKey> createAnnounceKey(MagnetUri magnetUri) {
+        Optional<AnnounceKey> announceKey;
+
+        Collection<String> trackerUrls = magnetUri.getTrackerUrls();
+        if (trackerUrls.isEmpty()) {
+            announceKey = Optional.empty();
+        } else {
+            List<List<String>> trackerTiers = Collections.singletonList(new ArrayList<>(trackerUrls));
+            announceKey = Optional.of(new AnnounceKey(trackerTiers));
+        }
+        return announceKey;
+    }
+
+    private Torrent amendTorrent(Torrent delegate, Optional<String> displayName, Optional<AnnounceKey> announceKey) {
+        Torrent torrent;
+
+        if (displayName.isPresent() || announceKey.isPresent()) {
+            torrent = new Torrent() {
+                @Override
+                public Optional<AnnounceKey> getAnnounceKey() {
+                    return announceKey;
+                }
+
+                @Override
+                public TorrentId getTorrentId() {
+                    return delegate.getTorrentId();
+                }
+
+                @Override
+                public String getName() {
+                    // prefer name from the info dictionary
+                    String name = delegate.getName();
+                    return (name == null) ? displayName.orElse(null) : name;
+                }
+
+                @Override
+                public long getChunkSize() {
+                    return delegate.getChunkSize();
+                }
+
+                @Override
+                public Iterable<byte[]> getChunkHashes() {
+                    return delegate.getChunkHashes();
+                }
+
+                @Override
+                public long getSize() {
+                    return delegate.getSize();
+                }
+
+                @Override
+                public List<TorrentFile> getFiles() {
+                    return delegate.getFiles();
+                }
+
+                @Override
+                public boolean isPrivate() {
+                    return delegate.isPrivate();
+                }
+            };
+        } else {
+            torrent = delegate;
+        }
+        return torrent;
     }
 }

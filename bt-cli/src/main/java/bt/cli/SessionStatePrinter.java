@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Set;
+import java.util.function.Supplier;
 
 public class SessionStatePrinter {
 
@@ -30,7 +31,7 @@ public class SessionStatePrinter {
 
     private static final String WHITESPACES = "\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020";
 
-    public static SessionStatePrinter createKeyInputAwarePrinter(Torrent torrent,
+    public static SessionStatePrinter createKeyInputAwarePrinter(Supplier<Torrent> torrent,
                                                                  Collection<KeyStrokeBinding> bindings) {
         return new SessionStatePrinter(torrent) {
             private Thread t;
@@ -77,12 +78,12 @@ public class SessionStatePrinter {
 
     private volatile boolean shutdown;
 
-    private Torrent torrent;
+    private Supplier<Torrent> torrentSupplier;
     private volatile long started;
     private volatile long downloaded;
     private volatile long uploaded;
 
-    public SessionStatePrinter(Torrent torrent) {
+    public SessionStatePrinter(Supplier<Torrent> torrentSupplier) {
         try {
             Terminal terminal = new DefaultTerminalFactory(System.out, System.in,
                      Charset.forName("UTF-8")).createTerminal();
@@ -95,8 +96,8 @@ public class SessionStatePrinter {
 
             started = System.currentTimeMillis();
 
-            this.torrent = torrent;
-            printTorrentInfo(torrent);
+            this.torrentSupplier = torrentSupplier;
+            printTorrentInfo(torrentSupplier.get());
         } catch (IOException e) {
             throw new RuntimeException("Failed to create terminal", e);
         }
@@ -149,6 +150,9 @@ public class SessionStatePrinter {
             long downloaded = sessionState.getDownloaded();
             long uploaded = sessionState.getUploaded();
 
+            Torrent torrent = torrentSupplier.get();
+            graphics.putString(0, 0, String.format(TORRENT_INFO, torrent.getName(), torrent.getSize()));
+
             graphics.putString(0, 2, getDurations(downloaded - this.downloaded,
                     sessionState.getPiecesRemaining(), sessionState.getPiecesTotal()));
 
@@ -192,7 +196,7 @@ public class SessionStatePrinter {
         } else if (downloaded == 0) {
             remainingStr = "\u221E" + WHITESPACES; // infinity
         } else {
-            long size = torrent.getSize();
+            long size = torrentSupplier.get().getSize();
             double remaining = piecesRemaining / ((double) piecesTotal);
             long remainingBytes = (long) (size * remaining);
             Duration remainingTime = Duration.ofSeconds(remainingBytes / downloaded);
