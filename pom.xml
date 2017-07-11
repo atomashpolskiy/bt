@@ -51,8 +51,6 @@
         <mockito-version>1.10.19</mockito-version>
 
         <!-- Test-specific properties -->
-        <skip.unit.tests>false</skip.unit.tests>
-        <skip.integration.tests>false</skip.integration.tests>
         <jacoco.ut.exec>target/coverage-reports/jacoco-ut.exec</jacoco.ut.exec>
         <jacoco.it.exec>target/coverage-reports/jacoco-it.exec</jacoco.it.exec>
     </properties>
@@ -223,7 +221,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>${surefireArgLine}</argLine>
-                    <skipTests>${skip.unit.tests}</skipTests>
                     <systemPropertyVariables>
                         <org.slf4j.simpleLogger.defaultLogLevel>${logging-level}</org.slf4j.simpleLogger.defaultLogLevel>
                         <org.slf4j.simpleLogger.showDateTime>true</org.slf4j.simpleLogger.showDateTime>
@@ -242,7 +239,6 @@
                         </goals>
                         <configuration>
                             <argLine>${failsafeArgLine}</argLine>
-                            <skipTests>${skip.integration.tests}</skipTests>
                             <systemPropertyVariables>
                                 <org.slf4j.simpleLogger.defaultLogLevel>${logging-level}</org.slf4j.simpleLogger.defaultLogLevel>
                                 <org.slf4j.simpleLogger.showDateTime>true</org.slf4j.simpleLogger.showDateTime>
