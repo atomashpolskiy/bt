@@ -23,6 +23,7 @@ Bug Fixes/Improvements:
 * Reduced dependency on the presence of a torrent; using torrent ID where possible
 * Lookup peers for active torrents only
 * Support HTTPS trackers
+* Configurable list of bootstrap DHT nodes
 
 ----------------------------------
 Release: 1.2
