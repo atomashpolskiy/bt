@@ -221,7 +221,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>${surefireArgLine}</argLine>
-                    <skipTests>false</skipTests>
+                    <skipTests>${skipTests}</skipTests>
                     <systemPropertyVariables>
                         <org.slf4j.simpleLogger.defaultLogLevel>${logging-level}</org.slf4j.simpleLogger.defaultLogLevel>
                         <org.slf4j.simpleLogger.showDateTime>true</org.slf4j.simpleLogger.showDateTime>
@@ -240,7 +240,7 @@
                         </goals>
                         <configuration>
                             <argLine>${failsafeArgLine}</argLine>
-                            <skipTests>false</skipTests>
+                            <skipTests>${skipTests}</skipTests>
                             <systemPropertyVariables>
                                 <org.slf4j.simpleLogger.defaultLogLevel>${logging-level}</org.slf4j.simpleLogger.defaultLogLevel>
                                 <org.slf4j.simpleLogger.showDateTime>true</org.slf4j.simpleLogger.showDateTime>
