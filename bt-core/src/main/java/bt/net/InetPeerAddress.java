@@ -42,6 +42,14 @@ public class InetPeerAddress {
         return address;
     }
 
+    public String getHostname() {
+        return hostname;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
     @Override
     public boolean equals(Object object) {
         if (this == object) {

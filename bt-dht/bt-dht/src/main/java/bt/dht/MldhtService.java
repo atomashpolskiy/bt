@@ -4,6 +4,7 @@ import bt.BtException;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
+import bt.net.InetPeerAddress;
 import bt.net.Peer;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.LifecycleBinding;
@@ -21,6 +22,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.SocketException;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -62,11 +64,13 @@ class MldhtService implements DHTService {
     private DHT dht;
 
     private boolean shouldBootstrap;
+    private Collection<InetPeerAddress> bootstrapNodes;
 
     public MldhtService(IRuntimeLifecycleBinder lifecycleBinder, DHTConfig config) {
         this.dht = new DHT(config.shouldUseIPv6()? DHTtype.IPV6_DHT : DHTtype.IPV4_DHT);
         this.config = toMldhtConfig(config);
         this.shouldBootstrap = config.shouldUseRouterBootstrap();
+        this.bootstrapNodes = config.getBootstrapNodes();
 
         lifecycleBinder.onStartup(LifecycleBinding.bind(this::start).description("Initialize DHT facilities").async().build());
         lifecycleBinder.onShutdown("Shutdown DHT facilities", this::shutdown);
@@ -114,11 +118,8 @@ class MldhtService implements DHTService {
         }
     }
 
-    // TODO: move the list of bootstrap nodes to config
-    private void bootstrap() {
-        dht.addDHTNode("router.bittorrent.com", 6881);
-        dht.addDHTNode("dht.transmissionbt.com", 6881);
-        dht.addDHTNode("router.utorrent.com", 6881);
+    protected void bootstrap() {
+        bootstrapNodes.forEach(node -> dht.addDHTNode(node.getHostname(), node.getPort()));
     }
 
     private void shutdown() {

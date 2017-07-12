@@ -1,5 +1,10 @@
 package bt.dht;
 
+import bt.net.InetPeerAddress;
+
+import java.util.Arrays;
+import java.util.Collection;
+
 /**
  * Provides configuration for DHT facilities.
  *
@@ -10,6 +15,7 @@ public class DHTConfig {
     private int listeningPort;
     private boolean useRouterBootstrap;
     private boolean useIPv6;
+    private Collection<InetPeerAddress> bootstrapNodes;
 
     /**
      * @since 1.1
@@ -18,6 +24,11 @@ public class DHTConfig {
         this.listeningPort = 49001;
         this.useRouterBootstrap = false;
         this.useIPv6 = false;
+        this.bootstrapNodes = Arrays.asList(
+            new InetPeerAddress("router.bittorrent.com", 6881),
+            new InetPeerAddress("dht.transmissionbt.com", 6881),
+            new InetPeerAddress("router.utorrent.com", 6881)
+        );
     }
 
     /**
@@ -67,5 +78,21 @@ public class DHTConfig {
      */
     public void setShouldUseIPv6(boolean useIPv6) {
         this.useIPv6 = useIPv6;
+    }
+
+    /**
+     * @see #setBootstrapNodes(Collection)
+     * @since 1.3
+     */
+    public Collection<InetPeerAddress> getBootstrapNodes() {
+        return bootstrapNodes;
+    }
+
+    /**
+     * @param bootstrapNodes DHT nodes to use upon startup to connect to the swarm.
+     * @since 1.3
+     */
+    public void setBootstrapNodes(Collection<InetPeerAddress> bootstrapNodes) {
+        this.bootstrapNodes = bootstrapNodes;
     }
 }
