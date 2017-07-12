@@ -75,7 +75,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         return processors;
     }
 
-    private ProcessingStage<TorrentContext> createTorrentProcessor() {
+    protected ProcessingStage<TorrentContext> createTorrentProcessor() {
 
         ProcessingStage<TorrentContext> stage3 = new ProcessTorrentStage<>(null, torrentRegistry, trackerService, executor);
 
@@ -90,7 +90,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         return stage0;
     }
 
-    private ProcessingStage<MagnetContext> createMagnetProcessor() {
+    protected ProcessingStage<MagnetContext> createMagnetProcessor() {
 
         ProcessingStage<MagnetContext> stage3 = new ProcessMagnetTorrentStage(null, torrentRegistry, trackerService, executor);
 
