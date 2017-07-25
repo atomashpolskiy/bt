@@ -7,12 +7,12 @@ import bt.net.HandshakeHandler;
 import bt.net.IConnectionHandlerFactory;
 import bt.net.extended.ExtendedProtocolHandshakeHandler;
 import bt.protocol.HandshakeFactory;
+import bt.protocol.IExtendedHandshakeFactory;
 import bt.protocol.IHandshakeFactory;
 import bt.protocol.Message;
 import bt.protocol.StandardBittorrentProtocol;
 import bt.protocol.extended.AlphaSortedMapping;
-import bt.protocol.extended.ExtendedHandshake;
-import bt.protocol.extended.ExtendedHandshakeProvider;
+import bt.protocol.extended.ExtendedHandshakeFactory;
 import bt.protocol.extended.ExtendedMessage;
 import bt.protocol.extended.ExtendedMessageTypeMapping;
 import bt.protocol.extended.ExtendedProtocol;
@@ -95,7 +95,7 @@ public class ProtocolModule implements Module {
         ProtocolModule.contributeMessageHandler(binder)
                 .addBinding(ExtendedProtocol.EXTENDED_MESSAGE_ID).to(ExtendedProtocol.class);
 
-        binder.bind(ExtendedHandshake.class).toProvider(ExtendedHandshakeProvider.class).in(Singleton.class);
+        binder.bind(IExtendedHandshakeFactory.class).to(ExtendedHandshakeFactory.class).in(Singleton.class);
 
         ProtocolModule.contributeExtendedMessageHandler(binder)
                 .addBinding("ut_metadata").to(UtMetadataMessageHandler.class);
@@ -106,12 +106,12 @@ public class ProtocolModule implements Module {
     public IConnectionHandlerFactory provideConnectionHandlerFactory(IHandshakeFactory handshakeFactory,
                                                                      TorrentRegistry torrentRegistry,
                                                                      Set<HandshakeHandler> boundHandshakeHandlers,
-                                                                     ExtendedHandshakeProvider extendedHandshakeProvider,
+                                                                     ExtendedHandshakeFactory extendedHandshakeFactory,
                                                                      Config config) {
         List<HandshakeHandler> handshakeHandlers = new ArrayList<>(boundHandshakeHandlers);
         // add default handshake handlers to the beginning of the connection handling chain
         handshakeHandlers.add(new BitfieldConnectionHandler(torrentRegistry));
-        handshakeHandlers.add(new ExtendedProtocolHandshakeHandler(extendedHandshakeProvider));
+        handshakeHandlers.add(new ExtendedProtocolHandshakeHandler(extendedHandshakeFactory));
 
         return new ConnectionHandlerFactory(handshakeFactory, torrentRegistry,
                 handshakeHandlers, config.getPeerHandshakeTimeout());

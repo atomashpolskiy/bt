@@ -2,23 +2,26 @@ package bt.protocol.extended;
 
 import bt.bencoding.model.BEInteger;
 import bt.bencoding.model.BEString;
+import bt.metainfo.TorrentId;
+import bt.protocol.IExtendedHandshakeFactory;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.runtime.Config;
 import bt.service.ApplicationService;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
 import java.nio.charset.Charset;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  *<p><b>Note that this class implements a service.
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
-public class ExtendedHandshakeProvider implements Provider<ExtendedHandshake> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ExtendedHandshakeProvider.class);
+public class ExtendedHandshakeFactory implements IExtendedHandshakeFactory {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExtendedHandshakeFactory.class);
 
     private static final String ENCRYPTION_PROPERTY = "e";
     private static final String TCPPORT_PROPERTY = "p";
@@ -31,33 +34,33 @@ public class ExtendedHandshakeProvider implements Provider<ExtendedHandshake> {
     private final EncryptionPolicy encryptionPolicy;
     private final int tcpAcceptorPort;
 
-    private volatile ExtendedHandshake extendedHandshake;
-    private final Object lock;
+    private final ConcurrentMap<TorrentId, ExtendedHandshake> extendedHandshakes;
 
     @Inject
-    public ExtendedHandshakeProvider(ExtendedMessageTypeMapping messageTypeMapping,
-                                     ApplicationService applicationService,
-                                     Config config) {
+    public ExtendedHandshakeFactory(ExtendedMessageTypeMapping messageTypeMapping,
+                                    ApplicationService applicationService,
+                                    Config config) {
         this.messageTypeMapping = messageTypeMapping;
         this.applicationService = applicationService;
         this.encryptionPolicy = config.getEncryptionPolicy();
         this.tcpAcceptorPort = config.getAcceptorPort();
-        this.lock = new Object();
+        this.extendedHandshakes = new ConcurrentHashMap<>();
     }
 
     @Override
-    public ExtendedHandshake get() {
-        if (extendedHandshake == null) {
-            synchronized (lock) {
-                if (extendedHandshake == null) {
-                    extendedHandshake = buildHandshake();
-                }
+    public ExtendedHandshake getHandshake(TorrentId torrentId) {
+        ExtendedHandshake handshake = extendedHandshakes.get(torrentId);
+        if (handshake == null) {
+            handshake = buildHandshake(torrentId);
+            ExtendedHandshake existing = extendedHandshakes.putIfAbsent(torrentId, handshake);
+            if (existing != null) {
+                handshake = existing;
             }
         }
-        return extendedHandshake;
+        return handshake;
     }
 
-    private ExtendedHandshake buildHandshake() {
+    private ExtendedHandshake buildHandshake(TorrentId torrentId) {
         ExtendedHandshake.Builder builder = ExtendedHandshake.builder();
 
         switch (encryptionPolicy) {
