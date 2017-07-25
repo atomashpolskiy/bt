@@ -3,6 +3,7 @@ package bt.torrent.stub;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
+import bt.metainfo.TorrentSource;
 import bt.tracker.AnnounceKey;
 
 import java.util.Collections;
@@ -14,6 +15,13 @@ public class StubTorrent implements Torrent {
 
     public static StubTorrent instance() {
         return instance;
+    }
+
+    @Override
+    public TorrentSource getSource() {
+        // TODO: return correct source, when torrent serialization is implemented
+        // also in yourip.mock.MockTorrent
+        return null;
     }
 
     @Override

@@ -5,6 +5,7 @@ import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
+import bt.metainfo.TorrentSource;
 import bt.net.InetPeer;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
@@ -91,6 +92,11 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
 
         if (displayName.isPresent() || announceKey.isPresent()) {
             torrent = new Torrent() {
+                @Override
+                public TorrentSource getSource() {
+                    return delegate.getSource();
+                }
+
                 @Override
                 public Optional<AnnounceKey> getAnnounceKey() {
                     return announceKey;

@@ -7,6 +7,7 @@ import bt.protocol.IExtendedHandshakeFactory;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.runtime.Config;
 import bt.service.ApplicationService;
+import bt.torrent.TorrentRegistry;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,9 +27,11 @@ public class ExtendedHandshakeFactory implements IExtendedHandshakeFactory {
     private static final String ENCRYPTION_PROPERTY = "e";
     private static final String TCPPORT_PROPERTY = "p";
     private static final String VERSION_PROPERTY = "v";
+    private static final String UT_METADATA_SIZE_PROPERTY = "metadata_size";
 
     private static final String VERSION_TEMPLATE = "Bt %s";
 
+    private final TorrentRegistry torrentRegistry;
     private final ExtendedMessageTypeMapping messageTypeMapping;
     private final ApplicationService applicationService;
     private final EncryptionPolicy encryptionPolicy;
@@ -37,9 +40,11 @@ public class ExtendedHandshakeFactory implements IExtendedHandshakeFactory {
     private final ConcurrentMap<TorrentId, ExtendedHandshake> extendedHandshakes;
 
     @Inject
-    public ExtendedHandshakeFactory(ExtendedMessageTypeMapping messageTypeMapping,
+    public ExtendedHandshakeFactory(TorrentRegistry torrentRegistry,
+                                    ExtendedMessageTypeMapping messageTypeMapping,
                                     ApplicationService applicationService,
                                     Config config) {
+        this.torrentRegistry = torrentRegistry;
         this.messageTypeMapping = messageTypeMapping;
         this.applicationService = applicationService;
         this.encryptionPolicy = config.getEncryptionPolicy();
@@ -79,7 +84,10 @@ public class ExtendedHandshakeFactory implements IExtendedHandshakeFactory {
 
         builder.property(TCPPORT_PROPERTY, new BEInteger(null, BigInteger.valueOf(tcpAcceptorPort)));
 
-        // TODO: metadata_size
+        torrentRegistry.getTorrent(torrentId).ifPresent(torrent -> {
+            int metadataSize = torrent.getSource().getExchangedMetadata().length;
+            builder.property(UT_METADATA_SIZE_PROPERTY, new BEInteger(null, BigInteger.valueOf(metadataSize)));
+        });
 
         String version;
         try {

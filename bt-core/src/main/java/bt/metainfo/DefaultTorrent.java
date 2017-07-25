@@ -14,6 +14,7 @@ class DefaultTorrent implements Torrent {
 
     private static final int CHUNK_HASH_LENGTH = 20;
 
+    private TorrentSource source;
     private Optional<AnnounceKey> announceKey;
     private TorrentId torrentId;
     private String name;
@@ -23,8 +24,14 @@ class DefaultTorrent implements Torrent {
     private List<TorrentFile> files;
     private boolean isPrivate;
 
-    DefaultTorrent() {
+    DefaultTorrent(TorrentSource source) {
+        this.source = source;
         this.announceKey = Optional.empty();
+    }
+
+    @Override
+    public TorrentSource getSource() {
+        return source;
     }
 
     @Override

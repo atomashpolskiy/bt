@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -93,7 +94,6 @@ public class MetadataService implements IMetadataService {
                     + parser.readType().name().toLowerCase());
         }
 
-        DefaultTorrent torrent = new DefaultTorrent();
         BEMap metadata = parser.readMap();
 
         ValidationResult validationResult = torrentModel.validate(metadata);;
@@ -106,8 +106,41 @@ public class MetadataService implements IMetadataService {
             }
         }
 
+        BEMap infoDictionary;
+        TorrentSource source;
+
         Map<String, BEObject<?>> root = metadata.getValue();
-        BEMap infoDictionary = root.containsKey(INFOMAP_KEY) ? (BEMap) root.get(INFOMAP_KEY) : metadata;
+        if (root.containsKey(INFOMAP_KEY)) {
+            // standard BEP-3 format
+            infoDictionary = (BEMap) root.get(INFOMAP_KEY);
+            source = new TorrentSource() {
+                @Override
+                public Optional<byte[]> getMetadata() {
+                    return Optional.of(metadata.getContent());
+                }
+
+                @Override
+                public byte[] getExchangedMetadata() {
+                    return infoDictionary.getContent();
+                }
+            };
+        } else {
+            // BEP-9 exchanged metadata (just the info dictionary)
+            infoDictionary = metadata;
+            source = new TorrentSource() {
+                @Override
+                public Optional<byte[]> getMetadata() {
+                    return Optional.empty();
+                }
+
+                @Override
+                public byte[] getExchangedMetadata() {
+                    return infoDictionary.getContent();
+                }
+            };
+        }
+
+        DefaultTorrent torrent = new DefaultTorrent(source);
 
         try {
             torrent.setTorrentId(TorrentId.fromBytes(CryptoUtil.getSha1Digest(infoDictionary.getContent())));

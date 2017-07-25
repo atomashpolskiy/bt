@@ -11,6 +11,11 @@ import java.util.Optional;
 public interface Torrent {
 
     /**
+     * @since 1.3
+     */
+    TorrentSource getSource();
+
+    /**
      * @return Announce key, or {@link Optional#empty()} for trackerless torrents
      * @since 1.1
      */

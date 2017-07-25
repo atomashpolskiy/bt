@@ -3,6 +3,7 @@ package yourip.mock;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
+import bt.metainfo.TorrentSource;
 import bt.tracker.AnnounceKey;
 
 import java.util.Collections;
@@ -23,6 +24,13 @@ public class MockTorrent implements Torrent {
             return Collections.singletonList("file.mock");
         }
     };
+
+    @Override
+    public TorrentSource getSource() {
+        // TODO: return correct source, when torrent serialization is implemented
+        // also in bt.torrent.stub.StubTorrent
+        return null;
+    }
 
     @Override
     public Optional<AnnounceKey> getAnnounceKey() {
