@@ -1,0 +1,9 @@
+codecov:
+  strict_yaml_branch: master  # only use the latest copy on master branch
+  ci:
+    - !appveyor # ignore CI builds by AppVeyor
+
+coverage:
+  precision: 2
+  round: down
+  range: "50...90"

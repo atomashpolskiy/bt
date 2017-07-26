@@ -36,6 +36,7 @@
         <module>bt-tests</module>
         <module>bt-cli</module>
         <module>examples</module>
+        <module>jacoco-report</module>
     </modules>
 
     <properties>
@@ -49,10 +50,6 @@
         <guice-version>4.1.0</guice-version>
         <junit-version>4.12</junit-version>
         <mockito-version>1.10.19</mockito-version>
-
-        <!-- Test-specific properties -->
-        <jacoco.ut.exec>target/coverage-reports/jacoco-ut.exec</jacoco.ut.exec>
-        <jacoco.it.exec>target/coverage-reports/jacoco-it.exec</jacoco.it.exec>
     </properties>
 
     <scm>
@@ -202,7 +199,7 @@
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
-                    <version>0.7.7.201606060606</version>
+                    <version>0.7.8</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -220,7 +217,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>${surefireArgLine}</argLine>
                     <skipTests>${skipTests}</skipTests>
                     <systemPropertyVariables>
                         <org.slf4j.simpleLogger.defaultLogLevel>${logging-level}</org.slf4j.simpleLogger.defaultLogLevel>
@@ -239,7 +235,6 @@
                             <goal>verify</goal>
                         </goals>
                         <configuration>
-                            <argLine>${failsafeArgLine}</argLine>
                             <skipTests>${skipTests}</skipTests>
                             <systemPropertyVariables>
                                 <org.slf4j.simpleLogger.defaultLogLevel>${logging-level}</org.slf4j.simpleLogger.defaultLogLevel>
@@ -260,7 +255,7 @@
                         </goals>
                         <phase>site</phase>
                         <configuration>
-                            <excludePackageNames>lbms.*:the8472.*</excludePackageNames>
+                            <excludePackageNames>lbms.*:the8472.*:bt.cli.*:bt.test.*:bt.it.*:yourip.*</excludePackageNames>
                         </configuration>
                     </execution>
                 </executions>
@@ -292,7 +287,7 @@
         <profile>
             <id>codecov</id>
             <properties>
-                <logging-level>TRACE</logging-level>
+                <logging-level>INFO</logging-level>
             </properties>
             <build>
                 <plugins>
@@ -304,78 +299,19 @@
                                 <exclude>bt/test/**/*</exclude>
                                 <exclude>bt/it/**/*</exclude>
                                 <exclude>bt/cli/**/*</exclude>
+                                <exclude>yourip/**/*</exclude>
                                 <exclude>lbms/**/*</exclude>
                                 <exclude>the8472/**/*</exclude>
                             </excludes>
                         </configuration>
                         <executions>
                             <execution>
-                                <id>pre-unit</id>
                                 <goals>
                                     <goal>prepare-agent</goal>
                                 </goals>
                                 <configuration>
-                                    <destFile>${jacoco.ut.exec}</destFile>
-                                    <propertyName>surefireArgLine</propertyName>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>post-unit</id>
-                                <phase>test</phase>
-                                <goals>
-                                    <goal>report</goal>
-                                </goals>
-                                <configuration>
-                                    <dataFile>${jacoco.ut.exec}</dataFile>
-                                    <outputDirectory>${project.reporting.outputDirectory}/coverage/jacoco-ut</outputDirectory>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>post-unit-aggregate</id>
-                                <phase>test</phase>
-                                <goals>
-                                    <goal>report-aggregate</goal>
-                                </goals>
-                                <configuration>
-                                    <dataFileIncludes>
-                                        <include>${jacoco.ut.exec}</include>
-                                    </dataFileIncludes>
-                                    <outputDirectory>${project.reporting.outputDirectory}/coverage/jacoco-ut-aggregate</outputDirectory>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>pre-it</id>
-                                <phase>pre-integration-test</phase>
-                                <goals>
-                                    <goal>prepare-agent</goal>
-                                </goals>
-                                <configuration>
-                                    <destFile>${jacoco.it.exec}</destFile>
-                                    <propertyName>failsafeArgLine</propertyName>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>post-it</id>
-                                <phase>post-integration-test</phase>
-                                <goals>
-                                    <goal>report</goal>
-                                </goals>
-                                <configuration>
-                                    <dataFile>${jacoco.it.exec}</dataFile>
-                                    <outputDirectory>${project.reporting.outputDirectory}/coverage/jacoco-it</outputDirectory>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>post-it-aggregate</id>
-                                <phase>post-integration-test</phase>
-                                <goals>
-                                    <goal>report-aggregate</goal>
-                                </goals>
-                                <configuration>
-                                    <dataFileIncludes>
-                                        <dataFileInclude>${jacoco.it.exec}</dataFileInclude>
-                                    </dataFileIncludes>
-                                    <outputDirectory>${project.reporting.outputDirectory}/coverage/jacoco-it-aggregate</outputDirectory>
+                                    <!-- for some reason the .exec file is not generated when destFile is not specified -->
+                                    <destFile>${project.build.directory}/jacoco.exec</destFile>
                                 </configuration>
                             </execution>
                         </executions>
