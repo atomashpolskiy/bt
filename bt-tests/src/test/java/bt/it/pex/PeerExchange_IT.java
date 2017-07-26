@@ -5,9 +5,9 @@ import bt.it.fixture.SharedTrackerModule;
 import bt.it.fixture.SharedTrackerModule.PeerFilter;
 import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
+import bt.net.Peer;
 import bt.peerexchange.PeerExchangeConfig;
 import bt.peerexchange.PeerExchangeModule;
-import bt.net.Peer;
 import bt.runtime.Config;
 import org.junit.Rule;
 import org.junit.Test;
@@ -86,21 +86,17 @@ public class PeerExchange_IT extends BaseBtTest {
         Set<Peer> swarmPeers = new HashSet<>();
         swarmPeers.addAll(swarm.getSeeders().stream().map(SwarmPeer::getPeer).collect(Collectors.toSet()));
 
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("Swarm peers:");
-            swarmPeers.forEach(peer -> {
-                LOGGER.trace("{} ({})", peer, peer.getClass());
-            });
-        }
+        LOGGER.info("Swarm peers:");
+        swarmPeers.forEach(peer -> {
+            LOGGER.info("{} ({})", peer, peer.getClass());
+        });
 
         assertTrue(discoveredPeers.keySet().containsAll(swarmPeers));
         discoveredPeers.forEach((peer, peers) -> {
-            if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Peer {} discovered the following peers:", peer);
-                swarmPeers.forEach(discoveredPeer -> {
-                    LOGGER.trace("{} ({})", discoveredPeer, discoveredPeer.getClass());
-                });
-            }
+            LOGGER.info("Peer {} discovered the following peers:", peer);
+            swarmPeers.forEach(discoveredPeer -> {
+                LOGGER.info("{} ({})", discoveredPeer, discoveredPeer.getClass());
+            });
             for (Peer swarmPeer : swarmPeers) {
                 assertContainsPeer(peers, swarmPeer);
             }
