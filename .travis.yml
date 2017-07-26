@@ -10,8 +10,8 @@ git:
   depth: 10
 script:
 - mvn clean install -Pcodecov 2>&1 | grep -Ev 'DEBUG|TRACE'
+- bash <(curl -s https://codecov.io/bash) -X gcov -X coveragepy -f "./jacoco-report/target/site/jacoco-aggregate/jacoco.xml"
 after_success:
-- bash <(curl -s https://codecov.io/bash) -X gcov -X coveragepy
 - mvn site
 - .travis/publish-javadoc.sh
 env:
