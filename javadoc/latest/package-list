@@ -8,7 +8,6 @@ bt.data.digest
 bt.data.file
 bt.data.range
 bt.dht
-bt.it.fixture
 bt.magnet
 bt.metainfo
 bt.module
@@ -25,8 +24,6 @@ bt.protocol.extended
 bt.protocol.handler
 bt.runtime
 bt.service
-bt.test.protocol
-bt.test.torrent.selector
 bt.torrent
 bt.torrent.annotation
 bt.torrent.compiler
@@ -38,4 +35,3 @@ bt.tracker
 bt.tracker.http
 bt.tracker.udp
 yourip
-yourip.mock

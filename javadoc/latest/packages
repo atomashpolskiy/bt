@@ -32,10 +32,6 @@ bt.torrent.stub
 bt.tracker
 bt.tracker.udp
 bt.tracker.http
-bt.it.fixture
-bt.test.protocol
-bt.test.torrent.selector
 bt.dht
 bt.cli
 yourip
-yourip.mock
