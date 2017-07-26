@@ -33,5 +33,3 @@ bt.tracker
 bt.tracker.udp
 bt.tracker.http
 bt.dht
-bt.cli
-yourip
