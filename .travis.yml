@@ -11,9 +11,9 @@ git:
 script:
 - mvn clean install -Pcodecov 2>&1 | grep -Ev 'DEBUG|TRACE'
 after_success:
+- bash <(curl -s https://codecov.io/bash) -f "$TRAVIS_BUILD_DIR/jacoco-report/target/site/jacoco-aggregate/jacoco.xml"
 - mvn site
 - .travis/publish-javadoc.sh
-- bash <(curl -s https://codecov.io/bash) -f "$TRAVIS_BUILD_DIR/jacoco-report/target/site/jacoco-aggregate/jacoco.xml"
 env:
   global:
   - MAVEN_OPTS="-Xmx256m"
