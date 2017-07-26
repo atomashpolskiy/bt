@@ -255,7 +255,7 @@
                         </goals>
                         <phase>site</phase>
                         <configuration>
-                            <excludePackageNames>lbms.*:the8472.*:bt.cli.*:bt.test.*:bt.it.*:yourip.*</excludePackageNames>
+                            <excludePackageNames>lbms:the8472:bt.cli:bt.test:bt.it:yourip</excludePackageNames>
                         </configuration>
                     </execution>
                 </executions>
