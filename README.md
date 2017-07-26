@@ -1,46 +1,40 @@
-[![Build Status](https://travis-ci.org/atomashpolskiy/bt.svg?branch=master)](https://travis-ci.org/atomashpolskiy/bt) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/) [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](http://atomashpolskiy.github.io/bt/javadoc/latest/)
+<h1 align="center">
+    <a href="http://atomashpolskiy.github.io/bt/">Bt</a>
+</h1>
 
-**Bt** is a modern full-featured BitTorrent library in Java 8. It offers good performance, reliability and is highly customizable. Bt is still in its' early days, but is actively developed and designed with stability and maintainability in mind.
+<p align="center"><strong>
+<sup>
+A full-featured BitTorrent implementation in Java 8
+<br/><a href="http://bittorrent.org/beps/bep_0011.html">peer exchange</a> | <a href="http://bittorrent.org/beps/bep_0009.html">magnet links</a> | <a href="http://bittorrent.org/beps/bep_0005.html">DHT</a> | <a href="http://wiki.vuze.com/w/Message_Stream_Encryption">encryption</a> | <a href="http://bittorrent.org/beps/bep_0027.html">private trackers</a> | <a href="http://bittorrent.org/beps/bep_0010.html">extended protocol</a>
+</sup> 
+</strong></p>
 
-## Quick Links
+<p align="center">
+    <a href="https://travis-ci.org/atomashpolskiy/bt">
+        <img src="https://img.shields.io/travis/atomashpolskiy/bt/master.svg?label=linux%20build"
+             alt="Linux build">
+    </a>
+    <a href="https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/">
+        <img src="https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/badge.svg"
+             alt="Maven Central">
+    </a>
+    <a href="http://atomashpolskiy.github.io/bt/javadoc/latest/">
+        <img src="https://img.shields.io/badge/javadoc-latest-orange.svg"
+             alt="JavaDoc">
+    </a>
+</p>
 
-[Website](http://atomashpolskiy.github.io/bt/) (contains examples and tutorials)
-
-[JavaDoc](http://atomashpolskiy.github.io/bt/javadoc/latest/) (based on the latest commit in _**master**_)
-
-[CLI Launcher](https://github.com/atomashpolskiy/bt/tree/master/bt-cli)
-
-## List of supported BEPs
-
-* [BEP-3: The BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html)
-* [BEP-5: DHT Protocol](http://bittorrent.org/beps/bep_0005.html)
-* [BEP-9: Extension for Peers to Send Metadata Files](http://bittorrent.org/beps/bep_0009.html)
-* [BEP-10: Extension Protocol](http://bittorrent.org/beps/bep_0010.html)
-* [BEP-11: Peer Exchange (PEX)](http://bittorrent.org/beps/bep_0011.html)
-* [BEP-12: Multitracker metadata extension](http://bittorrent.org/beps/bep_0012.html)
-* [BEP-15: UDP Tracker Protocol](http://bittorrent.org/beps/bep_0015.html)
-* [BEP-20: Peer ID Conventions](http://bittorrent.org/beps/bep_0020.html)
-* [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
-* [BEP-27: Private Torrents](http://bittorrent.org/beps/bep_0027.html)
-* [BEP-41: UDP Tracker Protocol Extensions](http://bittorrent.org/beps/bep_0041.html)
-* [Message Stream Encryption](http://wiki.vuze.com/w/Message_Stream_Encryption)
+* **[CLI](https://github.com/atomashpolskiy/bt/tree/master/bt-cli)** – command-line downloader
+* **[HOME](http://atomashpolskiy.github.io/bt/)** – website with documentation and tutorials
+* **[FORUM](https://groups.google.com/forum/#!forum/bttorrent)** – Google group for support and feedback
+* **[LICENSE](https://github.com/atomashpolskiy/bt/blob/master/LICENSE)** – licensed under Apache License 2.0
 
 ## Building from source
 
-1) Clone:
 ```
 git clone https://github.com/atomashpolskiy/bt.git
-```
-
-2) Build:
-```
 cd bt
 mvn clean install -DskipTests
- ```
- 
-3) Download with [CLI launcher](https://github.com/atomashpolskiy/bt/tree/master/bt-cli) or use as a library:
-```
-java -Xmx64m -jar bt-cli/target/bt-launcher.jar -f <path-to-torrent-file> -d <download-dir>
 ```
 
 ## Usage
@@ -152,3 +146,18 @@ Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new featu
 
 * open a new [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
 * post your question on the [Bt forum](https://groups.google.com/forum/#!forum/bttorrent)
+
+## List of supported BEPs
+
+* [BEP-3: The BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html)
+* [BEP-5: DHT Protocol](http://bittorrent.org/beps/bep_0005.html)
+* [BEP-9: Extension for Peers to Send Metadata Files](http://bittorrent.org/beps/bep_0009.html)
+* [BEP-10: Extension Protocol](http://bittorrent.org/beps/bep_0010.html)
+* [BEP-11: Peer Exchange (PEX)](http://bittorrent.org/beps/bep_0011.html)
+* [BEP-12: Multitracker metadata extension](http://bittorrent.org/beps/bep_0012.html)
+* [BEP-15: UDP Tracker Protocol](http://bittorrent.org/beps/bep_0015.html)
+* [BEP-20: Peer ID Conventions](http://bittorrent.org/beps/bep_0020.html)
+* [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
+* [BEP-27: Private Torrents](http://bittorrent.org/beps/bep_0027.html)
+* [BEP-41: UDP Tracker Protocol Extensions](http://bittorrent.org/beps/bep_0041.html)
+* [Message Stream Encryption](http://wiki.vuze.com/w/Message_Stream_Encryption)
