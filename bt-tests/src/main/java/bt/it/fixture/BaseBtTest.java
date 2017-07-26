@@ -9,6 +9,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.util.Collections;
 
 /**
@@ -44,24 +45,28 @@ public class BaseBtTest {
 
     @After
     public void tearDown() {
-        deleteRecursive(getTestRoot());
+        try {
+            deleteRecursive(getTestRoot());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    private void deleteRecursive(File file) {
-        if (file.exists()) {
-            if (file.isDirectory()) {
-                File[] children = file.listFiles();
-                if (children != null) {
-                    for (File child : children) {
-                        deleteRecursive(child);
-                    }
+    private void deleteRecursive(File file) throws IOException {
+        if (!file.exists()) {
+            return;
+        }
+
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    deleteRecursive(child);
                 }
             }
-
-            if (!file.delete()) {
-                throw new RuntimeException("Failed to delete file: " + file.getPath());
-            }
         }
+
+        Files.delete(file.toPath());
     }
 
     /**

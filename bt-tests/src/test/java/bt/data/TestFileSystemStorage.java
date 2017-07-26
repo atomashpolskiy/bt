@@ -6,6 +6,8 @@ import bt.metainfo.TorrentFile;
 import org.junit.rules.ExternalResource;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 
 // TODO: replace this with in-memory storage
 class TestFileSystemStorage extends ExternalResource implements Storage {
@@ -46,22 +48,27 @@ class TestFileSystemStorage extends ExternalResource implements Storage {
 
     @Override
     protected void after() {
-        cleanup();
-    }
-
-    private void cleanup() {
-        if (!deleteRecursive(rootDirectory)) {
-            throw new RuntimeException("Failed to delete directory: " + rootDirectory);
+        try {
+            deleteRecursive(rootDirectory);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    private boolean deleteRecursive(File file) {
-        boolean deleted = true;
+    private void deleteRecursive(File file) throws IOException {
+        if (!file.exists()) {
+            return;
+        }
+
         if (file.isDirectory()) {
-            for (File child : file.listFiles()) {
-                deleted = deleted && deleteRecursive(child);
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    deleteRecursive(child);
+                }
             }
         }
-        return deleted && file.delete();
+
+        Files.delete(file.toPath());
     }
 }
