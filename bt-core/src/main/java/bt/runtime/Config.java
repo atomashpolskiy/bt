@@ -36,6 +36,8 @@ public class Config {
     private int maxPendingConnectionRequests;
     private Duration timeoutedAssignmentPeerBanDuration;
     private EncryptionPolicy encryptionPolicy;
+    private int metadataExchangeBlockSize;
+    private int metadataExchangeMaxSize;
 
     /**
      * Create a config with default parameters.
@@ -54,8 +56,8 @@ public class Config {
         this.trackerQueryInterval = Duration.ofMinutes(5);
         this.maxPeerConnections = 500;
         this.maxPeerConnectionsPerTorrent = maxPeerConnections; // assume single torrent per runtime by default; change this to (maxActive * 2) maybe?
-        this.transferBlockSize = 2 << 13; // 8 KB
-        this.maxTransferBlockSize = 2 << 16; // 128 KB
+        this.transferBlockSize = 8 * 1024; // 8 KB
+        this.maxTransferBlockSize = 128 * 1024; // 128 KB
         this.maxIOQueueSize = 1000;
         this.shutdownHookTimeout = Duration.ofSeconds(5);
         this.numOfHashingThreads = 1; // do not parallelize by default
@@ -66,6 +68,8 @@ public class Config {
         this.maxPendingConnectionRequests = 50;
         this.timeoutedAssignmentPeerBanDuration = Duration.ofMinutes(1);
         this.encryptionPolicy = EncryptionPolicy.PREFER_PLAINTEXT;
+        this.metadataExchangeBlockSize = 16 * 1024; // 16 KB
+        this.metadataExchangeMaxSize = 2 * 1024 * 1024; // 2 MB
     }
 
     /**
@@ -98,6 +102,8 @@ public class Config {
         this.maxPendingConnectionRequests = config.getMaxPendingConnectionRequests();
         this.timeoutedAssignmentPeerBanDuration = config.getTimeoutedAssignmentPeerBanDuration();
         this.encryptionPolicy = config.getEncryptionPolicy();
+        this.metadataExchangeBlockSize = config.getMetadataExchangeBlockSize();
+        this.metadataExchangeMaxSize = config.getMetadataExchangeMaxSize();
     }
 
     /**
@@ -476,5 +482,35 @@ public class Config {
      */
     public EncryptionPolicy getEncryptionPolicy() {
         return encryptionPolicy;
+    }
+
+    /**
+     * @param metadataExchangeBlockSize BEP-9 transfer block size
+     * @since 1.3
+     */
+    public void setMetadataExchangeBlockSize(int metadataExchangeBlockSize) {
+        this.metadataExchangeBlockSize = metadataExchangeBlockSize;
+    }
+
+    /**
+     * @since 1.3
+     */
+    public int getMetadataExchangeBlockSize() {
+        return metadataExchangeBlockSize;
+    }
+
+    /**
+     * @param metadataExchangeMaxSize Maximum allowed metadata size for BEP-9 transfer
+     * @since 1.3
+     */
+    public void setMetadataExchangeMaxSize(int metadataExchangeMaxSize) {
+        this.metadataExchangeMaxSize = metadataExchangeMaxSize;
+    }
+
+    /**
+     * @since 1.3
+     */
+    public int getMetadataExchangeMaxSize() {
+        return metadataExchangeMaxSize;
     }
 }

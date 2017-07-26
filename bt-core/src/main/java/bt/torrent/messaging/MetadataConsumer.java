@@ -1,11 +1,5 @@
 package bt.torrent.messaging;
 
-import bt.data.BlockSet;
-import bt.data.digest.SHA1Digester;
-import bt.data.range.BlockRange;
-import bt.data.range.ByteRange;
-import bt.data.range.Range;
-import bt.data.range.Ranges;
 import bt.magnet.UtMetadata;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
@@ -13,35 +7,34 @@ import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.protocol.Message;
 import bt.protocol.extended.ExtendedHandshake;
+import bt.runtime.Config;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-public class MetadataFetcher {
-    private static final int BLOCK_SIZE = 16384;
-    private static final int MAX_METADATA_SIZE = 2 * 1024 * 1024; // 2MB
+public class MetadataConsumer {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MetadataConsumer.class);
+
     private static final Duration FIRST_BLOCK_ARRIVAL_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration WAIT_BEFORE_REREQUESTING_AFTER_REJECT = Duration.ofSeconds(10);
 
-    private final ConcurrentMap<Peer, Queue<Message>> outboundMessages;
     private final ConcurrentMap<Peer, Long> peersWithoutMetadata;
 
     private final Set<Peer> supportingPeers;
     private final ConcurrentMap<Peer, Long> requestedFirstPeers;
     private final Set<Peer> requestedAllPeers;
 
-    private volatile Range<BlockRange<ByteRange>> metadata;
-    private volatile BlockSet metadataBlocks;
+    private volatile ExchangedMetadata metadata;
 
     private final IMetadataService metadataService;
 
@@ -50,8 +43,13 @@ public class MetadataFetcher {
     // set immediately after metadata has been fetched and verified
     private final AtomicReference<Torrent> torrent;
 
-    public MetadataFetcher(IMetadataService metadataService, TorrentId torrentId) {
-        this.outboundMessages = new ConcurrentHashMap<>();
+    private final int metadataExchangeBlockSize;
+    private final int metadataExchangeMaxSize;
+
+    public MetadataConsumer(IMetadataService metadataService,
+                            TorrentId torrentId,
+                            Config config) {
+
         this.peersWithoutMetadata = new ConcurrentHashMap<>();
 
         this.supportingPeers = ConcurrentHashMap.newKeySet();
@@ -62,6 +60,9 @@ public class MetadataFetcher {
 
         this.torrentId = Objects.requireNonNull(torrentId);
         this.torrent = new AtomicReference<>();
+
+        this.metadataExchangeBlockSize = config.getMetadataExchangeBlockSize();
+        this.metadataExchangeMaxSize = config.getMetadataExchangeMaxSize();
     }
 
     @Consumes
@@ -79,83 +80,66 @@ public class MetadataFetcher {
         Peer peer = context.getPeer();
         // being lenient herer and not checking if the peer advertised ut_metadata support
         switch (message.getType()) {
-            case REQUEST: {
-                // TODO: spam protection
-                processMetadataRequest(peer, message.getPieceIndex());
-            }
             case DATA: {
                 int totalSize = message.getTotalSize().get();
-                if (totalSize >= MAX_METADATA_SIZE) {
+                if (totalSize >= metadataExchangeMaxSize) {
                     throw new IllegalStateException("Declared metadata size is too large: " + totalSize +
-                            "; max allowed is " + MAX_METADATA_SIZE);
+                            "; max allowed is " + metadataExchangeMaxSize);
                 }
                 processMetadataBlock(message.getPieceIndex(), totalSize, message.getData().get());
             }
             case REJECT: {
                 peersWithoutMetadata.put(peer, System.currentTimeMillis());
             }
-        }
-    }
-
-    private void processMetadataRequest(Peer peer, int pieceIndex) {
-        Message response;
-        if (torrent.get() == null) {
-            // reject all requests as we don't have the full metadata yet
-            response = UtMetadata.reject(pieceIndex);
-        } else {
-            if (pieceIndex >= metadataBlocks.blockCount()) {
-                throw new IllegalArgumentException("Invalid piece index: " + pieceIndex +
-                        "; expected 0.." + metadataBlocks.blockCount());
+            default: {
+                // ignore
             }
-            // last piece may be smaller than the rest
-            int blockLength = (pieceIndex == metadataBlocks.blockCount() - 1) ? (int) metadataBlocks.lastBlockSize() : BLOCK_SIZE;
-            byte[] data = metadata.getSubrange(pieceIndex * BLOCK_SIZE, blockLength).getBytes();
-            response = UtMetadata.data(pieceIndex, (int) metadata.length(), data);
         }
-        getOutboundMessages(peer).add(response);
     }
 
     private void processMetadataBlock(int pieceIndex, int totalSize, byte[] data) {
         if (metadata == null) {
-            BlockRange<ByteRange> range = Ranges.blockRange(new ByteRange(new byte[totalSize]), BLOCK_SIZE);
-            metadata = Ranges.synchronizedRange(range);
-            metadataBlocks = Ranges.synchronizedBlockSet(range.getBlockSet());
+            metadata = new ExchangedMetadata(totalSize, metadataExchangeBlockSize);
         }
 
-        if (!metadataBlocks.isPresent(pieceIndex)) {
-            metadata.getSubrange(pieceIndex * BLOCK_SIZE).putBytes(data);
+        if (!metadata.isBlockPresent(pieceIndex)) {
+            metadata.setBlock(pieceIndex, data);
+
+            if (metadata.isComplete()) {
+                byte[] digest = metadata.getSha1Digest();
+                if (Arrays.equals(digest, torrentId.getBytes())) {
+                    Torrent fetchedTorrent = null;
+                    try {
+                        fetchedTorrent = metadataService.fromByteArray(metadata.getBytes());
+                    } catch (Exception e) {
+                        LOGGER.error("Processing of metadata failed: " + torrentId, e);
+                        metadata = null;
+                    }
+
+                    if (fetchedTorrent != null) {
+                        synchronized (torrent) {
+                            torrent.set(fetchedTorrent);
+                            requestedFirstPeers.clear();
+                            requestedAllPeers.clear();
+                            torrent.notifyAll();
+                        }
+                    }
+                } else {
+                    LOGGER.warn("Metadata fetched, but hash does not match the torrent ID: {}. Will re-fetch", torrentId);
+                    // restart the process
+                    // TODO: terminate peer connections that the metadata was fetched from?
+                    // or just try again with the others?
+                    metadata = null;
+                }
+            }
         }
     }
 
     @Produces
     public void produce(Consumer<Message> messageConsumer, MessageContext context) {
+        // stop here if metadata has already been fetched
         if (torrent.get() != null) {
             return;
-        }
-
-        if (metadataBlocks != null && metadataBlocks.isComplete()) {
-            byte[] digest = SHA1Digester.rolling(8000000).digest(metadata);
-            if (Arrays.equals(digest, torrentId.getBytes())) {
-                try {
-                    synchronized (torrent) {
-                        torrent.set(metadataService.fromByteArray(metadata.getBytes()));
-                        requestedFirstPeers.clear();
-                        requestedAllPeers.clear();
-                        torrent.notifyAll();
-                        return;
-                    }
-                } catch (Exception e) {
-                    metadata = null;
-                    metadataBlocks = null;
-                    throw e;
-                }
-            } else {
-                // restart the process
-                // TODO: terminate peer connections that the metadata was fetched from?
-                metadata = null;
-                metadataBlocks = null;
-                throw new IllegalStateException("Metadata fetched, but hash does not match the torrent ID");
-            }
         }
 
         Peer peer = context.getPeer();
@@ -167,17 +151,18 @@ public class MetadataFetcher {
             }
 
             if (!peersWithoutMetadata.containsKey(peer)) {
-                if (metadataBlocks == null) {
+                if (metadata == null) {
                     if (!requestedFirstPeers.containsKey(peer) ||
                             (System.currentTimeMillis() - requestedFirstPeers.get(peer) > FIRST_BLOCK_ARRIVAL_TIMEOUT.toMillis())) {
                         requestedFirstPeers.put(peer, System.currentTimeMillis());
+                        // start with the first piece of metadata
                         messageConsumer.accept(UtMetadata.request(0));
                     }
                 } else if (!requestedAllPeers.contains(peer)) {
                     requestedAllPeers.add(peer);
                     // TODO: larger metadata should be handled in more intelligent way
                     // starting with block #1 because by now we should have already received block #0
-                    for (int i = 1; i < metadataBlocks.blockCount(); i++) {
+                    for (int i = 1; i < metadata.getBlockCount(); i++) {
                         messageConsumer.accept(UtMetadata.request(i));
                     }
                 }
@@ -185,19 +170,10 @@ public class MetadataFetcher {
         }
     }
 
-    private Queue<Message> getOutboundMessages(Peer peer) {
-        Queue<Message> queue = outboundMessages.get(peer);
-        if (queue == null) {
-            queue = new LinkedBlockingQueue<>();
-            Queue<Message> existing = outboundMessages.putIfAbsent(peer, queue);
-            if (existing != null) {
-                queue = existing;
-            }
-        }
-        return queue;
-    }
-
-    public Torrent fetchTorrent() {
+    /**
+     * @return Torrent, blocking the calling thread if it hasn't been fetched yet
+     */
+    public Torrent waitForTorrent() {
         if (torrent.get() == null) {
             synchronized (torrent) {
                 if (torrent.get() == null) {

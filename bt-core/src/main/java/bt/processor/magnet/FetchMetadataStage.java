@@ -9,10 +9,11 @@ import bt.metainfo.TorrentSource;
 import bt.net.InetPeer;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
+import bt.runtime.Config;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.messaging.BitfieldCollectingConsumer;
-import bt.torrent.messaging.MetadataFetcher;
+import bt.torrent.messaging.MetadataConsumer;
 import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
 import bt.tracker.TrackerAnnouncer;
@@ -28,23 +29,26 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
     private IMetadataService metadataService;
     private TorrentRegistry torrentRegistry;
     private ITrackerService trackerService;
+    private Config config;
 
     public FetchMetadataStage(ProcessingStage<MagnetContext> next,
                               IMetadataService metadataService,
                               TorrentRegistry torrentRegistry,
-                              ITrackerService trackerService) {
+                              ITrackerService trackerService,
+                              Config config) {
         super(next);
         this.metadataService = metadataService;
         this.torrentRegistry = torrentRegistry;
         this.trackerService = trackerService;
+        this.config = config;
     }
 
     @Override
     protected void doExecute(MagnetContext context) {
         TorrentId torrentId = context.getMagnetUri().getTorrentId();
 
-        MetadataFetcher metadataFetcher = new MetadataFetcher(metadataService, torrentId);
-        context.getRouter().registerMessagingAgent(metadataFetcher);
+        MetadataConsumer metadataConsumer = new MetadataConsumer(metadataService, torrentId, config);
+        context.getRouter().registerMessagingAgent(metadataConsumer);
 
         // need to also receive Bitfields and Haves (without validation for the number of pieces...)
         BitfieldCollectingConsumer bitfieldConsumer = new BitfieldCollectingConsumer();
@@ -56,7 +60,7 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
             context.getSession().get().onPeerDiscovered(new InetPeer(address));
         });
 
-        Torrent torrent = metadataFetcher.fetchTorrent();
+        Torrent torrent = metadataConsumer.waitForTorrent();
         Optional<AnnounceKey> announceKey = createAnnounceKey(context.getMagnetUri());
         torrent = amendTorrent(torrent, context.getMagnetUri().getDisplayName(), announceKey);
         if (announceKey.isPresent()) {

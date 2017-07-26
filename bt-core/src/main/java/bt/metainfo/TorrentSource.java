@@ -33,4 +33,5 @@ public interface TorrentSource {
     byte[] getExchangedMetadata();
 
     // TODO: provide BEObjectModels for both types of metadata?
+    // but this will effectively restrict possible types of metadata to bencoded form only...
 }

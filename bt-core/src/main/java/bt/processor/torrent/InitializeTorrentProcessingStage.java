@@ -13,6 +13,7 @@ import bt.torrent.messaging.Assignments;
 import bt.torrent.messaging.BitfieldConsumer;
 import bt.torrent.messaging.GenericConsumer;
 import bt.torrent.messaging.IncompletePiecesValidator;
+import bt.torrent.messaging.MetadataProducer;
 import bt.torrent.messaging.PeerRequestConsumer;
 import bt.torrent.messaging.PieceConsumer;
 import bt.torrent.messaging.RequestProducer;
@@ -54,6 +55,7 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
         context.getRouter().registerMessagingAgent(new PieceConsumer(bitfield, dataWorker));
         context.getRouter().registerMessagingAgent(new PeerRequestConsumer(dataWorker));
         context.getRouter().registerMessagingAgent(new RequestProducer(descriptor.getDataDescriptor()));
+        context.getRouter().registerMessagingAgent(new MetadataProducer(() -> context.getTorrent().orElse(null), config));
 
         context.setBitfield(bitfield);
         context.setAssignments(assignments);
