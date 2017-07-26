@@ -94,7 +94,7 @@ public class PeerExchange_IT extends BaseBtTest {
         assertTrue(discoveredPeers.keySet().containsAll(swarmPeers));
         discoveredPeers.forEach((peer, peers) -> {
             LOGGER.info("Peer {} discovered the following peers:", peer);
-            swarmPeers.forEach(discoveredPeer -> {
+            peers.forEach(discoveredPeer -> {
                 LOGGER.info("{} ({})", discoveredPeer, discoveredPeer.getClass());
             });
             for (Peer swarmPeer : swarmPeers) {
