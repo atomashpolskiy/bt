@@ -11,6 +11,8 @@ import bt.net.Peer;
 import bt.runtime.Config;
 import org.junit.Rule;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertTrue;
 
 public class PeerExchange_IT extends BaseBtTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PeerExchange_IT.class);
 
     private static final int PEER_COUNT = 6;
 
@@ -55,6 +58,7 @@ public class PeerExchange_IT extends BaseBtTest {
             .module(new SharedTrackerModule(new PEXPeerFilter(PEER_COUNT, 1)))
             .build();
 
+    // TODO: fails in Travis when JaCoCo is enabled -- need to investigate
     @Test
     public void testPeerExchange() {
 
@@ -82,12 +86,25 @@ public class PeerExchange_IT extends BaseBtTest {
         Set<Peer> swarmPeers = new HashSet<>();
         swarmPeers.addAll(swarm.getSeeders().stream().map(SwarmPeer::getPeer).collect(Collectors.toSet()));
 
-        assertTrue(discoveredPeers.keySet().containsAll(swarmPeers));
-        for (Set<Peer> peerPeers : discoveredPeers.values()) {
-            for (Peer swarmPeer : swarmPeers) {
-                assertContainsPeer(peerPeers, swarmPeer);
-            }
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("Swarm peers:");
+            swarmPeers.forEach(peer -> {
+                LOGGER.trace("{} ({})", peer, peer.getClass());
+            });
         }
+
+        assertTrue(discoveredPeers.keySet().containsAll(swarmPeers));
+        discoveredPeers.forEach((peer, peers) -> {
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Peer {} discovered the following peers:", peer);
+                swarmPeers.forEach(discoveredPeer -> {
+                    LOGGER.trace("{} ({})", discoveredPeer, discoveredPeer.getClass());
+                });
+            }
+            for (Peer swarmPeer : swarmPeers) {
+                assertContainsPeer(peers, swarmPeer);
+            }
+        });
     }
 
     private static void assertContainsPeer(Collection<Peer> peers, Peer peer) {
