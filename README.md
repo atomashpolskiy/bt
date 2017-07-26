@@ -26,6 +26,10 @@ A full-featured BitTorrent implementation in Java 8
         <img src="https://img.shields.io/badge/javadoc-latest-orange.svg"
              alt="JavaDoc">
     </a>
+    <a href="https://codecov.io/gh/atomashpolskiy/bt">
+        <img src="https://img.shields.io/codecov/c/github/atomashpolskiy/bt/master.svg"
+             alt="Coverage">
+    </a>
 </p>
 
 * **[CLI](https://github.com/atomashpolskiy/bt/tree/master/bt-cli)** – command-line downloader

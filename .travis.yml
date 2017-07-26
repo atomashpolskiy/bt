@@ -9,13 +9,11 @@ os:
 git:
   depth: 10
 script:
-- mvn clean install -Pcodecov 2>&1 | grep -Ev 'DEBUG|TRACE'
+- script/travis-run-tests.sh
 - bash <(curl -s https://codecov.io/bash) -X gcov -X coveragepy
 after_success:
 - mvn site
-- .travis/publish-javadoc.sh
+- script/travis-publish-javadoc.sh
 env:
-  global:
-  - MAVEN_OPTS="-Xmx256m"
   matrix:
   - secure: Mvrrih9QGNoM0dtk3v2EFHkUlU9G4DBLLBFv0v+tNWF8dKgP+QxNhlFRSdmNL1xeSTV0IRu83tKYNg4OMTdsh5d4Zrsweu83dfK2SOkqV9KYrAudKN8Q60IjZw6HzJOFK5asu1RhzZkt0p5Y41Iz5DIbTWcoAlt9mUD7dthoz4acIEXpjnVBFpXfdTxkHfovse40/jIb9LY0dPzaDQjctpD4vwKB/qZb+M55XO6MUZ+MI6IPJoUCf7HeC8Z94tmbyzZFx42cQM/0f5Nqz4uA1Zj3bqf974krC9nHYh8UPo3sLjFoVH/HonlKSfJN8KGS+w4+XzwP8yEtCJhgJ2lBmyWsi1JNsG5/sK7je+ZJdg42z1wrK9UcjSKu8/Q8D5krE0kBEFv2EhsXK9asiQMpNGm1uCynO+O7sQPfOeJNCtkS6BKGDoyTDFLHhZbPCofELa1jQKBTbe5xi+X8cdIXTRWc8t1Ud1/MZ+oyxS6YJgEm/6laxzO/Tx0JiGzKo2B9A+mUUuK66h3oqdIOLkNb51uuBrBpmYzJqqRmxZ5Zz9KB2tAPulwb++myDZ1fOJYscskh5wLwp8UvS7DC3CkKkd2pLyStnrJMSyA6NzCOh9dWVu4HySQcLJh8w0RKagld6hDqfbKrM5ZeqR82q3pfnsUwFg9knlzMoK2wSes1q5k=
