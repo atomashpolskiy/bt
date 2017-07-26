@@ -11,7 +11,7 @@ script:
 after_success:
 - mvn site
 - .travis/publish-javadoc.sh
-- bash <(curl -s https://codecov.io/bash)
+- bash < (curl -s https://codecov.io/bash) -f "jacoco-report/target/site/jacoco-aggregate/jacoco.xml"
 env:
   global:
   - MAVEN_OPTS="-Xmx256m"
