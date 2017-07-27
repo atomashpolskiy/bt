@@ -48,7 +48,7 @@ public class Swarm extends ExternalResource {
         shutdown();
     }
 
-    private void shutdown() {
+    public void shutdown() {
         peers.forEach(peer -> {
             try {
                 peer.close();
