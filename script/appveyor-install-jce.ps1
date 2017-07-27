@@ -36,3 +36,5 @@ Copy-Item "$tempPath\UnlimitedJCEPolicyJDK8\*.jar" $installPath
 
 Remove-Item -Recurse $tempPath\*
 Remove-Item $tempPath
+
+Write-Host "testtesttest22222"
