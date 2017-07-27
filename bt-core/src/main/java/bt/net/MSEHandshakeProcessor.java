@@ -48,10 +48,11 @@ class MSEHandshakeProcessor {
     private final int bufferSize;
 
     MSEHandshakeProcessor(TorrentRegistry torrentRegistry,
-                                 MessageHandler<Message> messageHandler,
-                                 EncryptionPolicy localEncryptionPolicy,
-                                 int bufferSize) {
-        this.keyGenerator = new MSEKeyPairGenerator();
+                          MessageHandler<Message> messageHandler,
+                          EncryptionPolicy localEncryptionPolicy,
+                          int bufferSize,
+                          int privateKeySize) {
+        this.keyGenerator = new MSEKeyPairGenerator(privateKeySize);
         this.torrentRegistry = torrentRegistry;
         this.messageHandler = messageHandler;
         this.localEncryptionPolicy = localEncryptionPolicy;

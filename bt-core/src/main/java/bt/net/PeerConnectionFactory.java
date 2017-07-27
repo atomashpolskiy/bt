@@ -2,8 +2,8 @@ package bt.net;
 
 import bt.metainfo.TorrentId;
 import bt.protocol.Message;
-import bt.protocol.crypto.EncryptionPolicy;
 import bt.protocol.handler.MessageHandler;
+import bt.runtime.Config;
 import bt.torrent.TorrentRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,12 +21,11 @@ class PeerConnectionFactory {
 
     public PeerConnectionFactory(MessageHandler<Message> messageHandler,
                                  SocketChannelFactory socketChannelFactory,
-                                 int maxTransferBlockSize,
                                  TorrentRegistry torrentRegistry,
-                                 EncryptionPolicy encryptionPolicy) {
+                                 Config config) {
         this.socketChannelFactory = socketChannelFactory;
-        this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(
-                torrentRegistry, messageHandler, encryptionPolicy, getBufferSize(maxTransferBlockSize));
+        this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(torrentRegistry, messageHandler,
+                config.getEncryptionPolicy(), getBufferSize(config.getMaxTransferBlockSize()), config.getMsePrivateKeySize());
     }
 
     private static int getBufferSize(long maxTransferBlockSize) {

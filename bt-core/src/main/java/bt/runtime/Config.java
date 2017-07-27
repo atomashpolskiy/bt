@@ -38,6 +38,7 @@ public class Config {
     private EncryptionPolicy encryptionPolicy;
     private int metadataExchangeBlockSize;
     private int metadataExchangeMaxSize;
+    private int msePrivateKeySize;
 
     /**
      * Create a config with default parameters.
@@ -70,6 +71,7 @@ public class Config {
         this.encryptionPolicy = EncryptionPolicy.PREFER_PLAINTEXT;
         this.metadataExchangeBlockSize = 16 * 1024; // 16 KB
         this.metadataExchangeMaxSize = 2 * 1024 * 1024; // 2 MB
+        this.msePrivateKeySize = 20; // 20 bytes
     }
 
     /**
@@ -104,6 +106,7 @@ public class Config {
         this.encryptionPolicy = config.getEncryptionPolicy();
         this.metadataExchangeBlockSize = config.getMetadataExchangeBlockSize();
         this.metadataExchangeMaxSize = config.getMetadataExchangeMaxSize();
+        this.msePrivateKeySize = config.getMsePrivateKeySize();
     }
 
     /**
@@ -512,5 +515,20 @@ public class Config {
      */
     public int getMetadataExchangeMaxSize() {
         return metadataExchangeMaxSize;
+    }
+
+    /**
+     * @param msePrivateKeySize MSE private key size in bytes.
+     *                          Allowed values are 16..512 bytes (128..4096 bits). Default is 20 bytes (160 bit).
+     */
+    public void setMsePrivateKeySize(int msePrivateKeySize) {
+        this.msePrivateKeySize = msePrivateKeySize;
+    }
+
+    /**
+     * @since 1.3
+     */
+    public int getMsePrivateKeySize() {
+        return msePrivateKeySize;
     }
 }

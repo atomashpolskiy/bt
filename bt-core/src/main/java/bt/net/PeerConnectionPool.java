@@ -75,8 +75,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         SocketChannelFactory socketChannelFactory =
                 new SocketChannelFactory(config.getAcceptorAddress(), config.getAcceptorPort());
-        this.connectionFactory = new PeerConnectionFactory(messageHandler,
-                socketChannelFactory, config.getMaxTransferBlockSize(), torrentRegistry, config.getEncryptionPolicy());
+        this.connectionFactory = new PeerConnectionFactory(messageHandler, socketChannelFactory, torrentRegistry, config);
 
         this.connectionHandlerFactory = connectionHandlerFactory;
         this.peerConnectionInactivityThreshold = config.getPeerConnectionInactivityThreshold();

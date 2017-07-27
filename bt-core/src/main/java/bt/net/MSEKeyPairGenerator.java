@@ -1,7 +1,5 @@
 package bt.net;
 
-import bt.net.BigIntegers;
-
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.KeyPair;
@@ -22,8 +20,17 @@ class MSEKeyPairGenerator {
 
     static final int PUBLIC_KEY_BYTES = 96;
 
+    private final int privateKeySize;
+
+    MSEKeyPairGenerator(int privateKeySize) {
+        if (privateKeySize < 16 || privateKeySize > 512) {
+            throw new IllegalArgumentException("Illegal key size: " + privateKeySize + "; expected 16..512 bytes");
+        }
+        this.privateKeySize = privateKeySize;
+    }
+
     KeyPair generateKeyPair() {
-        MSEPrivateKey privateKey = new MSEPrivateKey();
+        MSEPrivateKey privateKey = new MSEPrivateKey(privateKeySize);
         MSEPublicKey publicKey = privateKey.getPublicKey();
         return new KeyPair(publicKey, privateKey);
     }
@@ -83,21 +90,22 @@ class MSEKeyPairGenerator {
         private volatile MSEPublicKey publicKey;
         private final Object lock;
 
-        MSEPrivateKey() {
-            this.value = generatePrivateKey();
+        /**
+         * @param size Key size in bytes
+         */
+        MSEPrivateKey(int size) {
+            this.value = generatePrivateKey(size);
             this.lock = new Object();
         }
 
-        // private key: random 160 bit integer
-        // TODO: configurable length/provider
-        private BigInteger generatePrivateKey() {
+        // private key: random N bit integer
+        private BigInteger generatePrivateKey(int size) {
             Random r = new Random();
-            int len = 20; // in bytes
-            byte[] bytes = new byte[len];
-            for (int i = 0; i < len; i++) {
+            byte[] bytes = new byte[size];
+            for (int i = 0; i < size; i++) {
                 bytes[i] = (byte) r.nextInt(256);
             }
-            return BigIntegers.decodeUnsigned(ByteBuffer.wrap(bytes), 20);
+            return BigIntegers.decodeUnsigned(ByteBuffer.wrap(bytes), size);
         }
 
         MSEPublicKey getPublicKey() {
