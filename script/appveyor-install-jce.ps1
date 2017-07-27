@@ -10,6 +10,8 @@ $packageName = $env:ChocolateyPackageName
 $url = 'http://download.oracle.com/otn-pub/java/jce/8/jce_policy-8.zip'
 $sha256 = 'f3020a3922efd6626c2fff45695d527f34a8020e938a49292561f18ad1320b59'
 
+Write-Host "testtesttest22222"
+
 $javaRegistryKeyName = if ($packageName -like 'jre*') {'Java Runtime Environment'} else {'Java Development Kit'}
 $javaHome = (Get-ItemProperty -Path "HKLM:\SOFTWARE\JavaSoft\$javaRegistryKeyName\1.8" -Name JavaHome).JavaHome
 $jreHome = if ($packageName -like 'jre*') {$javaHome} else {"$javaHome\jre"}
@@ -17,9 +19,13 @@ $installPath = "$jreHome\lib\security"
 $tempPath = "$env:TEMP\$packageName"
 $artifactPath = "$tempPath\$(Split-Path -Leaf $url)"
 
+Write-Host "testtesttest33333"
+
 mkdir $tempPath -ErrorAction SilentlyContinue | Out-Null
 $webSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 $webSession.Cookies.Add((New-Object System.Net.Cookie 'oraclelicense','accept-securebackup-cookie','/','.oracle.com'))
+
+Write-Host "testtesttest44444"
 Invoke-WebRequest `
     $url `
     -UseBasicParsing `
@@ -31,10 +37,10 @@ if ($sha256 -ne $actualSha256) {
 }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 [IO.Compression.ZipFile]::ExtractToDirectory($artifactPath, $tempPath)
-
+Write-Host "testtesttest55555"
 Copy-Item "$tempPath\UnlimitedJCEPolicyJDK8\*.jar" $installPath
 
 Remove-Item -Recurse $tempPath\*
 Remove-Item $tempPath
 
-Write-Host "testtesttest22222"
+
