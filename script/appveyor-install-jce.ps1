@@ -39,8 +39,3 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 [IO.Compression.ZipFile]::ExtractToDirectory($artifactPath, $tempPath)
 Write-Host "testtesttest55555"
 Copy-Item "$tempPath\UnlimitedJCEPolicyJDK8\*.jar" $installPath
-
-Remove-Item -Recurse $tempPath\*
-Remove-Item $tempPath
-
-
