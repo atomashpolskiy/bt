@@ -3,6 +3,7 @@ package bt.peer;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
+import bt.tracker.AnnounceKey;
 
 import java.net.InetSocketAddress;
 import java.util.function.Consumer;
@@ -61,4 +62,19 @@ public interface IPeerRegistry {
      * @since 1.3
      */
     void removePeerConsumers(TorrentId torrentId);
+
+    /**
+     * Add peer for a given torrent and notify all peer consumers.
+     *
+     * @since 1.3
+     */
+    void addPeer(TorrentId torrentId, Peer peer);
+
+    /**
+     * Register a new tracker peer source for a given torrent, based on the provided announce key.
+     * Note that the new peer source will NOT be used, if the torrent is private (as in BEP-27).
+     *
+     * @since 1.3
+     */
+    void addPeerSource(TorrentId torrentId, AnnounceKey announceKey);
 }

@@ -104,6 +104,7 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
     @Override
     public void stop() {
         try {
+            // TODO: should also announce STOP to tracker here
             context.getTorrentId().ifPresent(torrentId -> {
                 torrentRegistry.getDescriptor(torrentId).ifPresent(TorrentDescriptor::stop);
             });

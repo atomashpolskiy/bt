@@ -1,15 +1,18 @@
 package bt.processor.torrent;
 
+import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
+import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
 import bt.tracker.TrackerAnnouncer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
@@ -33,8 +36,13 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
     @Override
     protected void doExecute(C context) {
         TorrentDescriptor descriptor = getDescriptor(context.getTorrentId().get());
-        TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, context.getTorrent().get());
-        context.setAnnouncer(announcer);
+
+        Torrent torrent = context.getTorrent().get();
+        Optional<AnnounceKey> announceKey = torrent.getAnnounceKey();
+        if (announceKey.isPresent()) {
+            TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, torrent.getTorrentId(), announceKey.get());
+            context.setAnnouncer(announcer);
+        }
 
         start(context);
 
@@ -87,7 +95,7 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
     }
 
     protected void onStarted(C context) {
-        context.getAnnouncer().start();
+        context.getAnnouncer().ifPresent(TrackerAnnouncer::start);
     }
 
     private void complete(C context) {
@@ -99,7 +107,7 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
     }
 
     protected void onCompleted(C context) {
-        context.getAnnouncer().complete();
+        context.getAnnouncer().ifPresent(TrackerAnnouncer::complete);
     }
 
     private void finish(C context) {

@@ -112,8 +112,8 @@ public class TorrentContext implements ProcessingContext {
         this.pieceStatistics = pieceStatistics;
     }
 
-    public TrackerAnnouncer getAnnouncer() {
-        return announcer;
+    public Optional<TrackerAnnouncer> getAnnouncer() {
+        return Optional.ofNullable(announcer);
     }
 
     public void setAnnouncer(TrackerAnnouncer announcer) {

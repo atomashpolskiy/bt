@@ -11,9 +11,9 @@ import bt.tracker.ITrackerService;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -24,7 +24,7 @@ class TrackerPeerSourceFactory implements PeerSourceFactory {
     private ITrackerService trackerService;
     private TorrentRegistry torrentRegistry;
     private Duration trackerQueryInterval;
-    private Map<TorrentId, TrackerPeerSource> peerSources;
+    private ConcurrentMap<TorrentId, ConcurrentMap<AnnounceKey, TrackerPeerSource>> peerSources;
 
     private ExecutorService executor;
 
@@ -50,27 +50,55 @@ class TrackerPeerSourceFactory implements PeerSourceFactory {
 
     @Override
     public PeerSource getPeerSource(TorrentId torrentId) {
-        TrackerPeerSource peerSource = peerSources.get(torrentId);
-        if (peerSource == null) {
-            Optional<Torrent> torrentOptional = torrentRegistry.getTorrent(torrentId);
-            if (!torrentOptional.isPresent()) {
-                // return a mock peer source instead of failing, because torrent might be being fetched at the time
-                return noopSource;
-            }
+        Optional<Torrent> torrentOptional = torrentRegistry.getTorrent(torrentId);
+        if (!torrentOptional.isPresent()) {
+            // return a mock peer source instead of failing, because torrent might be being fetched at the time
+            return noopSource;
+        }
 
-            Torrent torrent = torrentOptional.get();
-            Optional<AnnounceKey> announceKey = torrent.getAnnounceKey();
-            if (!announceKey.isPresent()) {
-                throw new IllegalStateException("Torrent does not have an announce key");
-            }
-            peerSource = new TrackerPeerSource(executor, trackerService.getTracker(announceKey.get()),
-                    torrentId, trackerQueryInterval);
-            TrackerPeerSource existing = peerSources.putIfAbsent(torrentId, peerSource);
+        Torrent torrent = torrentOptional.get();
+        Optional<AnnounceKey> announceKey = torrent.getAnnounceKey();
+        if (!announceKey.isPresent()) {
+            throw new IllegalStateException("Torrent does not have an announce key");
+        }
+
+        return getOrCreateTrackerPeerSource(torrentId, announceKey.get());
+    }
+
+    /**
+     * @since 1.3
+     */
+    public PeerSource getPeerSource(TorrentId torrentId, AnnounceKey announceKey) {
+        return getOrCreateTrackerPeerSource(torrentId, announceKey);
+    }
+
+    private TrackerPeerSource getOrCreateTrackerPeerSource(TorrentId torrentId, AnnounceKey announceKey) {
+        ConcurrentMap<AnnounceKey, TrackerPeerSource> map = getOrCreateTrackerPeerSourcesMap(torrentId);
+        TrackerPeerSource trackerPeerSource = map.get(announceKey);
+        if (trackerPeerSource == null) {
+            trackerPeerSource = createTrackerPeerSource(torrentId, announceKey);
+            TrackerPeerSource existing = map.putIfAbsent(announceKey, trackerPeerSource);
             if (existing != null) {
-                peerSource = existing;
+                trackerPeerSource = existing;
             }
         }
-        return peerSource;
+        return trackerPeerSource;
+    }
+
+    private ConcurrentMap<AnnounceKey, TrackerPeerSource> getOrCreateTrackerPeerSourcesMap(TorrentId torrentId) {
+        ConcurrentMap<AnnounceKey, TrackerPeerSource> map = peerSources.get(torrentId);
+        if (map == null) {
+            map = new ConcurrentHashMap<>();
+            ConcurrentMap<AnnounceKey, TrackerPeerSource> existing = peerSources.putIfAbsent(torrentId, map);
+            if (existing != null) {
+                map = existing;
+            }
+        }
+        return map;
+    }
+
+    private TrackerPeerSource createTrackerPeerSource(TorrentId torrentId, AnnounceKey announceKey) {
+        return new TrackerPeerSource(executor, trackerService.getTracker(announceKey), torrentId, trackerQueryInterval);
     }
 
     private static final PeerSource noopSource = new PeerSource() {

@@ -1,6 +1,6 @@
 package bt.tracker;
 
-import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,26 +17,23 @@ public class TrackerAnnouncer {
     }
 
     private final Optional<Tracker> trackerOptional;
-    private final Torrent torrent;
+    private final TorrentId torrentId;
 
-    public TrackerAnnouncer(ITrackerService trackerService, Torrent torrent) {
-        this.trackerOptional = Optional.ofNullable(createTracker(trackerService, torrent));
-        this.torrent = torrent;
+    public TrackerAnnouncer(ITrackerService trackerService, TorrentId torrentId, AnnounceKey announceKey) {
+        this.trackerOptional = Optional.ofNullable(createTracker(trackerService, torrentId, announceKey));
+        this.torrentId = torrentId;
     }
 
-    private Tracker createTracker(ITrackerService trackerService, Torrent torrent) {
-        Optional<AnnounceKey> announceKey = torrent.getAnnounceKey();
-        if (announceKey.isPresent()) {
-            try {
-                String trackerUrl = getTrackerUrl(announceKey.get());
-                if (trackerService.isSupportedProtocol(trackerUrl)) {
-                    return trackerService.getTracker(announceKey.get());
-                } else {
-                    LOGGER.warn("Tracker URL protocol is not supported: " + trackerUrl);
-                }
-            } catch (Exception e) {
-                LOGGER.error("Failed to create tracker for announce key: " + announceKey.get());
+    private Tracker createTracker(ITrackerService trackerService, TorrentId torrentId, AnnounceKey announceKey) {
+        try {
+            String trackerUrl = getTrackerUrl(announceKey);
+            if (trackerService.isSupportedProtocol(trackerUrl)) {
+                return trackerService.getTracker(announceKey);
+            } else {
+                LOGGER.warn("Tracker URL protocol is not supported: " + trackerUrl);
             }
+        } catch (Exception e) {
+            LOGGER.error("Failed to create tracker for announce key: " + announceKey);
         }
         return null;
     }
@@ -52,7 +49,7 @@ public class TrackerAnnouncer {
     public void start() {
         trackerOptional.ifPresent(tracker -> {
             try {
-                processResponse(Event.start, tracker, tracker.request(torrent).start());
+                processResponse(Event.start, tracker, tracker.request(torrentId).start());
             } catch (Exception e) {
                 logTrackerError(Event.start, tracker, Optional.of(e), Optional.empty());
             }
@@ -62,7 +59,7 @@ public class TrackerAnnouncer {
     public void stop() {
         trackerOptional.ifPresent(tracker -> {
             try {
-                processResponse(Event.stop, tracker, tracker.request(torrent).stop());
+                processResponse(Event.stop, tracker, tracker.request(torrentId).stop());
             } catch (Exception e) {
                 logTrackerError(Event.stop, tracker, Optional.of(e), Optional.empty());
             }
@@ -72,7 +69,7 @@ public class TrackerAnnouncer {
     public void complete() {
         trackerOptional.ifPresent(tracker -> {
             try {
-                processResponse(Event.complete, tracker, tracker.request(torrent).complete());
+                processResponse(Event.complete, tracker, tracker.request(torrentId).complete());
             } catch (Exception e) {
                 logTrackerError(Event.complete, tracker, Optional.of(e), Optional.empty());
             }

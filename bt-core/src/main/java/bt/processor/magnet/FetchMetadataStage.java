@@ -1,12 +1,12 @@
 package bt.processor.magnet;
 
-import bt.magnet.MagnetUri;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
 import bt.metainfo.TorrentSource;
 import bt.net.InetPeer;
+import bt.peer.IPeerRegistry;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
 import bt.runtime.Config;
@@ -16,11 +16,7 @@ import bt.torrent.messaging.BitfieldCollectingConsumer;
 import bt.torrent.messaging.MetadataConsumer;
 import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
-import bt.tracker.TrackerAnnouncer;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,17 +25,20 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
     private IMetadataService metadataService;
     private TorrentRegistry torrentRegistry;
     private ITrackerService trackerService;
+    private IPeerRegistry peerRegistry;
     private Config config;
 
     public FetchMetadataStage(ProcessingStage<MagnetContext> next,
                               IMetadataService metadataService,
                               TorrentRegistry torrentRegistry,
                               ITrackerService trackerService,
+                              IPeerRegistry peerRegistry,
                               Config config) {
         super(next);
         this.metadataService = metadataService;
         this.torrentRegistry = torrentRegistry;
         this.trackerService = trackerService;
+        this.peerRegistry = peerRegistry;
         this.config = config;
     }
 
@@ -56,17 +55,24 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
 
         getDescriptor(torrentId).start();
 
+        context.getMagnetUri().getPeerAddresses().forEach(peerAddress -> {
+            peerRegistry.addPeer(torrentId, new InetPeer(peerAddress));
+        });
+
+        context.getMagnetUri().getTrackerUrls().forEach(trackerUrl -> {
+            // TODO: should we use a single multi-key instead, containing all trackers from the magnet link?
+            peerRegistry.addPeerSource(torrentId, new AnnounceKey(trackerUrl));
+        });
+        // TODO: do we need a tracker announce for magnet-based torrents?
+//        TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, torrentId, null);
+//        announcer.start();
+
         context.getMagnetUri().getPeerAddresses().forEach(address -> {
             context.getSession().get().onPeerDiscovered(new InetPeer(address));
         });
 
         Torrent torrent = metadataConsumer.waitForTorrent();
-        Optional<AnnounceKey> announceKey = createAnnounceKey(context.getMagnetUri());
-        torrent = amendTorrent(torrent, context.getMagnetUri().getDisplayName(), announceKey);
-        if (announceKey.isPresent()) {
-            TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, torrent);
-            announcer.start();
-        }
+        torrent = amendTorrent(torrent, context.getMagnetUri().getDisplayName());
 
         context.setTorrent(torrent);
 
@@ -78,23 +84,10 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
                 .orElseThrow(() -> new IllegalStateException("No descriptor present for torrent ID: " + torrentId));
     }
 
-    private Optional<AnnounceKey> createAnnounceKey(MagnetUri magnetUri) {
-        Optional<AnnounceKey> announceKey;
-
-        Collection<String> trackerUrls = magnetUri.getTrackerUrls();
-        if (trackerUrls.isEmpty()) {
-            announceKey = Optional.empty();
-        } else {
-            List<List<String>> trackerTiers = Collections.singletonList(new ArrayList<>(trackerUrls));
-            announceKey = Optional.of(new AnnounceKey(trackerTiers));
-        }
-        return announceKey;
-    }
-
-    private Torrent amendTorrent(Torrent delegate, Optional<String> displayName, Optional<AnnounceKey> announceKey) {
+    private Torrent amendTorrent(Torrent delegate, Optional<String> displayName) {
         Torrent torrent;
 
-        if (displayName.isPresent() || announceKey.isPresent()) {
+        if (displayName.isPresent()) {
             torrent = new Torrent() {
                 @Override
                 public TorrentSource getSource() {
@@ -103,7 +96,7 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
 
                 @Override
                 public Optional<AnnounceKey> getAnnounceKey() {
-                    return announceKey;
+                    return Optional.empty();
                 }
 
                 @Override
