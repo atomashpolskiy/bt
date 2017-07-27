@@ -28,6 +28,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Optional;
 
 public class CliClient  {
 
@@ -54,7 +55,7 @@ public class CliClient  {
 
     private BtRuntime runtime;
     private BtClient client;
-    private SessionStatePrinter printer;
+    private Optional<SessionStatePrinter> printer;
 
     private boolean running;
 
@@ -106,7 +107,8 @@ public class CliClient  {
         }
 
         this.client = clientBuilder.build();
-        this.printer = SessionStatePrinter.createKeyInputAwarePrinter(() -> client.getSession().getTorrent(), keyBindings);
+        this.printer = options.shouldDisableUi() ? Optional.empty()
+                : Optional.of(SessionStatePrinter.createKeyInputAwarePrinter(() -> client.getSession().getTorrent(), keyBindings));
     }
 
     void resume() {
@@ -117,14 +119,14 @@ public class CliClient  {
         running = true;
         try {
             client.startAsync(state -> {
-                printer.print(state);
+                printer.ifPresent(p -> p.print(state));
                 if (!options.shouldSeedAfterDownloaded() && state.getPiecesRemaining() == 0) {
                     runtime.shutdown();
                 }
             }, 1000);
         } catch (Throwable e) {
             // in case the start request to the tracker fails
-            printer.shutdown();
+            printer.ifPresent(SessionStatePrinter::shutdown);
             printAndShutdown(e);
         }
     }

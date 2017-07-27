@@ -7,6 +7,7 @@ import bt.it.fixture.SwarmPeer;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.runtime.BtClient;
 import bt.runtime.Config;
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -43,6 +44,13 @@ public class Swarm_EncryptedIT extends BaseBtTest {
             .leechers(NUMBER_OF_SEEDERS)
             .module(new SharedTrackerModule())
             .build();
+
+    @After
+    public void after() {
+        // TODO: workaround to shutdown swarm _before_ BaseBtTest removes files;
+        // need to come up with something better to not write this everywhere
+        swarm.shutdown();
+    }
 
     @Test
     public void testSwarm_OneSeederOneLeecher() {

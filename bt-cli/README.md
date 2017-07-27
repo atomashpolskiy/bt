@@ -2,6 +2,10 @@
 
 This module contains a simple CLI launcher for **Bt**.
 
+**NOTE #1**: Currently, all peer connections are established via [encryption negotation protocol](http://wiki.vuze.com/w/Message_Stream_Encryption) (also called MSE handshake). Therefore, in order to be able to connect to peers you must install [Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy](http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html). The reason for this requirement is that the [MSE RC4 cipher](http://wiki.vuze.com/w/Message_Stream_Encryption) uses 160 bit keys, while default Java installation allows at most 128 bit keys.
+
+**NOTE #2**: Currently, the CLI launcher can only work in headless mode under _Windows_. This mode is activated, if `-H` command line argument is present. GUI will be disabled, but you'll still be able to find out what's going on by inspecting the logs in current working directory.
+
 ## Usage
 
 ### Available options
@@ -12,6 +16,7 @@ $ java -jar target/bt-launcher.jar
 Option (* = required)  Description
 ---------------------  -----------
 -?, -h, --help
+-H, --headless         Disable UI
 -S, --sequential       Download sequentially
 * -d, --dir <File>     Target download location
 -e, --encrypted        Enforce encryption for all connections
@@ -22,15 +27,25 @@ Option (* = required)  Description
 
 ### Run
 
+#### Using .torrent file
 ```
 $ java -jar target/bt-launcher.jar -f /path/to/torrent -d /save/to/here
 ```
+
+#### Using magnet link
+```
+$ java -jar target/bt-launcher.jar -m "magnet:?xt=urn:btih:AF0D9AA01A9AE123A73802CFA58CCAF355EB19F0" -d /save/to/here
+```
+
+#### Options
 
 Add `-e` flag to encrypt all peer connections.
 
 Add `-S` flag to download the data in sequential order (e.g. for streaming content).
 
 Add `-s` flag to continue seeding after torrent has been downloaded.
+
+Add `-H` flag to disable GUI.
 
 ### Key bindings
 
