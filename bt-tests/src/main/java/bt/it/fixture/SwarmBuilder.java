@@ -25,6 +25,7 @@ public class SwarmBuilder {
     private int startingPort;
     private int seedersCount;
     private int leechersCount;
+    private int magnetLeechersCount;
     private TorrentFiles torrentFiles;
     private Supplier<Torrent> torrentSupplier;
 
@@ -77,7 +78,7 @@ public class SwarmBuilder {
     /**
      * Set number of leechers in this swarm.
      *
-     * @param count Number of leechers
+     * @param count Number of leechers, that will use .torrent file to bootstrap
      * @since 1.0
      */
     public SwarmBuilder leechers(int count) {
@@ -85,6 +86,23 @@ public class SwarmBuilder {
             throw new RuntimeException("Invalid leechers count: " + count);
         }
         this.leechersCount = count;
+        this.magnetLeechersCount = 0;
+        return this;
+    }
+
+    /**
+     * Set number of leechers in this swarm.
+     *
+     * @param count Number of leechers, that will use .torrent file to bootstrap
+     * @param magnetCount Number of leechers, that will use magnet link
+     * @since 1.3
+     */
+    public SwarmBuilder leechers(int count, int magnetCount) {
+        if (count < 0 || magnetCount < 0) {
+            throw new RuntimeException("Invalid leechers count; standard: " + count + ", magnet: " + magnetCount);
+        }
+        this.leechersCount = count;
+        this.magnetLeechersCount = magnetCount;
         return this;
     }
 
@@ -128,6 +146,9 @@ public class SwarmBuilder {
         }
         for (int i = 0; i < leechersCount; i++) {
             peers.add(swarmPeerFactory.createLeecher(newRuntimeBuilder(runtimeFactory)));
+        }
+        for (int i = 0; i < magnetLeechersCount; i++) {
+            peers.add(swarmPeerFactory.createMagnetLeecher(newRuntimeBuilder(runtimeFactory)));
         }
 
         return new Swarm(peers);

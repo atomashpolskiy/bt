@@ -7,4 +7,6 @@ interface SwarmPeerFactory {
     SwarmPeer createSeeder(BtRuntimeBuilder runtimeBuilder);
 
     SwarmPeer createLeecher(BtRuntimeBuilder runtimeBuilder);
+
+    SwarmPeer createMagnetLeecher(BtRuntimeBuilder runtimeBuilder);
 }

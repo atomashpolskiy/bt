@@ -1,6 +1,7 @@
 package bt.it.fixture;
 
 import bt.metainfo.MetadataService;
+import bt.metainfo.Torrent;
 import org.junit.After;
 import org.junit.BeforeClass;
 
@@ -11,6 +12,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.util.Collections;
+import java.util.function.Supplier;
 
 /**
  * Base class for Bt integration tests.
@@ -78,7 +80,9 @@ public class BaseBtTest {
     protected SwarmBuilder buildSwarm() {
         SwarmBuilder builder = new SwarmBuilder(getTestRoot(), getSingleFile());
         builder.module(new TestExecutorModule());
-        builder.torrentSupplier(() -> new MetadataService().fromUrl(METAINFO_URL));
+
+        Supplier<Torrent> torrentSupplier = new CachingTorrentSupplier(() -> new MetadataService().fromUrl(METAINFO_URL));
+        builder.torrentSupplier(torrentSupplier);
         return builder;
     }
 
@@ -88,5 +92,32 @@ public class BaseBtTest {
 
     private static TorrentFiles getSingleFile() {
         return new TorrentFiles(Collections.singletonMap(FILE_NAME, SINGLE_FILE_CONTENT));
+    }
+
+    /**
+     * Loads torrent only once.
+     */
+    private static class CachingTorrentSupplier implements Supplier<Torrent> {
+
+        private final Supplier<Torrent> delegate;
+        private volatile Torrent torrent;
+        private final Object lock;
+
+        public CachingTorrentSupplier(Supplier<Torrent> delegate) {
+            this.delegate = delegate;
+            this.lock = new Object();
+        }
+
+        @Override
+        public Torrent get() {
+            if (torrent == null) {
+                synchronized (lock) {
+                    if (torrent == null) {
+                        torrent = delegate.get();
+                    }
+                }
+            }
+            return torrent;
+        }
     }
 }

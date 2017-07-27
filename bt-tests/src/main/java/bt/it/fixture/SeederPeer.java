@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 class SeederPeer extends LeecherPeer {
 
     SeederPeer(File localRoot, TorrentFiles files, Supplier<Torrent> torrentSupplier, BtRuntime runtime) {
-        super(localRoot, files, torrentSupplier, runtime);
+        super(localRoot, files, torrentSupplier, runtime, false);
         files.createFiles(localRoot);
     }
 }

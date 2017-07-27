@@ -15,8 +15,6 @@ import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -98,7 +96,7 @@ public class SharedTrackerModule implements Module {
         private volatile IPeerRegistry peerRegistry;
 
         private PeerFilter peerFilter;
-        private ConcurrentMap<URL, Tracker> trackers;
+        private ConcurrentMap<String, Tracker> trackers;
 
         @Inject
         PeerTrackerService(Provider<IPeerRegistry> peerRegistryProvider, PeerFilter peerFilter) {
@@ -113,19 +111,10 @@ public class SharedTrackerModule implements Module {
         }
 
         @Override
-        public Tracker getTracker(String url) {
-
-            URL trackerUrl;
-            try {
-                trackerUrl = new URL(url);
-            } catch (MalformedURLException e) {
-                throw new RuntimeException("Unexpected error", e);
-            }
+        public Tracker getTracker(String trackerUrl) {
             Tracker tracker = trackers.get(trackerUrl);
             if (tracker == null) {
-
                 tracker = new Tracker() {
-
                     private TrackerRequestBuilder requestBuilder =
                             new TrackerRequestBuilder(TorrentId.fromBytes(new byte[TorrentId.length()])) {
 
@@ -185,7 +174,6 @@ public class SharedTrackerModule implements Module {
 
         @Override
         public Tracker getTracker(AnnounceKey announceKey) {
-
             if (announceKey.isMultiKey()) {
                 throw new IllegalStateException("Multi keys not supported: " + announceKey);
             }
@@ -197,7 +185,7 @@ public class SharedTrackerModule implements Module {
 
     private static class KnownPeersService {
 
-        private ConcurrentMap<URL, Set<Peer>> knownPeers;
+        private ConcurrentMap<String, Set<Peer>> knownPeers;
         private ReentrantReadWriteLock lock;
 
         KnownPeersService() {
@@ -205,7 +193,7 @@ public class SharedTrackerModule implements Module {
             lock = new ReentrantReadWriteLock(true);
         }
 
-        public Set<Peer> getPeersSnapshot(URL trackerUrl) {
+        public Set<Peer> getPeersSnapshot(String trackerUrl) {
             lock.readLock().lock();
             try {
                 Set<Peer> peers = knownPeers.get(trackerUrl);
@@ -222,7 +210,7 @@ public class SharedTrackerModule implements Module {
             }
         }
 
-        public void addPeer(URL trackerUrl, Peer peer) {
+        public void addPeer(String trackerUrl, Peer peer) {
             lock.writeLock().lock();
             try {
                 Set<Peer> peers = knownPeers.get(trackerUrl);
@@ -236,7 +224,7 @@ public class SharedTrackerModule implements Module {
             }
         }
 
-        public void removePeer(URL trackerUrl, Peer peer) {
+        public void removePeer(String trackerUrl, Peer peer) {
             lock.writeLock().lock();
             try {
                 Set<Peer> peers = knownPeers.get(trackerUrl);
