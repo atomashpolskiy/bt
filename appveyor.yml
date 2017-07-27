@@ -8,8 +8,8 @@ build:
 os: Windows Server 2012
 install:
   - cinst: maven
-  - cmd: refreshenv
   - ps: .\script\appveyor-install-jce.ps1
+  - cmd: refreshenv
 environment:
   MAVEN_OPTS: '-Xmx256m'
 build_script:
