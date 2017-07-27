@@ -101,7 +101,7 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
      */
     @SuppressWarnings("unchecked")
     public B magnet(String magnetUri) {
-        this.magnetUri = new MagnetUriParser().parse(magnetUri);
+        this.magnetUri = MagnetUriParser.lenientParser().parse(magnetUri);
         this.torrentSupplier = null;
         return (B) this;
     }

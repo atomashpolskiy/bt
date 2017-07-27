@@ -27,7 +27,7 @@ public class MagnetUriParserTest {
         String peer2 = "2.2.2.2:10000";
         String s = String.format(uriTemplate, Protocols.toHex(torrentId), displayName, trackerUrl1, trackerUrl2, peer1, peer2);
 
-        MagnetUri uri = new MagnetUriParser().parse(s);
+        MagnetUri uri = MagnetUriParser.parser().parse(s);
         assertArrayEquals(torrentId, uri.getTorrentId().getBytes());
         assertEquals(displayName, uri.getDisplayName().get());
 
@@ -50,7 +50,7 @@ public class MagnetUriParserTest {
         byte[] torrentId = new byte[20];
         String s = String.format(uriTemplate, Protocols.toHex(torrentId));
 
-        MagnetUri uri = new MagnetUriParser().parse(s);
+        MagnetUri uri = MagnetUriParser.parser().parse(s);
         assertArrayEquals(torrentId, uri.getTorrentId().getBytes());
     }
 
@@ -63,7 +63,7 @@ public class MagnetUriParserTest {
         Arrays.fill(multihash, (byte) 1);
         String s = String.format(uriTemplate, Protocols.toHex(torrentId), Protocols.toHex(multihash));
 
-        MagnetUri uri = new MagnetUriParser().parse(s);
+        MagnetUri uri = MagnetUriParser.parser().parse(s);
         assertArrayEquals(torrentId, uri.getTorrentId().getBytes());
     }
 
@@ -76,7 +76,7 @@ public class MagnetUriParserTest {
         Arrays.fill(torrentId2, (byte) 1);
         String s = String.format(uriTemplate, Protocols.toHex(torrentId1), Protocols.toHex(torrentId2));
 
-        assertExceptionWithMessage(it -> new MagnetUriParser().parse(s),
+        assertExceptionWithMessage(it -> MagnetUriParser.parser().parse(s),
                 "Parameter 'xt' has invalid number of values with prefix 'urn:btih:': 2");
     }
 
@@ -87,7 +87,7 @@ public class MagnetUriParserTest {
         byte[] torrentId = new byte[20];
         String s = String.format(uriTemplate, Protocols.toHex(torrentId), Protocols.toHex(torrentId));
 
-        MagnetUri uri = new MagnetUriParser().parse(s);
+        MagnetUri uri = MagnetUriParser.parser().parse(s);
         assertArrayEquals(torrentId, uri.getTorrentId().getBytes());
     }
 
@@ -99,7 +99,7 @@ public class MagnetUriParserTest {
         String peer = "xxxyyyzzz";
         String s = String.format(uriTemplate, Protocols.toHex(torrentId), peer);
 
-        MagnetUri uri = new MagnetUriParser().parse(s);
+        MagnetUri uri = MagnetUriParser.lenientParser().parse(s);
         assertArrayEquals(torrentId, uri.getTorrentId().getBytes());
 
         Collection<InetPeerAddress> peerAddresses = uri.getPeerAddresses();

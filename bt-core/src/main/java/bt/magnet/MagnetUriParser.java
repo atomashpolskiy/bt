@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,6 +34,36 @@ public class MagnetUriParser {
     }
 
     /**
+     * Creates a parser, that will throw an exception,
+     * when some of the elements of the magnet link can not be parsed,
+     * e.g. invalid peer addresses.
+     *
+     * @return Magnet URI parser
+     * @since 1.3
+     */
+    public static MagnetUriParser parser() {
+        return new MagnetUriParser(false);
+    }
+
+    /**
+     * Creates a parser, that will suppress parsing errors,
+     * that do not prevent identification of torrent ID,
+     * e.g. invalid peer addresses.
+     *
+     * @return Magnet URI parser
+     * @since 1.3
+     */
+    public static MagnetUriParser lenientParser() {
+        return new MagnetUriParser(true);
+    }
+
+    private final boolean lenient;
+
+    private MagnetUriParser(boolean lenient) {
+        this.lenient = lenient;
+    }
+
+    /**
      * Create a magnet URI from its' string representation in BEP-9 format.
      * Current limitations:
      * - only v1 links are supported (xt=urn:btih:<info-hash>)
@@ -41,8 +72,22 @@ public class MagnetUriParser {
      * @since 1.3
      */
     public MagnetUri parse(String uriString) {
-        URI uri = URI.create(uriString);
+        try {
+            return parse(new URI(uriString));
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid URI: " + uriString, e);
+        }
+    }
 
+    /**
+     * Create a magnet URI from its' URI representation in BEP-9 format.
+     * Current limitations:
+     * - only v1 links are supported (xt=urn:btih:<info-hash>)
+     * - base32-encoded info hashes are not supported
+     *
+     * @since 1.3
+     */
+    public MagnetUri parse(URI uri) {
         if (!SCHEME.equals(uri.getScheme())) {
             throw new IllegalArgumentException("Invalid scheme: " + uri.getScheme());
         }
@@ -66,7 +111,11 @@ public class MagnetUriParser {
             try {
                 builder.peer(parsePeer(value));
             } catch (Exception e) {
-                LOGGER.warn("Failed to parse peer address: " + value, e);
+                if (lenient) {
+                    LOGGER.warn("Failed to parse peer address: " + value, e);
+                } else {
+                    throw new RuntimeException("Failed to parse peer address: " + value, e);
+                }
             }
         });
 
@@ -123,6 +172,9 @@ public class MagnetUriParser {
 
     private InetPeerAddress parsePeer(String value) throws Exception {
         String[] parts = value.split(":");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("Invalid peer format: " + value + "; should be <host>:<port>");
+        }
         String hostname = parts[0];
         int port = Integer.valueOf(parts[1]);
         return new InetPeerAddress(hostname, port);
