@@ -7,7 +7,7 @@ build:
   verbosity: minimal
 os: Windows Server 2012
 install:
-  - ps: '.\\script\\appveyor-install-jce.ps1'
+  - ps: .\script\appveyor-install-jce.ps1
   - cinst: maven
   - cmd: refreshenv
 environment:

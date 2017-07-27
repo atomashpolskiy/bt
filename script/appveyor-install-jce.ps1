@@ -1,6 +1,8 @@
 ## Install Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files
 ## This script is taken from https://chocolatey.org/packages/jre8-jce
 
+Write-Host "testtesttest"
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
