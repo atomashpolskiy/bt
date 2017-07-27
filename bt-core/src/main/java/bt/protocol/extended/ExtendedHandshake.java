@@ -71,7 +71,7 @@ public final class ExtendedHandshake extends ExtendedMessage {
 
     @Override
     public String toString() {
-        return "[" + this.getClass().getSimpleName() + "] supported messages {" + supportedMessageTypes + "}";
+        return "[" + this.getClass().getSimpleName() + "] supported messages {" + supportedMessageTypes + "}, data {" + data + "}";
     }
 
     /**

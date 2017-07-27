@@ -14,9 +14,13 @@ import java.util.Arrays;
  * @since 1.0
  */
 public class BEString implements BEObject<byte[]> {
+    private static final Charset defaultCharset = Charset.forName("UTF-8");
 
     private byte[] content;
     private BEEncoder encoder;
+
+    private volatile String stringValue;
+    private final Object lock;
 
     /**
      * @param content Binary representation of this string, as read from source.
@@ -25,7 +29,8 @@ public class BEString implements BEObject<byte[]> {
      */
     public BEString(byte[] content) {
         this.content = content;
-        encoder = BEEncoder.encoder();
+        this.encoder = BEEncoder.encoder();
+        this.lock = new Object();
     }
 
     @Override
@@ -69,5 +74,15 @@ public class BEString implements BEObject<byte[]> {
         }
 
         return Arrays.equals(content, ((BEString) obj).getContent());
+    }
+
+    @Override
+    public String toString() {
+        if (stringValue == null) {
+            synchronized (lock) {
+                stringValue = new String(content, defaultCharset);
+            }
+        }
+        return stringValue;
     }
 }

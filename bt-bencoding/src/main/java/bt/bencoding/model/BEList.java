@@ -69,4 +69,9 @@ public class BEList implements BEObject<List<? extends BEObject<?>>> {
 
         return value.equals(((BEList) obj).getValue());
     }
+
+    @Override
+    public String toString() {
+        return Arrays.toString(value.toArray());
+    }
 }

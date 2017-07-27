@@ -70,4 +70,9 @@ public class BEInteger implements BEObject<BigInteger> {
 
         return value.equals(((BEInteger) obj).getValue());
     }
+
+    @Override
+    public String toString() {
+        return value.toString(10);
+    }
 }

@@ -69,4 +69,9 @@ public class BEMap implements BEObject<Map<String, BEObject<?>>> {
 
         return value.equals(((BEMap) obj).getValue());
     }
+
+    @Override
+    public String toString() {
+        return value.toString();
+    }
 }
