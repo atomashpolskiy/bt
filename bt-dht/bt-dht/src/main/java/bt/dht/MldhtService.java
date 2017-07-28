@@ -63,13 +63,15 @@ class MldhtService implements DHTService {
     private DHTConfiguration config;
     private DHT dht;
 
-    private boolean shouldBootstrap;
+    private boolean useRouterBootstrap;
+    private Collection<InetPeerAddress> publicBootstrapNodes;
     private Collection<InetPeerAddress> bootstrapNodes;
 
     public MldhtService(IRuntimeLifecycleBinder lifecycleBinder, DHTConfig config) {
         this.dht = new DHT(config.shouldUseIPv6()? DHTtype.IPV6_DHT : DHTtype.IPV4_DHT);
         this.config = toMldhtConfig(config);
-        this.shouldBootstrap = config.shouldUseRouterBootstrap();
+        this.useRouterBootstrap = config.shouldUseRouterBootstrap();
+        this.publicBootstrapNodes = config.getPublicBootstrapNodes();
         this.bootstrapNodes = config.getBootstrapNodes();
 
         lifecycleBinder.onStartup(LifecycleBinding.bind(this::start).description("Initialize DHT facilities").async().build());
@@ -109,17 +111,14 @@ class MldhtService implements DHTService {
         if (!dht.isRunning()) {
             try {
                 dht.start(config);
-                if (shouldBootstrap) {
-                    bootstrap();
+                if (useRouterBootstrap) {
+                    publicBootstrapNodes.forEach(this::addNode);
                 }
+                bootstrapNodes.forEach(this::addNode);
             } catch (SocketException e) {
                 throw new BtException("Failed to start DHT", e);
             }
         }
-    }
-
-    protected void bootstrap() {
-        bootstrapNodes.forEach(node -> dht.addDHTNode(node.getHostname(), node.getPort()));
     }
 
     private void shutdown() {
@@ -173,7 +172,15 @@ class MldhtService implements DHTService {
 
     @Override
     public void addNode(Peer node) {
-        dht.addDHTNode(node.getInetAddress().getHostAddress(), node.getPort());
+        addNode(node.getInetAddress().getHostAddress(), node.getPort());
+    }
+
+    private void addNode(InetPeerAddress address) {
+        addNode(address.getHostname(), address.getPort());
+    }
+
+    private void addNode(String hostname, int port) {
+        dht.addDHTNode(hostname, port);
     }
 
     // TODO: add node by hostname/ipaddr and port ?

@@ -4,6 +4,7 @@ import bt.net.InetPeerAddress;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
 /**
  * Provides configuration for DHT facilities.
@@ -17,6 +18,8 @@ public class DHTConfig {
     private boolean useIPv6;
     private Collection<InetPeerAddress> bootstrapNodes;
 
+    private final Collection<InetPeerAddress> publicBootstrapNodes;
+
     /**
      * @since 1.1
      */
@@ -24,7 +27,9 @@ public class DHTConfig {
         this.listeningPort = 49001;
         this.useRouterBootstrap = false;
         this.useIPv6 = false;
-        this.bootstrapNodes = Arrays.asList(
+        this.bootstrapNodes = Collections.emptyList();
+
+        this.publicBootstrapNodes = Arrays.asList(
             new InetPeerAddress("router.bittorrent.com", 6881),
             new InetPeerAddress("dht.transmissionbt.com", 6881),
             new InetPeerAddress("router.utorrent.com", 6881)
@@ -94,5 +99,15 @@ public class DHTConfig {
      */
     public void setBootstrapNodes(Collection<InetPeerAddress> bootstrapNodes) {
         this.bootstrapNodes = bootstrapNodes;
+    }
+
+    /***************** NOT PUBLIC ******************/
+
+    /**
+     * @return Collection of public bootstrap nodes (routers)
+     * @since 1.3
+     */
+    Collection<InetPeerAddress> getPublicBootstrapNodes() {
+        return publicBootstrapNodes;
     }
 }
