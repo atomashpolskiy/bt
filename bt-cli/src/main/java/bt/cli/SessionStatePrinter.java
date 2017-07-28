@@ -237,7 +237,15 @@ public class SessionStatePrinter {
 
         Rate(long delta) {
             if (delta < 0) {
-                throw new IllegalArgumentException("delta: " + delta);
+//                throw new IllegalArgumentException("delta: " + delta);
+                // TODO: this is a workaround for some nasty bug in the session state,
+                // due to which the delta is sometimes (very seldom) negative
+                // To not crash the UI let's just skip the problematic 'tick' and pretend that nothing was received
+                // instead of throwing an exception
+                LOGGER.warn("Negative delta: " + delta + "; will not re-calculate rate");
+                delta = 0;
+                quantity = 0;
+                measureUnit = "B";
             } else if (delta < (2 << 9)) {
                 quantity = delta;
                 measureUnit = "B";
