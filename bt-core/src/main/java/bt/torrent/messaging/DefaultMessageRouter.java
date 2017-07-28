@@ -24,6 +24,7 @@ public class DefaultMessageRouter implements MessageRouter {
     // collection of added consumers/producers in the form of runnable "commands"..
     // quick and dirty!
     private List<Runnable> changes;
+    private final Object changesLock;
 
     public DefaultMessageRouter() {
         this(Collections.emptyList());
@@ -37,6 +38,7 @@ public class DefaultMessageRouter implements MessageRouter {
         this.producers = new ArrayList<>();
 
         this.changes = new ArrayList<>();
+        this.changesLock = new Object();
 
         messagingAgents.forEach(this::registerMessagingAgent);
     }
@@ -74,16 +76,20 @@ public class DefaultMessageRouter implements MessageRouter {
             }
         });
 
-        this.changes.add(() -> {
-            this.genericConsumers.addAll(genericConsumers);
-            this.typedConsumers.putAll(typedMessageConsumers);
-        });
+        synchronized (changesLock) {
+            this.changes.add(() -> {
+                this.genericConsumers.addAll(genericConsumers);
+                this.typedConsumers.putAll(typedMessageConsumers);
+            });
+        }
     }
 
     private void addProducers(Collection<MessageProducer> producers) {
-        this.changes.add(() -> {
-            this.producers.addAll(producers);
-        });
+        synchronized (changesLock) {
+            this.changes.add(() -> {
+                this.producers.addAll(producers);
+            });
+        }
     }
 
     @Override
@@ -116,9 +122,11 @@ public class DefaultMessageRouter implements MessageRouter {
     }
 
     private void mergeChanges() {
-        if (!changes.isEmpty()) {
-            changes.forEach(Runnable::run);
-            changes.clear();
+        synchronized (changesLock) {
+            if (!changes.isEmpty()) {
+                changes.forEach(Runnable::run);
+                changes.clear();
+            }
         }
     }
 
