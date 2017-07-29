@@ -27,6 +27,7 @@ Bug Fixes/Improvements:
 * Configurable MSE private key size
 * Headless mode in CLI client (Windows compatibility)
 * Fix for occasional UI crashes in CLI client
+* Allow to specify the desired log level in CLI client (normal, verbose, trace)
 
 ----------------------------------
 Release: 1.2
