@@ -37,19 +37,9 @@ A full-featured BitTorrent implementation in Java 8
 * **[FORUM](https://groups.google.com/forum/#!forum/bttorrent)** – Google group for support and feedback
 * **[LICENSE](https://github.com/atomashpolskiy/bt/blob/master/LICENSE)** – licensed under Apache License 2.0
 
-## Building from source
-
-```
-git clone https://github.com/atomashpolskiy/bt.git
-cd bt
-mvn clean install -DskipTests
-```
-
 ## Usage
 
-Most recent version available in Maven Central is **1.2**. 
-
-DHT module is available in **1.2** git tag (compatible with Bt 1.2 version) or **1.3-SNAPSHOT** (current master version), either of which should be built manually. 
+Most recent version available in Maven Central is **1.3**.
 
 Declare the following dependencies in your project’s **pom.xml**:
 
@@ -67,12 +57,19 @@ Declare the following dependencies in your project’s **pom.xml**:
     <artifactId>bt-http-tracker-client</artifactId>
     <version>${bt-version}</version>
 </dependency>
-<!-- bt-dht will be available if you've built the project manually -->
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-dht</artifactId>
     <version>${bt-version}</version>
 </dependency>
+```
+
+## Building from source
+
+```
+git clone https://github.com/atomashpolskiy/bt.git
+cd bt
+mvn clean install -DskipTests
 ```
 
 ## Code sample
