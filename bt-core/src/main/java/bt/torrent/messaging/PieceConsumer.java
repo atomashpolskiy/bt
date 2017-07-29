@@ -85,8 +85,8 @@ public class PieceConsumer {
     private boolean checkBlockIsExpected(Peer peer, ConnectionState connectionState, Piece piece) {
         Object key = Mapper.mapper().buildKey(piece.getPieceIndex(), piece.getOffset(), piece.getBlock().length);
         boolean expected = connectionState.getPendingRequests().remove(key);
-        if (!expected && LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Discarding unexpected block {} from peer: {}", piece, peer);
+        if (!expected && LOGGER.isTraceEnabled()) {
+            LOGGER.trace("Discarding unexpected block {} from peer: {}", piece, peer);
         }
         return expected;
     }

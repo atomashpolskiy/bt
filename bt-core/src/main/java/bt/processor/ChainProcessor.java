@@ -14,8 +14,8 @@ public class ChainProcessor {
     }
 
     private static <C extends ProcessingContext> ProcessingStage<C> doExecute(ProcessingStage<C> stage, C context) {
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace(String.format("Processing next stage: torrent ID (%s), stage (%s)",
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(String.format("Processing next stage: torrent ID (%s), stage (%s)",
                     context.getTorrentId().orElse(null), stage.getClass().getName()));
         }
         try {

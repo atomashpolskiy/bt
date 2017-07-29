@@ -1,7 +1,6 @@
 package bt.cli;
 
 import bt.metainfo.Torrent;
-import bt.net.Peer;
 import bt.torrent.TorrentSessionState;
 import com.googlecode.lanterna.graphics.TextGraphics;
 import com.googlecode.lanterna.input.KeyStroke;
@@ -18,7 +17,6 @@ import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Set;
 import java.util.function.Supplier;
 
 public class SessionStatePrinter {
@@ -26,10 +24,16 @@ public class SessionStatePrinter {
     private static final Logger LOGGER = LoggerFactory.getLogger(SessionStatePrinter.class);
 
     private static final String TORRENT_INFO = "Downloading %s (%,d B)";
-    private static final String SESSION_INFO = "Peers: %2d\t\tDown: %4.1f %s/s\t\tUp: %4.1f %s/s\t\t";
     private static final String DURATION_INFO ="Elapsed time: %s\t\tRemaining time: %s";
+    private static final String RATE_FORMAT = "%4.1f %s/s";
+    private static final String SESSION_INFO = "Peers: %2d\t\tDown: " + RATE_FORMAT + "\t\tUp: " + RATE_FORMAT + "\t\t";
 
     private static final String WHITESPACES = "\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020\u0020";
+
+    private static final String LOG_ENTRY = "Downloading.. Peers: %s; Down: " + RATE_FORMAT +
+            "; Up: " + RATE_FORMAT + "; %.2f%% complete; Remaining time: %s";
+
+    private static final String LOG_ENTRY_SEED = "Seeding.. Peers: %s; Up: " + RATE_FORMAT;
 
     public static SessionStatePrinter createKeyInputAwarePrinter(Supplier<Torrent> torrent,
                                                                  Collection<KeyStrokeBinding> bindings) {
@@ -151,20 +155,41 @@ public class SessionStatePrinter {
             long uploaded = sessionState.getUploaded();
 
             Torrent torrent = torrentSupplier.get();
-            graphics.putString(0, 0, String.format(TORRENT_INFO, torrent.getName(), torrent.getSize()));
 
-            graphics.putString(0, 2, getDurations(downloaded - this.downloaded,
-                    sessionState.getPiecesRemaining(), sessionState.getPiecesTotal()));
+            String torrentInfo = String.format(TORRENT_INFO, torrent.getName(), torrent.getSize());
+            graphics.putString(0, 0, torrentInfo);
 
-            graphics.putString(0, 3, getSessionInfo(sessionState.getConnectedPeers(),
-                    downloaded - this.downloaded, uploaded - this.uploaded));
-            graphics.putString(0, 4, getProgressBar(sessionState.getPiecesTotal(), sessionState.getPiecesRemaining()));
+            String elapsedTime = getElapsedTime();
+            String remainingTime = getRemainingTime(downloaded - this.downloaded,
+                    sessionState.getPiecesRemaining(), sessionState.getPiecesTotal());
+            graphics.putString(0, 2, String.format(DURATION_INFO, elapsedTime, remainingTime));
 
-            if (sessionState.getPiecesRemaining() == 0) {
+            Rate downRate = new Rate(downloaded - this.downloaded);
+            Rate upRate = new Rate(uploaded - this.uploaded);
+            int peerCount = sessionState.getConnectedPeers().size();
+            String sessionInfo = String.format(SESSION_INFO, peerCount, downRate.getQuantity(), downRate.getMeasureUnit(),
+                upRate.getQuantity(), upRate.getMeasureUnit());
+            graphics.putString(0, 3, sessionInfo);
+
+            double completePercents = getCompletePercentage(sessionState.getPiecesTotal(), sessionState.getPiecesRemaining());
+            graphics.putString(0, 4, getProgressBar(completePercents));
+
+            boolean complete = (sessionState.getPiecesRemaining() == 0);
+            if (complete) {
                 graphics.putString(0, 5, "Download is complete. Press Ctrl-C to stop seeding and exit.");
             }
 
-            screen.refresh(Screen.RefreshType.DELTA);
+            // might use RefreshType.DELTA, but it does not tolerate resizing of the window
+            screen.refresh(Screen.RefreshType.COMPLETE);
+
+            if (LOGGER.isDebugEnabled()) {
+                if (complete) {
+                    LOGGER.debug(String.format(LOG_ENTRY_SEED, peerCount, upRate.getQuantity(), upRate.getMeasureUnit()));
+                } else {
+                    LOGGER.debug(String.format(LOG_ENTRY, peerCount, downRate.getQuantity(), downRate.getMeasureUnit(),
+                            upRate.getQuantity(), upRate.getMeasureUnit(), completePercents, remainingTime));
+                }
+            }
 
             this.downloaded = downloaded;
             this.uploaded = uploaded;
@@ -175,21 +200,12 @@ public class SessionStatePrinter {
         }
     }
 
-    private String getSessionInfo(Set<Peer> peers, long downloaded, long uploaded) {
-
-        Rate downRate = new Rate(downloaded);
-        Rate upRate = new Rate(uploaded);
-
-        return String.format(SESSION_INFO, peers.size(),
-                downRate.getQuantity(), downRate.getMeasureUnit(),
-                upRate.getQuantity(), upRate.getMeasureUnit());
+    private String getElapsedTime() {
+        Duration elapsed = Duration.ofMillis(System.currentTimeMillis() - started);
+        return formatDuration(elapsed);
     }
 
-    private String getDurations(long downloaded, int piecesRemaining, int piecesTotal) {
-
-        Duration elapsed = Duration.ofMillis(System.currentTimeMillis() - started);
-        String elapsedStr = formatDuration(elapsed);
-
+    private String getRemainingTime(long downloaded, int piecesRemaining, int piecesTotal) {
         String remainingStr;
         if (piecesRemaining == 0) {
             remainingStr = "-" + WHITESPACES;
@@ -203,7 +219,7 @@ public class SessionStatePrinter {
             // overwrite trailing chars with whitespaces if there are any
             remainingStr = formatDuration(remainingTime) + WHITESPACES;
         }
-        return String.format(DURATION_INFO, elapsedStr, remainingStr);
+        return remainingStr;
     }
 
     private static String formatDuration(Duration duration) {
@@ -213,20 +229,23 @@ public class SessionStatePrinter {
         return seconds < 0 ? "-" + positive : positive;
     }
 
-    private String getProgressBar(int total, int remaining) throws IOException {
-
-        int complete = (int) ((total - remaining) / ((double) total) * 100);
+    private String getProgressBar(double completePercents) throws IOException {
+        int completeInt = (int) completePercents;
 
         int width = graphics.getSize().getColumns() - 25;
         if (width < 0) {
-            return "Progress: " + complete + "%";
+            return "Progress: " + completeInt + "%";
         }
 
         String s = "Progress: [%-" + width + "s] %d%%";
         double shrinkFactor = width / 100d;
-        char[] chars = new char[(int) (complete * shrinkFactor)];
+        char[] chars = new char[(int) (completeInt * shrinkFactor)];
         Arrays.fill(chars, '#');
-        return String.format(s, String.valueOf(chars), complete);
+        return String.format(s, String.valueOf(chars), completeInt);
+    }
+
+    private double getCompletePercentage(int total, int remaining) {
+        return ((total - remaining) / ((double) total) * 100);
     }
 
     private static class Rate {

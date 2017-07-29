@@ -57,15 +57,15 @@ public class RequestProducer {
         if (bitfield.isComplete(currentPiece)) {
             assignment.finish();
             resetConnection(connectionState, messageConsumer);
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Finished downloading piece #{}", currentPiece);
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Finished downloading piece #{}", currentPiece);
             }
             return;
         } else if (!connectionState.initializedRequestQueue()) {
             connectionState.getPendingWrites().clear();
             initializeRequestQueue(connectionState, currentPiece);
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Begin downloading piece #{} from peer: {}. Request queue length: {}",
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Begin downloading piece #{} from peer: {}. Request queue length: {}",
                         currentPiece, peer, connectionState.getRequestQueue().size());
             }
         }
@@ -138,7 +138,7 @@ public class RequestProducer {
             }
         }
         if (LOGGER.isTraceEnabled()) {
-            LOGGER.info("Built {} requests for piece #{} (size: {}, block size: {}, number of blocks: {})",
+            LOGGER.trace("Built {} requests for piece #{} (size: {}, block size: {}, number of blocks: {})",
                     requests.size(), pieceIndex, chunkSize, blockSize, chunk.blockCount());
         }
         return requests;
