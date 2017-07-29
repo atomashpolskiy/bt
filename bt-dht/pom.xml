@@ -19,7 +19,7 @@
     </modules>
 
     <properties>
-        <mldht-version>1.3-SNAPSHOT</mldht-version>
+        <mldht-version>0.1.0</mldht-version>
     </properties>
 
     <dependencyManagement>
