@@ -1,3 +1,8 @@
+/*******************************************************************************
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ ******************************************************************************/
 package the8472.mldht.indexing;
 
 import static java.lang.Math.max;
@@ -353,7 +358,8 @@ public class TorrentDumper implements Component {
 			Key k = entry.getKey();
 			FetchStats toStore = entry.getValue();
 			
-			fromMessages.remove(k);
+			if(!fromMessages.remove(k, toStore))
+				return;
 			
 			try {
 				
@@ -615,8 +621,9 @@ public class TorrentDumper implements Component {
 			
 
 			// strides of 8 * maxtasks/4. should be >= low watermark
-			int max = maxFetches() / 4;
-			for(int i = 0;i< max ;i++) {
+			int strides = maxFetches() / 4;
+			int[] added = new int[1];
+			for(int i = 0;i< strides ;i++) {
 				Stream<FetchStats> pst = filesToFetchers(fetchStatsStream(Stream.of(prio))).limit(200);
 				Stream<FetchStats> nst = filesToFetchers(fetchStatsStream(Stream.of(normal))).limit(200);
 				
@@ -626,9 +633,28 @@ public class TorrentDumper implements Component {
 						synchronized (toFetchNext) {
 							toFetchNext.add(e);
 						}
+						added[0] += 1;
 					});
 					
 				};
+			}
+			int remaining = strides * 8 - added[0];
+			
+			// if we have not found enough stats on the filesystem steal directly from the unprocessed incoming messages
+			for(Iterator<Entry<Key, FetchStats>> it = fromMessages.subMap(Key.createRandomKey(), true, Key.MAX_KEY, true).entrySet().iterator();it.hasNext(); ) {
+				if(remaining <= 0)
+					break;
+				Map.Entry<Key, FetchStats> e = it.next();
+				if(dedup.contains(e.getKey()))
+					continue;
+				if(!fromMessages.remove(e.getKey(), e.getValue()))
+					continue;
+				
+				dedup.add(e.getKey());
+				synchronized (toFetchNext) {
+					toFetchNext.add(e.getValue());
+				}
+				remaining--;
 			}
 		} catch (Exception e) {
 			log(e);

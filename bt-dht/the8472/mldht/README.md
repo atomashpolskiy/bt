@@ -20,6 +20,7 @@ Implemented specs:
 |[libtorrent.org](http://www.libtorrent.org/dht_extensions.html)| Extended `get_peers` response<br> Forward compatibility<br> Client identification|Yes|
 |[BEP45](http://bittorrent.org/beps/bep_0045.html)|multi-homing/multi-address mode|Yes|
 |[BEP44](http://bittorrent.org/beps/bep_0044.html)|Arbitrary data storage|Yes|
+|[BEP50](http://bittorrent.org/beps/bep_0050.html)|Pub/Sub|No|
 |[BEP51](http://bittorrent.org/beps/bep_0051.html)|DHT Infohash Indexing|Yes| 
 
 Additional:

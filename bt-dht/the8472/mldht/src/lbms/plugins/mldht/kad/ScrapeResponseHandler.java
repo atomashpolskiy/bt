@@ -1,19 +1,8 @@
-/*
- *    This file is part of mlDHT. 
- * 
- *    mlDHT is free software: you can redistribute it and/or modify 
- *    it under the terms of the GNU General Public License as published by 
- *    the Free Software Foundation, either version 2 of the License, or 
- *    (at your option) any later version. 
- * 
- *    mlDHT is distributed in the hope that it will be useful, 
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of 
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
- *    GNU General Public License for more details. 
- * 
- *    You should have received a copy of the GNU General Public License 
- *    along with mlDHT.  If not, see <http://www.gnu.org/licenses/>. 
- */
+/*******************************************************************************
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ ******************************************************************************/
 package lbms.plugins.mldht.kad;
 
 import java.net.InetAddress;
@@ -24,7 +13,7 @@ import lbms.plugins.mldht.kad.utils.AddressUtils;
 import lbms.plugins.mldht.utils.Blackhole;
 
 public class ScrapeResponseHandler {
-	private List<GetPeersResponse>			scrapeResponses = new ArrayList<GetPeersResponse>(20);
+	private List<GetPeersResponse>			scrapeResponses = new ArrayList<>(20);
 	private int								scrapeSeeds;
 	private int								scrapePeers;
 	private int								direct;
@@ -44,13 +33,13 @@ public class ScrapeResponseHandler {
 	}
 	
 	public int getDirectResultCount() {
-		return direct;		
+		return direct;
 	}
 	
 	public void process() {
-		List<BloomFilterBEP33> seedFilters = new ArrayList<BloomFilterBEP33>();
-		List<BloomFilterBEP33> peerFilters = new ArrayList<BloomFilterBEP33>();
-		Set<InetAddress> directPeers = new HashSet<InetAddress>();
+		List<BloomFilterBEP33> seedFilters = new ArrayList<>();
+		List<BloomFilterBEP33> peerFilters = new ArrayList<>();
+		Set<InetAddress> directPeers = new HashSet<>();
 		
 		// process seeds first, we need them for some checks later (not yet implemented)
 		for(int i=0;i<scrapeResponses.size();i++)
@@ -68,7 +57,7 @@ public class ScrapeResponseHandler {
 			GetPeersResponse response = scrapeResponses.get(i);
 			BloomFilterBEP33 f = response.getScrapePeers();
 
-			Set<InetAddress> addrs = new HashSet<InetAddress>();
+			Set<InetAddress> addrs = new HashSet<>();
 			
 			for(DBItem item : response.getPeerItems())
 			{

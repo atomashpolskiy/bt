@@ -1,0 +1,254 @@
+From - Thu Feb 23 19:37:30 2017
+X-Account-Key: account4
+X-UIDL: 5455a76e07af8ce96ec1bbede71d2faf
+X-Mozilla-Status: 0011
+X-Mozilla-Status2: 00000000
+X-Mozilla-Keys:                                                                                 
+X-Envelope-From: <bounces+848413-70a0-github=infinite-source.de@sgmail.github.com>
+X-Envelope-To: <github@infinite-source.de>
+X-Delivery-Time: 1487874457
+X-UID: 82006
+Return-Path: <bounces+848413-70a0-github=infinite-source.de@sgmail.github.com>
+Authentication-Results: strato.com 1;
+	spf=pass
+		smtp.mailfrom="bounces+848413-70a0-github=infinite-source.de@sgmail.github.com";
+	dkim=pass
+		header.d=github.com;
+	domainkeys=none;
+	dkim-adsp=pass
+		header.from="notifications@github.com"
+X-Strato-MessageType: email
+X-RZG-CLASS-ID: mi00
+Received-SPF: pass
+	(strato.com: domain sgmail.github.com designates 192.254.113.101 as permitted sender)
+	mechanism=ip4;
+	client-ip=192.254.113.101;
+	helo="o6.sgmail.github.com";
+	envelope-from="bounces+848413-70a0-github=infinite-source.de@sgmail.github.com";
+	receiver=smtp.rzone.de;
+	identity=mailfrom;
+Received: from o6.sgmail.github.com ([192.254.113.101])
+	by smtp.rzone.de (RZmta 39.13 OK)
+	with ESMTPS id x0567dt1NIRbWBB
+	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (curve secp521r1 with 521 ECDH bits, eq. 15360 bits RSA))
+	(Client did not present a certificate)
+	for <github@infinite-source.de>;
+	Thu, 23 Feb 2017 19:27:37 +0100 (CET)
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed/relaxed; d=github.com; 
+	h=from:reply-to:to:cc:in-reply-to:references:subject:mime-version:content-type:content-transfer-encoding:list-id:list-archive:list-post:list-unsubscribe; 
+	s=s20150108; bh=t65lmAEICe/7eEWw8uV/OvmzFKs=; b=v30tqAjRSpjnlegw
+	uuLlYN8kG6poJJzTERSAOfbSobWFU+PQB0qvTopFJsWqJVJXGlh8XYVl9iBRnrc6
+	rtoYC/ZAbFHSKxcodrLTsCLMgZs6SL14thoPy3mxftuu3RqyfvaLVOC+608MNKZf
+	X+b2jIqQH2ZCkybgw8u0h4iRqgk=
+Received: by filter0571p1mdw1.sendgrid.net with SMTP id filter0571p1mdw1-15164-58AF2986-1E
+        2017-02-23 18:27:18.464811458 +0000 UTC
+Received: from github-smtp2b-ext-cp1-prd.iad.github.net (github-smtp2b-ext-cp1-prd.iad.github.net [192.30.253.17])
+	by ismtpd0002p1iad1.sendgrid.net (SG) with ESMTP id Wn6d95HyT5G8D6O8KXP8sQ
+	for <github@infinite-source.de>; Thu, 23 Feb 2017 18:27:18.400 +0000 (UTC)
+Date: Thu, 23 Feb 2017 10:27:18 -0800
+From: =?UTF-8?B?TGVvbmFyZCBCcsO8bmluZ3M=?= <notifications@github.com>
+Reply-To: the8472/mldht <reply+00104302dc5d2e9c7725a95211f5157e7c25ef5fb2a9bd6a92cf0000000114c6eb8692a169ce0c0d78bf@reply.github.com>
+To: the8472/mldht <mldht@noreply.github.com>
+Cc: the8472 <github@infinite-source.de>, 
+ Mention <mention@noreply.github.com>
+Message-ID: <the8472/mldht/issues/5/282077682@github.com>
+In-Reply-To: <the8472/mldht/issues/5@github.com>
+References: <the8472/mldht/issues/5@github.com>
+Subject: Re: [the8472/mldht] Intent to relicense under MPL 2.0 (#5)
+Mime-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="--==_mimepart_58af29864d9fc_2e773fcb46e9fc2c4337c";
+ charset=UTF-8
+Content-Transfer-Encoding: 7bit
+Precedence: list
+X-GitHub-Sender: leonard84
+X-GitHub-Recipient: the8472
+X-GitHub-Reason: mention
+List-ID: the8472/mldht <mldht.the8472.github.com>
+List-Archive: https://github.com/the8472/mldht
+List-Post: <mailto:reply+00104302dc5d2e9c7725a95211f5157e7c25ef5fb2a9bd6a92cf0000000114c6eb8692a169ce0c0d78bf@reply.github.com>
+List-Unsubscribe: <mailto:unsub+00104302dc5d2e9c7725a95211f5157e7c25ef5fb2a9bd6a92cf0000000114c6eb8692a169ce0c0d78bf@reply.github.com>,
+ <https://github.com/notifications/unsubscribe/ABBDAnO-5gno7hD3hd8JQZF2Jcprkkvzks5rfc-GgaJpZM4Lpmni>
+X-Auto-Response-Suppress: All
+X-GitHub-Recipient-Address: github@infinite-source.de
+X-SG-EID: QJyLUyYn5G8FwqICRjHI9CqBAAcAsGqMDQNkXsgdm2HGC6joHSIu/PktD/rukLBuTizWJZlGebgnBw
+ KN2zFwmGklxh53VgJahbajMTM+6HYUA/g8SzVe4UBbJ5fTYAbNemSFg3MBJ6rAC4P8kN3zrT6QpR6I
+ cCFX0NKiOOKWAUYdRUZ/aXoTJwVOQiT+RCQQKg2pgyyxTOuWmqsjcUlD7Y3G2PFx8vMUj2ZBKwEyig
+ sNAPcbB1anBYJ+hDmwuqUx
+
+----==_mimepart_58af29864d9fc_2e773fcb46e9fc2c4337c
+Content-Type: text/plain;
+ charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Hi @the8472 I don't have any objections in general, but why don't we license it under APL 2.0? May I ask what prompted this?
+
+However, you'd need to check if there is a problem with KTorrent DHT, since the initial DHT Code was adapted from it see https://sourceforge.net/p/azsmrc/code/1527/
+
+And how does it work with Vuze/Azureus code, AFAIK that is still GPL 2.0 and mldht uses its interfaces?
+
+-- 
+You are receiving this because you were mentioned.
+Reply to this email directly or view it on GitHub:
+https://github.com/the8472/mldht/issues/5#issuecomment-282077682
+----==_mimepart_58af29864d9fc_2e773fcb46e9fc2c4337c
+Content-Type: text/html;
+ charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<p>Hi <a href=3D"https://github.com/the8472" class=3D"user-mention">@the847=
+2</a> I don't have any objections in general, but why don't we license it u=
+nder APL 2.0? May I ask what prompted this?</p>
+<p>However, you'd need to check if there is a problem with KTorrent DHT, si=
+nce the initial DHT Code was adapted from it see <a href=3D"https://sourcef=
+orge.net/p/azsmrc/code/1527/">https://sourceforge.net/p/azsmrc/code/1527/</=
+a></p>
+<p>And how does it work with Vuze/Azureus code, AFAIK that is still GPL 2.0=
+ and mldht uses its interfaces?</p>
+
+<p style=3D"font-size:small;-webkit-text-size-adjust:none;color:#666;">&mda=
+sh;<br />You are receiving this because you were mentioned.<br />Reply to t=
+his email directly, <a href=3D"https://github.com/the8472/mldht/issues/5#is=
+suecomment-282077682">view it on GitHub</a>, or <a href=3D"https://github.c=
+om/notifications/unsubscribe-auth/ABBDApixQU4B8uXIW09ZzIYDc5eIkXq_ks5rfc-Gg=
+aJpZM4Lpmni">mute the thread</a>.<img alt=3D"" height=3D"1" src=3D"https://=
+github.com/notifications/beacon/ABBDAgMWW9Th_rI69nMHc3mohr8ATb0hks5rfc-GgaJ=
+pZM4Lpmni.gif" width=3D"1" /></p>
+<div itemscope itemtype=3D"http://schema.org/EmailMessage">
+<div itemprop=3D"action" itemscope itemtype=3D"http://schema.org/ViewAction=
+">
+  <link itemprop=3D"url" href=3D"https://github.com/the8472/mldht/issues/5#=
+issuecomment-282077682"></link>
+  <meta itemprop=3D"name" content=3D"View Issue"></meta>
+</div>
+<meta itemprop=3D"description" content=3D"View this Issue on GitHub"></meta>
+</div>
+
+<script type=3D"application/json" data-scope=3D"inboxmarkup">{"api_version"=
+:"1.0","publisher":{"api_key":"05dde50f1d1a384dd78767c55493e4bb","name":"Gi=
+tHub"},"entity":{"external_key":"github/the8472/mldht","title":"the8472/mld=
+ht","subtitle":"GitHub repository","main_image_url":"https://cloud.githubus=
+ercontent.com/assets/143418/17495839/a5054eac-5d88-11e6-95fc-7290892c7bb5.p=
+ng","avatar_image_url":"https://cloud.githubusercontent.com/assets/143418/1=
+5842166/7c72db34-2c0b-11e6-9aed-b52498112777.png","action":{"name":"Open in=
+ GitHub","url":"https://github.com/the8472/mldht"}},"updates":{"snippets":[=
+{"icon":"PERSON","message":"@leonard84 in #5: Hi @the8472 I don't have any =
+objections in general, but why don't we license it under APL 2.0? May I ask=
+ what prompted this?\r\n\r\nHowever, you'd need to check if there is a prob=
+lem with KTorrent DHT, since the initial DHT Code was adapted from it see h=
+ttps://sourceforge.net/p/azsmrc/code/1527/\r\n\r\nAnd how does it work with=
+ Vuze/Azureus code, AFAIK that is still GPL 2.0 and mldht uses its interfac=
+es?"}],"action":{"name":"View Issue","url":"https://github.com/the8472/mldh=
+t/issues/5#issuecomment-282077682"}}}</script>=
+
+----==_mimepart_58af29864d9fc_2e773fcb46e9fc2c4337c--
+
+
+From - Tue Jul 18 10:38:20 2017
+X-Account-Key: account4
+X-UIDL: bd8284ca9c2f7b2a9fbdb8be4c6fcf3c
+X-Mozilla-Status: 0011
+X-Mozilla-Status2: 00000000
+X-Mozilla-Keys:                                                                                 
+X-Envelope-From: <joris.guisson@gmail.com>
+X-Envelope-To: <the8472@infinite-source.de>
+X-Delivery-Time: 1500366808
+X-UID: 88540
+Return-Path: <joris.guisson@gmail.com>
+Authentication-Results: strato.com 1;
+	spf=pass
+		smtp.mailfrom="joris.guisson@gmail.com";
+	dkim=pass
+		header.d=gmail.com;
+	domainkeys=none;
+	dkim-adsp=pass
+		header.from="joris.guisson@gmail.com"
+X-Strato-MessageType: email
+X-RZG-CLASS-ID: mi00
+Received-SPF: pass
+	(strato.com: domain _spf.google.com designates 2607:f8b0:4003:c06::235 as permitted sender)
+	mechanism=ip6;
+	client-ip=2607:f8b0:4003:c06::235;
+	helo="mail-oi0-x235.google.com";
+	envelope-from="joris.guisson@gmail.com";
+	receiver=smtp.rzone.de;
+	identity=mailfrom;
+Received: from mail-oi0-x235.google.com ([IPv6:2607:f8b0:4003:c06::235])
+	by smtp.rzone.de (RZmta 41.1 REPLY)
+	with ESMTPS id 101807t6I8XSdsx
+	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (curve secp384r1 with 384 ECDH bits, eq. 7680 bits RSA))
+	(Client CN "smtp.gmail.com", Issuer "Google Internet Authority G2" (verified OK))
+	(Client hostname verification FAILED)
+	for <the8472@infinite-source.de>;
+	Tue, 18 Jul 2017 10:33:28 +0200 (CEST)
+Received: by mail-oi0-x235.google.com with SMTP id p188so11495355oia.0
+        for <the8472@infinite-source.de>; Tue, 18 Jul 2017 01:33:28 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=mime-version:in-reply-to:references:from:date:message-id:subject:to;
+        bh=ctypUrGyFCo2iO/kAfa+IFAtai6FKfiVJ0bezk7rTjM=;
+        b=RRTyzuzDg16HMlYwNxZcC1QUwGdquFzDzTGGTjZ8/BdOHDGkSwA/5zdOfKKeB1l4vf
+         o4HyJxAqF2pJEO4/OHsUthCidXDwxR9u7nz101YjOyWmbHxg/1XtL8J0hHHnBDWrQc3U
+         LZVNnzo85tLcGKfv2HYJki+lqsEn5OA0WoqFVBu/pkFA+eE/vUPg8mUsrqEZvhFeU9xM
+         ioz3W0BVmx7d138p2OEzuohvsJ2kTh19AeQWFcAk1c0zxBxrRnZ4AaXV0qenbKxH2CEb
+         Zmf5Q/XZiarmeajYpN23II+scImTrjnIaPmbPWwUbyfYnN7ctmHejz0esYb6vura6MRs
+         MXPA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:in-reply-to:references:from:date
+         :message-id:subject:to;
+        bh=ctypUrGyFCo2iO/kAfa+IFAtai6FKfiVJ0bezk7rTjM=;
+        b=FcDSBIFVrTJTA1Hnq/ffLf41TtgR9OnCCJ3+rPExQE44AhY4nFDl/VHSgbCK5ihJB7
+         rQW5xCMeiL8YEgE/XDms7wKUue12QqOuXgQb2xTnqF/SXTEXs7mVIUeS5kmDfIAdt2X8
+         w/LpLzXy1XgBwaNVK/uOdcs15slC2Nf7A+6/nkDYkmyHu1mgi9cv+7if9BUDEu7vdcTv
+         8imRW14iUlHc6F0w8ITj52JtPZfzSTsCBCnWwwp9Suu1pVdnreSBQsBgsfDA5We/RnVg
+         iBXzAino/fgBhKhXx0N4uD8E8jo6ZznWwb34nSC1KkxTh4q4H253wiHrILHJu/p/HqZz
+         kDcg==
+X-Gm-Message-State: AIVw11077+QAVlrBH1ClWaN7xf3bexvetgWrhpJYClfK/JgTGbzVDwCq
+	F6eqjRg47tQdkerPYDx0g2c4RDj/Sg==
+X-Received: by 10.202.236.6 with SMTP id k6mr338151oih.20.1500366806768; Tue,
+ 18 Jul 2017 01:33:26 -0700 (PDT)
+MIME-Version: 1.0
+Received: by 10.74.112.1 with HTTP; Tue, 18 Jul 2017 01:33:26 -0700 (PDT)
+In-Reply-To: <ba769a9c-5e3a-1119-f9c2-c05addcc3124@infinite-source.de>
+References: <ba769a9c-5e3a-1119-f9c2-c05addcc3124@infinite-source.de>
+From: Joris Guisson <joris.guisson@gmail.com>
+Date: Tue, 18 Jul 2017 10:33:26 +0200
+Message-ID: <CAAmLN2Y9GPHp92qurMUrjqsPc1gW1Fx2JtoOKVDH2kkkKZrgyA@mail.gmail.com>
+Subject: Re: Relicensing java dht implementation to MPL2.0
+To: The 8472 <the8472@infinite-source.de>
+Content-Type: text/plain; charset="UTF-8"
+
+On Sat, Jul 15, 2017 at 10:13 PM, The 8472 <the8472@infinite-source.de> wrote:
+> Hello Joris,
+>
+> Am I correct in the assumption that you are @GeorgeKT on github?
+> It lists you as main contributor to KTorrent around 2007.
+>
+> As already mentioned on the related github issue[0] I intend to
+> relicense a java bittorrent DHT library which I have been
+> maintaining for several years now from GPLv2+ to MPLv2+.
+> The original maintainer agreed but mentioned that it was originally
+> ported from KTorrent's DHT code in C++ to Java.
+> Some of the code has already been originally rewritten as part of the
+> porting, additional parts changed and have been extended over time,
+> but a few lines may remain.
+>
+> So my questions are
+> a) are you the original developer of the Ktorrent DHT implementation
+
+Yes, I implemented it.
+
+> b) if yes do you agree with or object to the relicensing
+
+I dont really care if it is GPL or MPL, any open source license is
+fine by me. So you have my permission to relicense it.
+
+> c) or do you require further information
+>
+> greetings - The 8472
+>
+>
+> [0] https://github.com/the8472/mldht/issues/5
+
+

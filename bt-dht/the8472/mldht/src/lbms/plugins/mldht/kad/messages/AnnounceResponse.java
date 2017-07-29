@@ -1,29 +1,14 @@
-/*
- *    This file is part of mlDHT. 
- * 
- *    mlDHT is free software: you can redistribute it and/or modify 
- *    it under the terms of the GNU General Public License as published by 
- *    the Free Software Foundation, either version 2 of the License, or 
- *    (at your option) any later version. 
- * 
- *    mlDHT is distributed in the hope that it will be useful, 
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of 
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
- *    GNU General Public License for more details. 
- * 
- *    You should have received a copy of the GNU General Public License 
- *    along with mlDHT.  If not, see <http://www.gnu.org/licenses/>. 
- */
+/*******************************************************************************
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ ******************************************************************************/
 package lbms.plugins.mldht.kad.messages;
 
-import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
 import lbms.plugins.mldht.kad.DHT;
-import lbms.plugins.mldht.kad.DHTConstants;
-import lbms.plugins.mldht.kad.Key;
 
 /**
  * @author Damokles
@@ -49,7 +34,7 @@ public class AnnounceResponse extends MessageBase {
 	
 	@Override
 	public Map<String, Object> getInnerMap() {
-		Map<String, Object> inner = new TreeMap<String, Object>();
+		Map<String, Object> inner = new TreeMap<>();
 		inner.put("id", id.getHash());
 
 		return inner;
