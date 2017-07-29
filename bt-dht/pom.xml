@@ -18,16 +18,12 @@
         <module>the8472/mldht</module>
     </modules>
 
-    <properties>
-        <mldht-version>0.1.0</mldht-version>
-    </properties>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>mldht.core</groupId>
                 <artifactId>libmldht</artifactId>
-                <version>${mldht-version}</version>
+                <version>0.1.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
