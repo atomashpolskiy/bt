@@ -66,7 +66,7 @@ public class MagnetUriParser {
     /**
      * Create a magnet URI from its' string representation in BEP-9 format.
      * Current limitations:
-     * - only v1 links are supported (xt=urn:btih:<info-hash>)
+     * - only v1 links are supported (xt=urn:btih:&lt;info-hash&gt;)
      * - base32-encoded info hashes are not supported
      *
      * @since 1.3
@@ -82,7 +82,7 @@ public class MagnetUriParser {
     /**
      * Create a magnet URI from its' URI representation in BEP-9 format.
      * Current limitations:
-     * - only v1 links are supported (xt=urn:btih:<info-hash>)
+     * - only v1 links are supported (xt=urn:btih:&lt;info-hash&gt;)
      * - base32-encoded info hashes are not supported
      *
      * @since 1.3
