@@ -23,6 +23,8 @@ Option (* = required)  Description
 -f, --file <File>      Torrent metainfo file
 -m, --magnet           Magnet URI
 -s, --seed             Continue to seed when download is complete
+--trace                Enable trace logging
+-v, --verbose          Enable more verbose logging
 ```
 
 ### Run
@@ -45,7 +47,11 @@ Add `-S` flag to download the data in sequential order (e.g. for streaming conte
 
 Add `-s` flag to continue seeding after torrent has been downloaded.
 
-Add `-H` flag to disable GUI.
+Add `-H` flag to run in headless mode, disabling the GUI.
+
+Add `-v` flag to enable more verbose logging (especially useful in headless mode).
+
+Add `--trace` flag to enable trace logging (loads of debugging information, useful to diagnose problems).
 
 ### Key bindings
 

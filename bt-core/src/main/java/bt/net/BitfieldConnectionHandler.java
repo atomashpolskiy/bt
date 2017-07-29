@@ -37,8 +37,8 @@ public class BitfieldConnectionHandler implements HandshakeHandler {
                 bt.protocol.Bitfield bitfieldMessage = new bt.protocol.Bitfield(bitfield.getBitmask());
                 connection.postMessage(bitfieldMessage);
 
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Sending " + bitfieldMessage + " for " + connection.getRemotePeer());
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Sending " + bitfieldMessage + " for " + connection.getRemotePeer());
                 }
             }
         }

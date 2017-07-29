@@ -2,6 +2,7 @@ package bt.cli;
 
 import bt.Bt;
 import bt.BtClientBuilder;
+import bt.cli.Options.LogLevel;
 import bt.data.Storage;
 import bt.data.file.FileSystemStorage;
 import bt.dht.DHTConfig;
@@ -16,6 +17,7 @@ import bt.torrent.selector.SequentialSelector;
 import com.google.inject.Module;
 import com.googlecode.lanterna.input.KeyStroke;
 import joptsimple.OptionException;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
@@ -28,6 +30,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.Optional;
 
 public class CliClient  {
@@ -61,6 +64,8 @@ public class CliClient  {
 
     private CliClient(Options options) {
         this.options = options;
+
+        configureLogging(options.getLogLevel());
 
         Collection<KeyStrokeBinding> keyBindings = Collections.singletonList(
                 new KeyStrokeBinding(KeyStroke.fromString("p"), this::togglePause));
@@ -109,6 +114,28 @@ public class CliClient  {
         this.client = clientBuilder.build();
         this.printer = options.shouldDisableUi() ? Optional.empty()
                 : Optional.of(SessionStatePrinter.createKeyInputAwarePrinter(() -> client.getSession().getTorrent(), keyBindings));
+    }
+
+    private void configureLogging(LogLevel logLevel) {
+        Level log4jLogLevel;
+        switch (Objects.requireNonNull(logLevel)) {
+            case NORMAL: {
+                log4jLogLevel = Level.INFO;
+                break;
+            }
+            case VERBOSE: {
+                log4jLogLevel = Level.DEBUG;
+                break;
+            }
+            case TRACE: {
+                log4jLogLevel = Level.TRACE;
+                break;
+            }
+            default: {
+                throw new IllegalArgumentException("Unknown log level: " + logLevel.name());
+            }
+        }
+        Configurator.setLevel("bt", log4jLogLevel);
     }
 
     void resume() {

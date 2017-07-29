@@ -12,6 +12,10 @@ import java.util.Arrays;
 
 public class Options {
 
+    public enum LogLevel {
+        NORMAL, VERBOSE, TRACE
+    }
+
     private static final OptionSpec<File> metainfoFileOptionSpec;
     private static final OptionSpec<String> magnetUriOptionSpec;
     private static final OptionSpec<File> targetDirectoryOptionSpec;
@@ -19,6 +23,8 @@ public class Options {
     private static final OptionSpec<Void> sequentialOptionSpec;
     private static final OptionSpec<Void> enforceEncryptionOptionSpec;
     private static final OptionSpec<Void> headlessOptionSpec;
+    private static final OptionSpec<Void> verboseOptionSpec;
+    private static final OptionSpec<Void> traceOptionSpec;
 
     private static final OptionParser parser;
 
@@ -45,6 +51,10 @@ public class Options {
         enforceEncryptionOptionSpec = parser.acceptsAll(Arrays.asList("e", "encrypted"), "Enforce encryption for all connections");
 
         headlessOptionSpec = parser.acceptsAll(Arrays.asList("H", "headless"), "Disable UI");
+
+        verboseOptionSpec = parser.acceptsAll(Arrays.asList("v", "verbose"), "Enable more verbose logging");
+
+        traceOptionSpec = parser.accepts("trace", "Enable trace logging");
     }
 
     /**
@@ -52,6 +62,7 @@ public class Options {
      */
     public static Options parse(String... args) {
         OptionSet opts = parser.parse(args);
+
         return new Options(
                 opts.valueOf(metainfoFileOptionSpec),
                 opts.valueOf(magnetUriOptionSpec),
@@ -59,7 +70,9 @@ public class Options {
                 opts.has(shouldSeedOptionSpec),
                 opts.has(sequentialOptionSpec),
                 opts.has(enforceEncryptionOptionSpec),
-                opts.has(headlessOptionSpec));
+                opts.has(headlessOptionSpec),
+                opts.has(verboseOptionSpec),
+                opts.has(traceOptionSpec));
     }
 
     public static void printHelp(OutputStream out) {
@@ -77,6 +90,8 @@ public class Options {
     private boolean sequential;
     private boolean enforceEncryption;
     private boolean disableUi;
+    private boolean verboseLogging;
+    private boolean traceLogging;
 
     public Options(File metainfoFile,
                    String magnetUri,
@@ -84,7 +99,9 @@ public class Options {
                    boolean seedAfterDownloaded,
                    boolean sequential,
                    boolean enforceEncryption,
-                   boolean disableUi) {
+                   boolean disableUi,
+                   boolean verboseLogging,
+                   boolean traceLogging) {
         this.metainfoFile = metainfoFile;
         this.magnetUri = magnetUri;
         this.targetDirectory = targetDirectory;
@@ -92,6 +109,8 @@ public class Options {
         this.sequential = sequential;
         this.enforceEncryption = enforceEncryption;
         this.disableUi = disableUi;
+        this.verboseLogging = verboseLogging;
+        this.traceLogging = traceLogging;
     }
 
     public File getMetainfoFile() {
@@ -120,5 +139,9 @@ public class Options {
 
     public boolean shouldDisableUi() {
         return disableUi;
+    }
+
+    public LogLevel getLogLevel() {
+        return traceLogging ? LogLevel.TRACE : (verboseLogging ? LogLevel.VERBOSE : LogLevel.NORMAL);
     }
 }

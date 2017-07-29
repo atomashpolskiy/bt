@@ -33,10 +33,12 @@ public class DHTPeerSource extends ScheduledPeerSource {
         Stream<Peer> peerStream = dhtService.getPeers(torrentId).limit(MAX_PEERS_PER_COLLECTION);
         peerStream.forEach(peer -> {
             peerConsumer.accept(peer);
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug(String.format("Collected new peer (torrent ID: %s, peer: %s)", torrentId, peer));
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace(String.format("Collected new peer (torrent ID: %s, peer: %s)", torrentId, peer));
             }
         });
-        LOGGER.info("Peer collection finished for torrent ID: " + torrentId);
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.info("Peer collection finished for torrent ID: " + torrentId);
+        }
     }
 }
