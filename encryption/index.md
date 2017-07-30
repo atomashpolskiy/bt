@@ -11,6 +11,8 @@ Bt provides full support for [Message Stream Encryption](http://wiki.vuze.com/w/
 
 # **Configuration**
 
+<sup>**NOTE**: Currently, all peer connections are established via [encryption negotation protocol](http://wiki.vuze.com/w/Message_Stream_Encryption) (also called MSE handshake). Therefore, in order to be able to connect to peers you must install [Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy](http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html). The reason for this requirement is that the MSE RC4 cipher uses 160 bit keys, while default Java installation allows at most 128 bit keys.</sup>
+
 The only thing that is required to setup MSE is to specify the preferred policy regarding encryption. It can be done when assembling a Bt client by overriding default configuration and passing it to the Bt runtime or client builder:
  
 ```java
