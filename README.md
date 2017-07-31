@@ -10,6 +10,10 @@ A full-featured BitTorrent implementation in Java 8
 </strong></p>
 
 <p align="center">
+    <img src="https://atomashpolskiy.github.io/static/img/bt-animated.gif" alt="Bt CLI">
+</p>
+
+<p align="center">
     <a href="https://travis-ci.org/atomashpolskiy/bt">
         <img src="https://img.shields.io/travis/atomashpolskiy/bt/master.svg?label=Linux%20build"
              alt="Linux build">
@@ -36,6 +40,10 @@ A full-featured BitTorrent implementation in Java 8
 * **[HOME](http://atomashpolskiy.github.io/bt/)** – website with documentation and tutorials
 * **[FORUM](https://groups.google.com/forum/#!forum/bttorrent)** – Google group for support and feedback
 * **[LICENSE](https://github.com/atomashpolskiy/bt/blob/master/LICENSE)** – licensed under Apache License 2.0
+
+## Prerequisites
+
+<sup>Currently, all peer connections are established via [encryption negotation protocol](http://wiki.vuze.com/w/Message_Stream_Encryption) (also called MSE handshake). Therefore, in order to be able to connect to peers you must install [Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy](http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html). The reason for this requirement is that the [MSE RC4 cipher](http://wiki.vuze.com/w/Message_Stream_Encryption) uses 160 bit keys, while default Java installation allows at most 128 bit keys.</sup>
 
 ## Usage
 
