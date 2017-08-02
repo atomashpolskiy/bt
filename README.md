@@ -10,6 +10,10 @@ A full-featured BitTorrent implementation in Java 8
 </strong></p>
 
 <p align="center">
+    <img src="https://atomashpolskiy.github.io/static/img/bt-source-code.png" alt="Bt Example">
+</p>
+
+<p align="center">
     <img src="https://atomashpolskiy.github.io/static/img/bt-animated.gif" alt="Bt CLI">
 </p>
 
