@@ -59,6 +59,22 @@ Add `--trace` flag to enable trace logging (loads of debugging information, usef
 
 `Ctrl-C to quit`
 
+### Shell wrapper
+
+After you've run `mvn clean install -DskipTests`, all the main jars should be installed in your local Maven repository. Use the following shell wrapper to simplify launching the CLI client:
+
+```bash
+#!/bin/bash
+
+java -jar /Users/atomashpolskiy/.m2/repository/com/github/atomashpolskiy/bt-cli/1.4-SNAPSHOT/bt-cli-1.4-SNAPSHOT.jar -m "magnet:?xt=urn:btih:$1" -d ~/Downloads
+```
+
+Save to this to a file, make it executable (`chmod +x <filename>` on Unix/Linux) and add the containing folder to `$PATH`. Then run:
+
+```bash
+$ myscript.sh AF0D9AA01A9AE123A73802CFA58CCAF355EB19F8
+```
+
 ### LGPL dependencies
 
 _Please note that this module includes bundled LGPL dependencies and can't be distributed or released to Maven Central in binary form under APL 2.0 license.
