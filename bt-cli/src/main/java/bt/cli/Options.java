@@ -25,6 +25,8 @@ public class Options {
     private static final OptionSpec<Void> headlessOptionSpec;
     private static final OptionSpec<Void> verboseOptionSpec;
     private static final OptionSpec<Void> traceOptionSpec;
+    private static final OptionSpec<String> ifaceOptionSpec;
+    private static final OptionSpec<Integer> torrentPortOptionSpec;
 
     private static final OptionParser parser;
 
@@ -55,6 +57,12 @@ public class Options {
         verboseOptionSpec = parser.acceptsAll(Arrays.asList("v", "verbose"), "Enable more verbose logging");
 
         traceOptionSpec = parser.accepts("trace", "Enable trace logging");
+
+        ifaceOptionSpec = parser.acceptsAll(Arrays.asList("i", "iface"), "Use specific network interface")
+                .withRequiredArg().ofType(String.class);
+
+        torrentPortOptionSpec = parser.acceptsAll(Arrays.asList("p", "port"), "Listen on specific port for incoming connections")
+                .withRequiredArg().ofType(Integer.class);
     }
 
     /**
@@ -72,7 +80,9 @@ public class Options {
                 opts.has(enforceEncryptionOptionSpec),
                 opts.has(headlessOptionSpec),
                 opts.has(verboseOptionSpec),
-                opts.has(traceOptionSpec));
+                opts.has(traceOptionSpec),
+                opts.valueOf(ifaceOptionSpec),
+                opts.valueOf(torrentPortOptionSpec));
     }
 
     public static void printHelp(OutputStream out) {
@@ -92,6 +102,8 @@ public class Options {
     private boolean disableUi;
     private boolean verboseLogging;
     private boolean traceLogging;
+    private String iface;
+    private Integer port;
 
     public Options(File metainfoFile,
                    String magnetUri,
@@ -101,7 +113,9 @@ public class Options {
                    boolean enforceEncryption,
                    boolean disableUi,
                    boolean verboseLogging,
-                   boolean traceLogging) {
+                   boolean traceLogging,
+                   String iface,
+                   Integer port) {
         this.metainfoFile = metainfoFile;
         this.magnetUri = magnetUri;
         this.targetDirectory = targetDirectory;
@@ -111,6 +125,8 @@ public class Options {
         this.disableUi = disableUi;
         this.verboseLogging = verboseLogging;
         this.traceLogging = traceLogging;
+        this.iface = iface;
+        this.port = port;
     }
 
     public File getMetainfoFile() {
@@ -143,5 +159,13 @@ public class Options {
 
     public LogLevel getLogLevel() {
         return traceLogging ? LogLevel.TRACE : (verboseLogging ? LogLevel.VERBOSE : LogLevel.NORMAL);
+    }
+
+    public String getIface() {
+        return iface;
+    }
+
+    public Integer getPort() {
+        return port;
     }
 }

@@ -12,6 +12,8 @@ Official BEPs:
 
 Changes/New Features:
 
+* Choose a specific network interface #20
+
 
 Bug Fixes/Improvements:
 

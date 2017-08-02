@@ -12,6 +12,7 @@ import bt.tracker.TrackerRequestBuilder;
 import bt.tracker.TrackerResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.conn.params.ConnRouteParams;
 import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +57,8 @@ public class HttpTracker implements Tracker {
     public HttpTracker(String trackerUrl,
                        IdentityService idService,
                        IPeerRegistry peerRegistry,
-                       EncryptionPolicy encryptionPolicy) {
+                       EncryptionPolicy encryptionPolicy,
+                       InetAddress localAddress) {
         try {
             this.baseUri = new URI(trackerUrl);
         } catch (URISyntaxException e) {
@@ -66,10 +68,16 @@ public class HttpTracker implements Tracker {
         this.idService = idService;
         this.peerRegistry = peerRegistry;
         this.encryptionPolicy = encryptionPolicy;
-        this.httpClient = HttpClients.createMinimal();
+        this.httpClient = buildClient(localAddress);
         this.httpResponseHandler = new CommonsHttpResponseHandler(new bt.tracker.http.HttpResponseHandler());
 
         this.trackerIds = new ConcurrentHashMap<>();
+    }
+
+    private static HttpClient buildClient(InetAddress localAddress) {
+        HttpClient client = HttpClients.createMinimal();
+        client.getParams().setParameter(ConnRouteParams.LOCAL_ADDRESS, localAddress);
+        return client;
     }
 
     @Override

@@ -18,8 +18,9 @@ class SocketChannelFactory {
     // TODO: this should be configurable
     private static final Duration socketTimeout = Duration.ofSeconds(30);
 
-    private InetAddress localAddress;
-    private int localPort;
+    private InetSocketAddress localOutgoingSocketAddress;
+    private InetAddress localIncomingAddress;
+    private int localIncomingPort;
 
     private SelectorProvider selector;
     private volatile ServerSocketChannel incomingChannel;
@@ -29,8 +30,9 @@ class SocketChannelFactory {
      * @since 1.0
      */
     public SocketChannelFactory(InetAddress localAddress, int localPort) {
-        this.localAddress = localAddress;
-        this.localPort = localPort;
+        this.localOutgoingSocketAddress = new InetSocketAddress(localAddress, 0);
+        this.localIncomingAddress = localAddress;
+        this.localIncomingPort = localPort;
         this.selector = SelectorProvider.provider();
         this.lock = new Object();
     }
@@ -44,6 +46,7 @@ class SocketChannelFactory {
     public SocketChannel getChannel(InetAddress inetAddress, int port) throws IOException {
         InetSocketAddress remoteAddress = new InetSocketAddress(inetAddress, port);
         SocketChannel outgoingChannel = selector.openSocketChannel();
+        outgoingChannel.socket().bind(localOutgoingSocketAddress);
         outgoingChannel.socket().setSoTimeout((int) socketTimeout.toMillis());
         outgoingChannel.socket().setSoLinger(false, 0);
         outgoingChannel.connect(remoteAddress);
@@ -60,7 +63,7 @@ class SocketChannelFactory {
         if (incomingChannel == null) {
             synchronized (lock) {
                 if (incomingChannel == null) {
-                    SocketAddress localAddress = new InetSocketAddress(this.localAddress, localPort);
+                    SocketAddress localAddress = new InetSocketAddress(localIncomingAddress, localIncomingPort);
                     ServerSocketChannel serverSocketChannel = selector.openServerSocketChannel();
                     serverSocketChannel.bind(localAddress);
                     this.incomingChannel = serverSocketChannel;

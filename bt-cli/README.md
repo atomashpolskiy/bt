@@ -13,18 +13,20 @@ This module contains a simple CLI launcher for **Bt**.
 ```
 $ java -jar target/bt-launcher.jar
 
-Option (* = required)  Description
----------------------  -----------
--?, -h, --help
--H, --headless         Disable UI
--S, --sequential       Download sequentially
-* -d, --dir <File>     Target download location
--e, --encrypted        Enforce encryption for all connections
--f, --file <File>      Torrent metainfo file
--m, --magnet           Magnet URI
--s, --seed             Continue to seed when download is complete
---trace                Enable trace logging
--v, --verbose          Enable more verbose logging
+Option (* = required)  Description                                     
+---------------------  -----------                                     
+-?, -h, --help                                                         
+-H, --headless         Disable UI                                      
+-S, --sequential       Download sequentially                           
+* -d, --dir <File>     Target download location                        
+-e, --encrypted        Enforce encryption for all connections          
+-f, --file <File>      Torrent metainfo file                           
+-i, --iface            Use specific network interface                  
+-m, --magnet           Magnet URI                                      
+-p, --port <Integer>   Listen on specific port for incoming connections
+-s, --seed             Continue to seed when download is complete      
+--trace                Enable trace logging                            
+-v, --verbose          Enable more verbose logging  
 ```
 
 ### Run
@@ -40,6 +42,10 @@ $ java -jar target/bt-launcher.jar -m "magnet:?xt=urn:btih:AF0D9AA01A9AE123A7380
 ```
 
 #### Options
+
+Add `-i <hostname>` or `-i <inetaddr>` to bind all connections to the specified address.
+
+Add `-p <port>` to listen for incoming connections on the specified port.
 
 Add `-e` flag to encrypt all peer connections.
 

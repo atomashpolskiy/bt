@@ -26,8 +26,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
@@ -70,7 +72,20 @@ public class CliClient  {
         Collection<KeyStrokeBinding> keyBindings = Collections.singletonList(
                 new KeyStrokeBinding(KeyStroke.fromString("p"), this::togglePause));
 
+        Optional<InetAddress> acceptorAddressOverride = getAcceptorAddressOverride();
+        Optional<Integer> portOverride = getPortOverride();
+
         Config config = new Config() {
+            @Override
+            public InetAddress getAcceptorAddress() {
+                return acceptorAddressOverride.orElseGet(super::getAcceptorAddress);
+            }
+
+            @Override
+            public int getAcceptorPort() {
+                return portOverride.orElseGet(super::getAcceptorPort);
+            }
+
             @Override
             public int getNumOfHashingThreads() {
                 return Runtime.getRuntime().availableProcessors();
@@ -114,6 +129,28 @@ public class CliClient  {
         this.client = clientBuilder.build();
         this.printer = options.shouldDisableUi() ? Optional.empty()
                 : Optional.of(SessionStatePrinter.createKeyInputAwarePrinter(() -> client.getSession().getTorrent(), keyBindings));
+    }
+
+    private Optional<Integer> getPortOverride() {
+        Integer port = options.getPort();
+        if (port == null) {
+            return Optional.empty();
+        } else if (port < 1024 || port >= 65535) {
+            throw new IllegalArgumentException("Invalid port: " + port + "; expected 1024..65534");
+        }
+        return Optional.of(port);
+    }
+
+    private Optional<InetAddress> getAcceptorAddressOverride() {
+        String iface = options.getIface();
+        if (iface == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(InetAddress.getByName(iface));
+        } catch (UnknownHostException e) {
+            throw new IllegalArgumentException("Failed to parse the acceptor's internet address", e);
+        }
     }
 
     private void configureLogging(LogLevel logLevel) {
