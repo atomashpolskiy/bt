@@ -10,6 +10,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 class FileSystemStorageUnit implements StorageUnit {
@@ -34,21 +35,24 @@ class FileSystemStorageUnit implements StorageUnit {
     private boolean init(boolean create) {
 
         if (closed) {
-            if (!parent.exists()) {
-                if (create && !parent.mkdirs()) {
-                    throw new BtException("Failed to create file storage -- can't create (some of the) directories");
-                }
+        	if (!Files.exists(parent)) {
+        		try {
+        			Files.createDirectory(parent);
+        		} catch(IOException e) {
+        			if(create) {
+        				throw new BtException("Failed to create file storage -- can't create (some of the) directories");
+        			}
+        			throw new BtException("Failed to create file storage -- unexpected I/O error", e);
+        		}
             }
-
-            if (!file.exists()) {
+        	
+            if (!Files.exists(file)) {
                 if (create) {
                     try {
-                        if (!file.createNewFile()) {
-                            throw new BtException("Failed to create file storage -- " +
-                                    "can't create new file: " + file.getAbsolutePath());
-                        }
+                		Files.createFile(file);
                     } catch (IOException e) {
-                        throw new BtException("Failed to create file storage -- unexpected I/O error", e);
+                    	throw new BtException("Failed to create file storage -- " +
+                                "can't create new file: " + file.toAbsolutePath());
                     }
                 } else {
                     return false;
