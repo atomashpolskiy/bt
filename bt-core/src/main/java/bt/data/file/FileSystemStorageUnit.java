@@ -20,7 +20,6 @@ class FileSystemStorageUnit implements StorageUnit {
     private static final Logger LOGGER = LoggerFactory.getLogger(FileSystemStorageUnit.class);
 
     private Path parent, file;
-//    private RandomAccessFile raf;
     private SeekableByteChannel sbc;
     private long capacity;
 
@@ -90,9 +89,9 @@ class FileSystemStorageUnit implements StorageUnit {
         }
 
         try {
-            raf.seek(offset);
-            raf.getChannel().read(buffer);
-
+        	sbc.position(offset);
+        	sbc.read(buffer);
+    	
         } catch (IOException e) {
             throw new BtException("Failed to read bytes (offset: " + offset +
                     ", requested block length: " + buffer.remaining() + ", file size: " + capacity + ")", e);
