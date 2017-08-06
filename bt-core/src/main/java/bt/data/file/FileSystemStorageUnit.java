@@ -142,8 +142,8 @@ class FileSystemStorageUnit implements StorageUnit {
         }
 
         try {
-            raf.seek(offset);
-            raf.getChannel().write(buffer);
+        	sbc.position(offset);
+        	sbc.write(buffer);
 
         } catch (IOException e) {
             throw new BtException("Failed to write bytes (offset: " + offset +
@@ -166,8 +166,8 @@ class FileSystemStorageUnit implements StorageUnit {
         }
 
         try {
-            raf.seek(offset);
-            raf.write(block);
+        	sbc.position(offset);
+        	sbc.write(ByteBuffer.wrap(block));
 
         } catch (IOException e) {
             throw new BtException("Failed to write bytes (offset: " + offset +
@@ -182,7 +182,11 @@ class FileSystemStorageUnit implements StorageUnit {
 
     @Override
     public long size() {
-        return file.length();
+    	try {
+			return Files.size(file);
+		} catch (IOException e) {
+			throw new BtException("Unexpected I/O error", e);
+		}
     }
 
     @Override
