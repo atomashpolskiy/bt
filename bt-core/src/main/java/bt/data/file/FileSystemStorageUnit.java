@@ -1,24 +1,27 @@
 package bt.data.file;
 
-import bt.BtException;
-import bt.data.StorageUnit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import bt.BtException;
+import bt.data.StorageUnit;
 
 class FileSystemStorageUnit implements StorageUnit {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FileSystemStorageUnit.class);
 
     private Path parent, file;
-    private RandomAccessFile raf;
+//    private RandomAccessFile raf;
+    private SeekableByteChannel sbc;
     private long capacity;
 
     private volatile boolean closed;
@@ -60,10 +63,10 @@ class FileSystemStorageUnit implements StorageUnit {
             }
 
             try {
-                raf = new RandomAccessFile(file, "rwd");
-            } catch (FileNotFoundException e) {
-                throw new BtException("Unexpected I/O error", e);
-            }
+            	sbc = Files.newByteChannel(file, StandardOpenOption.READ, StandardOpenOption.WRITE);
+            } catch (IOException e) {
+            	throw new BtException("Unexpected I/O error", e);
+			}
 
             closed = false;
         }
