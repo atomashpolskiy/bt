@@ -116,9 +116,9 @@ class FileSystemStorageUnit implements StorageUnit {
         }
 
         try {
-            raf.seek(offset);
+        	sbc.position(offset);
             byte[] block = new byte[length];
-            raf.read(block);
+            sbc.read(ByteBuffer.wrap(block));
             return block;
 
         } catch (IOException e) {
