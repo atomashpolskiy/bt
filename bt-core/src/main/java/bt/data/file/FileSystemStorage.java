@@ -6,6 +6,7 @@ import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 
 import java.io.File;
+import java.nio.file.Path;
 
 /**
  * Provides file-system based storage for torrent files.
@@ -49,7 +50,7 @@ import java.io.File;
  */
 public class FileSystemStorage implements Storage {
 
-    private final File rootDirectory;
+	private final Path rootDirectory;
     private final PathNormalizer pathNormalizer;
 
     /**
@@ -58,12 +59,16 @@ public class FileSystemStorage implements Storage {
      * @param rootDirectory Root directory for this storage. All torrent files will be stored inside this directory.
      * @since 1.0
      */
-    public FileSystemStorage(File rootDirectory) {
-        this.rootDirectory = rootDirectory;
-        this.pathNormalizer = new PathNormalizer();
+    @Deprecated public FileSystemStorage(File rootDirectory) {
+    	this(rootDirectory.toPath());
     }
+    
+    public FileSystemStorage(Path rootDirectory) {
+    	this.rootDirectory = rootDirectory;
+    	this.pathNormalizer = new PathNormalizer();
+	}
 
-    @Override
+	@Override
     public StorageUnit getUnit(Torrent torrent, TorrentFile torrentFile) {
 
         File torrentDirectory;
