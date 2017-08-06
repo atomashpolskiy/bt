@@ -71,14 +71,13 @@ public class FileSystemStorage implements Storage {
 	@Override
     public StorageUnit getUnit(Torrent torrent, TorrentFile torrentFile) {
 
-        File torrentDirectory;
+        Path torrentDirectory;
         if (torrent.getFiles().size() == 1) {
             torrentDirectory = rootDirectory;
         } else {
             String normalizedName = pathNormalizer.normalize(torrent.getName());
-            torrentDirectory = new File(rootDirectory, normalizedName);
+            torrentDirectory = rootDirectory.resolve(normalizedName);
         }
-
         String normalizedPath = pathNormalizer.normalize(torrentFile.getPathElements());
         return new FileSystemStorageUnit(torrentDirectory, normalizedPath, torrentFile.getSize());
     }
