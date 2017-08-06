@@ -10,20 +10,21 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 
 class FileSystemStorageUnit implements StorageUnit {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FileSystemStorageUnit.class);
 
-    private File parent, file;
+    private Path parent, file;
     private RandomAccessFile raf;
     private long capacity;
 
     private volatile boolean closed;
 
-    FileSystemStorageUnit(File root, String path, long capacity) {
-        this.file = new File(root, path);
-        this.parent = file.getParentFile();
+    FileSystemStorageUnit(Path root, String path, long capacity) {
+    	this.file = root.resolve(path);
+    	this.parent = file.getParent();
         this.capacity = capacity;
         this.closed = true;
     }
