@@ -1,8 +1,6 @@
 package bt.data.file;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
@@ -191,16 +189,16 @@ class FileSystemStorageUnit implements StorageUnit {
 
     @Override
     public String toString() {
-        return "(" + capacity + " B) " + file.getPath();
+        return "(" + capacity + " B) " + file.getRoot();
     }
 
     @Override
     public void close() throws IOException {
         if (!closed) {
             try {
-                raf.close();
+            	sbc.close();
             } catch (IOException e) {
-                LOGGER.warn("Failed to close file: " + file.getPath(), e);
+                LOGGER.warn("Failed to close file: " + file.getRoot(), e);
             } finally {
                 closed = true;
             }
