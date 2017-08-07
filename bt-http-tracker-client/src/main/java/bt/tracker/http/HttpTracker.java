@@ -147,7 +147,7 @@ public class HttpTracker implements Tracker {
         InetAddress inetAddress = peer.getInetAddress();
         if (inetAddress != null) {
             buf.append("&ip=");
-            buf.append(inetAddress.getHostAddress());
+            buf.append(urlEncode(inetAddress.getHostAddress().getBytes()));
         }
 
         buf.append("&port=");
