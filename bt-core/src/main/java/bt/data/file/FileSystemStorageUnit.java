@@ -181,11 +181,8 @@ class FileSystemStorageUnit implements StorageUnit {
     @Override
     public long size() {
 
-        if (!Files.exists(file)) {
-        	throw new BtException("Unexpected I/O error");
-        }
         try {
-            return Files.size(file);
+            return Files.exists(file) ? Files.size(file) : 0;
         } catch (IOException e) {
             throw new BtException("Unexpected I/O error", e);
         }
