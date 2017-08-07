@@ -50,7 +50,7 @@ import java.nio.file.Path;
  */
 public class FileSystemStorage implements Storage {
 
-	private final Path rootDirectory;
+    private final Path rootDirectory;
     private final PathNormalizer pathNormalizer;
 
     /**
@@ -60,15 +60,15 @@ public class FileSystemStorage implements Storage {
      * @since 1.0
      */
     @Deprecated public FileSystemStorage(File rootDirectory) {
-    	this(rootDirectory.toPath());
+        this(rootDirectory.toPath());
     }
-    
-    public FileSystemStorage(Path rootDirectory) {
-    	this.rootDirectory = rootDirectory;
-    	this.pathNormalizer = new PathNormalizer();
-	}
 
-	@Override
+    public FileSystemStorage(Path rootDirectory) {
+        this.rootDirectory = rootDirectory;
+        this.pathNormalizer = new PathNormalizer();
+    }
+
+    @Override
     public StorageUnit getUnit(Torrent torrent, TorrentFile torrentFile) {
 
         Path torrentDirectory;
