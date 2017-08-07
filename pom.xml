@@ -20,6 +20,14 @@
         </developer>
     </developers>
 
+    <developers>
+        <developer>
+            <id>MorrisLaw</id>
+            <name>Jeremy L. Morris</name>
+            <email>morrislaw93@gmail.com</email>
+        </developer>
+    </developers>
+
     <licenses>
         <license>
             <name>Apache License 2.0</name>

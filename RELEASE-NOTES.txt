@@ -17,6 +17,8 @@ Changes/New Features:
 
 Bug Fixes/Improvements:
 
+* Jeremy L. Morris (MorrisLaw) - Refactored FileStorageSystem and FileSystemStorageUnit to use java.nio.files interfaces #25
+
 
 ----------------------------------
 Release: 1.3
