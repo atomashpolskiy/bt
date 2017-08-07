@@ -190,7 +190,7 @@ class FileSystemStorageUnit implements StorageUnit {
 
     @Override
     public String toString() {
-        return "(" + capacity + " B) " + file.getRoot();
+        return "(" + capacity + " B) " + file;
     }
 
     @Override
@@ -199,7 +199,7 @@ class FileSystemStorageUnit implements StorageUnit {
             try {
                 sbc.close();
             } catch (IOException e) {
-                LOGGER.warn("Failed to close file: " + file.getRoot(), e);
+                LOGGER.warn("Failed to close file: " + file, e);
             } finally {
                 closed = true;
             }
