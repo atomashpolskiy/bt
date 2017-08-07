@@ -39,11 +39,11 @@ class FileSystemStorageUnit implements StorageUnit {
                 try {
                     Files.createDirectories(parent);
                 } catch(IOException e) {
-                if(create) {
-                    throw new BtException("Failed to create file storage -- can't create (some of the) directories", e);
-                }
-                    throw new BtException("Failed to create file storage -- unexpected I/O error", e);
-                }
+                    if(create) {
+                        throw new BtException("Failed to create file storage -- can't create (some of the) directories", e);
+                    }
+                        throw new BtException("Failed to create file storage -- unexpected I/O error", e);
+                    }
             }
 
             if (!Files.exists(file)) {
@@ -180,6 +180,10 @@ class FileSystemStorageUnit implements StorageUnit {
 
     @Override
     public long size() {
+
+        if (!Files.exists(file)) {
+            return 0;
+        }
         try {
             return Files.size(file);
         } catch (IOException e) {
