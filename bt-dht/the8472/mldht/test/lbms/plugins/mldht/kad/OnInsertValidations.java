@@ -18,7 +18,6 @@ import java.util.concurrent.Executors;
 import org.junit.Before;
 import org.junit.Test;
 
-import lbms.plugins.mldht.kad.DHT.DHTtype;
 import lbms.plugins.mldht.kad.Node.RoutingTableEntry;
 import lbms.plugins.mldht.kad.messages.PingRequest;
 import lbms.plugins.mldht.kad.messages.PingResponse;
@@ -31,8 +30,8 @@ public class OnInsertValidations {
 	
 	@Before
 	public void setup() {
-		DHT dht = new DHT(DHTtype.IPV6_DHT);
-		dht.populate();
+		
+		DHT dht = NodeFactory.buildDHT();
 		dht.setScheduler(Executors.newScheduledThreadPool(0));
 		node = dht.getNode();
 		node.initKey(null);

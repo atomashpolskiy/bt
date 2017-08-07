@@ -8,8 +8,6 @@ package lbms.plugins.mldht.kad;
 import static lbms.plugins.mldht.kad.NodeFactory.fillTable;
 import static org.junit.Assert.assertEquals;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -19,49 +17,14 @@ import java.util.stream.Collectors;
 import org.junit.Before;
 import org.junit.Test;
 
-import lbms.plugins.mldht.DHTConfiguration;
-import lbms.plugins.mldht.kad.DHT.DHTtype;
-
 public class KClosestNodeSearchTest {
 	
 	Node node;
 	
 	@Before
 	public void setup() {
-		DHT dht = new DHT(DHTtype.IPV6_DHT);
+		DHT dht = NodeFactory.buildDHT();
 		dht.setScheduler(Executors.newScheduledThreadPool(0));
-		dht.populate();
-		dht.config = new DHTConfiguration() {
-			
-			@Override
-			public boolean noRouterBootstrap() {
-				// TODO Auto-generated method stub
-				return false;
-			}
-			
-			@Override
-			public boolean isPersistingID() {
-				// TODO Auto-generated method stub
-				return false;
-			}
-			
-			@Override
-			public Path getStoragePath() {
-				return Paths.get("./does.not.exist");
-			}
-			
-			@Override
-			public int getListeningPort() {
-				// TODO Auto-generated method stub
-				return 0;
-			}
-			
-			@Override
-			public boolean allowMultiHoming() {
-				// TODO Auto-generated method stub
-				return false;
-			}
-		};
 		node = dht.getNode();
 		node.initKey(dht.config);
 		node.registerId();

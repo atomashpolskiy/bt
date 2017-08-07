@@ -7,6 +7,10 @@ matrix:
       dist: trusty
       group: edge
       jdk: oraclejdk9
+      addons:
+        apt:
+          packages:
+            - oracle-java9-installer
   allow_failures:
     - jdk: oraclejdk9
 

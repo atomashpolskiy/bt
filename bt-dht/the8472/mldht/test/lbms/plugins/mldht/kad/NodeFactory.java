@@ -9,8 +9,11 @@ import static the8472.utils.Functional.unchecked;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.ThreadLocalRandom;
 
+import lbms.plugins.mldht.DHTConfiguration;
 import lbms.plugins.mldht.kad.DHT.DHTtype;
 
 public class NodeFactory {
@@ -27,11 +30,48 @@ public class NodeFactory {
 		return unchecked(() -> InetAddress.getByAddress(addr));
 	}
 	
-	static DHT buildDHT() {
-		DHT dht = new DHT(DHTtype.IPV6_DHT);
+	static DHT buildDHT(DHT.DHTtype type) {
+		DHT dht = new DHT(type);
+		dht.config = new DHTConfiguration() {
+			
+			@Override
+			public boolean noRouterBootstrap() {
+				// TODO Auto-generated method stub
+				return false;
+			}
+			
+			@Override
+			public boolean isPersistingID() {
+				// TODO Auto-generated method stub
+				return false;
+			}
+			
+			@Override
+			public Path getStoragePath() {
+				// TODO Auto-generated method stub
+				return Paths.get(".", "does", "not", "exist");
+			}
+			
+			@Override
+			public int getListeningPort() {
+				// TODO Auto-generated method stub
+				return 0;
+			}
+			
+			@Override
+			public boolean allowMultiHoming() {
+				// TODO Auto-generated method stub
+				return false;
+			}
+		};
 		dht.populate();
 		
 		return dht;
+		
+	}
+	
+	static DHT buildDHT() {
+		return buildDHT(DHTtype.IPV6_DHT);
 	}
 
 	static void fillTable(Node node) {

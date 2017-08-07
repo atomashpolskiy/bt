@@ -23,6 +23,7 @@ import java.nio.channels.DatagramChannel;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import lbms.plugins.mldht.kad.PeerAddressDBItem;
 import the8472.utils.Arrays;
@@ -119,47 +120,63 @@ public class AddressUtils {
 	}
 	
 	
+	static Stream<InetAddress> allAddresses() {
+		try {
+			return Collections.list(NetworkInterface.getNetworkInterfaces()).stream().filter(iface -> {
+				try {
+					return iface.isUp();
+				} catch (SocketException e) {
+					e.printStackTrace();
+					return false;
+				}
+			}).flatMap(iface -> Collections.list(iface.getInetAddresses()).stream());
+		} catch (SocketException e) {
+			e.printStackTrace();
+			return Stream.empty();
+		}
+	}
+	
+	
+	public static Stream<InetAddress> nonlocalAddresses() {
+		return allAddresses().filter(addr -> {
+			return !addr.isAnyLocalAddress() && !addr.isLoopbackAddress();
+		});
+	}
 
 	public static List<InetAddress> getAvailableGloballyRoutableAddrs(Class<? extends InetAddress> type) {
 		
 		LinkedList<InetAddress> addrs = new LinkedList<>();
-		
-		try
-		{
-			for (NetworkInterface iface : Collections.list(NetworkInterface.getNetworkInterfaces()))
-			{
-				if(!iface.isUp() || iface.isLoopback())
+
+		try {
+			for (NetworkInterface iface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+				if (!iface.isUp() || iface.isLoopback())
 					continue;
-				for (InterfaceAddress ifaceAddr : iface.getInterfaceAddresses())
-				{
-					if (type == Inet6Address.class && ifaceAddr.getAddress() instanceof Inet6Address)
-					{
+				for (InterfaceAddress ifaceAddr : iface.getInterfaceAddresses()) {
+					if (type == Inet6Address.class && ifaceAddr.getAddress() instanceof Inet6Address) {
 						Inet6Address addr = (Inet6Address) ifaceAddr.getAddress();
 						// only accept globally reachable IPv6 unicast addresses
 						if (addr.isIPv4CompatibleAddress() || !isGlobalUnicast(addr))
 							continue;
-	
+
 						// prefer other addresses over teredo
 						if (isTeredo(addr))
 							addrs.addLast(addr);
 						else
 							addrs.addFirst(addr);
 					}
-					
-					if(type == Inet4Address.class && ifaceAddr.getAddress() instanceof Inet4Address)
-					{
+
+					if (type == Inet4Address.class && ifaceAddr.getAddress() instanceof Inet4Address) {
 						Inet4Address addr = (Inet4Address) ifaceAddr.getAddress();
 
-						if(!isGlobalUnicast(addr))
+						if (!isGlobalUnicast(addr))
 							continue;
-					
+
 						addrs.add(addr);
 					}
 				}
 			}
-			
-		} catch (Exception e)
-		{
+
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		

@@ -640,7 +640,8 @@ public class RPCServer {
 	class SocketHandler implements Selectable {
 		DatagramChannel channel;
 		
-		private static final int NOT_INITIALIZED = -1;
+		private static final int NOT_INITIALIZED = -2;
+		private static final int INITIALIZING = -1;
 		private static final int WRITE_STATE_IDLE = 0;
 		private static final int WRITE_STATE_WRITING = 2;
 		private static final int WRITE_STATE_AWAITING_NIO_NOTIFICATION = 3;
@@ -654,6 +655,10 @@ public class RPCServer {
 		}
 		
 		void start() {
+			if(!writeState.compareAndSet(NOT_INITIALIZED, INITIALIZING)) {
+				return;
+			}
+			
 			try
 			{
 				timeoutFilter.reset();
@@ -665,7 +670,11 @@ public class RPCServer {
 				channel.bind(new InetSocketAddress(addr, port));
 				connectionManager = dh_table.getConnectionManager();
 				connectionManager.register(this);
-				writeState.set(WRITE_STATE_IDLE);
+				if(!writeState.compareAndSet(INITIALIZING, WRITE_STATE_IDLE)) {
+					writeState.set(INITIALIZING);
+					close();
+					
+				}
 			} catch (IOException e)
 			{
 				e.printStackTrace();
@@ -827,8 +836,8 @@ public class RPCServer {
 				return;
 			writeState.set(CLOSED);
 			stop();
-			connectionManager.deRegister(this);
-			channel.close();
+			if(channel != null)
+				channel.close();
 		}
 		
 		@Override

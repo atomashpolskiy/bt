@@ -7,6 +7,7 @@ package lbms.plugins.mldht.kad;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import lbms.plugins.mldht.DHTConfiguration;
@@ -14,9 +15,12 @@ import lbms.plugins.mldht.kad.DHT;
 import lbms.plugins.mldht.kad.DHTLogger;
 import lbms.plugins.mldht.kad.DHT.DHTtype;
 import lbms.plugins.mldht.kad.DHT.LogLevel;
+import lbms.plugins.mldht.kad.utils.AddressUtils;
 import lbms.plugins.mldht.kad.DHTStatus;
 
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -25,10 +29,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
 import org.junit.Test;
 
@@ -136,7 +143,7 @@ public class DHTLifeCycleTest {
 				chan.connect(new InetSocketAddress(srv.getBindAddress(), srv.getPort()));
 				ByteBuffer packet = ByteBuffer.allocate(50);
 				packet.put(0, (byte) 'd');
-				chan.write(packet);
+				assertEquals(50, chan.write(packet));
 				
 				srv.sel.readEvent();
 				
@@ -179,6 +186,73 @@ public class DHTLifeCycleTest {
 		exceptionCanary.get();
 		
 		assertFalse("should not create storage path, that's the caller's duty", Files.isDirectory(storagePath));
+		
+		
+	}
+	
+	@Test
+	public void testBindFilter() {
+		DHT dht = NodeFactory.buildDHT(DHTtype.IPV4_DHT);
+		dht.getNode().initKey(null);
+		dht.setScheduler(Executors.newSingleThreadScheduledExecutor());
+		AtomicReference<Predicate<InetAddress>> predicate = new AtomicReference<>(null);
+		
+		dht.config = new DHTConfiguration() {
+			
+			@Override
+			public boolean noRouterBootstrap() {
+				return true;
+			}
+			
+			@Override
+			public boolean isPersistingID() {
+				// TODO Auto-generated method stub
+				return false;
+			}
+			
+			@Override
+			public Path getStoragePath() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			
+			@Override
+			public int getListeningPort() {
+				// TODO Auto-generated method stub
+				return 0;
+			}
+			
+			@Override
+			public boolean allowMultiHoming() {
+				return false;
+			}
+			
+			@Override
+			public Predicate<InetAddress> filterBindAddress() {
+				return predicate.get();
+			}
+		};
+		
+		predicate.set((unused) -> true);
+		RPCServerManager srvman = dht.getServerManager();
+		srvman.refresh(System.currentTimeMillis());
+		assertNotEquals(0, srvman.getServerCount());
+		
+		predicate.set((unused) -> false);
+		srvman.doBindChecks();
+		assertEquals(0, srvman.getServerCount());
+		
+		// wildcard addr same as allowing all addresses of that family
+		predicate.set((addr) -> addr instanceof Inet4Address && addr.isAnyLocalAddress());
+		srvman.refresh(System.currentTimeMillis());
+		assertNotEquals(0, srvman.getServerCount());
+		
+		// select a specific address
+		InetAddress localAddr = AddressUtils.nonlocalAddresses().filter(Inet4Address.class::isInstance).findAny().get();
+		predicate.set((addr) -> addr.equals(localAddr));
+		srvman.doBindChecks();
+		srvman.refresh(System.currentTimeMillis());
+		assertEquals(localAddr, srvman.getAllServers().get(0).getBindAddress());
 		
 		
 	}
