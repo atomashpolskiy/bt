@@ -3,6 +3,7 @@ package bt.dht;
 import bt.module.ProtocolModule;
 import bt.module.ServiceModule;
 import bt.protocol.handler.PortMessageHandler;
+import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -41,7 +42,7 @@ public class DHTModule implements Module {
 
     @Provides
     @Singleton
-    public DHTService provideDHTService(IRuntimeLifecycleBinder lifecycleBinder) {
-        return new MldhtService(lifecycleBinder, config);
+    public DHTService provideDHTService(IRuntimeLifecycleBinder lifecycleBinder, Config coreConfig) {
+        return new MldhtService(lifecycleBinder, coreConfig.getAcceptorAddress(), config);
     }
 }

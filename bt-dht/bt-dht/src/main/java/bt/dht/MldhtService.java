@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.file.Path;
 import java.util.Collection;
@@ -28,6 +29,7 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -63,13 +65,15 @@ class MldhtService implements DHTService {
     private DHTConfiguration config;
     private DHT dht;
 
+    private InetAddress localAddress;
     private boolean useRouterBootstrap;
     private Collection<InetPeerAddress> publicBootstrapNodes;
     private Collection<InetPeerAddress> bootstrapNodes;
 
-    public MldhtService(IRuntimeLifecycleBinder lifecycleBinder, DHTConfig config) {
+    public MldhtService(IRuntimeLifecycleBinder lifecycleBinder, InetAddress localAddress, DHTConfig config) {
         this.dht = new DHT(config.shouldUseIPv6()? DHTtype.IPV6_DHT : DHTtype.IPV4_DHT);
         this.config = toMldhtConfig(config);
+        this.localAddress = localAddress;
         this.useRouterBootstrap = config.shouldUseRouterBootstrap();
         this.publicBootstrapNodes = config.getPublicBootstrapNodes();
         this.bootstrapNodes = config.getBootstrapNodes();
@@ -103,6 +107,11 @@ class MldhtService implements DHTService {
             @Override
             public boolean allowMultiHoming() {
                 return false;
+            }
+
+            @Override
+            public Predicate<InetAddress> filterBindAddress() {
+                return address -> localAddress.equals(address);
             }
         };
     }
