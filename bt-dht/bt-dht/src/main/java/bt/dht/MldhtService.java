@@ -111,7 +111,14 @@ class MldhtService implements DHTService {
 
             @Override
             public Predicate<InetAddress> filterBindAddress() {
-                return address -> localAddress.equals(address);
+                return address -> {
+                    boolean bothAnyLocal = address.isAnyLocalAddress() && localAddress.isAnyLocalAddress();
+                    boolean couldUse = bothAnyLocal || localAddress.equals(address);
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Filtering addresses to bind DHT server to.. Checking " + address + ".. Could use: " + couldUse);
+                    }
+                    return couldUse;
+                };
             }
         };
     }
