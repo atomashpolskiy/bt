@@ -37,10 +37,10 @@ class FileSystemStorageUnit implements StorageUnit {
         if (closed) {
             if (!Files.exists(parent)) {
                 try {
-                    Files.createDirectory(parent);
+                    Files.createDirectories(parent);
                 } catch(IOException e) {
                 if(create) {
-                    throw new BtException("Failed to create file storage -- can't create (some of the) directories");
+                    throw new BtException("Failed to create file storage -- can't create (some of the) directories", e);
                 }
                     throw new BtException("Failed to create file storage -- unexpected I/O error", e);
                 }
@@ -52,7 +52,7 @@ class FileSystemStorageUnit implements StorageUnit {
                         Files.createFile(file);
                     } catch (IOException e) {
                         throw new BtException("Failed to create file storage -- " +
-                                "can't create new file: " + file.toAbsolutePath());
+                                "can't create new file: " + file.toAbsolutePath(), e);
                     }
                 } else {
                     return false;
