@@ -1,6 +1,12 @@
 language: java
-jdk:
-- oraclejdk8
+matrix:
+  include:
+    - jdk: oraclejdk8
+      env: MAIN_BUILD=true
+    - jdk: oraclejdk9
+      env: MAIN_BUILD=false
+  allow_failures:
+    - jdk: oraclejdk9
 branches:
   only:
   - master
@@ -10,9 +16,9 @@ git:
   depth: 10
 script:
 - script/travis-run-tests.sh
-- bash <(curl -s https://codecov.io/bash) -X gcov -X coveragepy
+- script/travis-publish-codecov.sh
 after_success:
-- mvn site
+- script/travis-publish-site.sh
 - script/travis-publish-javadoc.sh
 env:
   matrix:

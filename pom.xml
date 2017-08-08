@@ -47,6 +47,8 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <compiler.source>1.8</compiler.source>
+        <compiler.target>1.8</compiler.target>
 
         <logging-level>INFO</logging-level>
 
@@ -142,7 +144,7 @@
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
-                    <version>3.0.1</version>
+                    <version>3.2.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -214,8 +216,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <encoding>UTF-8</encoding>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>${compiler.source}</source>
+                    <target>${compiler.target}</target>
                 </configuration>
             </plugin>
             <plugin>
@@ -289,6 +291,13 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>jdk9</id>
+            <properties>
+                <compiler.source>1.9</compiler.source>
+                <compiler.target>1.9</compiler.target>
+            </properties>
+        </profile>
         <profile>
             <id>codecov</id>
             <properties>
