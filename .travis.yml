@@ -5,6 +5,10 @@ matrix:
       env: MAIN_BUILD=true
     - jdk: oraclejdk9
       env: MAIN_BUILD=false
+      addons:
+        apt:
+          packages:
+            - oracle-java9-installer
   allow_failures:
     - jdk: oraclejdk9
 branches:
