@@ -3,12 +3,15 @@ matrix:
   include:
     - jdk: oraclejdk8
       env: MAIN_BUILD=true
-    - jdk: oraclejdk9
-      env: MAIN_BUILD=false
+    - sudo: required
+      dist: trusty
+      group: edge
+      jdk: oraclejdk9
       addons:
         apt:
           packages:
             - oracle-java9-installer
+      env: MAIN_BUILD=false
   allow_failures:
     - jdk: oraclejdk9
 branches:
