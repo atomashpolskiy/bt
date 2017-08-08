@@ -4,4 +4,8 @@ if [ "$TRAVIS_REPO_SLUG" == "atomashpolskiy/bt" ] && [ "$TRAVIS_OS_NAME" == "lin
 
     mvn site
 
+else
+
+    echo "Skipping..."
+
 fi

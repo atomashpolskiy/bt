@@ -4,4 +4,8 @@ if [ "$TRAVIS_REPO_SLUG" == "atomashpolskiy/bt" ] && [ "$TRAVIS_OS_NAME" == "lin
 
     bash <(curl -s https://codecov.io/bash) -X gcov -X coveragepy
 
+else
+
+    echo "Skipping..."
+
 fi

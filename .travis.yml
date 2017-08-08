@@ -11,6 +11,7 @@ matrix:
         apt:
           packages:
             - oracle-java9-installer
+            - oracle-java9-set-default
       env: MAIN_BUILD=false
   allow_failures:
     - jdk: oraclejdk9

@@ -22,4 +22,8 @@ if [ "$TRAVIS_REPO_SLUG" == "atomashpolskiy/bt" ] && [ "$TRAVIS_OS_NAME" == "lin
   #  prevent showing the token in travis logs
   git push origin HEAD:gh-pages > /dev/null 2>&1
 
+else
+
+    echo "Skipping..."
+
 fi
