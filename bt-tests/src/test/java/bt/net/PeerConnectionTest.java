@@ -87,6 +87,11 @@ public class PeerConnectionTest {
 
     @After
     public void tearDown() {
+        try {
+            clientChannel.close();
+        } catch (IOException e) {
+            LOGGER.warn("Failed to close client channel", e);
+        }
         server.close();
     }
 
