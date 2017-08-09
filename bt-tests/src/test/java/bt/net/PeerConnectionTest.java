@@ -52,6 +52,7 @@ public class PeerConnectionTest {
         SocketAddress localAddress = serverChannel.getLocalAddress();
         clientChannel = SelectorProvider.provider().openSocketChannel();
         clientChannel.connect(localAddress);
+        server.waitUntilConnected();
     }
 
     @Test
@@ -100,6 +101,7 @@ public class PeerConnectionTest {
         private ServerSocketChannel channel;
         private volatile SocketChannel clientSocket;
         private final Object lock;
+        private volatile boolean connected;
 
         Server(ServerSocketChannel channel) {
             this.channel = channel;
@@ -111,9 +113,20 @@ public class PeerConnectionTest {
             try {
                 synchronized (lock) {
                     clientSocket = channel.accept();
+                    connected = true;
                 }
             } catch (IOException e) {
                 throw new RuntimeException("Unexpected I/O error", e);
+            }
+        }
+
+        public void waitUntilConnected() {
+            while (!connected) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException("interrupted");
+                }
             }
         }
 
