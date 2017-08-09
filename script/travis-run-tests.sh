@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export MAVEN_OPTS="-Xmx256m"
+export MAVEN_OPTS="-Xmx512m"
 
 if [ "$MAIN_BUILD" == "true" ]; then
 
