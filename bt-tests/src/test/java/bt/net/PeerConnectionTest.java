@@ -12,9 +12,12 @@ import bt.test.protocol.ProtocolTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -30,20 +33,19 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 public class PeerConnectionTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionTest.class);
 
     private static final ProtocolTest TEST = ProtocolTest.forBittorrentProtocol().build();
 
     private static final int BUFFER_SIZE = 2 << 6;
 
-    private ServerSocketChannel serverChannel;
     private Server server;
     private SocketChannel clientChannel;
 
     @Before
     public void setUp() throws IOException {
-
-        serverChannel = SelectorProvider.provider().openServerSocketChannel();
-        serverChannel.bind(new InetSocketAddress(0));
+        ServerSocketChannel serverChannel = SelectorProvider.provider().openServerSocketChannel();
+        serverChannel.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
         server = new Server(serverChannel);
         new Thread(server).start();
 
@@ -85,16 +87,7 @@ public class PeerConnectionTest {
 
     @After
     public void tearDown() {
-        try {
-            clientChannel.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
-            serverChannel.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        server.close();
     }
 
     private class Server implements Runnable, Closeable {
@@ -129,11 +122,19 @@ public class PeerConnectionTest {
         }
 
         @Override
-        public void close() throws IOException {
+        public void close() {
             if (clientSocket != null) {
-                clientSocket.close();
+                try {
+                    clientSocket.close();
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to close client channel", e);
+                }
             }
-            channel.close();
+            try {
+                channel.close();
+            } catch (IOException e) {
+                LOGGER.warn("Failed to close server channel", e);
+            }
         }
     }
 }
