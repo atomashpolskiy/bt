@@ -20,8 +20,10 @@ public class NetworkUtil {
      * @since 1.0
      */
     public static InetAddress getInetAddressFromNetworkInterfaces() {
+        InetAddress selectedAddress = null;
         try {
             Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+            outer:
             while (networkInterfaces.hasMoreElements()) {
                 NetworkInterface networkInterface = networkInterfaces.nextElement();
                 Enumeration<InetAddress> inetAddresses = networkInterface.getInetAddresses();
@@ -29,7 +31,8 @@ public class NetworkUtil {
                     InetAddress inetAddress = inetAddresses.nextElement();
                     if (!inetAddress.isMulticastAddress() && !inetAddress.isLoopbackAddress()
                             && inetAddress.getAddress().length == 4) {
-                        return inetAddress;
+                        selectedAddress = inetAddress;
+                        break outer;
                     }
                 }
             }
@@ -37,6 +40,9 @@ public class NetworkUtil {
         } catch (SocketException e) {
             throw new BtException("Failed to retrieve network address", e);
         }
-        return null;
+        // explicitly returning a loopback address here instead of null;
+        // otherwise we'll depend on how JDK classes handle this,
+        // e.g. java/net/Socket.java:635
+        return (selectedAddress == null)? InetAddress.getLoopbackAddress() : selectedAddress;
     }
 }
