@@ -25,6 +25,7 @@ git:
 script:
 - script/travis-run-tests.sh
 - script/travis-publish-codecov.sh
+- script/travis-publish-sonar.sh
 after_success:
 - script/travis-publish-site.sh
 - script/travis-publish-javadoc.sh
