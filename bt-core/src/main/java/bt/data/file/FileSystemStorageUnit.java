@@ -88,7 +88,10 @@ class FileSystemStorageUnit implements StorageUnit {
 
         try {
             sbc.position(offset);
-            sbc.read(buffer);
+            int read = 1;
+            while (buffer.hasRemaining() && read > 0) {
+              read = sbc.read(buffer);
+            }
 
         } catch (IOException e) {
             throw new BtException("Failed to read bytes (offset: " + offset +
@@ -115,9 +118,12 @@ class FileSystemStorageUnit implements StorageUnit {
 
         try {
             sbc.position(offset);
-            byte[] block = new byte[length];
-            sbc.read(ByteBuffer.wrap(block));
-            return block;
+            ByteBuffer buf = ByteBuffer.allocate(length);
+            int read = 1;
+            while(buf.hasRemaining() && read > 0) {
+              read = sbc.read(buf);
+            }
+            return buf.array();
 
         } catch (IOException e) {
             throw new BtException("Failed to read bytes (offset: " + offset +
@@ -141,7 +147,10 @@ class FileSystemStorageUnit implements StorageUnit {
 
         try {
             sbc.position(offset);
-            sbc.write(buffer);
+            int written = 1;
+            while (buffer.hasRemaining() && written > 0) {
+              written = sbc.write(buffer);
+            }
 
         } catch (IOException e) {
             throw new BtException("Failed to write bytes (offset: " + offset +
@@ -165,7 +174,11 @@ class FileSystemStorageUnit implements StorageUnit {
 
         try {
             sbc.position(offset);
-            sbc.write(ByteBuffer.wrap(block));
+            ByteBuffer buf = ByteBuffer.wrap(block);
+            int written = 1;
+            while (buf.hasRemaining() && written > 0) {
+              written = sbc.write(buf);
+            }
 
         } catch (IOException e) {
             throw new BtException("Failed to write bytes (offset: " + offset +
