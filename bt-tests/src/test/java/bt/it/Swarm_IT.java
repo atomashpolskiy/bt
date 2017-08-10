@@ -43,6 +43,7 @@ public class Swarm_IT extends BaseBtTest {
             .seeders(NUMBER_OF_SEEDERS)
             .leechers(NUMBER_OF_SEEDERS)
             .module(new SharedTrackerModule())
+            .useInMemoryFileSystem()
             .build();
 
     @After

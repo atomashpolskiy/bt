@@ -56,6 +56,7 @@ public class PeerExchange_IT extends BaseBtTest {
                 }
             }))
             .module(new SharedTrackerModule(new PEXPeerFilter(PEER_COUNT, 1)))
+            .useInMemoryFileSystem()
             .build();
 
     // TODO: fails in Travis when JaCoCo is enabled -- need to investigate

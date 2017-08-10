@@ -3,12 +3,21 @@ package bt.it.fixture;
 import bt.metainfo.Torrent;
 import bt.runtime.BtRuntimeBuilder;
 import bt.runtime.Config;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 import com.google.inject.Module;
 
-import java.io.File;
+import java.io.Closeable;
+import java.io.IOException;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Swarm builder.
@@ -20,7 +29,7 @@ public class SwarmBuilder {
     private Config config;
     private Collection<Module> modules;
 
-    private File root;
+    private String name;
 
     private int startingPort;
     private int seedersCount;
@@ -29,14 +38,38 @@ public class SwarmBuilder {
     private TorrentFiles torrentFiles;
     private Supplier<Torrent> torrentSupplier;
 
-    SwarmBuilder(File root,
+    private Supplier<Path> swarmFileRootSupplier;
+    private Collection<Closeable> swarmResources;
+
+    SwarmBuilder(String name,
+                 Path defaultFsRelativeRoot,
                  TorrentFiles torrentFiles) {
         this.config = new Config();
         this.modules = new ArrayList<>();
-        this.root = root;
+
+        this.name = name;
         this.startingPort = 6891;
         this.torrentFiles = torrentFiles;
         this.torrentSupplier = () -> {throw new RuntimeException("No torrent provided");};
+
+        Supplier<Path> supplier = () -> defaultFsRelativeRoot.resolve(name);
+        this.swarmFileRootSupplier = supplier;
+        this.swarmResources = Collections.singletonList(() -> deleteRecursive(supplier.get()));
+    }
+
+    private void deleteRecursive(Path path) throws IOException {
+        if (!Files.exists(path)) {
+            return;
+        }
+
+        if (Files.isDirectory(path)) {
+            List<Path> children = Files.list(path).collect(Collectors.toList());
+            for (Path child : children) {
+                deleteRecursive(child);
+            }
+        }
+
+        Files.delete(path);
     }
 
     /**
@@ -132,12 +165,24 @@ public class SwarmBuilder {
     }
 
     /**
+     * Use in-memory file system implementation.
+     *
+     * @since 1.3
+     */
+    public SwarmBuilder useInMemoryFileSystem() {
+        FileSystem jimfs = Jimfs.newFileSystem(Configuration.unix());
+        this.swarmFileRootSupplier = () -> jimfs.getRootDirectories().iterator().next().resolve(name);
+        this.swarmResources = Collections.singletonList(jimfs);
+        return this;
+    }
+
+    /**
      * Build swarm.
      *
      * @since 1.0
      */
     public Swarm build() {
-        SwarmPeerFactory swarmPeerFactory = new DefaultSwarmPeerFactory(root, torrentFiles, torrentSupplier, startingPort);
+        SwarmPeerFactory swarmPeerFactory = new DefaultSwarmPeerFactory(getFileRoot(), torrentFiles, torrentSupplier, startingPort);
         BtRuntimeFactory runtimeFactory = createRuntimeFactory(modules);
 
         Collection<SwarmPeer> peers = new ArrayList<>(seedersCount + leechersCount + 1);
@@ -151,7 +196,11 @@ public class SwarmBuilder {
             peers.add(swarmPeerFactory.createMagnetLeecher(newRuntimeBuilder(runtimeFactory)));
         }
 
-        return new Swarm(peers);
+        return new Swarm(swarmResources, peers);
+    }
+
+    private Path getFileRoot() {
+        return swarmFileRootSupplier.get();
     }
 
     private BtRuntimeFactory createRuntimeFactory(Collection<Module> modules) {

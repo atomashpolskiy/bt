@@ -45,6 +45,7 @@ public class Swarm_MagnetIT extends BaseBtTest {
             .seeders(NUMBER_OF_SEEDERS)
             .leechers(NUMBER_OF_LEECHERS, NUMBER_OF_MAGNET_LEECHERS)
             .module(new SharedTrackerModule())
+            .useInMemoryFileSystem()
             .build();
 
     @After

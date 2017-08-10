@@ -9,17 +9,17 @@ import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 import bt.tracker.AnnounceKey;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Supplier;
 
 class LeecherPeer extends SwarmPeer {
 
     private BtClient handle;
-    private File localRoot;
+    private Path localRoot;
     private TorrentFiles files;
 
-    LeecherPeer(File localRoot, TorrentFiles files, Supplier<Torrent> torrentSupplier, BtRuntime runtime, boolean useMagnet) {
+    LeecherPeer(Path localRoot, TorrentFiles files, Supplier<Torrent> torrentSupplier, BtRuntime runtime, boolean useMagnet) {
         super(runtime);
 
         Torrent torrent = torrentSupplier.get();
@@ -41,8 +41,6 @@ class LeecherPeer extends SwarmPeer {
 
         this.localRoot = Objects.requireNonNull(localRoot);
         this.files = Objects.requireNonNull(files);
-
-        files.createRoot(localRoot);
     }
 
     @Override

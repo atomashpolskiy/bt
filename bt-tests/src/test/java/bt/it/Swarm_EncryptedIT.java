@@ -43,6 +43,7 @@ public class Swarm_EncryptedIT extends BaseBtTest {
             .seeders(NUMBER_OF_SEEDERS)
             .leechers(NUMBER_OF_SEEDERS)
             .module(new SharedTrackerModule())
+            .useInMemoryFileSystem()
             .build();
 
     @After

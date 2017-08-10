@@ -1,45 +1,69 @@
 package bt.it.fixture;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ByteChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.StringTokenizer;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 class TorrentFiles {
 
-    private Map<String, byte[]> files;
+    private Map<String[], byte[]> files;
 
-    TorrentFiles(Map<String, byte[]> files) {
+    TorrentFiles(Map<String[], byte[]> files) {
         this.files = files;
     }
 
-    public void createFiles(File root) {
+    public void createFiles(Path root) {
         createRoot(root);
         files.forEach((path, content) -> {
-            File file = getFile.apply(root, path);
-            writeContents.accept(file, content);
+            writeContents.accept(resolve(root, path), content);
         });
     }
 
-    public void createRoot(File root) {
-        if ((root.exists() && !root.isDirectory()) || (!root.exists() && !root.mkdirs())) {
-            throw new RuntimeException("Failed to create directory: " + root);
-        }
+    private void createRoot(Path root) {
+        if (Files.exists(root)) {
+            if (!Files.isDirectory(root)) {
+                throw new IllegalStateException("File already exists and is not a directory: " + root);
+            } else {
+                long fileCount;
+                try {
+                    fileCount = Files.list(root).count();
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to create directory: " + root, e);
+                }
+                if (fileCount > 0) {
+                    throw new RuntimeException("Directory is not empty: " + root);
+                }
+            }
+        } else {
+            try {
+                 Files.createDirectories(root);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to create directory: " + root, e);
+            }
+        } // else root exists and is a directory
     }
 
-    public boolean verifyFiles(File root) {
+    private Path resolve(Path root, String[] path) {
+        // should we forbid empty paths?
+        Path file = root;
+        for (String element : path) {
+            file = file.resolve(element);
+        }
+        return file;
+    }
 
-        for (Map.Entry<String, byte[]> entry : files.entrySet()) {
-
-            String path = entry.getKey();
+    public boolean verifyFiles(Path root) {
+        for (Map.Entry<String[], byte[]> entry : files.entrySet()) {
+            Path file = resolve(root, entry.getKey());
             byte[] expectedContent = entry.getValue();
 
-            File file = getFile.apply(root, path);
             if (!verifyContents.apply(file, expectedContent)) {
                 return false;
             }
@@ -47,42 +71,36 @@ class TorrentFiles {
         return true;
     }
 
-    private BiFunction<File, String, File> getFile = (root, path) -> {
-        StringTokenizer tokenizer = new StringTokenizer(path, File.separator);
-        if (!tokenizer.hasMoreTokens()) {
-            throw new RuntimeException("Empty path");
-        }
-        File file = root;
-        while (tokenizer.hasMoreTokens()) {
-            file = new File(file, tokenizer.nextToken());
-        }
-        return file;
-    };
-
-    private BiConsumer<File, byte[]> writeContents = (file, content) -> {
+    private BiConsumer<Path, byte[]> writeContents = (file, content) -> {
         try {
-            if (!file.createNewFile()) {
-                throw new RuntimeException("Failed to create file: " + file.getPath());
-            }
-            try (FileOutputStream fout = new FileOutputStream(file)) {
-                fout.write(content);
-                fout.flush();
+            ByteBuffer buf = ByteBuffer.wrap(content);
+            try (ByteChannel fout = Files.newByteChannel(file, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
+                int written = 1;
+                while (buf.hasRemaining() && written > 0) {
+                  written = fout.write(buf);
+                }
             }
         } catch (IOException e) {
-            throw new RuntimeException("Failed to create file: " + file.getPath(), e);
+            throw new RuntimeException("Failed to create file: " + file, e);
         }
     };
 
-    private BiFunction<File, byte[], Boolean> verifyContents = (file, expectedContent) -> {
-        if (!file.exists()) {
+    private BiFunction<Path, byte[], Boolean> verifyContents = (file, expectedContent) -> {
+        if (!Files.exists(file)) {
             return false;
         }
-        byte[] actualContent = new byte[(int) file.length()];
-        try (FileInputStream fin = new FileInputStream(file)) {
-            fin.read(actualContent);
+
+        try {
+            ByteBuffer buf = ByteBuffer.allocate((int) Files.size(file));
+            try (ByteChannel fin = Files.newByteChannel(file, StandardOpenOption.READ)) {
+                int read = 1;
+                while (buf.hasRemaining() && read > 0) {
+                  read = fin.read(buf);
+                }
+            }
+            return Arrays.equals(expectedContent, buf.array());
         } catch (IOException e) {
-            throw new RuntimeException("Failed to read file: " + file.getPath(), e);
+            throw new RuntimeException("Failed to read file: " + file, e);
         }
-        return Arrays.equals(expectedContent, actualContent);
     };
 }

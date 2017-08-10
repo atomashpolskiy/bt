@@ -4,6 +4,7 @@ import org.junit.rules.ExternalResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -21,9 +22,11 @@ public class Swarm extends ExternalResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Swarm.class);
 
+    private Collection<Closeable> resources;
     private Collection<SwarmPeer> peers;
 
-    Swarm(Collection<SwarmPeer> peers) {
+    Swarm(Collection<Closeable> resources, Collection<SwarmPeer> peers) {
+        this.resources = resources;
         this.peers = peers;
     }
 
@@ -49,11 +52,19 @@ public class Swarm extends ExternalResource {
     }
 
     public void shutdown() {
+        resources.forEach(resource -> {
+            try {
+                resource.close();
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to close swarm resource", e);
+            }
+        });
+
         peers.forEach(peer -> {
             try {
                 peer.close();
             } catch (IOException e) {
-                LOGGER.warn("Error on swarm shutdown", e);
+                LOGGER.warn("Failed to shutdown swarm peer: " + peer, e);
             }
         });
     }

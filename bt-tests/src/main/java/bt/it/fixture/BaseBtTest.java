@@ -2,7 +2,6 @@ package bt.it.fixture;
 
 import bt.metainfo.MetadataService;
 import bt.metainfo.Torrent;
-import org.junit.After;
 import org.junit.BeforeClass;
 
 import java.io.File;
@@ -10,7 +9,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.function.Supplier;
 
@@ -21,8 +21,10 @@ import java.util.function.Supplier;
  */
 public class BaseBtTest {
 
-    private static final File ROOT = new File("target/it");
+    // default file root on the default (normal) file system
+    private static final Path TEST_ROOT = Paths.get("target", "it");
 
+    // test resources (bundled with bt-tests jar)
     private static final String FILE_NAME = "file.txt";
     private static final URL FILE_URL = BaseBtTest.class.getResource(FILE_NAME);
     private static final URL METAINFO_URL = BaseBtTest.class.getResource(FILE_NAME + ".torrent");
@@ -45,32 +47,6 @@ public class BaseBtTest {
         }
     }
 
-    @After
-    public void tearDown() {
-        try {
-            deleteRecursive(getTestRoot());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void deleteRecursive(File file) throws IOException {
-        if (!file.exists()) {
-            return;
-        }
-
-        if (file.isDirectory()) {
-            File[] children = file.listFiles();
-            if (children != null) {
-                for (File child : children) {
-                    deleteRecursive(child);
-                }
-            }
-        }
-
-        Files.delete(file.toPath());
-    }
-
     /**
      * Create a swarm builder.
      *
@@ -78,7 +54,7 @@ public class BaseBtTest {
      * @since 1.0
      */
     protected SwarmBuilder buildSwarm() {
-        SwarmBuilder builder = new SwarmBuilder(getTestRoot(), getSingleFile());
+        SwarmBuilder builder = new SwarmBuilder(getTestName(), TEST_ROOT, getSingleFile());
         builder.module(new TestExecutorModule());
 
         Supplier<Torrent> torrentSupplier = new CachingTorrentSupplier(() -> new MetadataService().fromUrl(METAINFO_URL));
@@ -86,12 +62,12 @@ public class BaseBtTest {
         return builder;
     }
 
-    private File getTestRoot() {
-        return new File(ROOT, this.getClass().getName());
+    private String getTestName() {
+        return getClass().getName();
     }
 
     private static TorrentFiles getSingleFile() {
-        return new TorrentFiles(Collections.singletonMap(FILE_NAME, SINGLE_FILE_CONTENT));
+        return new TorrentFiles(Collections.singletonMap(new String[]{FILE_NAME}, SINGLE_FILE_CONTENT));
     }
 
     /**

@@ -13,6 +13,25 @@
     <name>Bt Tests</name>
     <description>Contains tests for Bt Core and provides a framework for creating Bt integration tests</description>
 
+    <properties>
+        <jimfs-version>1.1</jimfs-version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+            <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>${slf4j-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.jimfs</groupId>
+                <artifactId>jimfs</artifactId>
+                <version>${jimfs-version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>com.github.atomashpolskiy</groupId>
@@ -27,12 +46,15 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.google.jimfs</groupId>
+            <artifactId>jimfs</artifactId>
+        </dependency>
 
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>${slf4j-version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
