@@ -5,7 +5,7 @@
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.3</version>
+    <version>1.3.1-SNAPSHOT</version>
 
     <name>Bt</name>
     <description>BitTorrent Library</description>

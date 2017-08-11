@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>mldht.core</groupId>
 	<artifactId>libmldht</artifactId>
-	<version>1.3</version>
+	<version>1.3.1-SNAPSHOT</version>
 	<name>mldht - Bittorrent Mainline DHT library</name>
 	<packaging>jar</packaging>
 	<scm>
