@@ -31,7 +31,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-class MldhtService implements DHTService {
+public class MldhtService implements DHTService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MldhtService.class);
     private static final DHTLogger DHT_LOGGER = createLogger();
