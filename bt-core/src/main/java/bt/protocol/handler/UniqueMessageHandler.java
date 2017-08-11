@@ -6,7 +6,7 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 
-abstract class UniqueMessageHandler<T extends Message> extends BaseMessageHandler<T> {
+public abstract class UniqueMessageHandler<T extends Message> extends BaseMessageHandler<T> {
 
     private Class<T> type;
     private Collection<Class<? extends T>> supportedTypes;
