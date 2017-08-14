@@ -51,7 +51,7 @@ A full-featured BitTorrent implementation in Java 8
 
 ## Usage
 
-Most recent version available in Maven Central is **1.3**.
+Most recent version available in Maven Central is **1.4**.
 
 Declare the following dependencies in your project’s **pom.xml**:
 
@@ -103,9 +103,8 @@ Module dhtModule = new DHTModule(new DHTConfig() {
     }
 });
 
-// get torrent file URL and download directory
-URL torrentUrl = getTorrentUrl();
-File targetDirectory = getTargetDirectory();
+// get download directory
+Path targetDirectory = new File("~/Downloads").toPath();
 
 // create file system based backend for torrent data
 Storage storage = new FileSystemStorage(targetDirectory);
@@ -114,7 +113,7 @@ Storage storage = new FileSystemStorage(targetDirectory);
 BtClient client = Bt.client()
         .config(config)
         .storage(storage)
-        .torrent(torrentUrl)
+        .magnet("magnet:?xt=urn:btih:af0d9aa01a9ae123a73802cfa58ccaf355eb19f1")
         .autoLoadModules()
         .module(dhtModule)
         .build();
