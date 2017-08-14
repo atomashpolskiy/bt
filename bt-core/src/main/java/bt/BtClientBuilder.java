@@ -1,28 +1,16 @@
 package bt;
 
-import bt.runtime.BtRuntime;
-
-import java.util.Objects;
-
 /**
  * Builds a client and attaches it to the provided runtime.
  *
  * @since 1.1
  */
-public class BtClientBuilder extends BaseClientBuilder<BtClientBuilder> {
+public class BtClientBuilder extends TorrentClientBuilder<BtClientBuilder> {
+    // this class is basically a convenient TorrentClientBuilder without generic parameters
 
-    static BtClientBuilder runtime(BtRuntime runtime) {
-        return new BtClientBuilder(runtime);
-    }
-
-    private BtRuntime runtime;
-
-    private BtClientBuilder(BtRuntime runtime) {
-        this.runtime = Objects.requireNonNull(runtime, "Missing runtime");
-    }
-
-    @Override
-    protected BtRuntime getRuntime() {
-        return runtime;
+    /**
+     * @since 1.4
+     */
+    protected BtClientBuilder() {
     }
 }

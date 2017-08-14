@@ -19,6 +19,8 @@ Bug Fixes/Improvements:
 
 * Jeremy L. Morris (MorrisLaw) - Use generic java.nio.files interfaces in FileSystemStorage #21
 * Switch integration tests to using in-memory storage #27
+* UDP tracker request contains 0 as the listening port
+* Download not starting when using standalone client with private runtime #34
 
 ----------------------------------
 Release: 1.3

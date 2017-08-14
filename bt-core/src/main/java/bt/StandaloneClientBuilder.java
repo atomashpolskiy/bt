@@ -1,34 +1,26 @@
 package bt;
 
 import bt.module.BtModuleProvider;
+import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 import bt.runtime.BtRuntimeBuilder;
 import bt.runtime.Config;
 import com.google.inject.Module;
-
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
 
 /**
  * Builds a standalone client with a private runtime
  *
  * @since 1.1
  */
-public class StandaloneClientBuilder extends BaseClientBuilder<StandaloneClientBuilder> {
+public class StandaloneClientBuilder extends TorrentClientBuilder<StandaloneClientBuilder> {
 
-    static StandaloneClientBuilder standalone() {
-        return new StandaloneClientBuilder();
-    }
+    private BtRuntimeBuilder runtimeBuilder;
 
-    private Config config;
-    private Set<Module> modules;
-    private Set<Class<? extends Module>> moduleTypes;
-    private boolean shouldAutoLoadModules;
-
-    private StandaloneClientBuilder() {
-        // set default config
-        this.config = new Config();
+    /**
+     * @since 1.4
+     */
+    protected StandaloneClientBuilder() {
+        this.runtimeBuilder = BtRuntime.builder();
     }
 
     /**
@@ -37,7 +29,7 @@ public class StandaloneClientBuilder extends BaseClientBuilder<StandaloneClientB
      * @since 1.1
      */
     public StandaloneClientBuilder config(Config config) {
-        this.config = Objects.requireNonNull(config, "Missing runtime config");
+        runtimeBuilder.config(config);
         return this;
     }
 
@@ -47,11 +39,7 @@ public class StandaloneClientBuilder extends BaseClientBuilder<StandaloneClientB
      * @since 1.1
      */
     public StandaloneClientBuilder module(Module module) {
-        Objects.requireNonNull(module);
-        if (modules == null) {
-            modules = new HashSet<>();
-        }
-        modules.add(module);
+        runtimeBuilder.module(module);
         return this;
     }
 
@@ -61,11 +49,7 @@ public class StandaloneClientBuilder extends BaseClientBuilder<StandaloneClientB
      * @since 1.1
      */
     public StandaloneClientBuilder module(Class<? extends Module> moduleType) {
-        Objects.requireNonNull(moduleType);
-        if (moduleTypes == null) {
-            moduleTypes = new HashSet<>();
-        }
-        moduleTypes.add(moduleType);
+        runtimeBuilder.module(moduleType);
         return this;
     }
 
@@ -79,26 +63,13 @@ public class StandaloneClientBuilder extends BaseClientBuilder<StandaloneClientB
      * @since 1.1
      */
     public StandaloneClientBuilder autoLoadModules() {
-        this.shouldAutoLoadModules = true;
+        runtimeBuilder.autoLoadModules();
         return this;
     }
 
     @Override
-    protected BtRuntime getRuntime() {
-        BtRuntimeBuilder runtimeBuilder = BtRuntime.builder(config);
-
-        if (modules != null) {
-            modules.forEach(runtimeBuilder::module);
-        }
-
-        if (moduleTypes != null) {
-            moduleTypes.forEach(runtimeBuilder::module);
-        }
-
-        if (shouldAutoLoadModules) {
-            runtimeBuilder.autoLoadModules();
-        }
-
-        return runtimeBuilder.build();
+    public BtClient build() {
+        runtime(runtimeBuilder.build());
+        return super.build();
     }
 }

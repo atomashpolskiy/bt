@@ -16,7 +16,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -45,15 +44,16 @@ public class BtRuntime {
      * @since 1.0
      */
     public static BtRuntimeBuilder builder() {
-        return new BtRuntimeBuilder(new Config());
+        return new BtRuntimeBuilder();
     }
 
     /**
      * @param config Custom configuration
      * @return Runtime builder
+     * @since 1.0
      */
     public static BtRuntimeBuilder builder(Config config) {
-        return new BtRuntimeBuilder(Objects.requireNonNull(config));
+        return new BtRuntimeBuilder(config);
     }
 
     /**

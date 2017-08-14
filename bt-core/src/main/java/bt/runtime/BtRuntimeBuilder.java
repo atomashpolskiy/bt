@@ -37,14 +37,32 @@ public class BtRuntimeBuilder {
     private boolean shouldAutoLoadModules;
 
     /**
+     * Create runtime builder with default config.
+     *
+     * @since 1.4
+     */
+    public BtRuntimeBuilder() {
+        this.config = new Config();
+    }
+
+    /**
      * Create runtime builder with provided config.
      *
      * @param config Runtime config
      * @since 1.0
      */
     public BtRuntimeBuilder(Config config) {
-        this.config = config;
-        this.customProviders = new ArrayList<>();
+        this.config = Objects.requireNonNull(config, "Missing runtime config");
+    }
+
+    /**
+     * Set runtime config.
+     *
+     * @since 1.4
+     */
+    public BtRuntimeBuilder config(Config config) {
+        this.config = Objects.requireNonNull(config, "Missing runtime config");
+        return this;
     }
 
     /**
@@ -77,7 +95,11 @@ public class BtRuntimeBuilder {
      * @since 1.1
      */
     public BtRuntimeBuilder module(Class<? extends Module> adapterType) {
-        this.customProviders.add(() -> {
+        Objects.requireNonNull(adapterType);
+        if (customProviders == null) {
+            customProviders = new ArrayList<>();
+        }
+        customProviders.add(() -> {
             try {
                 return adapterType.newInstance();
             } catch (Exception e) {
@@ -175,7 +197,7 @@ public class BtRuntimeBuilder {
 
     private Collection<BtModuleProvider> standardProviders() {
         Collection<BtModuleProvider> standardProviders = new ArrayList<>();
-        standardProviders.add(() -> new ServiceModule(getConfig()));
+        standardProviders.add(() -> new ServiceModule(config));
         standardProviders.add(ProtocolModule::new);
         return standardProviders;
     }
