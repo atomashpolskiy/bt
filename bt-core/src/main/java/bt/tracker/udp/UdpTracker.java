@@ -10,6 +10,7 @@ import bt.tracker.udp.AnnounceRequest.EventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.SocketAddress;
@@ -27,7 +28,7 @@ class UdpTracker implements Tracker {
     private static final Logger LOGGER = LoggerFactory.getLogger(UdpTracker.class);
 
     private IdentityService idService;
-    private InetSocketAddress localAddress;
+    private int listeningPort;
     private URL trackerUrl;
     private UdpMessageWorker worker;
 
@@ -38,12 +39,14 @@ class UdpTracker implements Tracker {
      */
     public UdpTracker(IdentityService idService,
                       IRuntimeLifecycleBinder lifecycleBinder,
+                      InetAddress localAddress,
+                      int listeningPort,
                       String trackerUrl) {
         this.idService = idService;
-        this.localAddress = new InetSocketAddress(0);
+        this.listeningPort = listeningPort;
         // TODO: one UDP socket for all outgoing tracker connections
         this.trackerUrl = toUrl(trackerUrl);
-        this.worker = new UdpMessageWorker(localAddress, getSocketAddress(this.trackerUrl), lifecycleBinder);
+        this.worker = new UdpMessageWorker(new InetSocketAddress(localAddress, 0), getSocketAddress(this.trackerUrl), lifecycleBinder);
     }
 
     private URL toUrl(String s) {
@@ -108,7 +111,7 @@ class UdpTracker implements Tracker {
                 request.setLeft(getLeft());
                 request.setUploaded(getUploaded());
                 request.setEventType(eventType);
-                request.setListeningPort((short) localAddress.getPort());
+                request.setListeningPort((short) listeningPort);
                 getRequestString(trackerUrl).ifPresent(request::setRequestString);
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Executing tracker UDP request of type {}: {}", eventType.name(), request);
