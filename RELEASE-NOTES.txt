@@ -7,20 +7,24 @@ http://atomashpolskiy.github.io/bt/
 Release: 1.4
 Date:
 ----------------------------------
-Official BEPs:
-
-
 Changes/New Features:
 
 * Choose a specific network interface #20
 
-
 Bug Fixes/Improvements:
 
-* Jeremy L. Morris (MorrisLaw) - Use generic java.nio.files interfaces in FileSystemStorage #21
+* Use generic java.nio.files interfaces in FileSystemStorage #21 -- Jeremy L. Morris (MorrisLaw)
 * Switch integration tests to using in-memory storage #27
 * UDP tracker request contains 0 as the listening port
 * Download not starting when using standalone client with private runtime #34
+
+----------------------------------
+Release: 1.3.1
+Date: 08/11/2017
+----------------------------------
+Bug Fixes:
+
+* java.lang.IllegalAccessError when running inside JBoss modules #32
 
 ----------------------------------
 Release: 1.3
