@@ -44,6 +44,7 @@ import java.util.stream.Collectors;
  * @since 1.0
  */
 public class ExclusiveRule implements Rule {
+    private static final String ANY = "_";
 
     boolean shouldCheckRequired;
     private RequiredRule exclusiveRequired;
@@ -90,9 +91,13 @@ public class ExclusiveRule implements Rule {
                     .map(exclusive -> {
                         List<Object> found = new ArrayList<>(exclusive.size() + 1);
                         exclusive.forEach(key -> {
-                            Object obj = map.get(key);
-                            if (obj != null) {
-                                found.add(obj);
+                            if (ANY.equals(key)) {
+                                found.addAll(map.values());
+                            } else {
+                                Object obj = map.get(key);
+                                if (obj != null) {
+                                    found.add(obj);
+                                }
                             }
                         });
                         return found;

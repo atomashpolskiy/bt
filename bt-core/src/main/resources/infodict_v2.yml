@@ -1,0 +1,22 @@
+--- # schema of the info dictionary (BitTorrent v2)
+- datatype: &file_tree_file_attributes
+    type: dictionary
+    entries:
+      - {key: length, type: integer}
+      - {key: "pieces root", type: binary}
+- datatype: &file_tree_node
+    type: dictionary
+    exclusives:
+      - %
+      - ""
+    entries:
+      - {key: %, type: *file_tree_node}
+      - {key: "", type: *file_tree_file_attributes}
+- model:
+    type: dictionary
+    entries:
+      - {key: name, type: string, required: false}
+      - {key: "piece length", type: integer}
+      - {key: "meta version", type: integer}
+      - {key: "file tree", type: list, elements: *file}
+      - {key: private, type: integer, required: false}

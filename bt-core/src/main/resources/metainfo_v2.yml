@@ -1,0 +1,37 @@
+--- # schema of a basic metainfo document (BitTorrent v2)
+- datatype: &file_tree_file_attributes
+    type: file_tree_file_attributes
+    entries:
+      - {key: length, type: integer}
+      - {key: "pieces root", type: binary, required: false}
+- datatype: &file_tree_node
+    type: file_tree_node
+    exclusives:
+      - _
+      - ""
+    entries:
+      - {key: _, type: *file_tree_node}
+      - {key: "", type: *file_tree_file_attributes}
+- datatype: &infodict
+    type: dictionary
+    entries:
+      - {key: name, type: string, required: false}
+      - {key: "piece length", type: integer}
+      - {key: "meta version", type: integer}
+      - {key: "file tree", type: *file_tree_node}
+      - {key: private, type: integer, required: false}
+- model:
+    type: dictionary
+    entries:
+      - {key: announce, type: string}
+      - key: announce-list
+        required: false
+        type: list
+        elements:
+          type: list
+          elements:
+            type: string
+      - key: info
+        type: *infodict
+      - key: "piece layers"
+        type: binary

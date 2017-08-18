@@ -12,11 +12,12 @@ import static org.junit.Assert.assertTrue;
 
 public class YamlBEObjectModelLoaderTest {
 
-    BEObjectModel model;
+    BEObjectModel model, model_v2;
 
     @Before
     public void setUp() {
-        model = loadModel("metainfo_correct.yml");
+        model = loadModel("/metainfo.yml");
+        model_v2 = loadModel("/metainfo_v2.yml");
     }
 
     private BEObjectModel loadModel(String name) {
@@ -40,6 +41,13 @@ public class YamlBEObjectModelLoaderTest {
 
         Object torrentObject = readTorrent("single_file_correct.torrent");
         assertValidationSuccess(model.validate(torrentObject));
+    }
+
+    @Test
+    public void testValidateTorrent_SingleFile_v2() {
+
+        Object torrentObject = readTorrent("single_file_v2_correct.torrent");
+        assertValidationSuccess(model_v2.validate(torrentObject));
     }
 
     @Test

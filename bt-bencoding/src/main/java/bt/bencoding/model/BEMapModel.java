@@ -27,7 +27,7 @@ class BEMapModel extends BaseBEObjectModel {
 
             Map<?,?> map = (Map<?,?>) object;
             for (Map.Entry<String, BEObjectModel> entryModel : entriesModel.entrySet()) {
-
+                // TODO: update to use wildcard key
                 String key = entryModel.getKey();
                 entryModel.getValue().validate(map.get(key)).getMessages()
                         .forEach(validationResult::addMessage);
