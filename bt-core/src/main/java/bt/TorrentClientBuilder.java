@@ -19,7 +19,7 @@ import java.net.URL;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseClientBuilder<B> {
+public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseClientBuilder<B> {
 
     private Storage storage;
 
