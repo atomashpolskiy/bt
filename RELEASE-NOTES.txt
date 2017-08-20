@@ -4,8 +4,24 @@ For the latest information visit project web site:
 http://atomashpolskiy.github.io/bt/
 
 ----------------------------------
-Release: 1.4
+Release: 1.5
 Date:
+----------------------------------
+
+...
+
+
+----------------------------------
+Release: 1.4.1
+Date: 08/20/2017
+----------------------------------
+Bug Fixes:
+
+* java.lang.IllegalAccessError when instantiating StandaloneClientBuilder from Scala
+
+----------------------------------
+Release: 1.4
+Date: 08/14/2017
 ----------------------------------
 Changes/New Features:
 
