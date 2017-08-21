@@ -329,22 +329,22 @@ When run, the program will launch two Bt clients and wait for a little bit, whil
 
 ```
 [bt.net.pool.incoming-acceptor] INFO bt.net.PeerConnectionPool 
-    - Opening server channel for incoming connections @ /192.168.1.2:6892
+    - Opening server channel for incoming connections @ /127.0.0.1:6892
     
 [bt.net.pool.incoming-acceptor] INFO bt.net.PeerConnectionPool 
-    - Opening server channel for incoming connections @ /192.168.1.2:6891
+    - Opening server channel for incoming connections @ /127.0.0.1:6891
     
-I am /192.168.1.2:6891, for peer 0.0.0.0/0.0.0.0:6892 
-    my external address is /192.168.1.2:49666
+I am localhost/127.0.0.1:6891, for peer localhost/127.0.0.1:6892 
+    my external address is /127.0.0.1:49666
     
-I am /192.168.1.2:6892, for peer /192.168.1.2:49666 
-    my external address is 0.0.0.0/0.0.0.0:6892
+I am localhost/127.0.0.1:6892, for peer /127.0.0.1:49666 
+    my external address is localhost/127.0.0.1:6892
     
-I am /192.168.1.2:6892, for peer 0.0.0.0/0.0.0.0:6891 
-    my external address is /192.168.1.2:49665
+I am localhost/127.0.0.1:6892, for peer localhost/127.0.0.1:6891 
+    my external address is /127.0.0.1:49665
     
-I am /192.168.1.2:6891, for peer /192.168.1.2:49665 
-    my external address is 0.0.0.0/0.0.0.0:6891
+I am localhost/127.0.0.1:6891, for peer /127.0.0.1:49665 
+    my external address is localhost/127.0.0.1:6891
     
 [bt.net.pool.incoming-acceptor] ERROR bt.net.PeerConnectionPool 
     - Unexpected I/O error when listening to the incoming channel 
