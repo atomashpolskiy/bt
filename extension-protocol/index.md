@@ -266,7 +266,7 @@ import java.util.Set;
 public class Main {
 
     private static final int[] ports = new int[] {6891, 6892};
-    private static final Set<Peer> peers = new HashSet<Peer>() {{
+    private static final Set<Peer> peers = new HashSet<Peer>() { {
         for (int port : ports) {
             add(new InetPeer(InetAddress.getLoopbackAddress(), port));
         }
