@@ -9,7 +9,9 @@ import yourip.mock.MockModule;
 import yourip.mock.MockStorage;
 import yourip.mock.MockTorrent;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -20,7 +22,7 @@ public class Main {
     private static final int[] ports = new int[] {6891, 6892};
     private static final Set<Peer> peers = new HashSet<Peer>() {{
         for (int port : ports) {
-            add(new InetPeer(new InetSocketAddress(port)));
+            add(new InetPeer(InetAddress.getLoopbackAddress(), port));
         }
     }};
 
@@ -44,8 +46,23 @@ public class Main {
     private static BtClient buildClient(int port) {
         Config config = new Config() {
             @Override
+            public InetAddress getAcceptorAddress() {
+                return InetAddress.getLoopbackAddress();
+            }
+
+            @Override
             public int getAcceptorPort() {
                 return port;
+            }
+
+            @Override
+            public Duration getPeerDiscoveryInterval() {
+                return Duration.ofSeconds(1);
+            }
+
+            @Override
+            public Duration getTrackerQueryInterval() {
+                return Duration.ofSeconds(1);
             }
         };
 

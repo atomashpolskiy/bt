@@ -84,10 +84,14 @@ public class ExtendedHandshakeFactory implements IExtendedHandshakeFactory {
 
         builder.property(TCPPORT_PROPERTY, new BEInteger(null, BigInteger.valueOf(tcpAcceptorPort)));
 
-        torrentRegistry.getTorrent(torrentId).ifPresent(torrent -> {
-            int metadataSize = torrent.getSource().getExchangedMetadata().length;
-            builder.property(UT_METADATA_SIZE_PROPERTY, new BEInteger(null, BigInteger.valueOf(metadataSize)));
-        });
+        try {
+            torrentRegistry.getTorrent(torrentId).ifPresent(torrent -> {
+                int metadataSize = torrent.getSource().getExchangedMetadata().length;
+                builder.property(UT_METADATA_SIZE_PROPERTY, new BEInteger(null, BigInteger.valueOf(metadataSize)));
+            });
+        } catch (Exception e) {
+            LOGGER.error("Failed to get metadata size for torrent ID: " + torrentId, e);
+        }
 
         String version;
         try {

@@ -29,7 +29,17 @@ public class MockTorrent implements Torrent {
     public TorrentSource getSource() {
         // TODO: return correct source, when torrent serialization is implemented
         // also in bt.torrent.stub.StubTorrent
-        return null;
+        return new TorrentSource() {
+            @Override
+            public Optional<byte[]> getMetadata() {
+                return Optional.empty();
+            }
+
+            @Override
+            public byte[] getExchangedMetadata() {
+                return new byte[1];
+            }
+        };
     }
 
     @Override
