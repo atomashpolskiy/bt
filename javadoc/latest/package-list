@@ -33,3 +33,4 @@ bt.torrent.stub
 bt.tracker
 bt.tracker.http
 bt.tracker.udp
+peertracker
