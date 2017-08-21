@@ -157,6 +157,7 @@ package yourip;
 import bt.net.Peer;
 import bt.peer.IPeerRegistry;
 import bt.protocol.Message;
+import bt.protocol.extended.ExtendedHandshake;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.messaging.MessageContext;
@@ -170,26 +171,36 @@ public class YourIPMessenger {
 
     private final IPeerRegistry peerRegistry;
 
+    private Set<Peer> supportingPeers;
     private Set<Peer> known;
 
     @Inject
     public YourIPMessenger(IPeerRegistry peerRegistry) {
         this.peerRegistry = peerRegistry;
+        this.supportingPeers = new HashSet<>();
         this.known = new HashSet<>();
     }
 
     @Consumes
+    public void consume(ExtendedHandshake handshake, MessageContext context) {
+        Peer peer = context.getPeer();
+        if (handshake.getSupportedMessageTypes().contains(YourIP.id())) {
+            supportingPeers.add(peer);
+        } else if (supportingPeers.contains(peer)) {
+            supportingPeers.remove(peer);
+        }
+    }
+
+    @Consumes
     public void consume(YourIP message, MessageContext context) {
-        System.out.println(
-            "I am " + peerRegistry.getLocalPeer() +
-            ", for peer " + context.getPeer() + 
-            " my external address is " + message.getAddress());
+        System.out.println("I am " + peerRegistry.getLocalPeer() +
+                ", for peer " + context.getPeer() + " my external address is " + message.getAddress());
     }
 
     @Produces
     public void produce(Consumer<Message> messageConsumer, MessageContext context) {
         Peer peer = context.getPeer();
-        if (!known.contains(peer)) {
+        if (supportingPeers.contains(peer) && !known.contains(peer)) {
             String address = context.getPeer().getInetSocketAddress().toString();
             messageConsumer.accept(new YourIP(address));
             known.add(peer);
@@ -244,7 +255,9 @@ import yourip.mock.MockModule;
 import yourip.mock.MockStorage;
 import yourip.mock.MockTorrent;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -253,9 +266,9 @@ import java.util.Set;
 public class Main {
 
     private static final int[] ports = new int[] {6891, 6892};
-    private static final Set<Peer> peers = new HashSet<Peer>() { {
+    private static final Set<Peer> peers = new HashSet<Peer>() {{
         for (int port : ports) {
-            add(new InetPeer(new InetSocketAddress(port)));
+            add(new InetPeer(InetAddress.getLoopbackAddress(), port));
         }
     }};
 
@@ -279,8 +292,23 @@ public class Main {
     private static BtClient buildClient(int port) {
         Config config = new Config() {
             @Override
+            public InetAddress getAcceptorAddress() {
+                return InetAddress.getLoopbackAddress();
+            }
+
+            @Override
             public int getAcceptorPort() {
                 return port;
+            }
+
+            @Override
+            public Duration getPeerDiscoveryInterval() {
+                return Duration.ofSeconds(1);
+            }
+
+            @Override
+            public Duration getTrackerQueryInterval() {
+                return Duration.ofSeconds(1);
             }
         };
 
@@ -292,7 +320,6 @@ public class Main {
                 .torrent(() -> new MockTorrent())
                 .build();
     }
-
 }
 ```
 
