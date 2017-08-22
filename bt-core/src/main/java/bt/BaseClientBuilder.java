@@ -36,7 +36,7 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
      * @since 1.4
      */
     @SuppressWarnings("unchecked")
-    public B runtime(BtRuntime runtime) {
+    protected B runtime(BtRuntime runtime) {
         this.runtime = Objects.requireNonNull(runtime, "Missing runtime");
         return (B) this;
     }
