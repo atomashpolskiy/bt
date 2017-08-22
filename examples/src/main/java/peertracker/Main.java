@@ -95,7 +95,7 @@ public class Main {
 
         LOGGER.info("Starting clients...");
         List<CompletableFuture<?>> futures = clients.stream().map(BtClient::startAsync).collect(Collectors.toList());
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).thenRun(() -> System.exit(0)).join();
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).join();
     }
 
     private static BtRuntime createRuntime() {
