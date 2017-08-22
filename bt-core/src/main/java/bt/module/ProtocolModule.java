@@ -40,12 +40,26 @@ import java.util.Set;
 public class ProtocolModule implements Module {
 
     /**
+     * Returns the extender for contributing custom extensions to the ProtocolModule.
+     * Should be invoked from the dependent Module's {@link Module#configure(Binder)} method.
+     *
+     * @param binder DI binder passed to the Module that invokes this method.
+     * @return Extender for contributing custom extensions
+     * @since 1.5
+     */
+    public static ProtocolModuleExtender extend(Binder binder) {
+        return new ProtocolModuleExtender(binder);
+    }
+
+    /**
      * Contribute a message handler for some message type.
      * <p>Binding key is a unique message type ID, that will be used
      * to encode and decode the binary representation of a message of this type.
      *
      * @since 1.0
+     * @deprecated since 1.5 in favor of {@link ProtocolModuleExtender#addMessageHandler(int, Class)} and its' overloaded versions
      */
+    @Deprecated
     public static MapBinder<Integer, MessageHandler<? extends Message>> contributeMessageHandler(Binder binder) {
         return MapBinder.newMapBinder(
                 binder,
@@ -61,7 +75,10 @@ public class ProtocolModule implements Module {
      * during the extended handshake procedure in the 'm' dictionary of an extended handshake message.
      *
      * @since 1.0
+     * @deprecated since 1.5 in favor of {@link ProtocolModuleExtender#addExtendedMessageHandler(String, Class)}
+     *             and its' overloaded versions
      */
+    @Deprecated
     public static MapBinder<String, MessageHandler<? extends ExtendedMessage>> contributeExtendedMessageHandler(Binder binder) {
         return MapBinder.newMapBinder(
                 binder,
@@ -74,7 +91,9 @@ public class ProtocolModule implements Module {
      * Contribute a handshake handler.
      *
      * @since 1.0
+     * @deprecated since 1.5 in favor of {@link ProtocolModuleExtender#addHandshakeHandler(Class)} and its' overloaded versions
      */
+    @Deprecated
     public static Multibinder<HandshakeHandler> contributeHandshakeHandler(Binder binder) {
         return Multibinder.newSetBinder(binder, HandshakeHandler.class);
     }
@@ -82,23 +101,16 @@ public class ProtocolModule implements Module {
     @Override
     public void configure(Binder binder) {
 
-        // trigger creation of extension points
-        ProtocolModule.contributeMessageHandler(binder);
-        ProtocolModule.contributeExtendedMessageHandler(binder);
-        ProtocolModule.contributeHandshakeHandler(binder);
+        ProtocolModule.extend(binder).initAllExtensions()
+                .addMessageHandler(ExtendedProtocol.EXTENDED_MESSAGE_ID, ExtendedProtocol.class)
+                .addExtendedMessageHandler("ut_metadata", UtMetadataMessageHandler.class);
 
         binder.bind(IHandshakeFactory.class).to(HandshakeFactory.class).in(Singleton.class);
 
         binder.bind(new TypeLiteral<MessageHandler<Message>>(){}).annotatedWith(BitTorrentProtocol.class)
                 .to(StandardBittorrentProtocol.class).in(Singleton.class);
 
-        ProtocolModule.contributeMessageHandler(binder)
-                .addBinding(ExtendedProtocol.EXTENDED_MESSAGE_ID).to(ExtendedProtocol.class);
-
         binder.bind(IExtendedHandshakeFactory.class).to(ExtendedHandshakeFactory.class).in(Singleton.class);
-
-        ProtocolModule.contributeExtendedMessageHandler(binder)
-                .addBinding("ut_metadata").to(UtMetadataMessageHandler.class);
     }
 
     @Provides

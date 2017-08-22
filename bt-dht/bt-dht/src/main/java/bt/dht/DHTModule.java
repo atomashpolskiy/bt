@@ -31,9 +31,9 @@ public class DHTModule implements Module {
     public void configure(Binder binder) {
         binder.bind(DHTConfig.class).toInstance(config);
 
-        ServiceModule.contributePeerSourceFactory(binder).addBinding().to(DHTPeerSourceFactory.class);
-        ProtocolModule.contributeHandshakeHandler(binder).addBinding().to(DHTHandshakeHandler.class);
-        ProtocolModule.contributeMessageHandler(binder).addBinding(PortMessageHandler.PORT_ID).to(PortMessageHandler.class);
+        ServiceModule.extend(binder).addPeerSourceFactory(DHTPeerSourceFactory.class);
+        ProtocolModule.extend(binder).addHandshakeHandler(DHTHandshakeHandler.class);
+        ProtocolModule.extend(binder).addMessageHandler(PortMessageHandler.PORT_ID, PortMessageHandler.class);
 
         // this service contributes startup lifecycle bindings and should be instantiated eagerly
         binder.bind(DHTService.class).to(MldhtService.class).asEagerSingleton();

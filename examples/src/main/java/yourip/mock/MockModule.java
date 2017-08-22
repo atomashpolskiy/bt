@@ -8,6 +8,6 @@ public class MockModule implements Module {
 
     @Override
     public void configure(Binder binder) {
-        ServiceModule.contributeTrackerFactory(binder).addBinding(MockTrackerFactory.schema()).to(MockTrackerFactory.class);
+        ServiceModule.extend(binder).addTrackerFactory(MockTrackerFactory.class, MockTrackerFactory.schema());
     }
 }

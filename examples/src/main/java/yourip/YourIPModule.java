@@ -9,7 +9,7 @@ public class YourIPModule implements Module {
 
     @Override
     public void configure(Binder binder) {
-        ProtocolModule.contributeExtendedMessageHandler(binder).addBinding(YourIP.id()).to(YourIPMessageHandler.class);
-        ServiceModule.contributeMessagingAgent(binder).addBinding().to(YourIPMessenger.class);
+        ServiceModule.extend(binder).addMessagingAgentType(YourIPMessenger.class);
+        ProtocolModule.extend(binder).addExtendedMessageHandler(YourIP.id(), YourIPMessageHandler.class);
     }
 }

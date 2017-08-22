@@ -51,10 +51,24 @@ import java.util.concurrent.ExecutorService;
 public class ServiceModule implements Module {
 
     /**
+     * Returns the extender for contributing custom extensions to the ServiceModule.
+     * Should be invoked from the dependent Module's {@link Module#configure(Binder)} method.
+     *
+     * @param binder DI binder passed to the Module that invokes this method.
+     * @return Extender for contributing custom extensions
+     * @since 1.5
+     */
+    public static ServiceModuleExtender extend(Binder binder) {
+        return new ServiceModuleExtender(binder);
+    }
+
+    /**
      * Contribute a peer source factory.
      *
      * @since 1.0
+     * @deprecated since 1.5 in favor of {@link ServiceModuleExtender#addPeerSourceFactory(Class)} and its' overloaded versions
      */
+    @Deprecated
     public static Multibinder<PeerSourceFactory> contributePeerSourceFactory(Binder binder) {
         return Multibinder.newSetBinder(binder, PeerSourceFactory.class);
     }
@@ -63,7 +77,10 @@ public class ServiceModule implements Module {
      * Contribute a messaging agent.
      *
      * @since 1.0
+     * @deprecated since 1.5 in favor of {@link ServiceModuleExtender#addMessagingAgentType(Class)}
+     *             and {@link ServiceModuleExtender#addMessagingAgent(Object)}
      */
+    @Deprecated
     public static Multibinder<Object> contributeMessagingAgent(Binder binder) {
         return Multibinder.newSetBinder(binder, Object.class, MessagingAgents.class);
     }
@@ -72,7 +89,10 @@ public class ServiceModule implements Module {
      * Contribute a tracker factory for some protocol.
      *
      * @since 1.0
+     * @deprecated since 1.5 in favor of {@link ServiceModuleExtender#addTrackerFactory(Class, String, String...)}
+     *             and its' overloaded versions
      */
+    @Deprecated
     public static MapBinder<String, TrackerFactory> contributeTrackerFactory(Binder binder) {
         return MapBinder.newMapBinder(binder, String.class, TrackerFactory.class, TrackerFactories.class);
     }
@@ -90,10 +110,8 @@ public class ServiceModule implements Module {
     @Override
     public void configure(Binder binder) {
 
-        // trigger creation of extension points
-        ServiceModule.contributeMessagingAgent(binder);
-        ServiceModule.contributePeerSourceFactory(binder);
-        ServiceModule.contributeTrackerFactory(binder);
+        ServiceModule.extend(binder).initAllExtensions()
+                .addTrackerFactory(UdpTrackerFactory.class, "udp");
 
         binder.bind(Config.class).toInstance(config);
 
@@ -115,8 +133,6 @@ public class ServiceModule implements Module {
         // TODO: register a shutdown hook in the runtime
         binder.bind(ExecutorService.class).annotatedWith(ClientExecutor.class)
                 .toProvider(ExecutorServiceProvider.class).in(Singleton.class);
-
-        ServiceModule.contributeTrackerFactory(binder).addBinding("udp").to(UdpTrackerFactory.class);
     }
 
     @Provides

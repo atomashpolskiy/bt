@@ -27,13 +27,8 @@ public class PeerExchangeModule implements Module {
         // also, this service contributes startup lifecycle bindings and should be instantiated eagerly
         binder.bind(PeerExchangePeerSourceFactory.class).asEagerSingleton();
 
-        ServiceModule.contributePeerSourceFactory(binder).addBinding()
-                .to(PeerExchangePeerSourceFactory.class);
-
-        ServiceModule.contributeMessagingAgent(binder).addBinding()
-                .to(PeerExchangePeerSourceFactory.class);
-
-        ProtocolModule.contributeExtendedMessageHandler(binder)
-                .addBinding("ut_pex").to(PeerExchangeMessageHandler.class);
+        ServiceModule.extend(binder).addPeerSourceFactory(PeerExchangePeerSourceFactory.class);
+        ServiceModule.extend(binder).addMessagingAgentType(PeerExchangePeerSourceFactory.class);
+        ProtocolModule.extend(binder).addExtendedMessageHandler("ut_pex", PeerExchangeMessageHandler.class);
     }
 }

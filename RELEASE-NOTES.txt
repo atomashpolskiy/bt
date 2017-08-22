@@ -7,9 +7,10 @@ http://atomashpolskiy.github.io/bt/
 Release: 1.5
 Date:
 ----------------------------------
+Bug Fixes/Improvements:
 
-...
-
+* Disallow to set client's runtime other than via Bt factory method
+* Introduce module extenders for contributing custom extensions
 
 ----------------------------------
 Release: 1.4.1
