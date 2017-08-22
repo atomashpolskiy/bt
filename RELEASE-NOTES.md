@@ -1,62 +1,64 @@
-Bt Release Notes
-============================
-For the latest information visit project web site:
-http://atomashpolskiy.github.io/bt/
+# Bt Release Notes
 
-----------------------------------
-Release: 1.5
-Date:
-----------------------------------
-Bug Fixes/Improvements:
+---
+
+For the latest information visit project web site: http://atomashpolskiy.github.io/bt/
+
+## 1.5
+
+#### Date:
+
+#### Bug Fixes/Improvements:
 
 * Disallow to set client's runtime other than via Bt factory method
 * Introduce module extenders for contributing custom extensions
 
-----------------------------------
-Release: 1.4.1
-Date: 08/20/2017
-----------------------------------
-Bug Fixes:
+## 1.4.1
+
+#### Date: 08/20/2017
+
+#### Bug Fixes:
 
 * java.lang.IllegalAccessError when instantiating StandaloneClientBuilder from Scala
 
-----------------------------------
-Release: 1.4
-Date: 08/14/2017
-----------------------------------
-Changes/New Features:
+## 1.4
 
-* Choose a specific network interface #20
+#### Date: 08/14/2017
 
-Bug Fixes/Improvements:
+#### Changes/New Features:
 
-* Use generic java.nio.files interfaces in FileSystemStorage #21 -- Jeremy L. Morris (MorrisLaw)
-* Switch integration tests to using in-memory storage #27
+* Choose a specific network interface [#20](https://github.com/atomashpolskiy/bt/issues/20)
+
+##### Bug Fixes/Improvements:
+
+* Use generic java.nio.files interfaces in FileSystemStorage [#21](https://github.com/atomashpolskiy/bt/issues/21) by [Jeremy L. Morris (MorrisLaw)](https://github.com/MorrisLaw)
+* Switch integration tests to using in-memory storage [#27](https://github.com/atomashpolskiy/bt/issues/27)
 * UDP tracker request contains 0 as the listening port
-* Download not starting when using standalone client with private runtime #34
+* Download not starting when using standalone client with private runtime [#34](https://github.com/atomashpolskiy/bt/issues/34)
 
-----------------------------------
-Release: 1.3.1
-Date: 08/11/2017
-----------------------------------
-Bug Fixes:
+## 1.3.1
 
-* java.lang.IllegalAccessError when running inside JBoss modules #32
+#### Date: 08/11/2017
 
-----------------------------------
-Release: 1.3
-Date: 07/29/2017
-----------------------------------
-Official BEPs:
+#### Bug Fixes:
 
-* BEP-9: Extension for Peers to Send Metadata Files
+* java.lang.IllegalAccessError when running inside JBoss modules [#32](https://github.com/atomashpolskiy/bt/issues/32)
 
-Changes/New Features:
+## 1.3
+
+#### Date: 07/29/2017
+
+#### Official BEPs:
+
+* [BEP-5: DHT Protocol](http://bittorrent.org/beps/bep_0005.html)
+* [BEP-9: Extension for Peers to Send Metadata Files](http://bittorrent.org/beps/bep_0009.html)
+
+#### Changes/New Features:
 
 * Added ByteRange for working with binary ranges based on byte arrays and byte buffers
 * Support creating torrents from binary representation of info dictionary
 
-Bug Fixes/Improvements:
+#### Bug Fixes/Improvements:
 
 * Introduced notion of torrent processing chain
 * Fixed bug in extended protocol (invalid message type id mapping for peers) that sometimes prevented peers from receiving extended messages from Bt
@@ -69,27 +71,27 @@ Bug Fixes/Improvements:
 * Fix for occasional UI crashes in CLI client
 * Allow to specify the desired log level in CLI client (normal, verbose, trace)
 
-----------------------------------
-Release: 1.2
-Date: 05/24/2017
-----------------------------------
-Changes/New Features:
+## 1.2
 
-* Message Stream Encryption
+#### Date: 05/24/2017
+
+#### Changes/New Features:
+
+* [Message Stream Encryption](http://wiki.vuze.com/w/Message_Stream_Encryption)
 * Added API for retrieving the full list of registered torrents
 
-Bug Fixes/Improvements:
+#### Bug Fixes/Improvements:
 
 * Last block in a chunk is incorrectly marked as complete even when partially written
 * Provide info on encryption support, local TCP port and version in extended handshake
 * Eliminate self-connections in tests
 * Don't specify the recipient of a PEX message in the list of added peers
 
-----------------------------------
-Release: 1.1
-Date: 04/10/2017
-----------------------------------
-Changes/New Features:
+## 1.1
+
+#### Date: 04/10/2017
+
+#### Changes/New Features:
 
 * Support for auto-loading modules from the classpath
 * Enhanced API for building standalone and shared-runtime clients
@@ -99,7 +101,7 @@ Changes/New Features:
 * Lifecycle binding API improvements; support for asynchronous bindings
 * Tools for creating custom protocol tests
 
-Bug Fixes/Improvements:
+#### Bug Fixes/Improvements:
 
 * Torrent processing should not terminate when interaction with the tracker failed
 * Announce key can be missing in trackerless torrents
@@ -114,11 +116,11 @@ Bug Fixes/Improvements:
 * Adaptive message processing interval in message dispatcher to reduce the CPU load
 * Speed-up the initial startup by skipping verification if a storage unit is empty and by feeding larger blocks to the digester
 
-----------------------------------
-Release: 1.0
-Date: 01/16/17
-----------------------------------
-Features:
+## 1.0
+
+#### Date: 01/16/17
+
+#### Features:
 
 * Bencoding parser/encoder
 * Validation of arbitrary bencoded documents according to user-provided object models and YAML schemas
@@ -136,14 +138,14 @@ Features:
 * Shared runtime with multiple simultaneous torrent sessions
 * Test infrastructure with support for launching peer swarm on localhost to test new features in a real environment
 
-Official BEPs:
+#### Official BEPs:
 
-* BEP-3: The BitTorrent Protocol Specification
-* BEP-10: Extension Protocol
-* BEP-11: Peer Exchange (PEX)
-* BEP-12: Multitracker metadata extension
-* BEP-15: UDP Tracker Protocol
-* BEP-20: Peer ID Conventions
-* BEP-23: Tracker Returns Compact Peer Lists
-* BEP-27: Private Torrents
-* BEP-41: UDP Tracker Protocol Extensions
+* [BEP-3: The BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html)
+* [BEP-10: Extension Protocol](http://bittorrent.org/beps/bep_0010.html)
+* [BEP-11: Peer Exchange (PEX)](http://bittorrent.org/beps/bep_0011.html)
+* [BEP-12: Multitracker metadata extension](http://bittorrent.org/beps/bep_0012.html)
+* [BEP-15: UDP Tracker Protocol](http://bittorrent.org/beps/bep_0015.html)
+* [BEP-20: Peer ID Conventions](http://bittorrent.org/beps/bep_0020.html)
+* [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
+* [BEP-27: Private Torrents](http://bittorrent.org/beps/bep_0027.html)
+* [BEP-41: UDP Tracker Protocol Extensions](http://bittorrent.org/beps/bep_0041.html)

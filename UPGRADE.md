@@ -1,5 +1,7 @@
 # UPGRADE INSTRUCTIONS
 
+---
+
 ## 1.5
 
 * `bt.BaseClientBuilder#runtime(BtRuntime)` is now protected instead of public. Use a factory method `bt.Bt#client(BtRuntime)` to attach the newly created client to a shared runtime.
