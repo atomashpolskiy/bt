@@ -1,7 +1,5 @@
 # Bt Release Notes
 
----
-
 For the latest information visit project web site: http://atomashpolskiy.github.io/bt/
 
 ## 1.5
