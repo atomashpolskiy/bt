@@ -40,7 +40,6 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
 
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -98,14 +97,18 @@ public class ServiceModule implements Module {
 
         binder.bind(Config.class).toInstance(config);
 
+        // core services that contribute startup lifecycle bindings and should be instantiated eagerly
+        binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).asEagerSingleton();
+        binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).asEagerSingleton();
+        binder.bind(IPeerRegistry.class).to(PeerRegistry.class).asEagerSingleton();
+
+        // other services
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
         binder.bind(ApplicationService.class).to(ClasspathApplicationService.class).in(Singleton.class);
         binder.bind(IdentityService.class).to(VersionAwareIdentityService.class).in(Singleton.class);
         binder.bind(ITrackerService.class).to(TrackerService.class).in(Singleton.class);
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
         binder.bind(TorrentRegistry.class).to(AdhocTorrentRegistry.class).in(Singleton.class);
-        binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).in(Singleton.class);
-        binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).in(Singleton.class);
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
         binder.bind(ProcessorFactory.class).to(TorrentProcessorFactory.class).in(Singleton.class);
 
@@ -139,18 +142,5 @@ public class ServiceModule implements Module {
     @Singleton
     public IDataWorkerFactory provideDataWorkerFactory(IRuntimeLifecycleBinder lifecycleBinder, ChunkVerifier verifier) {
         return new DataWorkerFactory(lifecycleBinder, verifier, config.getMaxIOQueueSize());
-    }
-
-    @Provides
-    @Singleton
-    public IPeerRegistry providePeerRegistry(IRuntimeLifecycleBinder lifecycleBinder,
-                                             IdentityService idService,
-                                             TorrentRegistry torrentRegistry,
-                                             ITrackerService trackerService,
-                                             Set<PeerSourceFactory> peerSourceFactories) {
-        return new PeerRegistry(
-                lifecycleBinder, idService, torrentRegistry, trackerService, peerSourceFactories,
-                config.getAcceptorAddress(), config.getAcceptorPort(),
-                config.getPeerDiscoveryInterval(), config.getTrackerQueryInterval());
     }
 }

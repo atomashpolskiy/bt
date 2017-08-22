@@ -4,7 +4,6 @@ import bt.module.ProtocolModule;
 import bt.module.ServiceModule;
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.google.inject.Singleton;
 
 public class PeerExchangeModule implements Module {
 
@@ -25,7 +24,8 @@ public class PeerExchangeModule implements Module {
 
         // explicit singleton binding is required to prevent multibinders from creating 2 instances
         // see https://github.com/google/guice/issues/791
-        binder.bind(PeerExchangePeerSourceFactory.class).in(Singleton.class);
+        // also, this service contributes startup lifecycle bindings and should be instantiated eagerly
+        binder.bind(PeerExchangePeerSourceFactory.class).asEagerSingleton();
 
         ServiceModule.contributePeerSourceFactory(binder).addBinding()
                 .to(PeerExchangePeerSourceFactory.class);

@@ -5,12 +5,14 @@ import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.net.PeerId;
+import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdentityService;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
+import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,29 +54,28 @@ public class PeerRegistry implements IPeerRegistry {
     private ConcurrentMap<TorrentId, Set<AnnounceKey>> extraAnnounceKeys;
     private ReentrantLock extraAnnounceKeysLock;
 
+    @Inject
     public PeerRegistry(IRuntimeLifecycleBinder lifecycleBinder,
                         IdentityService idService,
                         TorrentRegistry torrentRegistry,
                         ITrackerService trackerService,
                         Set<PeerSourceFactory> extraPeerSourceFactories,
-                        InetAddress localPeerAddress,
-                        int localPeerPort,
-                        Duration peerDiscoveryInterval,
-                        Duration trackerQueryInterval) {
+                        Config config) {
 
         this.peerConsumers = new ConcurrentHashMap<>();
-        this.localPeer = new InetPeer(localPeerAddress, localPeerPort, idService.getLocalPeerId());
+        this.localPeer = new InetPeer(config.getAcceptorAddress(), config.getAcceptorPort(), idService.getLocalPeerId());
         this.cache = new PeerCache();
 
         this.torrentRegistry = torrentRegistry;
         this.trackerService = trackerService;
-        this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, torrentRegistry, lifecycleBinder, trackerQueryInterval);
+        this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, torrentRegistry,
+                lifecycleBinder, config.getTrackerQueryInterval());
         this.extraPeerSourceFactories = extraPeerSourceFactories;
 
         this.extraAnnounceKeys = new ConcurrentHashMap<>();
         this.extraAnnounceKeysLock = new ReentrantLock();
 
-        createExecutor(lifecycleBinder, peerDiscoveryInterval);
+        createExecutor(lifecycleBinder, config.getPeerDiscoveryInterval());
     }
 
     private void createExecutor(IRuntimeLifecycleBinder lifecycleBinder, Duration peerDiscoveryInterval) {

@@ -6,9 +6,11 @@ import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
 import bt.net.InetPeerAddress;
 import bt.net.Peer;
+import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.LifecycleBinding;
 import com.google.common.io.Files;
+import com.google.inject.Inject;
 import lbms.plugins.mldht.DHTConfiguration;
 import lbms.plugins.mldht.kad.DHT;
 import lbms.plugins.mldht.kad.DHT.DHTtype;
@@ -70,13 +72,14 @@ public class MldhtService implements DHTService {
     private Collection<InetPeerAddress> publicBootstrapNodes;
     private Collection<InetPeerAddress> bootstrapNodes;
 
-    public MldhtService(IRuntimeLifecycleBinder lifecycleBinder, InetAddress localAddress, DHTConfig config) {
-        this.dht = new DHT(config.shouldUseIPv6()? DHTtype.IPV6_DHT : DHTtype.IPV4_DHT);
-        this.config = toMldhtConfig(config);
-        this.localAddress = localAddress;
-        this.useRouterBootstrap = config.shouldUseRouterBootstrap();
-        this.publicBootstrapNodes = config.getPublicBootstrapNodes();
-        this.bootstrapNodes = config.getBootstrapNodes();
+    @Inject
+    public MldhtService(IRuntimeLifecycleBinder lifecycleBinder, Config config, DHTConfig dhtConfig) {
+        this.dht = new DHT(dhtConfig.shouldUseIPv6()? DHTtype.IPV6_DHT : DHTtype.IPV4_DHT);
+        this.config = toMldhtConfig(dhtConfig);
+        this.localAddress = config.getAcceptorAddress();
+        this.useRouterBootstrap = dhtConfig.shouldUseRouterBootstrap();
+        this.publicBootstrapNodes = dhtConfig.getPublicBootstrapNodes();
+        this.bootstrapNodes = dhtConfig.getBootstrapNodes();
 
         lifecycleBinder.onStartup(LifecycleBinding.bind(this::start).description("Initialize DHT facilities").async().build());
         lifecycleBinder.onShutdown("Shutdown DHT facilities", this::shutdown);
