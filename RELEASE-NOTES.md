@@ -17,7 +17,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 #### Bug Fixes:
 
-* java.lang.IllegalAccessError when instantiating StandaloneClientBuilder from Scala
+* java.lang.IllegalAccessError when instantiating StandaloneClientBuilder from Scala [PR#36](https://github.com/atomashpolskiy/bt/pull/36)
 
 ## 1.4
 
