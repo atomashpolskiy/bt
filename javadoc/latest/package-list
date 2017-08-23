@@ -7,6 +7,7 @@ bt.data.digest
 bt.data.file
 bt.data.range
 bt.dht
+bt.event
 bt.magnet
 bt.metainfo
 bt.module
