@@ -10,6 +10,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 * Disallow to set client's runtime other than via Bt factory method
 * Introduce module extenders for contributing custom extensions
+* Disable BEP-9 metadata exchange for private torrents
 
 ## 1.4.1
 

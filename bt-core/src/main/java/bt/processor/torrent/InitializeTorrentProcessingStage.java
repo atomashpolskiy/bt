@@ -1,6 +1,7 @@
 package bt.processor.torrent;
 
 import bt.data.Bitfield;
+import bt.metainfo.Torrent;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
 import bt.runtime.Config;
@@ -40,7 +41,8 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
 
     @Override
     protected void doExecute(C context) {
-        TorrentDescriptor descriptor = torrentRegistry.register(context.getTorrent().get(), context.getStorage());
+        Torrent torrent = context.getTorrent().get();
+        TorrentDescriptor descriptor = torrentRegistry.register(torrent, context.getStorage());
         descriptor.start();
 
         Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();

@@ -52,8 +52,10 @@ public class MetadataProducer {
         Message response;
 
         Torrent torrent = torrentSupplier.get();
-        if (torrent == null) {
-            // reject all requests as we don't have the torrent yet
+        if (torrent == null || torrent.isPrivate()) {
+            // reject all requests if:
+            // - we don't have the torrent yet
+            // - torrent is private
             response = UtMetadata.reject(pieceIndex);
         } else {
             if (metadata == null) {
