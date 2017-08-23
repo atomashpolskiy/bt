@@ -1,10 +1,10 @@
 package bt.torrent.messaging;
 
+import bt.event.EventSource;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
-import bt.net.PeerActivityListener;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentSession;
@@ -38,6 +38,7 @@ public class DefaultTorrentSession implements TorrentSession {
 
     public DefaultTorrentSession(IPeerConnectionPool connectionPool,
                                  TorrentRegistry torrentRegistry,
+                                 EventSource eventSource,
                                  TorrentWorker worker,
                                  TorrentId torrentId,
                                  TorrentDescriptor descriptor,
@@ -49,10 +50,27 @@ public class DefaultTorrentSession implements TorrentSession {
         this.sessionState = new DefaultTorrentSessionState(descriptor);
         this.maxPeerConnectionsPerTorrent = maxPeerConnectionsPerTorrent;
         this.condition = new AtomicBoolean(false);
+
+        eventSource.onPeerDiscovered(e -> {
+            if (torrentId.equals(e.getTorrentId())) {
+                onPeerDiscovered(e.getPeer());
+            }
+        });
+
+        eventSource.onPeerConnected(e -> {
+            if (torrentId.equals(e.getTorrentId())) {
+                onPeerConnected(e.getPeer());
+            }
+        });
+
+        eventSource.onPeerDisconnected(e -> {
+            if (torrentId.equals(e.getTorrentId())) {
+                onPeerDisconnected(e.getPeer());
+            }
+        });
     }
 
-    @Override
-    public void onPeerDiscovered(Peer peer) {
+    private void onPeerDiscovered(Peer peer) {
         // TODO: Store discovered peers to use them later,
         // when some of the currently connected peers disconnects
         performSequentially(() -> {
@@ -62,10 +80,9 @@ public class DefaultTorrentSession implements TorrentSession {
         });
     }
 
-    @Override
-    public void onPeerConnected(TorrentId torrentId, Peer peer) {
+    private void onPeerConnected(Peer peer) {
         performSequentially(() -> {
-            if (mightAddPeer(peer) && this.torrentId.equals(torrentId)) {
+            if (mightAddPeer(peer)) {
                 worker.addPeer(peer);
             }
         });
@@ -85,8 +102,7 @@ public class DefaultTorrentSession implements TorrentSession {
         return worker.getPeers().size() < maxPeerConnectionsPerTorrent && !worker.getPeers().contains(peer);
     }
 
-    @Override
-    public void onPeerDisconnected(TorrentId torrentId, Peer peer) {
+    private void onPeerDisconnected(Peer peer) {
         worker.removePeer(peer);
     }
 

@@ -1,6 +1,7 @@
 package bt.net;
 
 import bt.BtException;
+import bt.event.EventSink;
 import bt.metainfo.TorrentId;
 import bt.module.BitTorrentProtocol;
 import bt.peer.IPeerRegistry;
@@ -19,11 +20,9 @@ import java.net.SocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.time.Duration;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -34,7 +33,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  *<p><b>Note that this class implements a service.
@@ -48,14 +46,13 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private IPeerRegistry peerRegistry;
     private PeerConnectionFactory connectionFactory;
     private IConnectionHandlerFactory connectionHandlerFactory;
+    private EventSink eventSink;
 
     private ExecutorService executor;
     private ScheduledExecutorService cleaner;
 
     private final Map<Peer, CompletableFuture<Optional<PeerConnection>>> pendingConnections;
     private ConcurrentMap<Peer, DefaultPeerConnection> connections;
-    private Set<PeerActivityListener> connectionListeners;
-    private ReentrantReadWriteLock listenerLock;
     private ReentrantLock cleanerLock;
 
     private Map<Peer, Long> unreachablePeers;
@@ -66,12 +63,14 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     public PeerConnectionPool(@BitTorrentProtocol MessageHandler<Message> messageHandler,
                               IPeerRegistry peerRegistry,
                               TorrentRegistry torrentRegistry,
+                              EventSink eventSink,
                               IConnectionHandlerFactory connectionHandlerFactory,
                               IRuntimeLifecycleBinder lifecycleBinder,
                               Config config) {
 
         this.config = config;
         this.peerRegistry = peerRegistry;
+        this.eventSink = eventSink;
 
         SocketChannelFactory socketChannelFactory =
                 new SocketChannelFactory(config.getAcceptorAddress(), config.getAcceptorPort());
@@ -82,8 +81,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         this.pendingConnections = new ConcurrentHashMap<>();
         this.connections = new ConcurrentHashMap<>();
-        this.connectionListeners = new HashSet<>();
-        this.listenerLock = new ReentrantReadWriteLock();
         this.cleanerLock = new ReentrantLock();
 
         this.unreachablePeers = new ConcurrentHashMap<>();
@@ -120,16 +117,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         });
         lifecycleBinder.onShutdown("Shutdown outgoing connection request processor", executor::shutdownNow);
         lifecycleBinder.onShutdown("Shutdown connection pool", this::shutdown);
-    }
-
-    @Override
-    public void addConnectionListener(PeerActivityListener listener) {
-        listenerLock.writeLock().lock();
-        try {
-            connectionListeners.add(listener);
-        } finally {
-            listenerLock.writeLock().unlock();
-        }
     }
 
     @Override
@@ -398,19 +385,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         }
 
         if (added && shouldNotifyListeners) {
-            // TODO: is locking still needed here?
-            listenerLock.readLock().lock();
-            try {
-                for (PeerActivityListener listener : connectionListeners) {
-                    try {
-                        listener.onPeerConnected(newConnection.getTorrentId(), newConnection.getRemotePeer());
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                }
-            } finally {
-                listenerLock.readLock().unlock();
-            }
+            eventSink.firePeerConnected(newConnection.getTorrentId(), newConnection.getRemotePeer());
         }
         return added;
     }
@@ -421,13 +396,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             if (!purged.isClosed()) {
                 purged.closeQuietly();
             }
-            for (PeerActivityListener listener : connectionListeners) {
-                try {
-                    listener.onPeerDisconnected(purged.getTorrentId(), peer);
-                } catch (Exception e) {
-                    // ignore
-                }
-            }
+            eventSink.firePeerDisconnected(purged.getTorrentId(), peer);
         }
     }
 

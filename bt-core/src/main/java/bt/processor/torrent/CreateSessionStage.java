@@ -1,10 +1,10 @@
 package bt.processor.torrent;
 
 import bt.data.Bitfield;
+import bt.event.EventSource;
 import bt.metainfo.TorrentId;
 import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
-import bt.peer.IPeerRegistry;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
 import bt.runtime.Config;
@@ -26,7 +26,7 @@ import java.util.function.Supplier;
 public class CreateSessionStage<C extends TorrentContext> extends BaseProcessingStage<C> {
 
     private TorrentRegistry torrentRegistry;
-    private IPeerRegistry peerRegistry;
+    private EventSource eventSource;
     private IPeerConnectionPool connectionPool;
     private IMessageDispatcher messageDispatcher;
     private Set<Object> messagingAgents;
@@ -34,14 +34,14 @@ public class CreateSessionStage<C extends TorrentContext> extends BaseProcessing
 
     public CreateSessionStage(ProcessingStage<C> next,
                               TorrentRegistry torrentRegistry,
-                              IPeerRegistry peerRegistry,
+                              EventSource eventSource,
                               IPeerConnectionPool connectionPool,
                               IMessageDispatcher messageDispatcher,
                               Set<Object> messagingAgents,
                               Config config) {
         super(next);
         this.torrentRegistry = torrentRegistry;
-        this.peerRegistry = peerRegistry;
+        this.eventSource = eventSource;
         this.connectionPool = connectionPool;
         this.messageDispatcher = messageDispatcher;
         this.messagingAgents = messagingAgents;
@@ -62,11 +62,8 @@ public class CreateSessionStage<C extends TorrentContext> extends BaseProcessing
         TorrentWorker torrentWorker = new TorrentWorker(torrentId, messageDispatcher, peerWorkerFactory,
                 bitfieldSupplier, assignmentsSupplier, statisticsSupplier, config);
 
-        TorrentSession session = new DefaultTorrentSession(connectionPool, torrentRegistry, torrentWorker, torrentId,
-                descriptor, config.getMaxPeerConnectionsPerTorrent());
-
-        peerRegistry.addPeerConsumer(torrentId, session::onPeerDiscovered);
-        connectionPool.addConnectionListener(session);
+        TorrentSession session = new DefaultTorrentSession(connectionPool, torrentRegistry, eventSource,
+                torrentWorker, torrentId, descriptor, config.getMaxPeerConnectionsPerTorrent());
 
         context.setSession(session);
         context.setRouter(router);

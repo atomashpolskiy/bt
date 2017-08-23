@@ -1,6 +1,7 @@
 package bt.runtime;
 
 import bt.BtException;
+import bt.event.EventSource;
 import bt.module.ClientExecutor;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IRuntimeLifecycleBinder.LifecycleEvent;
@@ -179,6 +180,10 @@ public class BtRuntime {
      */
     public Collection<BtClient> getClients() {
         return Collections.unmodifiableCollection(knownClients);
+    }
+
+    public EventSource getEventSource() {
+        return service(EventSource.class);
     }
 
     /**

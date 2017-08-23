@@ -6,6 +6,9 @@ import bt.data.DefaultChunkVerifier;
 import bt.data.IDataDescriptorFactory;
 import bt.data.digest.Digester;
 import bt.data.digest.JavaSecurityDigester;
+import bt.event.EventBus;
+import bt.event.EventSink;
+import bt.event.EventSource;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.MetadataService;
 import bt.net.IMessageDispatcher;
@@ -130,6 +133,10 @@ public class ServiceModule implements Module {
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
         binder.bind(ProcessorFactory.class).to(TorrentProcessorFactory.class).in(Singleton.class);
 
+        // single instance of event bus provides two different injectable services
+        binder.bind(EventSink.class).to(EventBus.class).in(Singleton.class);
+        binder.bind(EventSource.class).to(EventBus.class).in(Singleton.class);
+
         // TODO: register a shutdown hook in the runtime
         binder.bind(ExecutorService.class).annotatedWith(ClientExecutor.class)
                 .toProvider(ExecutorServiceProvider.class).in(Singleton.class);
@@ -158,5 +165,11 @@ public class ServiceModule implements Module {
     @Singleton
     public IDataWorkerFactory provideDataWorkerFactory(IRuntimeLifecycleBinder lifecycleBinder, ChunkVerifier verifier) {
         return new DataWorkerFactory(lifecycleBinder, verifier, config.getMaxIOQueueSize());
+    }
+
+    @Provides
+    @Singleton
+    public EventBus provideEventBus() {
+        return new EventBus();
     }
 }

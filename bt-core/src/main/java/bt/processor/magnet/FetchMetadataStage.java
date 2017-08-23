@@ -68,7 +68,7 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
 //        announcer.start();
 
         context.getMagnetUri().getPeerAddresses().forEach(address -> {
-            context.getSession().get().onPeerDiscovered(new InetPeer(address));
+            peerRegistry.addPeer(torrentId, new InetPeer(address));
         });
 
         Torrent torrent = metadataConsumer.waitForTorrent();

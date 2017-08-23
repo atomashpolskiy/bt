@@ -1,10 +1,9 @@
 package bt.peerexchange;
 
 import bt.BtException;
+import bt.event.EventSource;
 import bt.metainfo.TorrentId;
-import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
-import bt.net.PeerActivityListener;
 import bt.peer.PeerSource;
 import bt.peer.PeerSourceFactory;
 import bt.protocol.Message;
@@ -14,7 +13,6 @@ import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.messaging.MessageContext;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +53,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     private int maxEventsPerMessage;
 
     @Inject
-    public PeerExchangePeerSourceFactory(Provider<IPeerConnectionPool> connectionPoolProvider,
+    public PeerExchangePeerSourceFactory(EventSource eventSource,
                                          IRuntimeLifecycleBinder lifecycleBinder,
                                          PeerExchangeConfig config) {
         this.peerSources = new ConcurrentHashMap<>();
@@ -67,8 +65,8 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         this.minEventsPerMessage = config.getMinEventsPerMessage();
         this.maxEventsPerMessage = config.getMaxEventsPerMessage();
 
-        lifecycleBinder.onStartup("Register PEX peer activity listener", () -> connectionPoolProvider.get()
-                .addConnectionListener(createPeerActivityListener()));
+        eventSource.onPeerConnected(e -> onPeerConnected(e.getTorrentId(), e.getPeer()))
+                .onPeerDisconnected(e -> onPeerDisconnected(e.getTorrentId(), e.getPeer()));
 
         ScheduledExecutorService executor =
                 Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "bt.peerexchange.cleaner"));
@@ -77,25 +75,14 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         lifecycleBinder.onShutdown("Shutdown PEX cleanup scheduler", executor::shutdownNow);
     }
 
-    private PeerActivityListener createPeerActivityListener() {
-        return new PeerActivityListener() {
-            @Override
-            public void onPeerDiscovered(Peer peer) {
-                // ignore
-            }
+    private void onPeerConnected(TorrentId torrentId, Peer peer) {
+        getPeerEvents(torrentId).add(PeerEvent.added(peer));
+    }
 
-            @Override
-            public void onPeerConnected(TorrentId torrentId, Peer peer) {
-                getPeerEvents(torrentId).add(PeerEvent.added(peer));
-            }
-
-            @Override
-            public void onPeerDisconnected(TorrentId torrentId, Peer peer) {
-                getPeerEvents(torrentId).add(PeerEvent.dropped(peer));
-                peers.remove(peer);
-                lastSentPEXMessage.remove(peer);
-            }
-        };
+    private void onPeerDisconnected(TorrentId torrentId, Peer peer) {
+        getPeerEvents(torrentId).add(PeerEvent.dropped(peer));
+        peers.remove(peer);
+        lastSentPEXMessage.remove(peer);
     }
 
     private Queue<PeerEvent> getPeerEvents(TorrentId torrentId) {

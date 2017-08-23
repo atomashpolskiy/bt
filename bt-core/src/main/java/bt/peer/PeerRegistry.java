@@ -1,5 +1,6 @@
 package bt.peer;
 
+import bt.event.EventSink;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
@@ -31,7 +32,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
 
 /**
  *<p><b>Note that this class implements a service.
@@ -46,10 +46,9 @@ public class PeerRegistry implements IPeerRegistry {
 
     private TorrentRegistry torrentRegistry;
     private ITrackerService trackerService;
+    private EventSink eventSink;
     private TrackerPeerSourceFactory trackerPeerSourceFactory;
     private Set<PeerSourceFactory> extraPeerSourceFactories;
-
-    private ConcurrentMap<TorrentId, List<Consumer<Peer>>> peerConsumers;
 
     private ConcurrentMap<TorrentId, Set<AnnounceKey>> extraAnnounceKeys;
     private ReentrantLock extraAnnounceKeysLock;
@@ -59,15 +58,16 @@ public class PeerRegistry implements IPeerRegistry {
                         IdentityService idService,
                         TorrentRegistry torrentRegistry,
                         ITrackerService trackerService,
+                        EventSink eventSink,
                         Set<PeerSourceFactory> extraPeerSourceFactories,
                         Config config) {
 
-        this.peerConsumers = new ConcurrentHashMap<>();
         this.localPeer = new InetPeer(config.getAcceptorAddress(), config.getAcceptorPort(), idService.getLocalPeerId());
         this.cache = new PeerCache();
 
         this.torrentRegistry = torrentRegistry;
         this.trackerService = trackerService;
+        this.eventSink = eventSink;
         this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, torrentRegistry,
                 lifecycleBinder, config.getTrackerQueryInterval());
         this.extraPeerSourceFactories = extraPeerSourceFactories;
@@ -87,7 +87,7 @@ public class PeerRegistry implements IPeerRegistry {
     }
 
     private void collectAndVisitPeers() {
-        peerConsumers.keySet().forEach(torrentId -> {
+        torrentRegistry.getTorrentIds().forEach(torrentId -> {
             Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrentId);
             if (descriptor.isPresent() && descriptor.get().isActive()) {
                 Optional<Torrent> torrentOptional = torrentRegistry.getTorrent(torrentId);
@@ -190,13 +190,7 @@ public class PeerRegistry implements IPeerRegistry {
             return;
         }
         cache.registerPeer(peer);
-        for (Consumer<Peer> consumer : peerConsumers.getOrDefault(torrentId, Collections.emptyList())) {
-            try {
-                consumer.accept(peer);
-            } catch (Exception e) {
-                LOGGER.error("Error in peer consumer", e);
-            }
-        }
+        eventSink.firePeerDiscovered(torrentId, peer);
     }
 
     @Override
@@ -233,35 +227,6 @@ public class PeerRegistry implements IPeerRegistry {
     @Override
     public Peer getPeerForAddress(InetSocketAddress address) {
         return cache.getPeerForAddress(address);
-    }
-
-    @Override
-    public void addPeerConsumer(Torrent torrent, Consumer<Peer> consumer) {
-        addPeerConsumer(torrent.getTorrentId(), consumer);
-    }
-
-    @Override
-    public void addPeerConsumer(TorrentId torrentId, Consumer<Peer> consumer) {
-        List<Consumer<Peer>> consumers = peerConsumers.get(torrentId);
-        if (consumers == null) {
-            consumers = new ArrayList<>();
-            List<Consumer<Peer>> existing = peerConsumers.putIfAbsent(torrentId, consumers);
-            if (existing != null) {
-                consumers = existing;
-            }
-        }
-        consumers.add(consumer);
-    }
-
-    // TODO: someone should call this after torrent is stopped/completed
-    @Override
-    public void removePeerConsumers(Torrent torrent) {
-        removePeerConsumers(torrent.getTorrentId());
-    }
-
-    @Override
-    public void removePeerConsumers(TorrentId torrentId) {
-        peerConsumers.remove(torrentId);
     }
 
     private static class PeerCache {

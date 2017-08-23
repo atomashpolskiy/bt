@@ -13,13 +13,6 @@ import java.util.concurrent.CompletableFuture;
 public interface IPeerConnectionPool {
 
     /**
-     * Add a listener for receiving peer events.
-     *
-     * @since 1.0
-     */
-    void addConnectionListener(PeerActivityListener listener);
-
-    /**
      * @return Connection for a given peer, if exists; null otherwise
      * @since 1.0
      */

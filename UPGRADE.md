@@ -21,3 +21,14 @@ public class MyModule implements Module {
     }
 }
 ```
+* New centralized mechanism was introduced for publishing/receiving events. It's represented by two DI services: `bt.event.EventSink` for publishing and `bt.event.EventSource` for subscriptions. Core services, that previously provided a custom API for subscribing to events, were updated to use the new mechanism, and the old methods and interfaces have been removed, namely:
+    - `bt.net.PeerActivityListener` removed
+    - `bt.torrent.TorrentSession` does not implement ``bt.net.PeerActivityListener` anymore
+    - methods were removed in `bt.peer.IPeerRegistry`:
+        - `addPeerConsumer(Torrent torrent, Consumer<Peer> consumer)`
+        - `addPeerConsumer(TorrentId torrentId, Consumer<Peer> consumer)`
+        - `removePeerConsumers(Torrent torrent)`
+        - `removePeerConsumers(TorrentId torrentId)`
+    - method was removed in `bt.net.IPeerConnectionPool`:
+        - `addConnectionListener(PeerActivityListener listener)`
+    

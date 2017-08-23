@@ -1,14 +1,15 @@
 package peertracker;
 
-import bt.metainfo.TorrentId;
+import bt.event.PeerConnectedEvent;
+import bt.event.PeerDisconnectedEvent;
+import bt.event.PeerDiscoveredEvent;
 import bt.net.Peer;
-import bt.net.PeerActivityListener;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class PeerStats implements PeerActivityListener {
+public class PeerStats {
 
     public static class Counter {
         private final AtomicLong discoveredTimes = new AtomicLong();
@@ -42,19 +43,16 @@ public class PeerStats implements PeerActivityListener {
 
     private final Map<Peer, Counter> counters = new ConcurrentHashMap<>(5000);
 
-    @Override
-    public void onPeerDiscovered(Peer peer) {
-        getCounter(peer).incrementDiscovered();
+    public void onPeerDiscovered(PeerDiscoveredEvent event) {
+        getCounter(event.getPeer()).incrementDiscovered();
     }
 
-    @Override
-    public void onPeerConnected(TorrentId torrentId, Peer peer) {
-        getCounter(peer).incrementConnected();
+    public void onPeerConnected(PeerConnectedEvent event) {
+        getCounter(event.getPeer()).incrementConnected();
     }
 
-    @Override
-    public void onPeerDisconnected(TorrentId torrentId, Peer peer) {
-        getCounter(peer).incrementDisconnected();
+    public void onPeerDisconnected(PeerDisconnectedEvent event) {
+        getCounter(event.getPeer()).incrementDisconnected();
     }
 
     private Counter getCounter(Peer peer) {

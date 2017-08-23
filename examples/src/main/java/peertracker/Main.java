@@ -7,8 +7,6 @@ import bt.dht.DHTConfig;
 import bt.dht.DHTModule;
 import bt.magnet.MagnetUri;
 import bt.metainfo.TorrentId;
-import bt.net.IPeerConnectionPool;
-import bt.peer.IPeerRegistry;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 import bt.runtime.Config;
@@ -135,7 +133,9 @@ public class Main {
 
     private static void attachPeerListener(BtRuntime runtime, TorrentId torrentId) {
         PeerStats perTorrentStats = STATS.computeIfAbsent(torrentId, it -> new PeerStats());
-        runtime.service(IPeerConnectionPool.class).addConnectionListener(perTorrentStats);
-        runtime.service(IPeerRegistry.class).addPeerConsumer(torrentId, perTorrentStats::onPeerDiscovered);
+        runtime.getEventSource()
+                .onPeerDiscovered(perTorrentStats::onPeerDiscovered)
+                .onPeerConnected(perTorrentStats::onPeerConnected)
+                .onPeerDisconnected(perTorrentStats::onPeerDisconnected);
     }
 }

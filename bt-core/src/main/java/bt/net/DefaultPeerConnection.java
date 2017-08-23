@@ -22,14 +22,14 @@ class DefaultPeerConnection implements PeerConnection {
 
     private static final long WAIT_BETWEEN_READS = 100L;
 
-    private TorrentId torrentId;
-    private Peer remotePeer;
+    private volatile TorrentId torrentId;
+    private final Peer remotePeer;
 
-    private Channel channel;
-    private MessageReaderWriter readerWriter;
+    private final Channel channel;
+    private final MessageReaderWriter readerWriter;
 
     private volatile boolean closed;
-    private AtomicLong lastActive;
+    private final AtomicLong lastActive;
 
     private final ReentrantLock readLock;
     private final Condition condition;

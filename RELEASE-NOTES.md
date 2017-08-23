@@ -6,6 +6,10 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 #### Date:
 
+#### Changes/New Features:
+
+* Introduce a unified, centralized mechanism for publishing/receiving events
+
 #### Bug Fixes/Improvements:
 
 * Disallow to set client's runtime other than via Bt factory method
