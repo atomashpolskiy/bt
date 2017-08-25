@@ -69,6 +69,7 @@ public class ServiceModuleExtender {
         Objects.requireNonNull(otherProtocols);
         Objects.requireNonNull(factoryType);
 
+        contributeTrackerFactories().addBinding(protocol).to(factoryType).in(Singleton.class);
         for (String otherProtocol : otherProtocols) {
             Objects.requireNonNull(otherProtocol);
             contributeTrackerFactories().addBinding(otherProtocol).to(factoryType).in(Singleton.class);
