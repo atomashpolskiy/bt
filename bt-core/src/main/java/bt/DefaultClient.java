@@ -110,6 +110,7 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
             });
         } finally {
             future.ifPresent(future -> future.complete(null));
+            started = false;
         }
     }
 
