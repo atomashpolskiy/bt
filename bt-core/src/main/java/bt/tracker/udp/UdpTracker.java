@@ -110,20 +110,9 @@ class UdpTracker implements Tracker {
                 request.setEventType(eventType);
                 request.setListeningPort((short) listeningPort);
 
-                long downloaded = getDownloaded();
-                if (downloaded > 0) {
-                    request.setDownloaded(downloaded);
-                }
-
-                long uploaded = getUploaded();
-                if (uploaded > 0) {
-                    request.setUploaded(uploaded);
-                }
-
-                long left = getLeft();
-                if (left > 0) {
-                    request.setLeft(left);
-                }
+                request.setDownloaded(getDownloaded());
+                request.setUploaded(getUploaded());
+                request.setLeft(getLeft());
 
                 getRequestString(trackerUrl).ifPresent(request::setRequestString);
                 if (LOGGER.isDebugEnabled()) {
