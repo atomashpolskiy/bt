@@ -154,7 +154,7 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 
 ### And much more...
 
-* _**check out [Release Notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.txt) for details!**_
+* _**check out [Release Notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.md) for details!**_
 
 ## Support and feedback
 

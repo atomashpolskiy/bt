@@ -16,6 +16,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * Introduce module extenders for contributing custom extensions
 * Disable BEP-9 metadata exchange for private torrents
 * DefaultClient state fix when client is stopped [PR#37](https://github.com/atomashpolskiy/bt/pull/37)
+* Announce stats to tracker on start, stop, complete
 
 ## 1.4.1
 
