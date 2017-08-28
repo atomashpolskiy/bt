@@ -10,7 +10,7 @@ import bt.torrent.TorrentSession;
 import bt.torrent.messaging.Assignments;
 import bt.torrent.messaging.MessageRouter;
 import bt.torrent.selector.PieceSelector;
-import bt.tracker.TrackerAnnouncer;
+import bt.torrent.TrackerAnnouncer;
 
 import java.util.Optional;
 import java.util.function.Supplier;

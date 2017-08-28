@@ -77,17 +77,17 @@ class MultiTracker implements Tracker {
             private TrackerRequestBuilder getDelegate(Tracker tracker, TorrentId torrentId) {
                 TrackerRequestBuilder delegate = tracker.request(torrentId);
 
-                int downloaded = getDownloaded();
+                long downloaded = getDownloaded();
                 if (downloaded > 0) {
                     delegate.downloaded(downloaded);
                 }
 
-                int uploaded = getUploaded();
+                long uploaded = getUploaded();
                 if (uploaded > 0) {
                     delegate.uploaded(uploaded);
                 }
 
-                int left = getLeft();
+                long left = getLeft();
                 if (left > 0) {
                     delegate.left(left);
                 }

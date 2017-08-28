@@ -4,16 +4,19 @@
     exclusives:
     # TODO: some trackers return failure reason together with interval and peers,
     # which causes the validation to fail -- need to do something about it
-      - "failure reason"
-      - ["warning message", interval, "min interval", "tracker id", complete, incomplete, peers]
+#      - "failure reason"
+#      - ["warning message", interval, "min interval", "tracker id", complete, incomplete, peers]
     entries:
-      - {key: "failure reason", type: string}
+      - {key: "failure reason", type: string, required: false}
+      # the following two properties (interval and peers) are in fact required, when failure reason is not present;
+      # but the model doesn't support conditional properties yet, so marking them as optional,
+      # and relying on the parser to enforce BEP-3 rules
+      - {key: interval, type: integer, required: false}
+      - {key: peers, type: string, required: false}
       - {key: "warning message", type: string, required: false}
-      - {key: interval, type: integer}
       - {key: "min interval", type: integer, required: false}
       - {key: "tracker id", type: string, required: false}
       - {key: complete, type: integer, required: false}
       - {key: incomplete, type: integer, required: false}
-      - {key: peers, type: string}
       - {key: crypto_flags, type: string, required: false}
 

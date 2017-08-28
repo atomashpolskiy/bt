@@ -1,6 +1,11 @@
-package bt.tracker;
+package bt.torrent;
 
-import bt.metainfo.TorrentId;
+import bt.metainfo.Torrent;
+import bt.tracker.AnnounceKey;
+import bt.tracker.ITrackerService;
+import bt.tracker.Tracker;
+import bt.tracker.TrackerRequestBuilder;
+import bt.tracker.TrackerResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,14 +22,19 @@ public class TrackerAnnouncer {
     }
 
     private final Optional<Tracker> trackerOptional;
-    private final TorrentId torrentId;
+    private final Torrent torrent;
+    private final TorrentSessionState sessionState;
 
-    public TrackerAnnouncer(ITrackerService trackerService, TorrentId torrentId, AnnounceKey announceKey) {
-        this.trackerOptional = Optional.ofNullable(createTracker(trackerService, torrentId, announceKey));
-        this.torrentId = torrentId;
+    public TrackerAnnouncer(ITrackerService trackerService,
+                            Torrent torrent,
+                            AnnounceKey announceKey,
+                            TorrentSessionState sessionState) {
+        this.trackerOptional = Optional.ofNullable(createTracker(trackerService, announceKey));
+        this.torrent = torrent;
+        this.sessionState = sessionState;
     }
 
-    private Tracker createTracker(ITrackerService trackerService, TorrentId torrentId, AnnounceKey announceKey) {
+    private Tracker createTracker(ITrackerService trackerService, AnnounceKey announceKey) {
         try {
             String trackerUrl = getTrackerUrl(announceKey);
             if (trackerService.isSupportedProtocol(trackerUrl)) {
@@ -49,7 +59,7 @@ public class TrackerAnnouncer {
     public void start() {
         trackerOptional.ifPresent(tracker -> {
             try {
-                processResponse(Event.start, tracker, tracker.request(torrentId).start());
+                processResponse(Event.start, tracker, prepareAnnounce(tracker).start());
             } catch (Exception e) {
                 logTrackerError(Event.start, tracker, Optional.of(e), Optional.empty());
             }
@@ -59,7 +69,7 @@ public class TrackerAnnouncer {
     public void stop() {
         trackerOptional.ifPresent(tracker -> {
             try {
-                processResponse(Event.stop, tracker, tracker.request(torrentId).stop());
+                processResponse(Event.stop, tracker, prepareAnnounce(tracker).stop());
             } catch (Exception e) {
                 logTrackerError(Event.stop, tracker, Optional.of(e), Optional.empty());
             }
@@ -69,11 +79,18 @@ public class TrackerAnnouncer {
     public void complete() {
         trackerOptional.ifPresent(tracker -> {
             try {
-                processResponse(Event.complete, tracker, tracker.request(torrentId).complete());
+                processResponse(Event.complete, tracker, prepareAnnounce(tracker).complete());
             } catch (Exception e) {
                 logTrackerError(Event.complete, tracker, Optional.of(e), Optional.empty());
             }
         });
+    }
+
+    private TrackerRequestBuilder prepareAnnounce(Tracker tracker) {
+        return tracker.request(torrent.getTorrentId())
+                .downloaded(sessionState.getDownloaded())
+                .uploaded(sessionState.getUploaded())
+                .left(sessionState.getPiecesRemaining() * torrent.getChunkSize());
     }
 
     private void processResponse(Event event, Tracker tracker, TrackerResponse response) {
@@ -90,7 +107,7 @@ public class TrackerAnnouncer {
         }
 
         if (e.isPresent()) {
-            LOGGER.error(log, e);
+            LOGGER.error(log, e.get());
         } else {
             LOGGER.warn(log);
         }

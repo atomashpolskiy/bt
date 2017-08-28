@@ -8,7 +8,7 @@ import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
-import bt.tracker.TrackerAnnouncer;
+import bt.torrent.TrackerAnnouncer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +40,7 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
         Torrent torrent = context.getTorrent().get();
         Optional<AnnounceKey> announceKey = torrent.getAnnounceKey();
         if (announceKey.isPresent()) {
-            TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, torrent.getTorrentId(), announceKey.get());
+            TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, torrent, announceKey.get(), context.getSession().get().getState());
             context.setAnnouncer(announcer);
         }
 

@@ -14,9 +14,9 @@ public abstract class TrackerRequestBuilder {
 
     private TorrentId torrentId;
 
-    private int uploaded;
-    private int downloaded;
-    private int left;
+    private long uploaded;
+    private long downloaded;
+    private long left;
 
     /**
      * Create a tracker request builder for a given torrent ID
@@ -62,12 +62,12 @@ public abstract class TrackerRequestBuilder {
     /**
      * Optionally set the amount of data uploaded during the current session.
      *
-     * @param uploaded Amount of data uploaded since the last {@link #start()} request.
+     * @param uploaded Amount of data uploaded since the last announce, in bytes.
      * @return Builder
      * @since 1.0
      */
-    public TrackerRequestBuilder uploaded(int uploaded) {
-        if (uploaded <= 0) {
+    public TrackerRequestBuilder uploaded(long uploaded) {
+        if (uploaded < 0) {
             throw new BtException("Invalid uploaded value: " + uploaded);
         }
         this.uploaded = uploaded;
@@ -77,12 +77,12 @@ public abstract class TrackerRequestBuilder {
     /**
      * Optionally set the amount of data downloaded during the current session.
      *
-     * @param downloaded Amount of data downloaded since the last {@link #start()} request.
+     * @param downloaded Amount of data downloaded since the last announce, in bytes.
      * @return Builder
      * @since 1.0
      */
-    public TrackerRequestBuilder downloaded(int downloaded) {
-        if (downloaded <= 0) {
+    public TrackerRequestBuilder downloaded(long downloaded) {
+        if (downloaded < 0) {
             throw new BtException("Invalid downloaded value: " + downloaded);
         }
         this.downloaded = downloaded;
@@ -92,12 +92,12 @@ public abstract class TrackerRequestBuilder {
     /**
      * Optionally set the amount of data left for the client to download.
      *
-     * @param left Amount of data that is left for the client to complete the torrent download.
+     * @param left Amount of data that is left for the client to complete the torrent download, in bytes.
      * @return Builder
      * @since 1.0
      */
-    public TrackerRequestBuilder left(int left) {
-        if (left <= 0) {
+    public TrackerRequestBuilder left(long left) {
+        if (left < 0) {
             throw new BtException("Invalid left value: " + left);
         }
         this.left = left;
@@ -114,21 +114,21 @@ public abstract class TrackerRequestBuilder {
     /**
      * @since 1.0
      */
-    public int getUploaded() {
+    public long getUploaded() {
         return uploaded;
     }
 
     /**
      * @since 1.0
      */
-    public int getDownloaded() {
+    public long getDownloaded() {
         return downloaded;
     }
 
     /**
      * @since 1.0
      */
-    public int getLeft() {
+    public long getLeft() {
         return left;
     }
 }

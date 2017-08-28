@@ -107,11 +107,24 @@ class UdpTracker implements Tracker {
                 AnnounceRequest request = new AnnounceRequest();
                 request.setTorrentId(getTorrentId());
                 request.setPeerId(idService.getLocalPeerId());
-                request.setDownloaded(getDownloaded());
-                request.setLeft(getLeft());
-                request.setUploaded(getUploaded());
                 request.setEventType(eventType);
                 request.setListeningPort((short) listeningPort);
+
+                long downloaded = getDownloaded();
+                if (downloaded > 0) {
+                    request.setDownloaded(downloaded);
+                }
+
+                long uploaded = getUploaded();
+                if (uploaded > 0) {
+                    request.setUploaded(uploaded);
+                }
+
+                long left = getLeft();
+                if (left > 0) {
+                    request.setLeft(left);
+                }
+
                 getRequestString(trackerUrl).ifPresent(request::setRequestString);
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Executing tracker UDP request of type {}: {}", eventType.name(), request);

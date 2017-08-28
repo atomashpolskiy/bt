@@ -34,6 +34,7 @@ class TrackerPeerSource extends ScheduledPeerSource {
         if (System.currentTimeMillis() - lastRefreshed >= trackerQueryInterval.toMillis()) {
             TrackerResponse response;
             try {
+                // TODO: report stats
                 response = tracker.request(torrentId).query();
             } finally {
                 lastRefreshed = System.currentTimeMillis();

@@ -155,14 +155,23 @@ public class HttpTracker implements Tracker {
 //        buf.append(encryptionPolicy == EncryptionPolicy.REQUIRE_ENCRYPTED ? 0 : peer.getPort());
         buf.append(peer.getPort());
 
-        buf.append("&uploaded=");
-        buf.append(requestBuilder.getUploaded());
+        long uploaded = requestBuilder.getUploaded();
+        if (uploaded > 0) {
+            buf.append("&uploaded=");
+            buf.append(uploaded);
+        }
 
-        buf.append("&downloaded=");
-        buf.append(requestBuilder.getDownloaded());
+        long downloaded = requestBuilder.getDownloaded();
+        if (downloaded > 0) {
+            buf.append("&downloaded=");
+            buf.append(downloaded);
+        }
 
-        buf.append("&left=");
-        buf.append(requestBuilder.getLeft());
+        long left = requestBuilder.getLeft();
+        if (left > 0) {
+            buf.append("&left=");
+            buf.append(left);
+        }
 
         buf.append("&compact=1");
         buf.append("&numwant=50");
