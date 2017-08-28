@@ -5,6 +5,7 @@ import bt.runtime.BtRuntime;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
@@ -61,7 +62,7 @@ class RuntimeAwareClient implements BtClient {
     }
 
     @Override
-    public TorrentSession getSession() {
+    public Optional<TorrentSession> getSession() {
         return delegate.getSession();
     }
 

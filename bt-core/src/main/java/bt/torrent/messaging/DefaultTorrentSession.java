@@ -9,12 +9,12 @@ import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
-import bt.torrent.stub.StubTorrent;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -107,8 +107,8 @@ public class DefaultTorrentSession implements TorrentSession {
     }
 
     @Override
-    public Torrent getTorrent() {
-        return torrentRegistry.getTorrent(torrentId).orElse(StubTorrent.instance());
+    public Optional<Torrent> getTorrent() {
+        return torrentRegistry.getTorrent(torrentId);
     }
 
     @Override

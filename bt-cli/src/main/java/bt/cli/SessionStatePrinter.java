@@ -17,6 +17,7 @@ import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 public class SessionStatePrinter {
@@ -35,7 +36,7 @@ public class SessionStatePrinter {
 
     private static final String LOG_ENTRY_SEED = "Seeding.. Peers: %s; Up: " + RATE_FORMAT;
 
-    public static SessionStatePrinter createKeyInputAwarePrinter(Supplier<Torrent> torrent,
+    public static SessionStatePrinter createKeyInputAwarePrinter(Supplier<Optional<Torrent>> torrent,
                                                                  Collection<KeyStrokeBinding> bindings) {
         return new SessionStatePrinter(torrent) {
             private Thread t;
@@ -82,12 +83,12 @@ public class SessionStatePrinter {
 
     private volatile boolean shutdown;
 
-    private Supplier<Torrent> torrentSupplier;
+    private Supplier<Optional<Torrent>> torrentSupplier;
     private volatile long started;
     private volatile long downloaded;
     private volatile long uploaded;
 
-    public SessionStatePrinter(Supplier<Torrent> torrentSupplier) {
+    public SessionStatePrinter(Supplier<Optional<Torrent>> torrentSupplier) {
         try {
             Terminal terminal = new DefaultTerminalFactory(System.out, System.in,
                      Charset.forName("UTF-8")).createTerminal();
@@ -134,11 +135,18 @@ public class SessionStatePrinter {
         return screen.readInput();
     }
 
-    private void printTorrentInfo(Torrent torrent) {
-        graphics.putString(0, 0, String.format(TORRENT_INFO, torrent.getName(), torrent.getSize()));
+    private void printTorrentInfo(Optional<Torrent> torrent) {
+        printTorrentNameAndSize(torrent);
         char[] chars = new char[graphics.getSize().getColumns()];
         Arrays.fill(chars, '-');
         graphics.putString(0, 1, String.valueOf(chars));
+    }
+
+    private void printTorrentNameAndSize(Optional<Torrent> torrent) {
+        String name = torrent.isPresent() ? torrent.get().getName() : "";
+        long size = torrent.isPresent() ? torrent.get().getSize() : 0;
+
+        graphics.putString(0, 0, String.format(TORRENT_INFO, name, size));
     }
 
     /**
@@ -154,10 +162,9 @@ public class SessionStatePrinter {
             long downloaded = sessionState.getDownloaded();
             long uploaded = sessionState.getUploaded();
 
-            Torrent torrent = torrentSupplier.get();
+            Optional<Torrent> torrent = torrentSupplier.get();
 
-            String torrentInfo = String.format(TORRENT_INFO, torrent.getName(), torrent.getSize());
-            graphics.putString(0, 0, torrentInfo);
+            printTorrentNameAndSize(torrent);
 
             String elapsedTime = getElapsedTime();
             String remainingTime = getRemainingTime(downloaded - this.downloaded,
@@ -206,13 +213,14 @@ public class SessionStatePrinter {
     }
 
     private String getRemainingTime(long downloaded, int piecesRemaining, int piecesTotal) {
+        Optional<Torrent> torrent = torrentSupplier.get();
         String remainingStr;
         if (piecesRemaining == 0) {
             remainingStr = "-" + WHITESPACES;
-        } else if (downloaded == 0) {
+        } else if (downloaded == 0 || !torrent.isPresent()) {
             remainingStr = "\u221E" + WHITESPACES; // infinity
         } else {
-            long size = torrentSupplier.get().getSize();
+            long size = torrent.get().getSize();
             double remaining = piecesRemaining / ((double) piecesTotal);
             long remainingBytes = (long) (size * remaining);
             Duration remainingTime = Duration.ofSeconds(remainingBytes / downloaded);

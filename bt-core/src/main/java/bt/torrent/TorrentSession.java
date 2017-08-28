@@ -3,6 +3,8 @@ package bt.torrent;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 
+import java.util.Optional;
+
 /**
  * Torrent processing session.
  *
@@ -13,14 +15,12 @@ public interface TorrentSession {
     /**
      * Returns torrent, that this session is processing.
      * Note that in some cases (e.g. when using magnet links) the torrent may be absent in the beginning.
-     * In such case this method will return a fake Torrent object, containing reasonable "stub" values
-     * (falses, zeroes, empty collections).
      *
-     * @return Torrent, that this session is processing, or a fake Torrent object, if the torrent hasn't been fetched yet
+     * @return Torrent, that this session is processing, or {@link Optional#empty()}, if the torrent hasn't been fetched yet
      * @see #getTorrentId()
-     * @since 1.0
+     * @since 1.5
      */
-    Torrent getTorrent();
+    Optional<Torrent> getTorrent();
 
     /**
      * Returns torrent ID, that this session is processing.

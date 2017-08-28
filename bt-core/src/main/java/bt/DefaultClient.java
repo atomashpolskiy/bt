@@ -8,7 +8,6 @@ import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
-import bt.torrent.stub.StubSession;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -66,10 +65,18 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
         this.listenerExecutor = Executors.newSingleThreadScheduledExecutor();
         this.listener = Optional.of(listener);
         this.listenerFuture = Optional.of(listenerExecutor.scheduleAtFixedRate(
-                () -> listener.accept(getSession().getState()),
-                period, period, TimeUnit.MILLISECONDS));
+                this::notifyListener, period, period, TimeUnit.MILLISECONDS));
 
         return doStartAsync();
+    }
+
+    private void notifyListener() {
+        if (listener.isPresent()) {
+            Optional<TorrentSession> session = getSession();
+            if (session.isPresent()) {
+                listener.get().accept(session.get().getState());
+            }
+        }
     }
 
     @Override
@@ -92,7 +99,7 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
         CompletableFuture<?> future = CompletableFuture.runAsync(
                 () -> ChainProcessor.execute(processor, context), executor);
 
-        future.whenComplete((r, t) -> listener.ifPresent(listener -> listener.accept(getSession().getState())))
+        future.whenComplete((r, t) -> notifyListener())
                 .whenComplete((r, t) -> listenerFuture.ifPresent(listener -> listener.cancel(true)))
                 .whenComplete((r, t) -> listenerExecutor.shutdownNow());
 
@@ -115,8 +122,8 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
     }
 
     @Override
-    public TorrentSession getSession() {
-        return context.getSession().orElse(StubSession.instance());
+    public Optional<TorrentSession> getSession() {
+        return context.getSession();
     }
 
     @Override

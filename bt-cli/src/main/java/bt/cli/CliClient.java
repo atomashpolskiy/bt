@@ -7,10 +7,12 @@ import bt.data.Storage;
 import bt.data.file.FileSystemStorage;
 import bt.dht.DHTConfig;
 import bt.dht.DHTModule;
+import bt.metainfo.Torrent;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 import bt.runtime.Config;
+import bt.torrent.TorrentSession;
 import bt.torrent.selector.PieceSelector;
 import bt.torrent.selector.RarestFirstSelector;
 import bt.torrent.selector.SequentialSelector;
@@ -34,6 +36,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 public class CliClient  {
 
@@ -127,8 +130,8 @@ public class CliClient  {
         }
 
         this.client = clientBuilder.build();
-        this.printer = options.shouldDisableUi() ? Optional.empty()
-                : Optional.of(SessionStatePrinter.createKeyInputAwarePrinter(() -> client.getSession().getTorrent(), keyBindings));
+        this.printer = options.shouldDisableUi() ?
+                Optional.empty() : Optional.of(SessionStatePrinter.createKeyInputAwarePrinter(getTorrentSupplier(client), keyBindings));
     }
 
     private Optional<Integer> getPortOverride() {
@@ -175,6 +178,21 @@ public class CliClient  {
         Configurator.setLevel("bt", log4jLogLevel);
     }
 
+    private static URL toUrl(File file) {
+        try {
+            return file.toURI().toURL();
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException("Unexpected error", e);
+        }
+    }
+
+    private Supplier<Optional<Torrent>> getTorrentSupplier(BtClient client) {
+        return () -> {
+            Optional<TorrentSession> session = client.getSession();
+            return session.isPresent() ? session.get().getTorrent() : Optional.empty();
+        };
+    }
+
     void resume() {
         if (running) {
             return;
@@ -206,14 +224,6 @@ public class CliClient  {
             LOGGER.warn("Unexpected error when stopping client", e);
         } finally {
             running = false;
-        }
-    }
-
-    private static URL toUrl(File file) {
-        try {
-            return file.toURI().toURL();
-        } catch (MalformedURLException e) {
-            throw new IllegalArgumentException("Unexpected error", e);
         }
     }
 

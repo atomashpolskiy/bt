@@ -3,6 +3,7 @@ package bt.runtime;
 import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
@@ -44,14 +45,13 @@ public interface BtClient {
 
     /**
      * Provides access to a torrent session.
-     * This method can be considered an alternative way
-     * to get current state of torrent processing,
+     * This method can be considered an alternative way to get current state of torrent processing,
      * as well as some other additional information.
      *
-     * @return Torrent session
-     * @since 1.0
+     * @return Torrent session, or {@link Optional#empty()}, if the session has not been created yet
+     * @since 1.5
      */
-    TorrentSession getSession();
+    Optional<TorrentSession> getSession();
 
     /**
      * Check if this client is started.
