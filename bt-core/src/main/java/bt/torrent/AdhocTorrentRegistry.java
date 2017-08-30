@@ -10,6 +10,7 @@ import com.google.inject.Inject;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,6 +55,7 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
 
     @Override
     public Optional<Torrent> getTorrent(TorrentId torrentId) {
+        Objects.requireNonNull(torrentId, "Missing torrent ID");
         return Optional.ofNullable(torrents.get(torrentId));
     }
 
@@ -64,6 +66,7 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
 
     @Override
     public Optional<TorrentDescriptor> getDescriptor(TorrentId torrentId) {
+        Objects.requireNonNull(torrentId, "Missing torrent ID");
         return Optional.ofNullable(descriptors.get(torrentId));
     }
 
