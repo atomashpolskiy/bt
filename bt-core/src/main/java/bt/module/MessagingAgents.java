@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
  * @see bt.torrent.compiler.MessagingAgentCompiler
  * @since 1.0
  */
-@Target({ ElementType.PARAMETER, ElementType.FIELD })
+@Target({ ElementType.PARAMETER, ElementType.FIELD, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 @BindingAnnotation
 public @interface MessagingAgents {}
