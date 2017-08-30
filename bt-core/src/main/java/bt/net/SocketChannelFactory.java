@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
@@ -29,11 +30,11 @@ class SocketChannelFactory {
     /**
      * @since 1.0
      */
-    public SocketChannelFactory(InetAddress localAddress, int localPort) {
+    public SocketChannelFactory(Selector selector, InetAddress localAddress, int localPort) {
         this.localOutgoingSocketAddress = new InetSocketAddress(localAddress, 0);
         this.localIncomingAddress = localAddress;
         this.localIncomingPort = localPort;
-        this.selector = SelectorProvider.provider();
+        this.selector = selector.provider();
         this.lock = new Object();
     }
 

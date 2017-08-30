@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Objects;
 
@@ -17,13 +19,16 @@ class PeerConnectionFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionFactory.class);
 
     private SocketChannelFactory socketChannelFactory;
+    private Selector selector;
     private MSEHandshakeProcessor cryptoHandshakeProcessor;
 
     public PeerConnectionFactory(MessageHandler<Message> messageHandler,
                                  SocketChannelFactory socketChannelFactory,
                                  TorrentRegistry torrentRegistry,
+                                 Selector selector,
                                  Config config) {
         this.socketChannelFactory = socketChannelFactory;
+        this.selector = selector;
         this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(torrentRegistry, messageHandler,
                 config.getEncryptionPolicy(), getBufferSize(config.getMaxTransferBlockSize()), config.getMsePrivateKeySize());
     }
@@ -72,7 +77,12 @@ class PeerConnectionFactory {
                 cryptoHandshakeProcessor.negotiateIncoming(peer, channel)
                 : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId);
 
-        return new DefaultPeerConnection(peer, channel, readerWriter);
+        DefaultPeerConnection connection = new DefaultPeerConnection(peer, channel, readerWriter);
+        selector.wakeup(); // prevent blocking of registration if selection is in progress
+        // TODO: race condition between message dispatcher and current thread
+        // (dispatcher may wakeup and lock the selector again before register call is performed)
+        channel.register(selector, SelectionKey.OP_READ, connection);
+        return connection;
     }
 
     private void closeQuietly(SocketChannel channel) {

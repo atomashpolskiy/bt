@@ -4,6 +4,7 @@ import bt.BtException;
 import bt.event.EventSink;
 import bt.metainfo.TorrentId;
 import bt.module.BitTorrentProtocol;
+import bt.module.PeerConnectionSelector;
 import bt.peer.IPeerRegistry;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.time.Duration;
@@ -64,6 +66,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                               IPeerRegistry peerRegistry,
                               TorrentRegistry torrentRegistry,
                               EventSink eventSink,
+                              @PeerConnectionSelector Selector selector,
                               IConnectionHandlerFactory connectionHandlerFactory,
                               IRuntimeLifecycleBinder lifecycleBinder,
                               Config config) {
@@ -73,8 +76,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         this.eventSink = eventSink;
 
         SocketChannelFactory socketChannelFactory =
-                new SocketChannelFactory(config.getAcceptorAddress(), config.getAcceptorPort());
-        this.connectionFactory = new PeerConnectionFactory(messageHandler, socketChannelFactory, torrentRegistry, config);
+                new SocketChannelFactory(selector, config.getAcceptorAddress(), config.getAcceptorPort());
+        this.connectionFactory = new PeerConnectionFactory(messageHandler, socketChannelFactory, torrentRegistry, selector, config);
 
         this.connectionHandlerFactory = connectionHandlerFactory;
         this.peerConnectionInactivityThreshold = config.getPeerConnectionInactivityThreshold();

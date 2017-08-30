@@ -25,7 +25,9 @@ import bt.service.ApplicationService;
 import bt.service.ClasspathApplicationService;
 import bt.service.ExecutorServiceProvider;
 import bt.service.IRuntimeLifecycleBinder;
+import bt.service.IRuntimeLifecycleBinder.LifecycleEvent;
 import bt.service.IdentityService;
+import bt.service.LifecycleBinding;
 import bt.service.RuntimeLifecycleBinder;
 import bt.service.VersionAwareIdentityService;
 import bt.torrent.AdhocTorrentRegistry;
@@ -43,6 +45,8 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
 
+import java.io.IOException;
+import java.nio.channels.Selector;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -171,5 +175,29 @@ public class ServiceModule implements Module {
     @Singleton
     public EventBus provideEventBus() {
         return new EventBus();
+    }
+
+    @Provides
+    @Singleton
+    @PeerConnectionSelector
+    public Selector provideSelector(IRuntimeLifecycleBinder lifecycleBinder) {
+        Selector selector;
+        try {
+            selector = Selector.open();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to get I/O selector", e);
+        }
+
+        Runnable shutdownRoutine = () -> {
+            try {
+                selector.close();
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to close selector", e);
+            }
+        };
+        lifecycleBinder.addBinding(LifecycleEvent.SHUTDOWN,
+                LifecycleBinding.bind(shutdownRoutine).description("Shutdown selector").build());
+
+        return selector;
     }
 }

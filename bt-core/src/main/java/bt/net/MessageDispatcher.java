@@ -1,6 +1,7 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.module.PeerConnectionSelector;
 import bt.protocol.Message;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
@@ -10,17 +11,23 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
+import java.io.IOException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -38,94 +45,209 @@ public class MessageDispatcher implements IMessageDispatcher {
     private final Map<Peer, Collection<Supplier<Message>>> suppliers;
 
     private TorrentRegistry torrentRegistry;
+    private Selector selector;
+
+    private Queue<PeerMessage> messages;
 
     @Inject
     public MessageDispatcher(IRuntimeLifecycleBinder lifecycleBinder,
                              IPeerConnectionPool pool,
                              TorrentRegistry torrentRegistry,
+                             @PeerConnectionSelector Selector selector,
                              Config config) {
 
         this.consumers = new ConcurrentHashMap<>();
         this.suppliers = new ConcurrentHashMap<>();
         this.torrentRegistry = torrentRegistry;
+        this.selector = selector;
+        this.messages = new LinkedBlockingQueue<>();
 
+        initializeMessageLoop(lifecycleBinder, pool, messages, config);
+        initializeMessageReceiver(lifecycleBinder, messages);
+    }
+
+    private void initializeMessageLoop(IRuntimeLifecycleBinder lifecycleBinder,
+                                       IPeerConnectionPool pool,
+                                       Queue<PeerMessage> messages,
+                                       Config config) {
         ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.net.message-dispatcher"));
-        Worker worker = new Worker(pool, config.getMaxMessageProcessingInterval());
-        lifecycleBinder.onStartup("Initialize message dispatcher", () -> executor.execute(worker));
-        lifecycleBinder.onShutdown("Shutdown message dispatcher worker", () -> {
+        LoopControl loopControl = new LoopControl(config.getMaxMessageProcessingInterval().toMillis());
+        MessageDispatchingLoop loop = new MessageDispatchingLoop(pool, loopControl, messages::poll);
+        lifecycleBinder.onStartup("Initialize message dispatcher", () -> executor.execute(loop));
+        lifecycleBinder.onShutdown("Shutdown message dispatcher", () -> {
             try {
-                worker.shutdown();
+                loop.shutdown();
             } finally {
                 executor.shutdownNow();
             }
         });
     }
 
-    private class Worker implements Runnable {
+    private void initializeMessageReceiver(IRuntimeLifecycleBinder lifecycleBinder, Queue<PeerMessage> messages) {
+        ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.net.message-receiver"));
+        BiConsumer<Peer, Message> messageSink = (peer, message) ->
+                messages.add(new PeerMessage(Objects.requireNonNull(peer), Objects.requireNonNull(message)));
+        MessageReceivingLoop loop = new MessageReceivingLoop(messageSink);
+        lifecycleBinder.onStartup("Initialize message receiver", () -> executor.execute(loop));
+        lifecycleBinder.onShutdown("Shutdown message receiver", () -> {
+            try {
+                loop.shutdown();
+            } finally {
+                executor.shutdownNow();
+            }
+        });
+    }
 
-        private IPeerConnectionPool pool;
-        private LoopControl loopControl;
+    private class PeerMessage {
+        private final Peer peer;
+        private final Message message;
 
+        public PeerMessage(Peer peer, Message message) {
+            this.peer = peer;
+            this.message = message;
+        }
+
+        public Peer getPeer() {
+            return peer;
+        }
+
+        public Message getMessage() {
+            return message;
+        }
+    }
+
+    private class MessageReceivingLoop implements Runnable {
+
+        private final BiConsumer<Peer, Message> messageSink;
         private volatile boolean shutdown;
 
-        Worker(IPeerConnectionPool pool, Duration maxProcessingInterval) {
-            this.pool = pool;
-            this.loopControl = new LoopControl(maxProcessingInterval.toMillis());
+        MessageReceivingLoop(BiConsumer<Peer, Message> messageSink) {
+            this.messageSink = messageSink;
         }
 
         @Override
         public void run() {
             while (!shutdown) {
-                if (!consumers.isEmpty()) {
-                    Iterator<Map.Entry<Peer, Collection<Consumer<Message>>>> iter = consumers.entrySet().iterator();
-                    while (iter.hasNext()) {
+                if (!selector.isOpen()) {
+                    LOGGER.info("Selector is closed, stopping...");
+                    break;
+                }
 
-                        Map.Entry<Peer, Collection<Consumer<Message>>> entry = iter.next();
-                        Peer peer = entry.getKey();
-                        Collection<Consumer<Message>> consumers = entry.getValue();
+                try {
+                    selector.select();
+                } catch (IOException e) {
+                    throw new RuntimeException("Unexpected I/O exception when selecting peer connections", e);
+                }
 
-                        PeerConnection connection = pool.getConnection(peer);
-                        if (connection != null && !connection.isClosed()) {
+                Set<SelectionKey> selectedKeys = selector.selectedKeys();
+                if (!selectedKeys.isEmpty()) {
+                    selectedKeys.forEach(key -> {
+                        try {
+                            processKey(key);
+                        } catch (Exception e) {
+                            LOGGER.error("Failed to process key", e);
+                        }
+                    });
+                }
 
-                            if (isSupportedAndActive(connection.getTorrentId())) {
-                                Message message = null;
-                                try {
-                                    message = connection.readMessageNow();
-                                } catch (Exception e) {
-                                    LOGGER.error("Error when reading message from peer: " + peer, e);
-                                    iter.remove();
-                                    suppliers.remove(peer);
-                                }
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
 
-                                if (message != null) {
-                                    loopControl.incrementProcessed();
-                                    for (Consumer<Message> messageConsumer : consumers) {
-                                        try {
-                                            messageConsumer.accept(message);
-                                        } catch (Exception e) {
-                                            LOGGER.warn("Error in message consumer", e);
-                                        }
-                                    }
-                                }
-                            }
+        private void processKey(SelectionKey key) {
+            Object obj = key.attachment();
+            if (obj == null || !(obj instanceof PeerConnection)) {
+                LOGGER.warn("Unexpected attachment in selection key: {}. Skipping..", obj);
+                return;
+            }
+
+            PeerConnection connection = (PeerConnection) obj;
+            Peer peer = connection.getRemotePeer();
+            if (!key.isValid() || !key.isReadable()) {
+                LOGGER.warn("Selected connection for peer {}, but the key is cancelled or read op is not indicated. Skipping..", peer);
+                return;
+            }
+
+            if (!connection.isClosed()) {
+                TorrentId torrentId = connection.getTorrentId();
+                if (torrentId != null && isSupportedAndActive(torrentId)) {
+                    while (true) {
+                        Message message;
+                        try {
+                            message = connection.readMessageNow();
+                        } catch (Exception e) {
+                            key.cancel();
+                            throw new RuntimeException("Error when reading message from peer: " + peer, e);
+                        }
+                        if (message == null) {
+                            break;
                         } else {
-                            iter.remove();
-                            suppliers.remove(peer);
+                            messageSink.accept(peer, message);
+                        }
+                    }
+                }
+            } else {
+                key.cancel();
+            }
+        }
+
+        public void shutdown() {
+            shutdown = true;
+        }
+    }
+
+    private class MessageDispatchingLoop implements Runnable {
+
+        private final IPeerConnectionPool pool;
+        private final LoopControl loopControl;
+        private final Supplier<PeerMessage> messageSource;
+
+        private volatile boolean shutdown;
+
+        MessageDispatchingLoop(IPeerConnectionPool pool, LoopControl loopControl, Supplier<PeerMessage> messageSource) {
+            this.pool = pool;
+            this.loopControl = loopControl;
+            this.messageSource = messageSource;
+        }
+
+        @Override
+        public void run() {
+            while (!shutdown) {
+                // TODO: restrict max amount of incoming messages per iteration
+                PeerMessage envelope;
+                while ((envelope = messageSource.get()) != null) {
+                    loopControl.incrementProcessed();
+
+                    Peer peer = envelope.getPeer();
+                    Message message = envelope.getMessage();
+
+                    Collection<Consumer<Message>> peerConsumers = consumers.get(peer);
+                    if (peerConsumers != null && peerConsumers.size() > 0) {
+                        for (Consumer<Message> consumer : peerConsumers) {
+                            try {
+                                consumer.accept(message);
+                            } catch (Exception e) {
+                                LOGGER.error("Unexpected exception when processing message " + message + " for peer " + peer, e);
+                            }
+                        }
+                    } else {
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Discarding message {} for peer {}, because no consumers were registered", message, peer);
                         }
                     }
                 }
 
                 if (!suppliers.isEmpty()) {
-                    Iterator<Map.Entry<Peer, Collection<Supplier<Message>>>> iter = suppliers.entrySet().iterator();
-                    while (iter.hasNext()) {
-
-                        Map.Entry<Peer, Collection<Supplier<Message>>> entry = iter.next();
+                    for (Map.Entry<Peer, Collection<Supplier<Message>>> entry : suppliers.entrySet()) {
                         Peer peer = entry.getKey();
                         Collection<Supplier<Message>> suppliers = entry.getValue();
 
                         PeerConnection connection = pool.getConnection(peer);
                         if (connection != null && !connection.isClosed()) {
-
                             if (isSupportedAndActive(connection.getTorrentId())) {
                                 for (Supplier<Message> messageSupplier : suppliers) {
                                     Message message = null;
@@ -141,15 +263,10 @@ public class MessageDispatcher implements IMessageDispatcher {
                                             connection.postMessage(message);
                                         } catch (Exception e) {
                                             LOGGER.error("Error when writing message", e);
-                                            iter.remove();
-                                            consumers.remove(peer);
                                         }
                                     }
                                 }
                             }
-                        } else {
-                            iter.remove();
-                            consumers.remove(peer);
                         }
                     }
                 }
@@ -161,13 +278,6 @@ public class MessageDispatcher implements IMessageDispatcher {
         public void shutdown() {
             shutdown = true;
         }
-    }
-
-    private boolean isSupportedAndActive(TorrentId torrentId) {
-        Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrentId);
-        // it's OK if descriptor is not present -- torrent might be being fetched at the time
-        return torrentRegistry.getTorrentIds().contains(torrentId)
-                && (!descriptor.isPresent() || descriptor.get().isActive());
     }
 
     /**
@@ -211,6 +321,13 @@ public class MessageDispatcher implements IMessageDispatcher {
             }
             messagesProcessed = 0;
         }
+    }
+
+    private boolean isSupportedAndActive(TorrentId torrentId) {
+        Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrentId);
+        // it's OK if descriptor is not present -- torrent might be being fetched at the time
+        return torrentRegistry.getTorrentIds().contains(torrentId)
+                && (!descriptor.isPresent() || descriptor.get().isActive());
     }
 
     @Override
