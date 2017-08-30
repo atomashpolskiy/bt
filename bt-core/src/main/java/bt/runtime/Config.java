@@ -60,7 +60,7 @@ public class Config {
         this.transferBlockSize = 8 * 1024; // 8 KB
         this.maxTransferBlockSize = 128 * 1024; // 128 KB
         this.maxIOQueueSize = 1000;
-        this.shutdownHookTimeout = Duration.ofSeconds(5);
+        this.shutdownHookTimeout = Duration.ofSeconds(30);
         this.numOfHashingThreads = 1; // do not parallelize by default
         this.maxConcurrentlyActivePeerConnectionsPerTorrent = 20;
         this.maxPieceReceivingTime = Duration.ofSeconds(30);
