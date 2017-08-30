@@ -15,6 +15,7 @@ import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.net.MessageDispatcher;
 import bt.net.PeerConnectionPool;
+import bt.net.SharedSelector;
 import bt.peer.IPeerRegistry;
 import bt.peer.PeerRegistry;
 import bt.peer.PeerSourceFactory;
@@ -180,10 +181,10 @@ public class ServiceModule implements Module {
     @Provides
     @Singleton
     @PeerConnectionSelector
-    public Selector provideSelector(IRuntimeLifecycleBinder lifecycleBinder) {
-        Selector selector;
+    public SharedSelector provideSelector(IRuntimeLifecycleBinder lifecycleBinder) {
+        SharedSelector selector;
         try {
-            selector = Selector.open();
+            selector = new SharedSelector(Selector.open());
         } catch (IOException e) {
             throw new RuntimeException("Failed to get I/O selector", e);
         }

@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
@@ -45,25 +44,21 @@ public class MessageDispatcher implements IMessageDispatcher {
     private final Map<Peer, Collection<Supplier<Message>>> suppliers;
 
     private TorrentRegistry torrentRegistry;
-    private Selector selector;
-
-    private Queue<PeerMessage> messages;
 
     @Inject
     public MessageDispatcher(IRuntimeLifecycleBinder lifecycleBinder,
                              IPeerConnectionPool pool,
                              TorrentRegistry torrentRegistry,
-                             @PeerConnectionSelector Selector selector,
+                             @PeerConnectionSelector SharedSelector selector,
                              Config config) {
 
         this.consumers = new ConcurrentHashMap<>();
         this.suppliers = new ConcurrentHashMap<>();
         this.torrentRegistry = torrentRegistry;
-        this.selector = selector;
-        this.messages = new LinkedBlockingQueue<>();
 
+        Queue<PeerMessage> messages = new LinkedBlockingQueue<>(); // shared message queue
         initializeMessageLoop(lifecycleBinder, pool, messages, config);
-        initializeMessageReceiver(lifecycleBinder, messages);
+        initializeMessageReceiver(selector, lifecycleBinder, messages);
     }
 
     private void initializeMessageLoop(IRuntimeLifecycleBinder lifecycleBinder,
@@ -83,11 +78,13 @@ public class MessageDispatcher implements IMessageDispatcher {
         });
     }
 
-    private void initializeMessageReceiver(IRuntimeLifecycleBinder lifecycleBinder, Queue<PeerMessage> messages) {
+    private void initializeMessageReceiver(SharedSelector selector,
+                                           IRuntimeLifecycleBinder lifecycleBinder,
+                                           Queue<PeerMessage> messages) {
         ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.net.message-receiver"));
         BiConsumer<Peer, Message> messageSink = (peer, message) ->
                 messages.add(new PeerMessage(Objects.requireNonNull(peer), Objects.requireNonNull(message)));
-        MessageReceivingLoop loop = new MessageReceivingLoop(messageSink);
+        MessageReceivingLoop loop = new MessageReceivingLoop(selector, messageSink);
         lifecycleBinder.onStartup("Initialize message receiver", () -> executor.execute(loop));
         lifecycleBinder.onShutdown("Shutdown message receiver", () -> {
             try {
@@ -118,10 +115,12 @@ public class MessageDispatcher implements IMessageDispatcher {
 
     private class MessageReceivingLoop implements Runnable {
 
+        private final SharedSelector selector;
         private final BiConsumer<Peer, Message> messageSink;
         private volatile boolean shutdown;
 
-        MessageReceivingLoop(BiConsumer<Peer, Message> messageSink) {
+        MessageReceivingLoop(SharedSelector selector, BiConsumer<Peer, Message> messageSink) {
+            this.selector = selector;
             this.messageSink = messageSink;
         }
 
@@ -148,12 +147,6 @@ public class MessageDispatcher implements IMessageDispatcher {
                             LOGGER.error("Failed to process key", e);
                         }
                     });
-                }
-
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
                 }
             }
         }

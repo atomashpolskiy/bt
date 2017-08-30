@@ -66,7 +66,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                               IPeerRegistry peerRegistry,
                               TorrentRegistry torrentRegistry,
                               EventSink eventSink,
-                              @PeerConnectionSelector Selector selector,
+                              @PeerConnectionSelector SharedSelector selector,
                               IConnectionHandlerFactory connectionHandlerFactory,
                               IRuntimeLifecycleBinder lifecycleBinder,
                               Config config) {
