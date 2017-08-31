@@ -86,7 +86,9 @@ class DefaultMessageReader implements Supplier<Message> {
             } catch (IOException e) {
                 throw new BtException("Unexpected error when reading message", e);
             }
-            if (read > 0) {
+            if (read == -1) {
+                throw new BtException("Reached end of stream");
+            } else if (read > 0) {
                 message = readMessageFromBuffer();
                 if (message == null && !buffer.hasRemaining()) {
                     compactBuffer(buffer, dataOffset);

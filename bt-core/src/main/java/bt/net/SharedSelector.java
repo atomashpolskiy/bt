@@ -7,6 +7,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Selector decorator with some convenient extensions, like {@link #wakeupAndRegister(SelectableChannel, int, Object)}.
@@ -16,10 +17,11 @@ import java.util.Set;
 public class SharedSelector extends Selector {
 
     private final Selector delegate;
-    private volatile boolean registrationInProgress;
+    private final ReentrantLock registrationLock;
 
     public SharedSelector(Selector delegate) {
         this.delegate = delegate;
+        this.registrationLock = new ReentrantLock();
     }
 
     @Override
@@ -44,17 +46,32 @@ public class SharedSelector extends Selector {
 
     @Override
     public int selectNow() throws IOException {
-        return registrationInProgress ? 0 : delegate.selectNow();
+        registrationLock.lock();
+        try {
+            return delegate.selectNow();
+        } finally {
+            registrationLock.unlock();
+        }
     }
 
     @Override
     public int select(long timeout) throws IOException {
-        return registrationInProgress ? 0 : delegate.select(timeout);
+        registrationLock.lock();
+        try {
+            return delegate.select(timeout);
+        } finally {
+            registrationLock.unlock();
+        }
     }
 
     @Override
     public int select() throws IOException {
-        return registrationInProgress ? 0 : delegate.select();
+        registrationLock.lock();
+        try {
+            return delegate.select();
+        } finally {
+            registrationLock.unlock();
+        }
     }
 
     @Override
@@ -68,14 +85,15 @@ public class SharedSelector extends Selector {
      * @since 1.5
      */
     public void wakeupAndRegister(SelectableChannel channel, int ops, Object attachment) {
-        registrationInProgress = true;
-        try {
+        while (!registrationLock.tryLock()) {
             delegate.wakeup();
+        }
+        try {
             channel.register(delegate, ops, attachment);
         } catch (ClosedChannelException e) {
             throw new RuntimeException("Failed to register channel", e);
         } finally {
-            registrationInProgress = false;
+            registrationLock.unlock();
         }
     }
 

@@ -14,11 +14,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -133,59 +133,74 @@ public class MessageDispatcher implements IMessageDispatcher {
                 }
 
                 try {
-                    selector.select();
+                    while (selector.select() == 0 && selector.selectedKeys().isEmpty()) {
+                        Thread.yield();
+                    }
                 } catch (IOException e) {
                     throw new RuntimeException("Unexpected I/O exception when selecting peer connections", e);
                 }
 
-                Set<SelectionKey> selectedKeys = selector.selectedKeys();
-                if (!selectedKeys.isEmpty()) {
-                    selectedKeys.forEach(key -> {
-                        try {
-                            processKey(key);
-                        } catch (Exception e) {
-                            LOGGER.error("Failed to process key", e);
+                Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
+                while (selectedKeys.hasNext()) {
+                    try {
+                        if (processKey(selectedKeys.next())) {
+                            selectedKeys.remove();
                         }
-                    });
+                    } catch (Exception e) {
+                        LOGGER.error("Failed to process key", e);
+                        selectedKeys.remove();
+                    }
                 }
             }
         }
 
-        private void processKey(SelectionKey key) {
+        /**
+         * @return true, if the key has been processed and can be removed
+         */
+        private boolean processKey(SelectionKey key) {
             Object obj = key.attachment();
             if (obj == null || !(obj instanceof PeerConnection)) {
                 LOGGER.warn("Unexpected attachment in selection key: {}. Skipping..", obj);
-                return;
+                return false;
             }
 
             PeerConnection connection = (PeerConnection) obj;
             Peer peer = connection.getRemotePeer();
             if (!key.isValid() || !key.isReadable()) {
                 LOGGER.warn("Selected connection for peer {}, but the key is cancelled or read op is not indicated. Skipping..", peer);
-                return;
+                return false;
             }
 
-            if (!connection.isClosed()) {
-                TorrentId torrentId = connection.getTorrentId();
-                if (torrentId != null && isSupportedAndActive(torrentId)) {
-                    while (true) {
-                        Message message;
-                        try {
-                            message = connection.readMessageNow();
-                        } catch (Exception e) {
-                            key.cancel();
-                            throw new RuntimeException("Error when reading message from peer: " + peer, e);
-                        }
-                        if (message == null) {
-                            break;
-                        } else {
-                            messageSink.accept(peer, message);
-                        }
-                    }
-                }
-            } else {
-                key.cancel();
+            if (connection.isClosed()) {
+                LOGGER.warn("Selected connection for peer {}, but the connection has already been closed. Skipping..", peer);
+                return false;
             }
+
+            TorrentId torrentId = connection.getTorrentId();
+            if (torrentId == null) {
+                LOGGER.warn("Selected connection for peer {}, but the connection does not indicate a torrent ID. Skipping..", peer);
+                return false;
+            } else if (!isSupportedAndActive(torrentId)) {
+                LOGGER.warn("Selected connection for peer {}, but the torrent ID is unknown or inactive: {}. Skipping..", peer, torrentId);
+                return false;
+            }
+
+            while (true) {
+                Message message = null;
+                try {
+                    message = connection.readMessageNow();
+                } catch (Exception e) {
+                    LOGGER.error("Error when reading message from peer: " + peer, e);
+                    connection.closeQuietly();
+                    key.cancel();
+                }
+                if (message == null) {
+                    break;
+                } else {
+                    messageSink.accept(peer, message);
+                }
+            }
+            return true;
         }
 
         public void shutdown() {

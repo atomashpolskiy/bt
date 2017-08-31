@@ -7,6 +7,7 @@ import bt.torrent.TorrentRegistry;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -44,7 +45,7 @@ public class ConnectionHandlerFactory implements IConnectionHandlerFactory {
 
     @Override
     public ConnectionHandler getOutgoingHandler(TorrentId torrentId) {
-
+        Objects.requireNonNull(torrentId, "Missing torrent ID");
         ConnectionHandler outgoing = outgoingHandlers.get(torrentId);
         if (outgoing == null) {
             outgoing = new OutgoingHandshakeHandler(handshakeFactory, torrentId,

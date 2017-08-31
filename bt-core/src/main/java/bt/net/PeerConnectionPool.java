@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.time.Duration;
@@ -47,7 +46,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private Config config;
     private IPeerRegistry peerRegistry;
     private PeerConnectionFactory connectionFactory;
-    private IConnectionHandlerFactory connectionHandlerFactory;
+
     private EventSink eventSink;
 
     private ExecutorService executor;
@@ -77,9 +76,9 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         SocketChannelFactory socketChannelFactory =
                 new SocketChannelFactory(selector, config.getAcceptorAddress(), config.getAcceptorPort());
-        this.connectionFactory = new PeerConnectionFactory(messageHandler, socketChannelFactory, torrentRegistry, selector, config);
+        this.connectionFactory = new PeerConnectionFactory(messageHandler, socketChannelFactory,
+                connectionHandlerFactory, torrentRegistry, selector, config);
 
-        this.connectionHandlerFactory = connectionHandlerFactory;
         this.peerConnectionInactivityThreshold = config.getPeerConnectionInactivityThreshold();
 
         this.pendingConnections = new ConcurrentHashMap<>();
@@ -149,15 +148,14 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 return connection;
             }
 
-            ConnectionHandler connectionHandler = connectionHandlerFactory.getOutgoingHandler(torrentId);
             connection = CompletableFuture.supplyAsync(() -> {
                 try {
-                    DefaultPeerConnection newConnection = connectionFactory.createOutgoingConnection(peer, torrentId);
+                    DefaultPeerConnection newConnection = connectionFactory.createOutgoingConnection(peer, torrentId)
+                            .orElseThrow(() -> new BtException("Failed to initialize new connection for peer: " + peer));
 
-                    if (!initConnection(newConnection, connectionHandler, true)) {
-                        throw new BtException("Failed to initialize new connection for peer: " + peer);
-                    }
-                    return Optional.of((PeerConnection) connections.get(newConnection.getRemotePeer()));
+                    newConnection = addOrGetExisting(newConnection);
+
+                    return Optional.of((PeerConnection)newConnection);
                 } catch (IOException e) {
                     throw new BtException("Failed to create new outgoing connection for peer: " + peer, e);
                 } finally {
@@ -181,7 +179,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
             pendingConnections.put(peer, connection);
             return connection;
-
         }
     }
 
@@ -272,6 +269,64 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         }
     }
 
+    private void acceptIncomingConnection(SocketChannel incomingChannel) {
+        executor.execute(() -> {
+            try {
+                Peer peer = peerRegistry.getPeerForAddress((InetSocketAddress) incomingChannel.getRemoteAddress());
+                DefaultPeerConnection incomingConnection = connectionFactory.createIncomingConnection(peer, incomingChannel)
+                        .orElseThrow(() -> new BtException("Failed to initialize new connection for peer: " + peer));
+                addOrGetExisting(incomingConnection);
+            } catch (IOException e) {
+                LOGGER.error("Failed to process incoming connection", e);
+            }
+        });
+    }
+
+    private DefaultPeerConnection addOrGetExisting(DefaultPeerConnection newConnection) {
+        if (!addConnectionIfAbsent(newConnection)) {
+            // check if it was already added simultaneously by another connection worker
+            DefaultPeerConnection existingConnection = connections.get(newConnection.getRemotePeer());
+            if (existingConnection == null) {
+                throw new BtException("Failed to add new connection for peer: " + newConnection.getRemotePeer());
+            }
+            newConnection = existingConnection;
+        }
+        return newConnection;
+    }
+
+    private boolean addConnectionIfAbsent(DefaultPeerConnection newConnection) {
+        boolean added = false;
+        DefaultPeerConnection existingConnection = null;
+
+        cleanerLock.lock();
+        try {
+            if (connections.size() >= config.getMaxPeerConnections()) {
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Closing newly created connection with {} due to exceeding of connections limit",
+                            newConnection.getRemotePeer());
+                }
+                newConnection.closeQuietly();
+            } else {
+                existingConnection = connections.putIfAbsent(newConnection.getRemotePeer(), newConnection);
+                added = (existingConnection == null);
+            }
+        } finally {
+            cleanerLock.unlock();
+        }
+        if (existingConnection != null) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Connection already exists for peer: " + newConnection.getRemotePeer());
+            }
+            newConnection.closeQuietly();
+            newConnection = existingConnection;
+        }
+
+        if (added) {
+            eventSink.firePeerConnected(newConnection.getTorrentId(), newConnection.getRemotePeer());
+        }
+        return added;
+    }
+
     private class Cleaner implements Runnable {
 
         private final Duration unreachablePeerBanDuration;
@@ -327,70 +382,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 cleanerLock.unlock();
             }
         }
-    }
-
-    private void acceptIncomingConnection(SocketChannel incomingChannel) {
-        executor.execute(() -> {
-            try {
-                Peer peer = peerRegistry.getPeerForAddress((InetSocketAddress) incomingChannel.getRemoteAddress());
-                DefaultPeerConnection incomingConnection = connectionFactory.createIncomingConnection(peer, incomingChannel);
-                initConnection(incomingConnection, connectionHandlerFactory.getIncomingHandler(), true);
-            } catch (IOException e) {
-                LOGGER.error("Failed to process incoming connection", e);
-            }
-        });
-    }
-
-    private boolean initConnection(DefaultPeerConnection newConnection, ConnectionHandler connectionHandler, boolean shouldNotifyListeners) {
-        boolean success = connectionHandler.handleConnection(newConnection);
-        if (success) {
-            success = addConnection(newConnection, shouldNotifyListeners);
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Successfully performed handshake for connection, remote peer: " +
-                        newConnection.getRemotePeer() + "; handshake handler: " + connectionHandler.getClass().getName());
-            }
-        } else {
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Failed to perform handshake for connection, remote peer: " +
-                        newConnection.getRemotePeer() + "; handshake handler: " + connectionHandler.getClass().getName());
-            }
-            newConnection.closeQuietly();
-        }
-        return success;
-    }
-
-    private boolean addConnection(DefaultPeerConnection newConnection, boolean shouldNotifyListeners) {
-
-        boolean added = false;
-        DefaultPeerConnection existingConnection = null;
-
-        cleanerLock.lock();
-        try {
-            if (connections.size() >= config.getMaxPeerConnections()) {
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Closing newly created connection with {} due to exceeding of connections limit",
-                            newConnection.getRemotePeer());
-                }
-                newConnection.closeQuietly();
-            } else {
-                existingConnection = connections.putIfAbsent(newConnection.getRemotePeer(), newConnection);
-                added = (existingConnection == null);
-            }
-        } finally {
-            cleanerLock.unlock();
-        }
-        if (existingConnection != null) {
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Connection already exists for peer: " + newConnection.getRemotePeer());
-            }
-            newConnection.closeQuietly();
-            newConnection = existingConnection;
-        }
-
-        if (added && shouldNotifyListeners) {
-            eventSink.firePeerConnected(newConnection.getTorrentId(), newConnection.getRemotePeer());
-        }
-        return added;
     }
 
     private void purgeConnectionWithPeer(Peer peer) {
