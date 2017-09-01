@@ -133,7 +133,8 @@ public class MessageDispatcher implements IMessageDispatcher {
                 }
 
                 try {
-                    while (selector.select() == 0 && selector.selectedKeys().isEmpty()) {
+                    // wakeup periodically to check if there are unprocessed keys left
+                    while (selector.select(1000) == 0 && selector.selectedKeys().isEmpty()) {
                         Thread.yield();
                     }
                 } catch (IOException e) {
@@ -143,6 +144,8 @@ public class MessageDispatcher implements IMessageDispatcher {
                 Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
                 while (selectedKeys.hasNext()) {
                     try {
+                        // do not remove the key if it hasn't been processed,
+                        // we'll try again in the next loop iteration
                         if (processKey(selectedKeys.next())) {
                             selectedKeys.remove();
                         }
