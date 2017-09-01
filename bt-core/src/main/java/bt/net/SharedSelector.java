@@ -7,7 +7,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Set;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Selector decorator with some convenient extensions, like {@link #wakeupAndRegister(SelectableChannel, int, Object)}.
@@ -17,11 +17,12 @@ import java.util.concurrent.locks.ReentrantLock;
 public class SharedSelector extends Selector {
 
     private final Selector delegate;
-    private final ReentrantLock registrationLock;
+    private final ReentrantReadWriteLock registrationLock;
+    private volatile boolean selectInProgress;
 
     public SharedSelector(Selector delegate) {
         this.delegate = delegate;
-        this.registrationLock = new ReentrantLock();
+        this.registrationLock = new ReentrantReadWriteLock();
     }
 
     @Override
@@ -46,31 +47,37 @@ public class SharedSelector extends Selector {
 
     @Override
     public int selectNow() throws IOException {
-        registrationLock.lock();
+        registrationLock.writeLock().lock();
         try {
+            selectInProgress = true;
             return delegate.selectNow();
         } finally {
-            registrationLock.unlock();
+            selectInProgress = false;
+            registrationLock.writeLock().unlock();
         }
     }
 
     @Override
     public int select(long timeout) throws IOException {
-        registrationLock.lock();
+        registrationLock.writeLock().lock();
         try {
+            selectInProgress = true;
             return delegate.select(timeout);
         } finally {
-            registrationLock.unlock();
+            selectInProgress = false;
+            registrationLock.writeLock().unlock();
         }
     }
 
     @Override
     public int select() throws IOException {
-        registrationLock.lock();
+        registrationLock.writeLock().lock();
         try {
+            selectInProgress = true;
             return delegate.select();
         } finally {
-            registrationLock.unlock();
+            selectInProgress = false;
+            registrationLock.writeLock().unlock();
         }
     }
 
@@ -85,15 +92,20 @@ public class SharedSelector extends Selector {
      * @since 1.5
      */
     public void wakeupAndRegister(SelectableChannel channel, int ops, Object attachment) {
-        while (!registrationLock.tryLock()) {
-            delegate.wakeup();
+        while (!registrationLock.readLock().tryLock()) {
+            // try to prevent lots of wakeup calls,
+            // when multiple channels are being registered simultaneously;
+            // no guarantees though
+            if (selectInProgress) {
+                delegate.wakeup();
+            }
         }
         try {
             channel.register(delegate, ops, attachment);
         } catch (ClosedChannelException e) {
             throw new RuntimeException("Failed to register channel", e);
         } finally {
-            registrationLock.unlock();
+            registrationLock.readLock().unlock();
         }
     }
 
