@@ -27,6 +27,7 @@ public class UdpTrackerFactory implements TrackerFactory {
 
     @Override
     public Tracker getTracker(String trackerUrl) {
-        return new UdpTracker(idService, lifecycleBinder, config.getAcceptorAddress(), config.getAcceptorPort(), trackerUrl);
+        return new UdpTracker(idService, lifecycleBinder, config.getAcceptorAddress(), config.getAcceptorPort(),
+                config.getNumberOfPeersToRequestFromTracker(), trackerUrl);
     }
 }

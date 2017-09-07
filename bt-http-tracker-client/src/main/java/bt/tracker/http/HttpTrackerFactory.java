@@ -21,6 +21,7 @@ public class HttpTrackerFactory implements TrackerFactory {
     private IPeerRegistry peerRegistry;
     private EncryptionPolicy encryptionPolicy;
     private InetAddress localAddress;
+    private int numberOfPeersToRequestFromTracker;
 
     @Inject
     public HttpTrackerFactory(IdentityService idService, IPeerRegistry peerRegistry, Config config) {
@@ -28,10 +29,12 @@ public class HttpTrackerFactory implements TrackerFactory {
         this.peerRegistry = peerRegistry;
         this.encryptionPolicy = config.getEncryptionPolicy();
         this.localAddress = config.getAcceptorAddress();
+        this.numberOfPeersToRequestFromTracker = config.getNumberOfPeersToRequestFromTracker();
     }
 
     @Override
     public Tracker getTracker(String trackerUrl) {
-        return new HttpTracker(trackerUrl, idService, peerRegistry, encryptionPolicy, localAddress);
+        return new HttpTracker(trackerUrl, idService, peerRegistry, encryptionPolicy, localAddress,
+                numberOfPeersToRequestFromTracker);
     }
 }

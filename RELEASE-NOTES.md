@@ -9,6 +9,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 #### Changes/New Features:
 
 * Introduce a unified, centralized mechanism for publishing/receiving events
+* Introduce a processing stage listener mechanism
 
 #### Bug Fixes/Improvements:
 
@@ -18,6 +19,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * DefaultClient state fix when client is stopped [PR#37](https://github.com/atomashpolskiy/bt/pull/37)
 * Announce stats to tracker on start, stop, complete
 * Use I/O selector for receiving incoming messages
+* Allow to override the number of peers to request from a tracker
 
 ## 1.4.1
 

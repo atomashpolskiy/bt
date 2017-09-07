@@ -29,6 +29,7 @@ class UdpTracker implements Tracker {
 
     private IdentityService idService;
     private int listeningPort;
+    private int numberOfPeersToRequestFromTracker;
     private URL trackerUrl;
     private UdpMessageWorker worker;
 
@@ -41,9 +42,11 @@ class UdpTracker implements Tracker {
                       IRuntimeLifecycleBinder lifecycleBinder,
                       InetAddress localAddress,
                       int listeningPort,
+                      int numberOfPeersToRequestFromTracker,
                       String trackerUrl) {
         this.idService = idService;
         this.listeningPort = listeningPort;
+        this.numberOfPeersToRequestFromTracker = numberOfPeersToRequestFromTracker;
         // TODO: one UDP socket for all outgoing tracker connections
         this.trackerUrl = toUrl(trackerUrl);
         this.worker = new UdpMessageWorker(new InetSocketAddress(localAddress, 0), getSocketAddress(this.trackerUrl), lifecycleBinder);
@@ -113,6 +116,7 @@ class UdpTracker implements Tracker {
                 request.setDownloaded(getDownloaded());
                 request.setUploaded(getUploaded());
                 request.setLeft(getLeft());
+                request.setNumwant(numberOfPeersToRequestFromTracker);
 
                 getRequestString(trackerUrl).ifPresent(request::setRequestString);
                 if (LOGGER.isDebugEnabled()) {

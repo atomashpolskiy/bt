@@ -44,6 +44,7 @@ public class HttpTracker implements Tracker {
     private IdentityService idService;
     private IPeerRegistry peerRegistry;
     private EncryptionPolicy encryptionPolicy;
+    private int numberOfPeersToRequestFromTracker;
     private HttpClient httpClient;
     private CommonsHttpResponseHandler httpResponseHandler;
 
@@ -58,7 +59,8 @@ public class HttpTracker implements Tracker {
                        IdentityService idService,
                        IPeerRegistry peerRegistry,
                        EncryptionPolicy encryptionPolicy,
-                       InetAddress localAddress) {
+                       InetAddress localAddress,
+                       int numberOfPeersToRequestFromTracker) {
         try {
             this.baseUri = new URI(trackerUrl);
         } catch (URISyntaxException e) {
@@ -68,6 +70,7 @@ public class HttpTracker implements Tracker {
         this.idService = idService;
         this.peerRegistry = peerRegistry;
         this.encryptionPolicy = encryptionPolicy;
+        this.numberOfPeersToRequestFromTracker = numberOfPeersToRequestFromTracker;
         this.httpClient = buildClient(localAddress);
         this.httpResponseHandler = new CommonsHttpResponseHandler(new bt.tracker.http.HttpResponseHandler());
 
@@ -165,7 +168,8 @@ public class HttpTracker implements Tracker {
         buf.append(requestBuilder.getLeft());
 
         buf.append("&compact=1");
-        buf.append("&numwant=50");
+        buf.append("&numwant=");
+        buf.append(numberOfPeersToRequestFromTracker);
 
         Optional<SecretKey> secretKey = idService.getSecretKey();
         if (secretKey.isPresent()) {

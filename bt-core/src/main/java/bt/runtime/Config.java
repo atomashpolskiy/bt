@@ -39,6 +39,7 @@ public class Config {
     private int metadataExchangeBlockSize;
     private int metadataExchangeMaxSize;
     private int msePrivateKeySize;
+    private int numberOfPeersToRequestFromTracker;
 
     /**
      * Create a config with default parameters.
@@ -72,6 +73,7 @@ public class Config {
         this.metadataExchangeBlockSize = 16 * 1024; // 16 KB
         this.metadataExchangeMaxSize = 2 * 1024 * 1024; // 2 MB
         this.msePrivateKeySize = 20; // 20 bytes
+        this.numberOfPeersToRequestFromTracker = 50;
     }
 
     /**
@@ -107,6 +109,7 @@ public class Config {
         this.metadataExchangeBlockSize = config.getMetadataExchangeBlockSize();
         this.metadataExchangeMaxSize = config.getMetadataExchangeMaxSize();
         this.msePrivateKeySize = config.getMsePrivateKeySize();
+        this.numberOfPeersToRequestFromTracker = config.getNumberOfPeersToRequestFromTracker();
     }
 
     /**
@@ -520,6 +523,7 @@ public class Config {
     /**
      * @param msePrivateKeySize MSE private key size in bytes.
      *                          Allowed values are 16..512 bytes (128..4096 bits). Default is 20 bytes (160 bit).
+     * @since 1.3
      */
     public void setMsePrivateKeySize(int msePrivateKeySize) {
         this.msePrivateKeySize = msePrivateKeySize;
@@ -530,5 +534,20 @@ public class Config {
      */
     public int getMsePrivateKeySize() {
         return msePrivateKeySize;
+    }
+
+    /**
+     * @param numberOfPeersToRequestFromTracker Number of peers to request from a tracker
+     * @since 1.5
+     */
+    public void setNumberOfPeersToRequestFromTracker(int numberOfPeersToRequestFromTracker) {
+        this.numberOfPeersToRequestFromTracker = numberOfPeersToRequestFromTracker;
+    }
+
+    /**
+     * @since 1.5
+     */
+    public int getNumberOfPeersToRequestFromTracker() {
+        return numberOfPeersToRequestFromTracker;
     }
 }

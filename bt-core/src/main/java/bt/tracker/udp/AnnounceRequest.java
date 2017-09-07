@@ -33,6 +33,7 @@ class AnnounceRequest extends UdpTrackerMessage {
     private long downloaded;
     private long left;
     private long uploaded;
+    private int numwant;
     private EventType eventType;
     private short listeningPort;
     private String requestString;
@@ -61,6 +62,10 @@ class AnnounceRequest extends UdpTrackerMessage {
         this.uploaded = uploaded;
     }
 
+    public void setNumwant(int numwant) {
+        this.numwant = numwant;
+    }
+
     public void setEventType(EventType eventType) {
         this.eventType = eventType;
     }
@@ -83,7 +88,7 @@ class AnnounceRequest extends UdpTrackerMessage {
         out.write(Protocols.getIntBytes(Objects.requireNonNull(eventType).code()));
         out.write(Protocols.getIntBytes(0)); // local ip
         out.write(Protocols.getIntBytes(0)); // secret key
-        out.write(Protocols.getIntBytes(50)); // numwant
+        out.write(Protocols.getIntBytes(numwant)); // numwant
         out.write(Protocols.getShortBytes(listeningPort));
 
         // extensions
