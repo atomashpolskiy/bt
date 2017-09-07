@@ -23,7 +23,6 @@ public class MyModule implements Module {
 ```
 * New centralized mechanism was introduced for publishing/receiving events. It's represented by two DI services: `bt.event.EventSink` for publishing and `bt.event.EventSource` for subscriptions. Core services, that previously provided a custom API for subscribing to events, were updated to use the new mechanism, and the old methods and interfaces have been removed, namely:
     - `bt.net.PeerActivityListener` removed
-    - `bt.torrent.TorrentSession` does not implement ``bt.net.PeerActivityListener` anymore
     - methods were removed in `bt.peer.IPeerRegistry`:
         - `addPeerConsumer(Torrent torrent, Consumer<Peer> consumer)`
         - `addPeerConsumer(TorrentId torrentId, Consumer<Peer> consumer)`
@@ -31,5 +30,6 @@ public class MyModule implements Module {
         - `removePeerConsumers(TorrentId torrentId)`
     - method was removed in `bt.net.IPeerConnectionPool`:
         - `addConnectionListener(PeerActivityListener listener)`
-* `bt.runtime.BtClient#getSession()` now returns a `java.util.Optional`, which is going to be empty until the session is created
-* `bt.torrent.TorrentSession#getTorrent()` now returns a `java.util.Optional`, which is going to be empty until the metadata is fetched
+* `bt.torrent.TorrentSession` and `bt.runtime.BtClient#getSession()` have been removed. Here's what to use to get the information, that could previously be retrieved from the session:
+  - Torrent ID and Torrent object: use `bt.TorrentClientBuilder#afterTorrentFetched(Consumer<Torrent>)` to be notified, when the torrent is fetched
+  - Session state: use asynchronous listener via `bt.runtime.BtClient#startAsync(java.util.function.Consumer<bt.torrent.TorrentSessionState>, long)`

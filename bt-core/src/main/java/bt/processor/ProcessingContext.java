@@ -2,7 +2,7 @@ package bt.processor;
 
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.torrent.TorrentSession;
+import bt.torrent.TorrentSessionState;
 
 import java.util.Optional;
 
@@ -12,5 +12,5 @@ public interface ProcessingContext {
 
     Optional<Torrent> getTorrent();
 
-    Optional<TorrentSession> getSession();
+    Optional<TorrentSessionState> getState();
 }

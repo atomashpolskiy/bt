@@ -7,9 +7,9 @@ import bt.processor.ProcessingStage;
 import bt.processor.listener.ProcessingEvent;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
+import bt.torrent.TrackerAnnouncer;
 import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
-import bt.torrent.TrackerAnnouncer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +41,7 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
         Torrent torrent = context.getTorrent().get();
         Optional<AnnounceKey> announceKey = torrent.getAnnounceKey();
         if (announceKey.isPresent()) {
-            TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, torrent, announceKey.get(), context.getSession().get().getState());
+            TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, torrent, announceKey.get(), context.getState().get());
             context.setAnnouncer(announcer);
         }
 
@@ -53,7 +53,7 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
             while (descriptor.isActive()) {
                 try {
                     Thread.sleep(1000);
-                    if (context.getSession().get().getState().getPiecesRemaining() == 0) {
+                    if (context.getState().get().getPiecesRemaining() == 0) {
                         descriptor.complete();
                         return;
                     }
@@ -66,7 +66,7 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
 
         future = future.thenRunAsync(() -> {
             // might have been stopped externally before the torrent was actually completed
-            if (context.getSession().get().getState().getPiecesRemaining() == 0) {
+            if (context.getState().get().getPiecesRemaining() == 0) {
                 complete(context);
             }
         }, executor);

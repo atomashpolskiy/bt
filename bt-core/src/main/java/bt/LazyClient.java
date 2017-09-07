@@ -1,10 +1,8 @@
 package bt;
 
 import bt.runtime.BtClient;
-import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -54,14 +52,6 @@ class LazyClient implements BtClient {
             return;
         }
         delegate.stop();
-    }
-
-    @Override
-    public Optional<TorrentSession> getSession() {
-        if (delegate == null) {
-            initClient();
-        }
-        return delegate.getSession();
     }
 
     @Override

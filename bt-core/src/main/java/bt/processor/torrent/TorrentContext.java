@@ -6,11 +6,11 @@ import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.processor.ProcessingContext;
 import bt.torrent.BitfieldBasedStatistics;
-import bt.torrent.TorrentSession;
+import bt.torrent.TorrentSessionState;
+import bt.torrent.TrackerAnnouncer;
 import bt.torrent.messaging.Assignments;
 import bt.torrent.messaging.MessageRouter;
 import bt.torrent.selector.PieceSelector;
-import bt.torrent.TrackerAnnouncer;
 
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -24,7 +24,7 @@ public class TorrentContext implements ProcessingContext {
     /* all of these can be missing, depending on which stage is currently being executed */
     private volatile TorrentId torrentId;
     private volatile Torrent torrent;
-    private volatile TorrentSession session;
+    private volatile TorrentSessionState state;
     private volatile MessageRouter router;
     private volatile Bitfield bitfield;
     private volatile Assignments assignments;
@@ -67,17 +67,17 @@ public class TorrentContext implements ProcessingContext {
         return Optional.ofNullable(torrent);
     }
 
+    @Override
+    public Optional<TorrentSessionState> getState() {
+        return Optional.ofNullable(state);
+    }
+
+    public void setState(TorrentSessionState state) {
+        this.state = state;
+    }
+
     public void setTorrent(Torrent torrent) {
         this.torrent = torrent;
-    }
-
-    @Override
-    public Optional<TorrentSession> getSession() {
-        return Optional.ofNullable(session);
-    }
-
-    public void setSession(TorrentSession session) {
-        this.session = session;
     }
 
     public MessageRouter getRouter() {

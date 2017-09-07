@@ -1,8 +1,10 @@
 package bt.torrent.messaging;
 
 import bt.data.Bitfield;
+import bt.event.EventSource;
 import bt.metainfo.TorrentId;
 import bt.net.IMessageDispatcher;
+import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Interested;
@@ -43,9 +45,11 @@ public class TorrentWorker {
     private IMessageDispatcher dispatcher;
     private Config config;
 
+    private final IPeerConnectionPool connectionPool;
     private IPeerWorkerFactory peerWorkerFactory;
     private ConcurrentMap<Peer, PieceAnnouncingPeerWorker> peerMap;
     private final int MAX_CONCURRENT_ACTIVE_CONNECTIONS;
+    private final int MAX_TOTAL_CONNECTIONS;
     private Map<Peer, Long> timeoutedPeers;
     private Queue<Peer> disconnectedPeers;
     private Map<Peer, Message> interestUpdates;
@@ -57,18 +61,22 @@ public class TorrentWorker {
 
     public TorrentWorker(TorrentId torrentId,
                          IMessageDispatcher dispatcher,
+                         IPeerConnectionPool connectionPool,
                          IPeerWorkerFactory peerWorkerFactory,
                          Supplier<Bitfield> bitfieldSupplier,
                          Supplier<Assignments> assignmentsSupplier,
                          Supplier<BitfieldBasedStatistics> statisticsSupplier,
+                         EventSource eventSource,
                          Config config) {
         this.torrentId = torrentId;
         this.dispatcher = dispatcher;
         this.config = config;
 
+        this.connectionPool = connectionPool;
         this.peerWorkerFactory = peerWorkerFactory;
         this.peerMap = new ConcurrentHashMap<>();
         this.MAX_CONCURRENT_ACTIVE_CONNECTIONS = config.getMaxConcurrentlyActivePeerConnectionsPerTorrent();
+        this.MAX_TOTAL_CONNECTIONS = config.getMaxPeerConnectionsPerTorrent();
         this.timeoutedPeers = new ConcurrentHashMap<>();
         this.disconnectedPeers = new LinkedBlockingQueue<>();
         this.interestUpdates = new ConcurrentHashMap<>();
@@ -76,6 +84,24 @@ public class TorrentWorker {
         this.bitfieldSupplier = bitfieldSupplier;
         this.assignmentsSupplier = assignmentsSupplier;
         this.statisticsSupplier = statisticsSupplier;
+
+        eventSource.onPeerDiscovered(e -> {
+            if (torrentId.equals(e.getTorrentId())) {
+                onPeerDiscovered(e.getPeer());
+            }
+        });
+
+        eventSource.onPeerConnected(e -> {
+            if (torrentId.equals(e.getTorrentId())) {
+                onPeerConnected(e.getPeer());
+            }
+        });
+
+        eventSource.onPeerDisconnected(e -> {
+            if (torrentId.equals(e.getTorrentId())) {
+                onPeerDisconnected(e.getPeer());
+            }
+        });
     }
 
     private Bitfield getBitfield() {
@@ -361,5 +387,27 @@ public class TorrentWorker {
         Queue<Have> getPieceAnnouncements() {
             return pieceAnnouncements;
         }
+    }
+
+    private synchronized void onPeerDiscovered(Peer peer) {
+        // TODO: Store discovered peers to use them later,
+        // when some of the currently connected peers disconnects
+        if (mightAddPeer(peer)) {
+            connectionPool.requestConnection(torrentId, peer);
+        }
+    }
+
+    private synchronized void onPeerConnected(Peer peer) {
+        if (mightAddPeer(peer)) {
+            addPeer(peer);
+        }
+    }
+
+    private boolean mightAddPeer(Peer peer) {
+        return getPeers().size() < MAX_TOTAL_CONNECTIONS && !getPeers().contains(peer);
+    }
+
+    private synchronized void onPeerDisconnected(Peer peer) {
+        removePeer(peer);
     }
 }

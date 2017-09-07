@@ -7,7 +7,6 @@ import bt.processor.listener.ListenerSource;
 import bt.runtime.BtClient;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
-import bt.torrent.TorrentSession;
 import bt.torrent.TorrentSessionState;
 
 import java.util.Optional;
@@ -73,9 +72,9 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
 
     private void notifyListener() {
         if (listener.isPresent()) {
-            Optional<TorrentSession> session = getSession();
-            if (session.isPresent()) {
-                listener.get().accept(session.get().getState());
+            Optional<TorrentSessionState> state = context.getState();
+            if (state.isPresent()) {
+                listener.get().accept(state.get());
             }
         }
     }
@@ -120,11 +119,6 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
             future.ifPresent(future -> future.complete(null));
             started = false;
         }
-    }
-
-    @Override
-    public Optional<TorrentSession> getSession() {
-        return context.getSession();
     }
 
     @Override

@@ -10,12 +10,11 @@ import bt.processor.ProcessingStage;
 import bt.processor.listener.ProcessingEvent;
 import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
+import bt.torrent.DefaultTorrentSessionState;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
-import bt.torrent.TorrentSession;
 import bt.torrent.messaging.Assignments;
 import bt.torrent.messaging.DefaultMessageRouter;
-import bt.torrent.messaging.DefaultTorrentSession;
 import bt.torrent.messaging.IPeerWorkerFactory;
 import bt.torrent.messaging.MessageRouter;
 import bt.torrent.messaging.PeerWorkerFactory;
@@ -60,13 +59,10 @@ public class CreateSessionStage<C extends TorrentContext> extends BaseProcessing
         Supplier<Bitfield> bitfieldSupplier = context::getBitfield;
         Supplier<Assignments> assignmentsSupplier = context::getAssignments;
         Supplier<BitfieldBasedStatistics> statisticsSupplier = context::getPieceStatistics;
-        TorrentWorker torrentWorker = new TorrentWorker(torrentId, messageDispatcher, peerWorkerFactory,
-                bitfieldSupplier, assignmentsSupplier, statisticsSupplier, config);
+        TorrentWorker torrentWorker = new TorrentWorker(torrentId, messageDispatcher, connectionPool, peerWorkerFactory,
+                bitfieldSupplier, assignmentsSupplier, statisticsSupplier, eventSource, config);
 
-        TorrentSession session = new DefaultTorrentSession(connectionPool, torrentRegistry, eventSource,
-                torrentWorker, torrentId, descriptor, config.getMaxPeerConnectionsPerTorrent());
-
-        context.setSession(session);
+        context.setState(new DefaultTorrentSessionState(descriptor, torrentWorker));
         context.setRouter(router);
     }
 
