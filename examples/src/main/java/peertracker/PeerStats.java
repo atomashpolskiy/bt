@@ -1,5 +1,6 @@
 package peertracker;
 
+import bt.event.PeerBitfieldUpdatedEvent;
 import bt.event.PeerConnectedEvent;
 import bt.event.PeerDisconnectedEvent;
 import bt.event.PeerDiscoveredEvent;
@@ -7,6 +8,7 @@ import bt.net.Peer;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class PeerStats {
@@ -15,6 +17,8 @@ public class PeerStats {
         private final AtomicLong discoveredTimes = new AtomicLong();
         private final AtomicLong connectedTimes = new AtomicLong();
         private final AtomicLong disconnectedTimes = new AtomicLong();
+        private final AtomicInteger piecesCompleted = new AtomicInteger();
+        private final AtomicInteger piecesRemaining = new AtomicInteger();
 
         public void incrementDiscovered() {
             discoveredTimes.addAndGet(1);
@@ -28,6 +32,14 @@ public class PeerStats {
             disconnectedTimes.addAndGet(1);
         }
 
+        public void setPiecesCompleted(int piecesCompleted) {
+            this.piecesCompleted.set(piecesCompleted);
+        }
+
+        public void setPiecesRemaining(int piecesRemaining) {
+            this.piecesRemaining.set(piecesRemaining);
+        }
+
         public long getDiscoveredTimes() {
             return discoveredTimes.get();
         }
@@ -38,6 +50,14 @@ public class PeerStats {
 
         public long getDisconnectedTimes() {
             return disconnectedTimes.get();
+        }
+
+        public int getPiecesCompleted() {
+            return piecesCompleted.get();
+        }
+
+        public int getPiecesRemaining() {
+            return piecesRemaining.get();
         }
     }
 
@@ -53,6 +73,12 @@ public class PeerStats {
 
     public void onPeerDisconnected(PeerDisconnectedEvent event) {
         getCounter(event.getPeer()).incrementDisconnected();
+    }
+
+    public void onPeerBitfieldUpdated(PeerBitfieldUpdatedEvent event) {
+        Counter counter = getCounter(event.getPeer());
+        counter.setPiecesCompleted(event.getBitfield().getPiecesComplete());
+        counter.setPiecesRemaining(event.getBitfield().getPiecesRemaining());
     }
 
     private Counter getCounter(Peer peer) {

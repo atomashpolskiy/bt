@@ -136,6 +136,7 @@ public class Main {
         runtime.getEventSource()
                 .onPeerDiscovered(perTorrentStats::onPeerDiscovered)
                 .onPeerConnected(perTorrentStats::onPeerConnected)
-                .onPeerDisconnected(perTorrentStats::onPeerDisconnected);
+                .onPeerDisconnected(perTorrentStats::onPeerDisconnected)
+                .onPeerBitfieldUpdated(perTorrentStats::onPeerBitfieldUpdated);
     }
 }

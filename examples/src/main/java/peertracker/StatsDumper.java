@@ -46,8 +46,13 @@ public class StatsDumper {
                         Peer peer = e2.getKey();
                         PeerStats.Counter counter = e2.getValue();
 
-                        w.write(String.format("\t(%50s)\ttimes discovered: %6d,\ttimes connected: %6d,\ttimes disconnected: %6d",
-                                peer, counter.getDiscoveredTimes(), counter.getConnectedTimes(), counter.getDisconnectedTimes()));
+                        long discovered = counter.getDiscoveredTimes();
+                        long connected = counter.getConnectedTimes();
+                        long disconnected = counter.getDisconnectedTimes();
+                        String available = (connected == 0) ? "-" : getAvailableDataPercentage(counter) + "%";
+
+                        w.write(String.format("\t(%50s)\tdata available: %4s\ttimes discovered: %6d,\ttimes connected: %6d,\ttimes disconnected: %6d",
+                                peer, available, discovered, connected, disconnected));
                         w.newLine();
                     }
                     w.newLine();
@@ -74,5 +79,19 @@ public class StatsDumper {
                 tempFile.delete();
             }
         }
+    }
+
+    private int getAvailableDataPercentage(PeerStats.Counter counter) {
+        int completed = counter.getPiecesCompleted();
+        int remaining = counter.getPiecesRemaining();
+        if (counter.getPiecesCompleted() == 0) {
+            return 0;
+        } else if (counter.getPiecesRemaining() == 0) {
+            return 100;
+        }
+
+        int total = remaining + completed;
+        System.out.println("Total: " + total + ", completed: " + completed + ", remaining: " + remaining);
+        return (counter.getPiecesCompleted() / total) * 100;
     }
 }

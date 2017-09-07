@@ -13,19 +13,19 @@ magnet:?xt=urn:btih:47c1eb4b8ece4286e70ab7359d7c4c39b7fc9d32&tr=udp%3A%2F%2Ftrac
 Every 15 seconds the program will dump peer stats to a file `stats.txt` in current working directory. Example of file content:
 
 ```
-Uptime: PT30.023S
+Uptime: PT15.004S
 
-[f1a8e486ee924735e3295f016a6bc92d95c58f23]	total known peers:    150
-	(                               /80.216.7.246:10452)	times discovered:      5,	times connected:      0,	times disconnected:      0
-	(                                    /93.44.93.22:1)	times discovered:      5,	times connected:      0,	times disconnected:      0
-	(                              /77.131.74.145:41819)	times discovered:      5,	times connected:      0,	times disconnected:      0
-	(                             /190.192.187.24:17308)	times discovered:      5,	times connected:      0,	times disconnected:      0
-	(                              /190.153.80.67:52690)	times discovered:      5,	times connected:      0,	times disconnected:      0
-	(                                  /212.16.20.246:1)	times discovered:      5,	times connected:      0,	times disconnected:      0
-	(                              /87.69.209.225:34250)	times discovered:      5,	times connected:      0,	times disconnected:      0
-	(                                  /190.80.95.211:1)	times discovered:      5,	times connected:      0,	times disconnected:      0
-	(                                 /186.90.251.212:1)	times discovered:      5,	times connected:      0,	times disconnected:      0
-	(                                  /77.250.172.29:1)	times discovered:      5,	times connected:      0,	times disconnected:      0
-	(                                  /94.66.220.101:1)	times discovered:      5,	times connected:      0,	times disconnected:      0
+[f7a8e486ee974735e3295f896a6bc92d95c58f42]	total known peers:    149
+	(                               /189.6.17.246:27417)	data available:    -	times discovered:      1,	times connected:      0,	times disconnected:      0
+	(                             /185.193.184.13:16837)	data available:    -	times discovered:      1,	times connected:      0,	times disconnected:      0
+	(                                   /46.116.78.47:1)	data available:    -	times discovered:      1,	times connected:      0,	times disconnected:      0
+	(                             /130.105.197.39:64960)	data available:    -	times discovered:      1,	times connected:      0,	times disconnected:      0
+	(                              /178.143.2.201:20303)	data available:    -	times discovered:      1,	times connected:      0,	times disconnected:      0
+	(                               /189.82.9.155:54270)	data available: 100%	times discovered:      1,	times connected:      1,	times disconnected:      0
+	(                             /24.209.224.237:38729)	data available:    -	times discovered:      1,	times connected:      0,	times disconnected:      0
+	(                               /94.65.64.215:15925)	data available:    -	times discovered:      1,	times connected:      0,	times disconnected:      0
+	(                             /103.198.97.104:17638)	data available:    -	times discovered:      1,	times connected:      0,	times disconnected:      0
+	(                             /187.59.205.216:19667)	data available:    -	times discovered:      1,	times connected:      0,	times disconnected:      0
+	(                              /78.141.77.236:24874)	data available:    -	times discovered:      1,	times connected:      0,	times disconnected:      0
 	...
 ```
