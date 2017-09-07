@@ -40,10 +40,16 @@ A full-featured BitTorrent implementation in Java 8
     </a>
 </p>
 
-* **[CLI](https://github.com/atomashpolskiy/bt/tree/master/bt-cli)** – command-line downloader
 * **[HOME](http://atomashpolskiy.github.io/bt/)** – website with documentation and tutorials
 * **[FORUM](https://groups.google.com/forum/#!forum/bttorrent)** – Google group for support and feedback
 * **[LICENSE](https://github.com/atomashpolskiy/bt/blob/master/LICENSE)** – licensed under Apache License 2.0
+
+## Runnable apps and demos
+
+* **[CLI](https://github.com/atomashpolskiy/bt/tree/master/bt-cli)** – command-line downloader
+* **[PEER TRACKER](https://github.com/atomashpolskiy/bt/tree/master/examples/src/main/java/peertracker)** – tracking of swarm statistics via events
+* **[YOURIP MESSENGER](https://github.com/atomashpolskiy/bt/tree/master/examples/src/main/java/yourip)** – usage of custom messages
+
 
 ## Prerequisites
 
