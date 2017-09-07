@@ -1,5 +1,7 @@
 package bt.torrent.messaging;
 
+import bt.event.EventSink;
+import bt.net.Peer;
 import bt.protocol.Bitfield;
 import bt.protocol.Have;
 import bt.torrent.BitfieldBasedStatistics;
@@ -18,20 +20,27 @@ public class BitfieldConsumer {
 
     private bt.data.Bitfield bitfield;
     private BitfieldBasedStatistics pieceStatistics;
+    private EventSink eventSink;
 
-    public BitfieldConsumer(bt.data.Bitfield bitfield, BitfieldBasedStatistics pieceStatistics) {
+    public BitfieldConsumer(bt.data.Bitfield bitfield, BitfieldBasedStatistics pieceStatistics, EventSink eventSink) {
         this.bitfield = bitfield;
         this.pieceStatistics = pieceStatistics;
+        this.eventSink = eventSink;
     }
 
     @Consumes
     public void consume(Bitfield bitfieldMessage, MessageContext context) {
+        Peer peer = context.getPeer();
         bt.data.Bitfield peerBitfield = new bt.data.Bitfield(bitfieldMessage.getBitfield(), bitfield.getPiecesTotal());
-        pieceStatistics.addBitfield(context.getPeer(), peerBitfield);
+        pieceStatistics.addBitfield(peer, peerBitfield);
+        eventSink.firePeerBitfieldUpdated(context.getTorrentId().get(), peer, peerBitfield);
     }
 
     @Consumes
     public void consume(Have have, MessageContext context) {
-        pieceStatistics.addPiece(context.getPeer(), have.getPieceIndex());
+        Peer peer = context.getPeer();
+        pieceStatistics.addPiece(peer, have.getPieceIndex());
+        pieceStatistics.getPeerBitfield(peer).ifPresent(
+                bitfield -> eventSink.firePeerBitfieldUpdated(context.getTorrentId().get(), peer, bitfield));
     }
 }

@@ -1,5 +1,6 @@
 package bt.processor;
 
+import bt.event.EventSink;
 import bt.event.EventSource;
 import bt.metainfo.IMetadataService;
 import bt.module.ClientExecutor;
@@ -39,6 +40,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
     private Set<Object> messagingAgents;
     private IMetadataService metadataService;
     private EventSource eventSource;
+    private EventSink eventSink;
     private Config config;
 
     private final Map<Class<?>, ProcessingStage<?>> processors;
@@ -54,6 +56,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
                                    @MessagingAgents Set<Object> messagingAgents,
                                    IMetadataService metadataService,
                                    EventSource eventSource,
+                                   EventSink eventSink,
                                    Config config) {
         this.torrentRegistry = torrentRegistry;
         this.dataWorkerFactory = dataWorkerFactory;
@@ -65,6 +68,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         this.messagingAgents = messagingAgents;
         this.metadataService = metadataService;
         this.eventSource = eventSource;
+        this.eventSink = eventSink;
         this.config = config;
 
         this.processors = processors();
@@ -84,7 +88,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         ProcessingStage<TorrentContext> stage3 = new ProcessTorrentStage<>(null, torrentRegistry, trackerService, executor);
 
         ProcessingStage<TorrentContext> stage2 = new InitializeTorrentProcessingStage<>(stage3, torrentRegistry,
-                dataWorkerFactory, config);
+                dataWorkerFactory, eventSink, config);
 
         ProcessingStage<TorrentContext> stage1 = new CreateSessionStage<>(stage2, torrentRegistry, eventSource,
                 connectionPool, messageDispatcher, messagingAgents, config);
@@ -99,7 +103,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         ProcessingStage<MagnetContext> stage3 = new ProcessMagnetTorrentStage(null, torrentRegistry, trackerService, executor);
 
         ProcessingStage<MagnetContext> stage2 = new InitializeMagnetTorrentProcessingStage(stage3, torrentRegistry,
-                dataWorkerFactory, config);
+                dataWorkerFactory, eventSink, config);
 
         ProcessingStage<MagnetContext> stage1 = new FetchMetadataStage(stage2, metadataService, torrentRegistry,
                 trackerService, peerRegistry, config);

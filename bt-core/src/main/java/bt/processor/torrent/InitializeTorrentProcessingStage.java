@@ -1,6 +1,7 @@
 package bt.processor.torrent;
 
 import bt.data.Bitfield;
+import bt.event.EventSink;
 import bt.metainfo.Torrent;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
@@ -28,15 +29,18 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
 
     private TorrentRegistry torrentRegistry;
     private IDataWorkerFactory dataWorkerFactory;
+    private EventSink eventSink;
     private Config config;
 
     public InitializeTorrentProcessingStage(ProcessingStage<C> next,
                                             TorrentRegistry torrentRegistry,
                                             IDataWorkerFactory dataWorkerFactory,
+                                            EventSink eventSink,
                                             Config config) {
         super(next);
         this.torrentRegistry = torrentRegistry;
         this.dataWorkerFactory = dataWorkerFactory;
+        this.eventSink = eventSink;
         this.config = config;
     }
 
@@ -54,7 +58,7 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
         Assignments assignments = new Assignments(bitfield, selector, pieceStatistics, config);
 
         context.getRouter().registerMessagingAgent(GenericConsumer.consumer());
-        context.getRouter().registerMessagingAgent(new BitfieldConsumer(bitfield, pieceStatistics));
+        context.getRouter().registerMessagingAgent(new BitfieldConsumer(bitfield, pieceStatistics, eventSink));
         context.getRouter().registerMessagingAgent(new PieceConsumer(bitfield, dataWorker));
         context.getRouter().registerMessagingAgent(new PeerRequestConsumer(dataWorker));
         context.getRouter().registerMessagingAgent(new RequestProducer(descriptor.getDataDescriptor()));

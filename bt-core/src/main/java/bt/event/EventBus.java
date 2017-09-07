@@ -1,7 +1,10 @@
 package bt.event;
 
+import bt.data.Bitfield;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,6 +13,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 
 public class EventBus implements EventSink, EventSource {
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventBus.class);
 
     private final ConcurrentMap<Class<? extends BaseEvent>, Collection<Consumer<? extends BaseEvent>>> listeners;
 
@@ -46,6 +50,15 @@ public class EventBus implements EventSink, EventSource {
         if (hasListeners(PeerDisconnectedEvent.class)) {
             long id = nextId();
             fireEvent(new PeerDisconnectedEvent(id, timestamp, torrentId, peer));
+        }
+    }
+
+    @Override
+    public void firePeerBitfieldUpdated(TorrentId torrentId, Peer peer, Bitfield bitfield) {
+        long timestamp = System.currentTimeMillis();
+        if (hasListeners(PeerBitfieldUpdatedEvent.class)) {
+            long id = nextId();
+            fireEvent(new PeerBitfieldUpdatedEvent(id, timestamp, torrentId, peer, bitfield));
         }
     }
 
@@ -92,6 +105,12 @@ public class EventBus implements EventSink, EventSource {
         return this;
     }
 
+    @Override
+    public EventSource onPeerBitfieldUpdated(Consumer<PeerBitfieldUpdatedEvent> listener) {
+        addListener(PeerBitfieldUpdatedEvent.class, listener);
+        return this;
+    }
+
     private <E extends BaseEvent> void addListener(Class<E> eventType, Consumer<E> listener) {
         Collection<Consumer<? extends BaseEvent>> listeners = this.listeners.get(eventType);
         if (listeners == null) {
@@ -104,7 +123,14 @@ public class EventBus implements EventSink, EventSource {
 
         eventLock.writeLock().lock();
         try {
-            listeners.add(listener);
+            Consumer<E> safeListener = e -> {
+                try {
+                    listener.accept(e);
+                } catch (Exception e1) {
+                    LOGGER.error("Listener invocation failed", e);
+                }
+            };
+            listeners.add(safeListener);
         } finally {
             eventLock.writeLock().unlock();
         }
