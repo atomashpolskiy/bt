@@ -4,6 +4,7 @@ import bt.data.Bitfield;
 import bt.metainfo.Torrent;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
+import bt.processor.listener.ProcessingEvent;
 import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.TorrentDescriptor;
@@ -76,5 +77,10 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
 
     private DataWorker createDataWorker(TorrentDescriptor descriptor) {
         return dataWorkerFactory.createWorker(descriptor.getDataDescriptor());
+    }
+
+    @Override
+    public ProcessingEvent after() {
+        return null;
     }
 }

@@ -2,6 +2,7 @@ package bt.processor.magnet;
 
 import bt.data.Bitfield;
 import bt.processor.ProcessingStage;
+import bt.processor.listener.ProcessingEvent;
 import bt.processor.torrent.InitializeTorrentProcessingStage;
 import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
@@ -47,5 +48,10 @@ public class InitializeMagnetTorrentProcessingStage extends InitializeTorrentPro
         // unregistering only now, so that there were no gaps in bitifield receiving
         context.getRouter().unregisterMessagingAgent(context.getBitfieldConsumer());
         context.setBitfieldConsumer(null); // mark for gc collection
+    }
+
+    @Override
+    public ProcessingEvent after() {
+        return null;
     }
 }

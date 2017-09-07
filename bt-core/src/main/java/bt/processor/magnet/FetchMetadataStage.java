@@ -9,6 +9,7 @@ import bt.net.InetPeer;
 import bt.peer.IPeerRegistry;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
+import bt.processor.listener.ProcessingEvent;
 import bt.runtime.Config;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
@@ -140,5 +141,10 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
             torrent = delegate;
         }
         return torrent;
+    }
+
+    @Override
+    public ProcessingEvent after() {
+        return ProcessingEvent.TORRENT_FETCHED;
     }
 }

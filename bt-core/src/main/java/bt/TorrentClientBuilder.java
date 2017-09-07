@@ -6,6 +6,9 @@ import bt.magnet.MagnetUriParser;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
 import bt.processor.ProcessingContext;
+import bt.processor.ProcessingStage;
+import bt.processor.listener.ListenerSource;
+import bt.processor.listener.ProcessingEvent;
 import bt.processor.magnet.MagnetContext;
 import bt.processor.torrent.TorrentContext;
 import bt.runtime.BtRuntime;
@@ -16,7 +19,11 @@ import bt.torrent.selector.SelectorAdapter;
 import bt.torrent.selector.SequentialSelector;
 
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseClientBuilder<B> {
@@ -28,6 +35,8 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
     private MagnetUri magnetUri;
 
     private PieceSelector pieceSelector;
+
+    private List<Consumer<Torrent>> torrentConsumers;
 
     /**
      * @since 1.4
@@ -158,6 +167,15 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
        return selector(RarestFirstSelector.randomizedRarest());
     }
 
+    @SuppressWarnings("unchecked")
+    public B afterTorrentFetched(Consumer<Torrent> torrentConsumer) {
+        if (torrentConsumers == null) {
+            torrentConsumers = new ArrayList<>();
+        }
+        torrentConsumers.add(torrentConsumer);
+        return (B) this;
+    }
+
     @Override
     protected ProcessingContext buildProcessingContext(BtRuntime runtime) {
         Objects.requireNonNull(storage, "Missing data storage");
@@ -174,6 +192,20 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
         }
 
         return context;
+    }
+
+    @Override
+    protected <C extends ProcessingContext> void collectStageListeners(ListenerSource<C> listenerSource) {
+        if (torrentConsumers != null) {
+            BiFunction<C, ProcessingStage<C>, ProcessingStage<C>> listener = (context, next) -> {
+                Torrent torrent = context.getTorrent().get();
+                for (Consumer<Torrent> torrentConsumer : torrentConsumers) {
+                    torrentConsumer.accept(torrent);
+                }
+                return next;
+            };
+            listenerSource.addListener(ProcessingEvent.TORRENT_FETCHED, listener);
+        }
     }
 
     private Torrent fetchTorrentFromUrl(BtRuntime runtime, URL metainfoUrl) {

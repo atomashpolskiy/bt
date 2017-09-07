@@ -4,6 +4,7 @@ import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
+import bt.processor.listener.ProcessingEvent;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.tracker.AnnounceKey;
@@ -128,5 +129,10 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
     private TorrentDescriptor getDescriptor(TorrentId torrentId) {
         return torrentRegistry.getDescriptor(torrentId)
                 .orElseThrow(() -> new IllegalStateException("No descriptor present for torrent ID: " + torrentId));
+    }
+
+    @Override
+    public ProcessingEvent after() {
+        return null;
     }
 }

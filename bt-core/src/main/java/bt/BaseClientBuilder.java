@@ -4,6 +4,7 @@ import bt.module.ClientExecutor;
 import bt.processor.ProcessingContext;
 import bt.processor.ProcessingStage;
 import bt.processor.ProcessorFactory;
+import bt.processor.listener.ListenerSource;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 import bt.torrent.TorrentRegistry;
@@ -77,14 +78,23 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
         @SuppressWarnings("unchecked")
         Class<C> contextType = (Class<C>) context.getClass();
 
+        ListenerSource<C> listenerSource = new ListenerSource<>(contextType);
+        collectStageListeners(listenerSource);
+
         BtClient client = new DefaultClient<>(
                 getExecutor(runtime),
                 runtime.service(TorrentRegistry.class),
                 processor(runtime, contextType),
+                listenerSource,
                 context);
 
         return new RuntimeAwareClient(runtime, client);
     }
+
+    /**
+     * @since 1.5
+     */
+    protected abstract <C extends ProcessingContext> void collectStageListeners(ListenerSource<C> listenerSource);
 
     private <C extends ProcessingContext> ProcessingStage<C> processor(BtRuntime runtime, Class<C> contextType) {
         ProcessingStage<C> processor = runtime.service(ProcessorFactory.class).processor(contextType);

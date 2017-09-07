@@ -1,6 +1,7 @@
 package bt.processor.magnet;
 
 import bt.processor.ProcessingStage;
+import bt.processor.listener.ProcessingEvent;
 import bt.processor.torrent.ProcessTorrentStage;
 import bt.torrent.TorrentRegistry;
 import bt.tracker.ITrackerService;
@@ -19,5 +20,10 @@ public class ProcessMagnetTorrentStage extends ProcessTorrentStage<MagnetContext
     @Override
     protected void onStarted(MagnetContext context) {
         // do not announce start, as it should have been done already per FetchMetadataStage
+    }
+
+    @Override
+    public ProcessingEvent after() {
+        return null;
     }
 }

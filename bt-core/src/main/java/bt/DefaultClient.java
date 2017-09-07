@@ -3,6 +3,7 @@ package bt;
 import bt.processor.ChainProcessor;
 import bt.processor.ProcessingContext;
 import bt.processor.ProcessingStage;
+import bt.processor.listener.ListenerSource;
 import bt.runtime.BtClient;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
@@ -28,6 +29,7 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
     private TorrentRegistry torrentRegistry;
 
     private ProcessingStage<C> processor;
+    private ListenerSource<C> listenerSource;
     private C context;
     private Optional<CompletableFuture<?>> future;
     private Optional<Consumer<TorrentSessionState>> listener;
@@ -38,16 +40,15 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
 
     private volatile boolean started;
 
-    /**
-     * @since 1.0
-     */
     public DefaultClient(ExecutorService executor,
                          TorrentRegistry torrentRegistry,
                          ProcessingStage<C> processor,
+                         ListenerSource<C> listenerSource,
                          C context) {
         this.torrentRegistry = torrentRegistry;
         this.executor = executor;
         this.processor = processor;
+        this.listenerSource = listenerSource;
         this.context = context;
 
         this.future = Optional.empty();
@@ -97,7 +98,7 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
 
     private CompletableFuture<?> doStart() {
         CompletableFuture<?> future = CompletableFuture.runAsync(
-                () -> ChainProcessor.execute(processor, context), executor);
+                () -> ChainProcessor.execute(processor, context, listenerSource), executor);
 
         future.whenComplete((r, t) -> notifyListener())
                 .whenComplete((r, t) -> listenerFuture.ifPresent(listener -> listener.cancel(true)))

@@ -7,6 +7,7 @@ import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
 import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
+import bt.processor.listener.ProcessingEvent;
 import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.TorrentDescriptor;
@@ -67,5 +68,10 @@ public class CreateSessionStage<C extends TorrentContext> extends BaseProcessing
 
         context.setSession(session);
         context.setRouter(router);
+    }
+
+    @Override
+    public ProcessingEvent after() {
+        return null;
     }
 }
