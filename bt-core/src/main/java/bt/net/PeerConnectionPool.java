@@ -156,7 +156,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                     newConnection = addOrGetExisting(newConnection);
 
                     return Optional.of((PeerConnection)newConnection);
-                } catch (IOException e) {
+                } catch (Exception e) {
+                    LOGGER.error("Failed to create new outgoing connection for peer: " + peer, e);
                     throw new BtException("Failed to create new outgoing connection for peer: " + peer, e);
                 } finally {
                     synchronized (pendingConnections) {
@@ -271,13 +272,21 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     private void acceptIncomingConnection(SocketChannel incomingChannel) {
         executor.execute(() -> {
+            Peer peer = null;
             try {
-                Peer peer = peerRegistry.getPeerForAddress((InetSocketAddress) incomingChannel.getRemoteAddress());
-                DefaultPeerConnection incomingConnection = connectionFactory.createIncomingConnection(peer, incomingChannel)
-                        .orElseThrow(() -> new BtException("Failed to initialize new connection for peer: " + peer));
-                addOrGetExisting(incomingConnection);
-            } catch (IOException e) {
-                LOGGER.error("Failed to process incoming connection", e);
+                peer = peerRegistry.getPeerForAddress((InetSocketAddress) incomingChannel.getRemoteAddress());
+                Optional<DefaultPeerConnection> incomingConnection = connectionFactory.createIncomingConnection(peer, incomingChannel);
+                if (incomingConnection.isPresent()) {
+                    addOrGetExisting(incomingConnection.get());
+                } else {
+                    throw new BtException("Failed to initialize new connection for peer: " + peer);
+                }
+            } catch (Exception e) {
+                if (peer == null) {
+                    LOGGER.error("Failed to process incoming connection", e);
+                } else {
+                    LOGGER.error("Failed to process incoming connection from peer: " + peer, e);
+                }
             }
         });
     }

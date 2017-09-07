@@ -70,7 +70,10 @@ public class EncryptedChannel implements ByteChannel {
             }
             src.put(bytes);
             src.position(position);
-            written = delegate.write(src);
+            while (src.hasRemaining()) {
+                // write fully
+                written += delegate.write(src);
+            }
         }
         return written;
     }
