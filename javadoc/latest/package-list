@@ -16,6 +16,7 @@ bt.net.extended
 bt.peer
 bt.peerexchange
 bt.processor
+bt.processor.listener
 bt.processor.magnet
 bt.processor.torrent
 bt.protocol
