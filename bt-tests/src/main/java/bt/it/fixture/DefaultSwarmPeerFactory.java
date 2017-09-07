@@ -7,7 +7,6 @@ import bt.runtime.Config;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.util.PrimitiveIterator;
 import java.util.function.Supplier;
@@ -58,12 +57,7 @@ class DefaultSwarmPeerFactory implements SwarmPeerFactory {
     }
 
     protected static InetAddress localhostAddress() {
-        try {
-            return Inet4Address.getLocalHost();
-        } catch (UnknownHostException e) {
-            // not going to happen
-            throw new RuntimeException("Unexpected error", e);
-        }
+        return Inet4Address.getLoopbackAddress();
     }
 
     private Path createLocalRoot(int port) {
