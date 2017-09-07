@@ -41,14 +41,16 @@ A full-featured BitTorrent implementation in Java 8
 </p>
 
 * **[HOME](http://atomashpolskiy.github.io/bt/)** – website with documentation and tutorials
+* **[RELEASE NOTES](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.md#bt-release-notes)** – list of features, bugfixes and improments for each version
+* **[UPGRADE INSTRUCTIONS](https://github.com/atomashpolskiy/bt/blob/master/UPGRADE.md#upgrade-instructions)** – version migration guide
 * **[FORUM](https://groups.google.com/forum/#!forum/bttorrent)** – Google group for support and feedback
 * **[LICENSE](https://github.com/atomashpolskiy/bt/blob/master/LICENSE)** – licensed under Apache License 2.0
 
 ## Runnable apps and demos
 
-* **[CLI](https://github.com/atomashpolskiy/bt/tree/master/bt-cli)** – command-line downloader
-* **[PEER TRACKER](https://github.com/atomashpolskiy/bt/tree/master/examples/src/main/java/peertracker)** – tracking of swarm statistics via events
-* **[YOURIP MESSENGER](https://github.com/atomashpolskiy/bt/tree/master/examples/src/main/java/yourip)** – usage of custom messages
+* **[CLI](https://github.com/atomashpolskiy/bt/tree/master/bt-cli#simple-command-line-torrent-downloader)** – command-line downloader
+* **[PEER TRACKER](https://github.com/atomashpolskiy/bt/tree/master/examples/src/main/java/peertracker#peer-tracker)** – tracking of swarm statistics via events
+* **[YOURIP MESSENGER](https://github.com/atomashpolskiy/bt/tree/master/examples/src/main/java/yourip#yourip-messenger)** – usage of custom messages
 
 
 ## Prerequisites
@@ -160,7 +162,7 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 
 ### And much more...
 
-* _**check out [Release Notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.md) for details!**_
+* _**check out [Release Notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.md#bt-release-notes) for details!**_
 
 ## Support and feedback
 
