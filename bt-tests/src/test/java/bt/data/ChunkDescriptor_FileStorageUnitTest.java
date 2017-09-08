@@ -41,6 +41,8 @@ public class ChunkDescriptor_FileStorageUnitTest {
         this.dataDescriptorFactory = new DataDescriptorFactory(verifier, transferBlockSize);
     }
 
+    /**************************************************************************************/
+
     private byte[] SINGLE_FILE = new byte[] {
             1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,
             1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,
@@ -104,6 +106,40 @@ public class ChunkDescriptor_FileStorageUnitTest {
         assertFileHasContents(new File(storage.getRoot(), fileName), SINGLE_FILE);
     }
 
+    /**************************************************************************************/
+
+    private DataDescriptor createDataDescriptor_SingleEmptyFile(String fileName) {
+
+        long chunkSize = 16;
+        long fileSize = 0;
+
+        byte[][] chunkHashes = new byte[0][];
+        Torrent torrent = mockTorrent(fileName, fileSize, chunkSize, chunkHashes,
+                mockTorrentFile(fileSize, fileName));
+
+        DataDescriptor descriptor = dataDescriptorFactory.createDescriptor(torrent, storage);
+        assertEquals(0, descriptor.getChunkDescriptors().size());
+
+        return descriptor;
+    }
+
+    @Test
+    public void testDescriptors_WriteSingleEmptyFile() {
+
+        String fileName = "1-single-empty.bin";
+        DataDescriptor descriptor = createDataDescriptor_SingleEmptyFile(fileName);
+        List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
+        assertTrue(chunks.isEmpty());
+        assertEquals(0, descriptor.getBitfield().getPiecesRemaining());
+        assertEquals(0, descriptor.getBitfield().getPiecesTotal());
+        assertEquals(0, descriptor.getBitfield().getPiecesComplete());
+        assertEquals(0, descriptor.getBitfield().getBitmask().length);
+
+        assertFileHasContents(new File(storage.getRoot(), fileName), new byte[0]);
+    }
+
+    /**************************************************************************************/
+
     @Test
     public void testDescriptors_ReadSingleFile() {
 
@@ -131,6 +167,8 @@ public class ChunkDescriptor_FileStorageUnitTest {
         block = chunks.get(0).getData().getSubrange(1, 14).getBytes();
         assertArrayEquals(Arrays.copyOfRange(SINGLE_FILE, 1, 15), block);
     }
+
+    /**************************************************************************************/
 
     private byte[] MULTI_FILE_1 = new byte[] {
             1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,
@@ -279,6 +317,71 @@ public class ChunkDescriptor_FileStorageUnitTest {
         assertFileHasContents(new File(torrentDirectory, fileName5), MULTI_FILE_5);
         assertFileHasContents(new File(torrentDirectory, fileName6), MULTI_FILE_6);
     }
+
+    /**************************************************************************************/
+
+    private DataDescriptor createDataDescriptor_MultiEmptyFile(String fileName1, String fileName2, String fileName3,
+                                                               String fileName4, String fileName5, String fileName6,
+                                                               File parentDirectory) {
+
+        String torrentName = parentDirectory.getName();
+
+        long chunkSize = 16;
+        long torrentSize = 0;
+        long fileSize1 = 0,
+             fileSize2 = 0,
+             fileSize3 = 0,
+             fileSize4 = 0,
+             fileSize5 = 0,
+             fileSize6 = 0;
+
+        // sanity check
+        assertEquals(torrentSize, fileSize1 + fileSize2 + fileSize3 + fileSize4 + fileSize5 + fileSize6);
+
+        byte[][] chunkHashes = new byte[0][];
+
+        Torrent torrent = mockTorrent(torrentName, torrentSize, chunkSize, chunkHashes,
+                mockTorrentFile(fileSize1, fileName1), mockTorrentFile(fileSize2, fileName2),
+                mockTorrentFile(fileSize3, fileName3), mockTorrentFile(fileSize4, fileName4),
+                mockTorrentFile(fileSize5, fileName5), mockTorrentFile(fileSize6, fileName6));
+
+        DataDescriptor descriptor = dataDescriptorFactory.createDescriptor(torrent, storage);
+        assertEquals(0, descriptor.getChunkDescriptors().size());
+
+        return descriptor;
+    }
+
+    @Test
+    public void testDescriptors_WriteMultiEmptyFile() {
+
+        String torrentName = "xyz-torrent";
+        File torrentDirectory = new File(storage.getRoot(), torrentName);
+        String extension = "-multi.bin";
+
+        String fileName1 = 1 + extension,
+               fileName2 = 2 + extension,
+               fileName3 = 3 + extension,
+               fileName4 = 4 + extension,
+               fileName5 = 5 + extension,
+               fileName6 = 6 + extension;
+
+        DataDescriptor descriptor = createDataDescriptor_MultiEmptyFile(fileName1, fileName2, fileName3, fileName4,
+                fileName5, fileName6, torrentDirectory);
+        assertTrue(descriptor.getChunkDescriptors().isEmpty());
+        assertEquals(0, descriptor.getBitfield().getPiecesRemaining());
+        assertEquals(0, descriptor.getBitfield().getPiecesTotal());
+        assertEquals(0, descriptor.getBitfield().getPiecesComplete());
+        assertEquals(0, descriptor.getBitfield().getBitmask().length);
+
+        assertFileHasContents(new File(torrentDirectory, fileName1), new byte[0]);
+        assertFileHasContents(new File(torrentDirectory, fileName2), new byte[0]);
+        assertFileHasContents(new File(torrentDirectory, fileName3), new byte[0]);
+        assertFileHasContents(new File(torrentDirectory, fileName4), new byte[0]);
+        assertFileHasContents(new File(torrentDirectory, fileName5), new byte[0]);
+        assertFileHasContents(new File(torrentDirectory, fileName6), new byte[0]);
+    }
+
+    /**************************************************************************************/
 
     @Test
     public void testDescriptors_ReadMultiFile() {

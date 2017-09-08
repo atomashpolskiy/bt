@@ -48,30 +48,47 @@ class DefaultDataDescriptor implements DataDescriptor {
             transferBlockSize = chunkSize;
         }
 
-        Iterator<byte[]> chunkHashes = torrent.getChunkHashes().iterator();
-        this.storageUnits = files.stream().map(f -> storage.getUnit(torrent, f)).collect(Collectors.toList());
-
-        long limitInLastUnit = storageUnits.get(storageUnits.size() - 1).capacity();
-        DataRange data = new ReadWriteDataRange(storageUnits, 0, limitInLastUnit);
-
         int chunksTotal = (int) Math.ceil(totalSize / chunkSize);
         List<ChunkDescriptor> chunks = new ArrayList<>(chunksTotal + 1);
 
-        long off, lim;
-        long remaining = totalSize;
-        while (remaining > 0) {
-            off = chunks.size() * chunkSize;
-            lim = Math.min(chunkSize, remaining);
+        Iterator<byte[]> chunkHashes = torrent.getChunkHashes().iterator();
+        this.storageUnits = files.stream().map(f -> storage.getUnit(torrent, f)).collect(Collectors.toList());
 
-            DataRange subrange = data.getSubrange(off, lim);
-
-            if (!chunkHashes.hasNext()) {
-                throw new BtException("Wrong number of chunk hashes in the torrent: too few");
+        // filter out empty files (and create them at once)
+        List<StorageUnit> nonEmptyStorageUnits = new ArrayList<>();
+        for (StorageUnit unit : storageUnits) {
+            if (unit.capacity() > 0) {
+                nonEmptyStorageUnits.add(unit);
+            } else {
+                try {
+                    // TODO: think about adding some explicit "initialization/creation" method
+                    unit.writeBlock(new byte[0], 0);
+                } catch (Exception e) {
+                    LOGGER.warn("Failed to create empty storage unit: " + unit, e);
+                }
             }
+        }
 
-            chunks.add(buildChunkDescriptor(subrange, transferBlockSize, chunkHashes.next()));
+        if (nonEmptyStorageUnits.size() > 0) {
+            long limitInLastUnit = nonEmptyStorageUnits.get(nonEmptyStorageUnits.size() - 1).capacity();
+            DataRange data = new ReadWriteDataRange(nonEmptyStorageUnits, 0, limitInLastUnit);
 
-            remaining -= chunkSize;
+            long off, lim;
+            long remaining = totalSize;
+            while (remaining > 0) {
+                off = chunks.size() * chunkSize;
+                lim = Math.min(chunkSize, remaining);
+
+                DataRange subrange = data.getSubrange(off, lim);
+
+                if (!chunkHashes.hasNext()) {
+                    throw new BtException("Wrong number of chunk hashes in the torrent: too few");
+                }
+
+                chunks.add(buildChunkDescriptor(subrange, transferBlockSize, chunkHashes.next()));
+
+                remaining -= chunkSize;
+            }
         }
 
         if (chunkHashes.hasNext()) {

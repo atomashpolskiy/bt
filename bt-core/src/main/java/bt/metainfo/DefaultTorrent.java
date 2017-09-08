@@ -139,7 +139,7 @@ class DefaultTorrent implements Torrent {
     }
 
     void setSize(long size) {
-        if (size <= 0) {
+        if (size < 0) {
             throw new BtException("Invalid torrent size: " + size);
         }
         this.size = size;
