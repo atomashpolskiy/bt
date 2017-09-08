@@ -11,7 +11,7 @@
       - files
     entries:
       - {key: name, type: string, required: false}
-      - {key: "piece length", type: integer}
+      - {key: 'piece length', type: integer}
       - {key: pieces, type: binary}
       - {key: length, type: integer}
       - {key: files, type: list, elements: *file}
@@ -29,3 +29,5 @@
             type: string
       - key: info
         type: *infodict
+      - {key: 'creation date', type: integer, required: false}
+      - {key: 'created by', type: string, required: false}

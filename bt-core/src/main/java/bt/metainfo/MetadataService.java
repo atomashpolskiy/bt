@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.math.BigInteger;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -45,6 +46,8 @@ public class MetadataService implements IMetadataService {
     private static final String FILE_SIZE_KEY = "length";
     private static final String FILE_PATH_ELEMENTS_KEY = "path";
     private static final String PRIVATE_KEY = "private";
+    private static final String CREATION_DATE_KEY = "creation date";
+    private static final String CREATED_BY_KEY = "created by";
 
     private BEObjectModel torrentModel;
     private BEObjectModel infodictModel;
@@ -194,6 +197,16 @@ public class MetadataService implements IMetadataService {
                     torrent.setPrivate(true);
                     isPrivate = true;
                 }
+            }
+
+            if (infoMap.get(CREATION_DATE_KEY) != null) {
+                BigInteger epochMilli = (BigInteger) infoMap.get(CREATION_DATE_KEY).getValue();
+                torrent.setCreationDate(Instant.ofEpochMilli(epochMilli.intValueExact() * 1000));
+            }
+
+            if (infoMap.get(CREATED_BY_KEY) != null) {
+                byte[] createdBy = (byte[]) infoMap.get(CREATED_BY_KEY).getValue();
+                torrent.setCreatedBy(new String(createdBy, defaultCharset));
             }
 
             AnnounceKey announceKey = null;

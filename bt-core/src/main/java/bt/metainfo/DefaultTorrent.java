@@ -3,6 +3,7 @@ package bt.metainfo;
 import bt.BtException;
 import bt.tracker.AnnounceKey;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -23,10 +24,14 @@ class DefaultTorrent implements Torrent {
     private long size;
     private List<TorrentFile> files;
     private boolean isPrivate;
+    private Optional<Instant> creationDate;
+    private Optional<String> createdBy;
 
     DefaultTorrent(TorrentSource source) {
         this.source = source;
         this.announceKey = Optional.empty();
+        this.creationDate = Optional.empty();
+        this.createdBy = Optional.empty();
     }
 
     @Override
@@ -104,6 +109,16 @@ class DefaultTorrent implements Torrent {
         return isPrivate;
     }
 
+    @Override
+    public Optional<Instant> getCreationDate() {
+        return creationDate;
+    }
+
+    @Override
+    public Optional<String> getCreatedBy() {
+        return createdBy;
+    }
+
     void setAnnounceKey(AnnounceKey announceKey) {
         this.announceKey = Optional.of(announceKey);
     }
@@ -147,6 +162,14 @@ class DefaultTorrent implements Torrent {
 
     public void setPrivate(boolean isPrivate) {
         this.isPrivate = isPrivate;
+    }
+
+    public void setCreationDate(Instant creationDate) {
+        this.creationDate = Optional.of(creationDate);
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = Optional.of(createdBy);
     }
 
     @Override

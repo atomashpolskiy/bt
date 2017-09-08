@@ -2,6 +2,7 @@ package bt.metainfo;
 
 import bt.tracker.AnnounceKey;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,4 +63,16 @@ public interface Torrent {
      * @since 1.0
      */
     boolean isPrivate();
+
+    /**
+     * @return Creation time of the torrent
+     * @since 1.5
+     */
+    Optional<Instant> getCreationDate();
+
+    /**
+     * @return Creator of the torrent (usually name and version of the program used to create the .torrent file)
+     * @since 1.5
+     */
+    Optional<String> getCreatedBy();
 }

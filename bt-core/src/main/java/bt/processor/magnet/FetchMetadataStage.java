@@ -18,6 +18,7 @@ import bt.torrent.messaging.MetadataConsumer;
 import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -135,6 +136,16 @@ public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
                 @Override
                 public boolean isPrivate() {
                     return delegate.isPrivate();
+                }
+
+                @Override
+                public Optional<Instant> getCreationDate() {
+                    return delegate.getCreationDate();
+                }
+
+                @Override
+                public Optional<String> getCreatedBy() {
+                    return delegate.getCreatedBy();
                 }
             };
         } else {

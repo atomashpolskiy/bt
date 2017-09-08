@@ -6,6 +6,7 @@ import bt.metainfo.TorrentId;
 import bt.metainfo.TorrentSource;
 import bt.tracker.AnnounceKey;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -80,5 +81,15 @@ public class MockTorrent implements Torrent {
     @Override
     public boolean isPrivate() {
         return false;
+    }
+
+    @Override
+    public Optional<Instant> getCreationDate() {
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<String> getCreatedBy() {
+        return Optional.empty();
     }
 }

@@ -20,6 +20,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * Announce stats to tracker on start, stop, complete
 * Use I/O selector for receiving incoming messages
 * Allow to override the number of peers to request from a tracker
+* Provide information on creation date and creator of the torrent
 
 ## 1.4.1
 
