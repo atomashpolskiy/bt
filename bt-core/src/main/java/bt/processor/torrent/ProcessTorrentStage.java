@@ -47,44 +47,21 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
 
         start(context);
 
-        CompletableFuture<Void> future;
-
-        future = CompletableFuture.runAsync(() -> {
+        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
             while (descriptor.isActive()) {
                 try {
                     Thread.sleep(1000);
                     if (context.getState().get().getPiecesRemaining() == 0) {
-                        descriptor.complete();
+                        complete(context);
                         return;
                     }
                 } catch (InterruptedException e) {
-                    finish(context);
-                    throw new RuntimeException(e);
-                }
-            }
-        }, executor);
-
-        future = future.thenRunAsync(() -> {
-            // might have been stopped externally before the torrent was actually completed
-            if (context.getState().get().getPiecesRemaining() == 0) {
-                complete(context);
-            }
-        }, executor);
-
-        future = future.thenRunAsync(() -> {
-            while (descriptor.isActive()) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    finish(context);
                     throw new RuntimeException(e);
                 }
             }
         }, executor);
 
         future.join();
-
-        finish(context);
     }
 
     private void start(C context) {
@@ -101,6 +78,7 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
 
     private void complete(C context) {
         try {
+            getDescriptor(context.getTorrentId().get()).complete();
             onCompleted(context);
         } catch (Exception e) {
             LOGGER.error("Unexpected error", e);
@@ -111,21 +89,6 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
         context.getAnnouncer().ifPresent(TrackerAnnouncer::complete);
     }
 
-    private void finish(C context) {
-        try {
-            onFinished(context);
-        } catch (Exception e) {
-            LOGGER.error("Unexpected error", e);
-        }
-    }
-
-    protected void onFinished(C context) {
-        // TODO: misbehaving... but currently no way to know if runtime automatic shutdown was disabled
-        // previously this was called via BtRuntime -> BtClient -> TorrentDescriptor
-//        announcer.stop();
-        getDescriptor(context.getTorrentId().get()).stop();
-    }
-
     private TorrentDescriptor getDescriptor(TorrentId torrentId) {
         return torrentRegistry.getDescriptor(torrentId)
                 .orElseThrow(() -> new IllegalStateException("No descriptor present for torrent ID: " + torrentId));
@@ -133,6 +96,6 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
 
     @Override
     public ProcessingEvent after() {
-        return null;
+        return ProcessingEvent.DOWNLOAD_COMPLETE;
     }
 }

@@ -1,17 +1,13 @@
 package bt;
 
-import bt.module.ClientExecutor;
 import bt.processor.ProcessingContext;
-import bt.processor.ProcessingStage;
+import bt.processor.Processor;
 import bt.processor.ProcessorFactory;
 import bt.processor.listener.ListenerSource;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
-import bt.torrent.TorrentRegistry;
-import com.google.inject.Key;
 
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 
 /**
@@ -81,12 +77,7 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
         ListenerSource<C> listenerSource = new ListenerSource<>(contextType);
         collectStageListeners(listenerSource);
 
-        BtClient client = new DefaultClient<>(
-                getExecutor(runtime),
-                runtime.service(TorrentRegistry.class),
-                processor(runtime, contextType),
-                listenerSource,
-                context);
+        BtClient client = new DefaultClient<>(processor(runtime, contextType), context, listenerSource);
 
         return new RuntimeAwareClient(runtime, client);
     }
@@ -96,16 +87,11 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
      */
     protected abstract <C extends ProcessingContext> void collectStageListeners(ListenerSource<C> listenerSource);
 
-    private <C extends ProcessingContext> ProcessingStage<C> processor(BtRuntime runtime, Class<C> contextType) {
-        ProcessingStage<C> processor = runtime.service(ProcessorFactory.class).processor(contextType);
+    private <C extends ProcessingContext> Processor<C> processor(BtRuntime runtime, Class<C> contextType) {
+        Processor<C> processor = runtime.service(ProcessorFactory.class).processor(contextType);
         if (processor == null) {
             throw new IllegalStateException("No processors found for context type: " + contextType.getName());
         }
         return processor;
-    }
-
-    private ExecutorService getExecutor(BtRuntime runtime) {
-        return runtime.getInjector().getExistingBinding(Key.get(ExecutorService.class, ClientExecutor.class))
-                .getProvider().get();
     }
 }

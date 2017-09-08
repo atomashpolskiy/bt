@@ -16,7 +16,9 @@ import bt.processor.torrent.CreateSessionStage;
 import bt.processor.torrent.FetchTorrentStage;
 import bt.processor.torrent.InitializeTorrentProcessingStage;
 import bt.processor.torrent.ProcessTorrentStage;
+import bt.processor.torrent.SeedStage;
 import bt.processor.torrent.TorrentContext;
+import bt.processor.torrent.TorrentContextFinalizer;
 import bt.runtime.Config;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.data.IDataWorkerFactory;
@@ -43,7 +45,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
     private EventSink eventSink;
     private Config config;
 
-    private final Map<Class<?>, ProcessingStage<?>> processors;
+    private final Map<Class<?>, Processor<?>> processors;
 
     @Inject
     public TorrentProcessorFactory(TorrentRegistry torrentRegistry,
@@ -74,8 +76,8 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         this.processors = processors();
     }
 
-    private Map<Class<?>, ProcessingStage<?>> processors() {
-        Map<Class<?>, ProcessingStage<?>> processors = new HashMap<>();
+    private Map<Class<?>, Processor<?>> processors() {
+        Map<Class<?>, Processor<?>> processors = new HashMap<>();
 
         processors.put(TorrentContext.class, createTorrentProcessor());
         processors.put(MagnetContext.class, createMagnetProcessor());
@@ -83,9 +85,11 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         return processors;
     }
 
-    protected ProcessingStage<TorrentContext> createTorrentProcessor() {
+    protected ChainProcessor<TorrentContext> createTorrentProcessor() {
 
-        ProcessingStage<TorrentContext> stage3 = new ProcessTorrentStage<>(null, torrentRegistry, trackerService, executor);
+        ProcessingStage<TorrentContext> stage4 = new SeedStage<>(null, torrentRegistry, executor);
+
+        ProcessingStage<TorrentContext> stage3 = new ProcessTorrentStage<>(stage4, torrentRegistry, trackerService, executor);
 
         ProcessingStage<TorrentContext> stage2 = new InitializeTorrentProcessingStage<>(stage3, torrentRegistry,
                 dataWorkerFactory, eventSink, config);
@@ -95,12 +99,14 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
         ProcessingStage<TorrentContext> stage0 = new FetchTorrentStage(stage1);
 
-        return stage0;
+        return new ChainProcessor<>(stage0, new TorrentContextFinalizer<>(torrentRegistry), executor);
     }
 
-    protected ProcessingStage<MagnetContext> createMagnetProcessor() {
+    protected ChainProcessor<MagnetContext> createMagnetProcessor() {
 
-        ProcessingStage<MagnetContext> stage3 = new ProcessMagnetTorrentStage(null, torrentRegistry, trackerService, executor);
+        ProcessingStage<MagnetContext> stage4 = new SeedStage<>(null, torrentRegistry, executor);
+
+        ProcessingStage<MagnetContext> stage3 = new ProcessMagnetTorrentStage(stage4, torrentRegistry, trackerService, executor);
 
         ProcessingStage<MagnetContext> stage2 = new InitializeMagnetTorrentProcessingStage(stage3, torrentRegistry,
                 dataWorkerFactory, eventSink, config);
@@ -111,12 +117,12 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         ProcessingStage<MagnetContext> stage0 = new CreateSessionStage<>(stage1, torrentRegistry, eventSource,
                 connectionPool, messageDispatcher, messagingAgents, config);
 
-        return stage0;
+        return new ChainProcessor<>(stage0, new TorrentContextFinalizer<>(torrentRegistry), executor);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public <C extends ProcessingContext> ProcessingStage<C> processor(Class<C> contextType) {
-        return (ProcessingStage<C>) processors.get(contextType);
+    public <C extends ProcessingContext> Processor<C> processor(Class<C> contextType) {
+        return (Processor<C>) processors.get(contextType);
     }
 }
