@@ -1,6 +1,7 @@
 package bt;
 
 import bt.processor.ProcessingContext;
+import bt.processor.ProcessingFuture;
 import bt.processor.Processor;
 import bt.processor.listener.ListenerSource;
 import bt.runtime.BtClient;
@@ -8,6 +9,7 @@ import bt.torrent.TorrentSessionState;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -24,21 +26,26 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
     private Processor<C> processor;
     private ListenerSource<C> listenerSource;
     private C context;
+    private Optional<ProcessingFuture> processingFutureOptional;
     private Optional<CompletableFuture<?>> future;
     private Optional<Consumer<TorrentSessionState>> listener;
     private Optional<ScheduledFuture<?>> listenerFuture;
 
+    private ExecutorService executor;
     private ScheduledExecutorService listenerExecutor;
 
     private volatile boolean started;
 
     public DefaultClient(Processor<C> processor,
                          C context,
-                         ListenerSource<C> listenerSource) {
+                         ListenerSource<C> listenerSource,
+                         ExecutorService executor) {
         this.processor = processor;
-        this.listenerSource = listenerSource;
         this.context = context;
+        this.listenerSource = listenerSource;
+        this.executor = executor;
 
+        this.processingFutureOptional = Optional.empty();
         this.future = Optional.empty();
         this.listener = Optional.empty();
         this.listenerFuture = Optional.empty();
@@ -85,7 +92,8 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
     }
 
     private CompletableFuture<?> doStart() {
-        CompletableFuture<?> future = processor.process(context, listenerSource);
+        this.processingFutureOptional = Optional.of(processor.process(context, listenerSource));
+        CompletableFuture<?> future = CompletableFuture.runAsync(() -> processingFutureOptional.get().get(), executor);
 
         future.whenComplete((r, t) -> notifyListener())
                 .whenComplete((r, t) -> listenerFuture.ifPresent(listener -> listener.cancel(true)))
@@ -97,8 +105,9 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
     @Override
     public void stop() {
         try {
-            future.ifPresent(future -> future.cancel(true));
+            processingFutureOptional.ifPresent(ProcessingFuture::cancel);
         } finally {
+            future.ifPresent(future -> future.complete(null));
             started = false;
         }
     }

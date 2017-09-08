@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 
 public class ChainProcessor<C extends ProcessingContext> implements Processor<C> {
@@ -27,20 +28,35 @@ public class ChainProcessor<C extends ProcessingContext> implements Processor<C>
     }
 
     @Override
-    public CompletableFuture<?> process(C context, ListenerSource<C> listenerSource) {
-        return CompletableFuture.runAsync(() -> process(chainHead, context, listenerSource), executor);
-    }
+    public ProcessingFuture process(C context, ListenerSource<C> listenerSource) {
+        AtomicBoolean completed = new AtomicBoolean();
 
-    public void process(ProcessingStage<C> chainHead,
-                        C context,
-                        ListenerSource<C> listenerSource) {
-        try {
-            executeStage(chainHead, context, listenerSource);
-        } catch (Exception e) {
-            LOGGER.error("Processing failed with error", e);
-        } finally {
-            complete(context);
-        }
+        Runnable r = () -> {
+            try {
+                executeStage(chainHead, context, listenerSource);
+            } catch (Exception e) {
+                LOGGER.error("Processing failed with error", e);
+            } finally {
+                if (!completed.get()) {
+                    complete(context);
+                }
+            }
+        };
+        CompletableFuture<?> future = CompletableFuture.runAsync(r, executor);
+
+        return new ProcessingFuture() {
+            @Override
+            public void get() {
+                future.join();
+            }
+
+            @Override
+            public void cancel() {
+                complete(context);
+                completed.set(true);
+                future.cancel(true);
+            }
+        };
     }
 
     private void executeStage(ProcessingStage<C> chainHead,

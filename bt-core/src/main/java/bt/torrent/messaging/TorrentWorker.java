@@ -121,7 +121,7 @@ public class TorrentWorker {
      *
      * @since 1.0
      */
-    public void addPeer(Peer peer) {
+    private void addPeer(Peer peer) {
         PieceAnnouncingPeerWorker worker = createPeerWorker(peer);
         PieceAnnouncingPeerWorker existing = peerMap.putIfAbsent(peer, worker);
         if (existing == null) {
