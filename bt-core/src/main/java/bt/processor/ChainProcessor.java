@@ -36,25 +36,22 @@ public class ChainProcessor<C extends ProcessingContext> implements Processor<C>
                 executeStage(chainHead, context, listenerSource);
             } catch (Exception e) {
                 LOGGER.error("Processing failed with error", e);
+                throw e;
             } finally {
-                if (!completed.get()) {
+                if (completed.compareAndSet(false, true)) {
                     complete(context);
                 }
             }
         };
         CompletableFuture<?> future = CompletableFuture.runAsync(r, executor);
 
-        return new ProcessingFuture() {
-            @Override
-            public void get() {
-                future.join();
-            }
-
+        return new DefaultProcessingFuture(future) {
             @Override
             public void cancel() {
-                complete(context);
-                completed.set(true);
-                future.cancel(true);
+                if (completed.compareAndSet(false, true)) {
+                    complete(context);
+                }
+                super.cancel();
             }
         };
     }

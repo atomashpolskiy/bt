@@ -87,9 +87,9 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
     protected ChainProcessor<TorrentContext> createTorrentProcessor() {
 
-        ProcessingStage<TorrentContext> stage4 = new SeedStage<>(null, torrentRegistry, executor);
+        ProcessingStage<TorrentContext> stage4 = new SeedStage<>(null, torrentRegistry);
 
-        ProcessingStage<TorrentContext> stage3 = new ProcessTorrentStage<>(stage4, torrentRegistry, trackerService, executor);
+        ProcessingStage<TorrentContext> stage3 = new ProcessTorrentStage<>(stage4, torrentRegistry, trackerService);
 
         ProcessingStage<TorrentContext> stage2 = new InitializeTorrentProcessingStage<>(stage3, torrentRegistry,
                 dataWorkerFactory, eventSink, config);
@@ -104,9 +104,9 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
     protected ChainProcessor<MagnetContext> createMagnetProcessor() {
 
-        ProcessingStage<MagnetContext> stage4 = new SeedStage<>(null, torrentRegistry, executor);
+        ProcessingStage<MagnetContext> stage4 = new SeedStage<>(null, torrentRegistry);
 
-        ProcessingStage<MagnetContext> stage3 = new ProcessMagnetTorrentStage(stage4, torrentRegistry, trackerService, executor);
+        ProcessingStage<MagnetContext> stage3 = new ProcessMagnetTorrentStage(stage4, torrentRegistry, trackerService);
 
         ProcessingStage<MagnetContext> stage2 = new InitializeMagnetTorrentProcessingStage(stage3, torrentRegistry,
                 dataWorkerFactory, eventSink, config);

@@ -270,9 +270,14 @@ public class BtRuntime {
     private void shutdownExecutor(ExecutorService executor) {
         executor.shutdown();
         try {
-            executor.awaitTermination(config.getShutdownHookTimeout().toMillis(), TimeUnit.MILLISECONDS);
+            long timeout = config.getShutdownHookTimeout().toMillis();
+            boolean terminated = executor.awaitTermination(timeout, TimeUnit.MILLISECONDS);
+            if (!terminated) {
+                LOGGER.warn("Failed to shutdown executor in {} millis", timeout);
+            }
         } catch (InterruptedException e) {
             // ignore
+            LOGGER.warn("Interrupted while waiting for shutdown", e);
             executor.shutdownNow();
         }
     }

@@ -6,15 +6,12 @@ import bt.processor.torrent.ProcessTorrentStage;
 import bt.torrent.TorrentRegistry;
 import bt.tracker.ITrackerService;
 
-import java.util.concurrent.ExecutorService;
-
 public class ProcessMagnetTorrentStage extends ProcessTorrentStage<MagnetContext> {
 
     public ProcessMagnetTorrentStage(ProcessingStage<MagnetContext> next,
                                      TorrentRegistry torrentRegistry,
-                                     ITrackerService trackerService,
-                                     ExecutorService executor) {
-        super(next, torrentRegistry, trackerService, executor);
+                                     ITrackerService trackerService) {
+        super(next, torrentRegistry, trackerService);
     }
 
     @Override

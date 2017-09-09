@@ -1,5 +1,6 @@
 package bt;
 
+import bt.processor.DefaultProcessingFuture;
 import bt.processor.ProcessingContext;
 import bt.processor.ProcessingFuture;
 import bt.processor.Processor;
@@ -9,10 +10,8 @@ import bt.torrent.TorrentSessionState;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -26,94 +25,80 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
     private Processor<C> processor;
     private ListenerSource<C> listenerSource;
     private C context;
-    private Optional<ProcessingFuture> processingFutureOptional;
-    private Optional<CompletableFuture<?>> future;
-    private Optional<Consumer<TorrentSessionState>> listener;
-    private Optional<ScheduledFuture<?>> listenerFuture;
 
-    private ExecutorService executor;
-    private ScheduledExecutorService listenerExecutor;
+    private volatile Optional<ProcessingFuture> futureOptional;
+    private volatile Optional<Consumer<TorrentSessionState>> listenerOptional;
 
-    private volatile boolean started;
+    private volatile ScheduledExecutorService listenerExecutor;
 
     public DefaultClient(Processor<C> processor,
                          C context,
-                         ListenerSource<C> listenerSource,
-                         ExecutorService executor) {
+                         ListenerSource<C> listenerSource) {
         this.processor = processor;
         this.context = context;
         this.listenerSource = listenerSource;
-        this.executor = executor;
 
-        this.processingFutureOptional = Optional.empty();
-        this.future = Optional.empty();
-        this.listener = Optional.empty();
-        this.listenerFuture = Optional.empty();
+        this.futureOptional = Optional.empty();
+        this.listenerOptional = Optional.empty();
     }
 
     @Override
-    public CompletableFuture<?> startAsync(Consumer<TorrentSessionState> listener, long period) {
-        if (started) {
+    public synchronized CompletableFuture<?> startAsync(Consumer<TorrentSessionState> listener, long period) {
+        if (futureOptional.isPresent()) {
             throw new BtException("Can't start -- already running");
         }
-        started = true;
 
         this.listenerExecutor = Executors.newSingleThreadScheduledExecutor();
-        this.listener = Optional.of(listener);
-        this.listenerFuture = Optional.of(listenerExecutor.scheduleAtFixedRate(
-                this::notifyListener, period, period, TimeUnit.MILLISECONDS));
+        this.listenerOptional = Optional.of(listener);
+
+        listenerExecutor.scheduleAtFixedRate(this::notifyListener, period, period, TimeUnit.MILLISECONDS);
 
         return doStartAsync();
     }
 
     private void notifyListener() {
-        if (listener.isPresent()) {
-            Optional<TorrentSessionState> state = context.getState();
-            if (state.isPresent()) {
-                listener.get().accept(state.get());
-            }
-        }
+        listenerOptional.ifPresent(listener ->
+                context.getState().ifPresent(listener::accept));
+    }
+
+    private void shutdownListener() {
+        listenerExecutor.shutdownNow();
     }
 
     @Override
-    public CompletableFuture<?> startAsync() {
-        if (started) {
+    public synchronized CompletableFuture<?> startAsync() {
+        if (futureOptional.isPresent()) {
             throw new BtException("Can't start -- already running");
         }
-        started = true;
 
         return doStartAsync();
     }
 
     private CompletableFuture<?> doStartAsync() {
-        CompletableFuture<?> future = doStart();
-        this.future = Optional.of(future);
-        return future;
-    }
+        // TODO: this is a workaround for preserving the current public API with CompletableFuture
+        // we don't want the CompletableFuture to be present in ProcessingFuture interface,
+        // so we have to resort to a cast to get access to the actual future
+        DefaultProcessingFuture processingFuture = (DefaultProcessingFuture) processor.process(context, listenerSource);
 
-    private CompletableFuture<?> doStart() {
-        this.processingFutureOptional = Optional.of(processor.process(context, listenerSource));
-        CompletableFuture<?> future = CompletableFuture.runAsync(() -> processingFutureOptional.get().get(), executor);
+        processingFuture.getDelegate()
+                .whenComplete((r, t) -> notifyListener())
+                .whenComplete((r, t) -> shutdownListener());
 
-        future.whenComplete((r, t) -> notifyListener())
-                .whenComplete((r, t) -> listenerFuture.ifPresent(listener -> listener.cancel(true)))
-                .whenComplete((r, t) -> listenerExecutor.shutdownNow());
+        this.futureOptional = Optional.of(processingFuture);
 
-        return future;
+        return processingFuture.getDelegate();
     }
 
     @Override
-    public void stop() {
-        try {
-            processingFutureOptional.ifPresent(ProcessingFuture::cancel);
-        } finally {
-            future.ifPresent(future -> future.complete(null));
-            started = false;
+    public synchronized void stop() {
+        if (futureOptional.isPresent()) {
+            futureOptional.get().cancel();
+            futureOptional = Optional.empty();
         }
     }
 
     @Override
-    public boolean isStarted() {
-        return started;
+    public synchronized boolean isStarted() {
+        return futureOptional.isPresent();
     }
 }

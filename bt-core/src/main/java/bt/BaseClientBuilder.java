@@ -1,16 +1,13 @@
 package bt;
 
-import bt.module.ClientExecutor;
 import bt.processor.ProcessingContext;
 import bt.processor.Processor;
 import bt.processor.ProcessorFactory;
 import bt.processor.listener.ListenerSource;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
-import com.google.inject.Key;
 
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 
 /**
@@ -80,8 +77,7 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
         ListenerSource<C> listenerSource = new ListenerSource<>(contextType);
         collectStageListeners(listenerSource);
 
-        ExecutorService executor = getExecutor(runtime);
-        BtClient client = new DefaultClient<>(processor(runtime, contextType), context, listenerSource, executor);
+        BtClient client = new DefaultClient<>(processor(runtime, contextType), context, listenerSource);
 
         return new RuntimeAwareClient(runtime, client);
     }
@@ -97,10 +93,5 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
             throw new IllegalStateException("No processors found for context type: " + contextType.getName());
         }
         return processor;
-    }
-
-    private ExecutorService getExecutor(BtRuntime runtime) {
-        return runtime.getInjector().getExistingBinding(Key.get(ExecutorService.class, ClientExecutor.class))
-                .getProvider().get();
     }
 }

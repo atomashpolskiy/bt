@@ -14,24 +14,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 
 public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessingStage<C> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProcessTorrentStage.class);
 
     private TorrentRegistry torrentRegistry;
     private ITrackerService trackerService;
-    private ExecutorService executor;
 
     public ProcessTorrentStage(ProcessingStage<C> next,
                                TorrentRegistry torrentRegistry,
-                               ITrackerService trackerService,
-                               ExecutorService executor) {
+                               ITrackerService trackerService) {
         super(next);
         this.torrentRegistry = torrentRegistry;
         this.trackerService = trackerService;
-        this.executor = executor;
     }
 
     @Override
@@ -47,21 +42,17 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
 
         start(context);
 
-        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-            while (descriptor.isActive()) {
-                try {
-                    Thread.sleep(1000);
-                    if (context.getState().get().getPiecesRemaining() == 0) {
-                        complete(context);
-                        return;
-                    }
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+        while (descriptor.isActive()) {
+            try {
+                Thread.sleep(1000);
+                if (context.getState().get().getPiecesRemaining() == 0) {
+                    complete(context);
+                    return;
                 }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
-        }, executor);
-
-        future.join();
+        }
     }
 
     private void start(C context) {
