@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectionKey;
 import java.util.Collection;
 import java.util.Iterator;
@@ -137,22 +138,28 @@ public class MessageDispatcher implements IMessageDispatcher {
                     while (selector.select(1000) == 0 && selector.selectedKeys().isEmpty()) {
                         Thread.yield();
                     }
-                } catch (IOException e) {
-                    throw new RuntimeException("Unexpected I/O exception when selecting peer connections", e);
-                }
 
-                Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
-                while (selectedKeys.hasNext()) {
-                    try {
-                        // do not remove the key if it hasn't been processed,
-                        // we'll try again in the next loop iteration
-                        if (processKey(selectedKeys.next())) {
+                    Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
+                    while (selectedKeys.hasNext()) {
+                        try {
+                            // do not remove the key if it hasn't been processed,
+                            // we'll try again in the next loop iteration
+                            if (processKey(selectedKeys.next())) {
+                                selectedKeys.remove();
+                            }
+                        } catch (ClosedSelectorException e) {
+                            // selector has been closed, there's no point to continue processing
+                            throw e;
+                        } catch (Exception e) {
+                            LOGGER.error("Failed to process key", e);
                             selectedKeys.remove();
                         }
-                    } catch (Exception e) {
-                        LOGGER.error("Failed to process key", e);
-                        selectedKeys.remove();
                     }
+                } catch (ClosedSelectorException e) {
+                    LOGGER.info("Selector has been closed, will stop receiving messages...");
+                    return;
+                } catch (IOException e) {
+                    throw new RuntimeException("Unexpected I/O exception when selecting peer connections", e);
                 }
             }
         }

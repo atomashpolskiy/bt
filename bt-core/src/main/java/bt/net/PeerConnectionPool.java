@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.time.Duration;
@@ -238,8 +239,11 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                         }
                     }
                 }
+            } catch (ClosedChannelException e) {
+                LOGGER.info("Incoming channel @ {} has been closed, will stop accepting incoming connections...", localAddress);
             } catch (IOException e) {
-                LOGGER.error("Unexpected I/O error when listening to the incoming channel @ " + localAddress, e);
+                LOGGER.error("Unexpected I/O error when listening to the incoming channel @ " +
+                        localAddress + ", will stop accepting incoming connections...", e);
             }
         }
 
