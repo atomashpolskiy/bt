@@ -151,30 +151,31 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
             connection = CompletableFuture.supplyAsync(() -> {
                 try {
-                    DefaultPeerConnection newConnection = connectionFactory.createOutgoingConnection(peer, torrentId)
-                            .orElseThrow(() -> new BtException("Failed to initialize new connection for peer: " + peer));
-
-                    newConnection = addOrGetExisting(newConnection);
-
-                    return Optional.of((PeerConnection)newConnection);
-                } catch (Exception e) {
-                    LOGGER.error("Failed to create new outgoing connection for peer: " + peer, e);
-                    throw new BtException("Failed to create new outgoing connection for peer: " + peer, e);
+                    Optional<DefaultPeerConnection> newConnection =
+                            connectionFactory.createOutgoingConnection(peer, torrentId);
+                    if (newConnection.isPresent()) {
+                        return Optional.of((PeerConnection)addOrGetExisting(newConnection.get()));
+                    } else {
+                        return Optional.of((PeerConnection)newConnection.get());
+                    }
                 } finally {
                     synchronized (pendingConnections) {
                         pendingConnections.remove(peer);
                     }
                 }
             }, executor).whenComplete((acquiredConnection, throwable) -> {
-                if (throwable != null) {
+                if (acquiredConnection == null || throwable != null) {
                     cleanerLock.lock();
                     try {
                         unreachablePeers.putIfAbsent(peer, System.currentTimeMillis());
                     } finally {
                         cleanerLock.unlock();
                     }
+
+                }
+                if (throwable != null) {
                     if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Failed to connect to peer: " + peer, throwable);
+                        LOGGER.trace("Failed to establish outgoing connection to peer: " + peer, throwable);
                     }
                 }
             });
@@ -279,18 +280,18 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             Peer peer = null;
             try {
                 peer = peerRegistry.getPeerForAddress((InetSocketAddress) incomingChannel.getRemoteAddress());
+            } catch (IOException e) {
+                LOGGER.error("Failed to establish incoming connection", e);
+                return;
+            }
+
+            try {
                 Optional<DefaultPeerConnection> incomingConnection = connectionFactory.createIncomingConnection(peer, incomingChannel);
                 if (incomingConnection.isPresent()) {
                     addOrGetExisting(incomingConnection.get());
-                } else {
-                    throw new BtException("Failed to initialize new connection for peer: " + peer);
                 }
             } catch (Exception e) {
-                if (peer == null) {
-                    LOGGER.error("Failed to process incoming connection", e);
-                } else {
-                    LOGGER.error("Failed to process incoming connection from peer: " + peer, e);
-                }
+                LOGGER.error("Failed to establish incoming connection from peer: " + peer, e);
             }
         });
     }

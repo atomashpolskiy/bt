@@ -8,6 +8,8 @@ import bt.protocol.IExtendedHandshakeFactory;
 import bt.protocol.extended.ExtendedHandshake;
 import com.google.inject.Inject;
 
+import java.io.IOException;
+
 /**
  * Sets a reserved bit, indicating that
  * BEP-10: Extension Protocol is supported by the local client.
@@ -31,7 +33,11 @@ public class ExtendedProtocolHandshakeHandler implements HandshakeHandler {
         // do not send the extended handshake
         // if local client does not have any extensions turned on
         if (!extendedHandshake.getData().isEmpty()) {
-            connection.postMessage(extendedHandshake);
+            try {
+                connection.postMessage(extendedHandshake);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to send extended handshake to peer: " + connection.getRemotePeer(), e);
+            }
         }
     }
 

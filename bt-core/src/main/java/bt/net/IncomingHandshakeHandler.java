@@ -9,6 +9,7 @@ import bt.torrent.TorrentRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Optional;
@@ -37,8 +38,17 @@ class IncomingHandshakeHandler implements ConnectionHandler {
 
     @Override
     public boolean handleConnection(PeerConnection connection) {
+        Peer peer = connection.getRemotePeer();
+        Message firstMessage = null;
+        try {
+            firstMessage = connection.readMessage(handshakeTimeout.toMillis());
+        } catch (IOException e) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Failed to receive handshake from peer: {}. Reason: {} ({})",
+                        peer, e.getClass().getName(), e.getMessage());
+            }
+        }
 
-        Message firstMessage = connection.readMessage(handshakeTimeout.toMillis());
         if (firstMessage != null) {
             if (Handshake.class.equals(firstMessage.getClass())) {
 
@@ -53,7 +63,15 @@ class IncomingHandshakeHandler implements ConnectionHandler {
                     handshakeHandlers.forEach(handler ->
                             handler.processOutgoingHandshake(handshake));
 
-                    connection.postMessage(handshake);
+                    try {
+                        connection.postMessage(handshake);
+                    } catch (IOException e) {
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Failed to send handshake to peer: {}. Reason: {} ({})",
+                                    peer, e.getClass().getName(), e.getMessage());
+                        }
+                        return false;
+                    }
                     ((DefaultPeerConnection) connection).setTorrentId(torrentId);
 
                     handshakeHandlers.forEach(handler ->
@@ -62,10 +80,8 @@ class IncomingHandshakeHandler implements ConnectionHandler {
                     return true;
                 }
             } else {
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Received message of unexpected type " + firstMessage.getClass().getSimpleName() +
-                            " as handshake; remote peer: " + connection.getRemotePeer());
-                }
+                LOGGER.warn("Received message of unexpected type '{}' instead of handshake from peer: {}",
+                        firstMessage.getClass(), peer);
             }
         }
         return false;

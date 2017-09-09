@@ -4,6 +4,7 @@ import bt.metainfo.TorrentId;
 import bt.protocol.Message;
 
 import java.io.Closeable;
+import java.io.IOException;
 
 /**
  * Connection with a remote peer.
@@ -35,7 +36,7 @@ public interface PeerConnection extends Closeable {
      * @return Message, or null if there isn't any
      * @since 1.0
      */
-    Message readMessageNow();
+    Message readMessageNow() throws IOException;
 
     /**
      * Attempt to read an incoming message within a specified time interval.
@@ -49,14 +50,14 @@ public interface PeerConnection extends Closeable {
      * @return Message, or null if there isn't any
      * @since 1.0
      */
-    Message readMessage(long timeout);
+    Message readMessage(long timeout) throws IOException;
 
     /**
      * Send a message to remote peer.
      *
      * @since 1.0
      */
-    void postMessage(Message message);
+    void postMessage(Message message) throws IOException;
 
     /**
      * @return Last time a message was received or sent via this connection

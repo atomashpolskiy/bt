@@ -11,6 +11,7 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectionKey;
@@ -183,7 +184,7 @@ public class MessageDispatcher implements IMessageDispatcher {
 
             if (connection.isClosed()) {
                 LOGGER.warn("Selected connection for peer {}, but the connection has already been closed. Skipping..", peer);
-                return false;
+                throw new RuntimeException("Connection closed");
             }
 
             TorrentId torrentId = connection.getTorrentId();
@@ -197,14 +198,29 @@ public class MessageDispatcher implements IMessageDispatcher {
 
             while (true) {
                 Message message = null;
+                boolean error = false;
                 try {
                     message = connection.readMessageNow();
+                } catch (EOFException e) {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Received EOF from peer: {}. Disconnecting...", peer);
+                    }
+                    error = true;
+                } catch (IOException e) {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("I/O error when reading message from peer: {}. Reason: {} ({})",
+                                peer, e.getClass().getName(), e.getMessage());
+                    }
+                    error = true;
                 } catch (Exception e) {
-                    LOGGER.error("Error when reading message from peer: " + peer, e);
+                    LOGGER.error("Unexpected error when reading message from peer: " + peer, e);
+                    error = true;
+                }
+                if (error) {
                     connection.closeQuietly();
                     key.cancel();
-                }
-                if (message == null) {
+                    break;
+                } else if (message == null) {
                     break;
                 } else {
                     messageSink.accept(peer, message);

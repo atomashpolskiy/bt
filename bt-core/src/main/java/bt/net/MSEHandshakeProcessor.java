@@ -25,8 +25,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 /**
  * Implements Message Stream Encryption protocol negotiation.
@@ -59,7 +57,7 @@ class MSEHandshakeProcessor {
         this.bufferSize = bufferSize;
     }
 
-    MessageReaderWriter negotiateOutgoing(Peer peer, ByteChannel channel, TorrentId torrentId) throws IOException {
+    PeerConnectionMessageWorker negotiateOutgoing(Peer peer, ByteChannel channel, TorrentId torrentId) throws IOException {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Negotiating encryption for outgoing connection: {}", peer);
         }
@@ -241,7 +239,7 @@ class MSEHandshakeProcessor {
         }
     }
 
-    MessageReaderWriter negotiateIncoming(Peer peer, ByteChannel channel) throws IOException {
+    PeerConnectionMessageWorker negotiateIncoming(Peer peer, ByteChannel channel) throws IOException {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Negotiating encryption for incoming connection: {}", peer);
         }
@@ -447,10 +445,10 @@ class MSEHandshakeProcessor {
         }
     }
 
-    private MessageReaderWriter createReaderWriter(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out) {
-        Supplier<Message> reader = new DefaultMessageReader(peer, channel, messageHandler, in);
-        Consumer<Message> writer = new DefaultMessageWriter(channel, peer, messageHandler, out);
-        return new DelegatingMessageReaderWriter(reader, writer);
+    private PeerConnectionMessageWorker createReaderWriter(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out) {
+        MessageReader reader = new MessageReader(peer, channel, messageHandler, in);
+        MessageWriter writer = new MessageWriter(channel, peer, messageHandler, out);
+        return new DelegatingPeerConnectionMessageWorker(reader, writer);
     }
 
     private byte[] getPadding(int length) {

@@ -6,6 +6,8 @@ import bt.protocol.Handshake;
 import bt.protocol.Port;
 import com.google.inject.Inject;
 
+import java.io.IOException;
+
 /**
  * @since 1.1
  */
@@ -25,7 +27,11 @@ public class DHTHandshakeHandler implements HandshakeHandler {
         // according to the spec, the client should immediately communicate its' DHT service port
         // upon receiving a handshake indicating DHT support
         if (peerHandshake.isReservedBitSet(DHT_FLAG_BIT_INDEX)) {
-            connection.postMessage(new Port(config.getListeningPort()));
+            try {
+                connection.postMessage(new Port(config.getListeningPort()));
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to send port to peer: " + connection.getRemotePeer(), e);
+            }
         }
     }
 

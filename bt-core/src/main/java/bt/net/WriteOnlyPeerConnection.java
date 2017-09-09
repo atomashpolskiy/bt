@@ -24,17 +24,17 @@ class WriteOnlyPeerConnection implements PeerConnection {
     }
 
     @Override
-    public Message readMessageNow() {
+    public Message readMessageNow() throws IOException {
         throw new UnsupportedOperationException("Connection is write-only");
     }
 
     @Override
-    public Message readMessage(long timeout) {
+    public Message readMessage(long timeout) throws IOException {
         throw new UnsupportedOperationException("Connection is write-only");
     }
 
     @Override
-    public void postMessage(Message message) {
+    public void postMessage(Message message) throws IOException {
         delegate.postMessage(message);
     }
 

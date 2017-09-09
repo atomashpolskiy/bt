@@ -43,7 +43,7 @@ class PeerConnectionFactory {
         return (int) (maxTransferBlockSize) * 2;
     }
 
-    public Optional<DefaultPeerConnection> createOutgoingConnection(Peer peer, TorrentId torrentId) throws IOException {
+    public Optional<DefaultPeerConnection> createOutgoingConnection(Peer peer, TorrentId torrentId) {
         Objects.requireNonNull(peer);
 
         InetAddress inetAddress = peer.getInetAddress();
@@ -54,17 +54,25 @@ class PeerConnectionFactory {
             channel = socketChannelFactory.getChannel(inetAddress, port);
             return createConnection(peer, torrentId, channel, false);
         } catch (IOException e) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Failed to establish ougoing connection to peer: {}. Reason: {} ({})",
+                        peer, e.getClass().getName(), e.getMessage());
+            }
             closeQuietly(channel);
-            throw new IOException("Failed to create peer connection (" + inetAddress + ":" + port + ")", e);
+            return Optional.empty();
         }
     }
 
-    public Optional<DefaultPeerConnection> createIncomingConnection(Peer peer, SocketChannel channel) throws IOException {
+    public Optional<DefaultPeerConnection> createIncomingConnection(Peer peer, SocketChannel channel) {
         try {
             return createConnection(peer, null, channel, true);
         } catch (IOException e) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Failed to establish incoming connection from peer: {}. Reason: {} ({})",
+                        peer, e.getClass().getName(), e.getMessage());
+            }
             closeQuietly(channel);
-            throw e;
+            return Optional.empty();
         }
     }
 
@@ -79,7 +87,7 @@ class PeerConnectionFactory {
 
         channel.configureBlocking(false);
 
-        MessageReaderWriter readerWriter = incoming ?
+        PeerConnectionMessageWorker readerWriter = incoming ?
                 cryptoHandshakeProcessor.negotiateIncoming(peer, channel)
                 : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId);
 
@@ -107,13 +115,13 @@ class PeerConnectionFactory {
         boolean success = connectionHandler.handleConnection(newConnection);
         if (success) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Successfully inited newly established, remote peer: " +
-                        newConnection.getRemotePeer() + "; handshake handler: " + connectionHandler.getClass().getName());
+                LOGGER.debug("Successfully initialized newly established connection to peer: {}, handshake handler: {}",
+                        newConnection.getRemotePeer(), connectionHandler.getClass().getName());
             }
         } else {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Failed to init newly established connection, remote peer: " +
-                        newConnection.getRemotePeer() + "; handshake handler: " + connectionHandler.getClass().getName());
+                LOGGER.debug("Failed to initialize newly established connection to peer: {}, handshake handler: {}",
+                        newConnection.getRemotePeer(), connectionHandler.getClass().getName());
             }
         }
         return success;
@@ -125,7 +133,10 @@ class PeerConnectionFactory {
                 channel.close();
             } catch (IOException e1) {
                 try {
-                    LOGGER.warn("Failed to close outgoing channel: " + channel.getRemoteAddress(), e1);
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Failed to close outgoing channel: {}. Reason: {} ({})",
+                                channel.getRemoteAddress(), e1.getClass().getName(), e1.getMessage());
+                    }
                 } catch (IOException e2) {
                     // ignore
                 }

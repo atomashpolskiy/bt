@@ -26,7 +26,7 @@ class DefaultPeerConnection implements PeerConnection {
     private final Peer remotePeer;
 
     private final Channel channel;
-    private final MessageReaderWriter readerWriter;
+    private final PeerConnectionMessageWorker readerWriter;
 
     private volatile boolean closed;
     private final AtomicLong lastActive;
@@ -36,7 +36,7 @@ class DefaultPeerConnection implements PeerConnection {
 
     DefaultPeerConnection(Peer remotePeer,
                           Channel channel,
-                          MessageReaderWriter readerWriter) {
+                          PeerConnectionMessageWorker readerWriter) {
         this.remotePeer = remotePeer;
         this.channel = channel;
         this.readerWriter = readerWriter;
@@ -58,7 +58,7 @@ class DefaultPeerConnection implements PeerConnection {
     }
 
     @Override
-    public synchronized Message readMessageNow() {
+    public synchronized Message readMessageNow() throws IOException {
         Message message = null;
         Optional<Message> messageOptional = readerWriter.readMessage();
         if (messageOptional.isPresent()) {
@@ -72,7 +72,7 @@ class DefaultPeerConnection implements PeerConnection {
     }
 
     @Override
-    public synchronized Message readMessage(long timeout) {
+    public synchronized Message readMessage(long timeout) throws IOException {
         Message message = readMessageNow();
         if (message == null) {
 
@@ -112,7 +112,7 @@ class DefaultPeerConnection implements PeerConnection {
     }
 
     @Override
-    public synchronized void postMessage(Message message) {
+    public synchronized void postMessage(Message message) throws IOException {
         updateLastActive();
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Sending message to peer: " + remotePeer + " -- " + message);
