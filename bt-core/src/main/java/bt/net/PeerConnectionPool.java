@@ -161,7 +161,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                     if (newConnection.isPresent()) {
                         return Optional.of(addOrGetExisting(newConnection.get()));
                     } else {
-                        return Optional.of((PeerConnection)newConnection.get());
+                        return newConnection; // empty optional
                     }
                 } finally {
                     synchronized (pendingConnections) {
