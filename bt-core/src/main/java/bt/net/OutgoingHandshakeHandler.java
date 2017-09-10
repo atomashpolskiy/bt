@@ -63,7 +63,7 @@ class OutgoingHandshakeHandler implements ConnectionHandler {
                 Handshake peerHandshake = (Handshake) firstMessage;
                 TorrentId incomingTorrentId = peerHandshake.getTorrentId();
                 if (torrentId.equals(incomingTorrentId)) {
-                    ((DefaultPeerConnection) connection).setTorrentId(torrentId);
+                    connection.setTorrentId(torrentId);
 
                     handshakeHandlers.forEach(handler ->
                             handler.processIncomingHandshake(new WriteOnlyPeerConnection(connection), peerHandshake));

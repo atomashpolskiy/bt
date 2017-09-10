@@ -6,26 +6,27 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.channels.Channel;
+import java.nio.channels.SocketChannel;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @since 1.0
  */
-class DefaultPeerConnection implements PeerConnection {
+class SocketPeerConnection implements PeerConnection {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultPeerConnection.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SocketPeerConnection.class);
 
     private static final long WAIT_BETWEEN_READS = 100L;
 
-    private volatile TorrentId torrentId;
+    private final AtomicReference<TorrentId> torrentId;
     private final Peer remotePeer;
 
-    private final Channel channel;
+    private final SocketChannel channel;
     private final PeerConnectionMessageWorker readerWriter;
 
     private volatile boolean closed;
@@ -34,9 +35,10 @@ class DefaultPeerConnection implements PeerConnection {
     private final ReentrantLock readLock;
     private final Condition condition;
 
-    DefaultPeerConnection(Peer remotePeer,
-                          Channel channel,
-                          PeerConnectionMessageWorker readerWriter) {
+    SocketPeerConnection(Peer remotePeer,
+                         SocketChannel channel,
+                         PeerConnectionMessageWorker readerWriter) {
+        this.torrentId = new AtomicReference<>();
         this.remotePeer = remotePeer;
         this.channel = channel;
         this.readerWriter = readerWriter;
@@ -48,13 +50,14 @@ class DefaultPeerConnection implements PeerConnection {
     /**
      * @since 1.0
      */
-    void setTorrentId(TorrentId torrentId) {
-        this.torrentId = torrentId;
+    @Override
+    public TorrentId setTorrentId(TorrentId torrentId) {
+        return this.torrentId.getAndSet(torrentId);
     }
 
     @Override
     public TorrentId getTorrentId() {
-        return torrentId;
+        return torrentId.get();
     }
 
     @Override
@@ -160,5 +163,9 @@ class DefaultPeerConnection implements PeerConnection {
     @Override
     public long getLastActive() {
         return lastActive.get();
+    }
+
+    public SocketChannel getChannel() {
+        return channel;
     }
 }

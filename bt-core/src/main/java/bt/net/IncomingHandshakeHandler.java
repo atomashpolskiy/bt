@@ -72,7 +72,7 @@ class IncomingHandshakeHandler implements ConnectionHandler {
                         }
                         return false;
                     }
-                    ((DefaultPeerConnection) connection).setTorrentId(torrentId);
+                    connection.setTorrentId(torrentId);
 
                     handshakeHandlers.forEach(handler ->
                             handler.processIncomingHandshake(new WriteOnlyPeerConnection(connection), peerHandshake));

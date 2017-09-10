@@ -60,7 +60,7 @@ public class PeerConnectionTest {
         MessageReader reader = new MessageReader(peer, clientChannel, messageHandler, BUFFER_SIZE);
         MessageWriter writer = new MessageWriter(clientChannel, peer, messageHandler, BUFFER_SIZE);
         PeerConnectionMessageWorker readerWriter = new DelegatingPeerConnectionMessageWorker(reader, writer);
-        PeerConnection connection = new DefaultPeerConnection(peer, clientChannel, readerWriter);
+        PeerConnection connection = new SocketPeerConnection(peer, clientChannel, readerWriter);
 
         Message message;
 

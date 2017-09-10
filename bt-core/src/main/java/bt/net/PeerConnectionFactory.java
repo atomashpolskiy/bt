@@ -91,7 +91,7 @@ class PeerConnectionFactory {
                 cryptoHandshakeProcessor.negotiateIncoming(peer, channel)
                 : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId);
 
-        PeerConnection connection = new DefaultPeerConnection(peer, channel, readerWriter);
+        PeerConnection connection = new SocketPeerConnection(peer, channel, readerWriter);
         ConnectionHandler connectionHandler;
         if (incoming) {
             connectionHandler = connectionHandlerFactory.getIncomingHandler();
