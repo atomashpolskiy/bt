@@ -43,7 +43,7 @@ class PeerConnectionFactory {
         return (int) (maxTransferBlockSize) * 2;
     }
 
-    public Optional<DefaultPeerConnection> createOutgoingConnection(Peer peer, TorrentId torrentId) {
+    public Optional<PeerConnection> createOutgoingConnection(Peer peer, TorrentId torrentId) {
         Objects.requireNonNull(peer);
 
         InetAddress inetAddress = peer.getInetAddress();
@@ -63,7 +63,7 @@ class PeerConnectionFactory {
         }
     }
 
-    public Optional<DefaultPeerConnection> createIncomingConnection(Peer peer, SocketChannel channel) {
+    public Optional<PeerConnection> createIncomingConnection(Peer peer, SocketChannel channel) {
         try {
             return createConnection(peer, null, channel, true);
         } catch (IOException e) {
@@ -76,7 +76,7 @@ class PeerConnectionFactory {
         }
     }
 
-    private Optional<DefaultPeerConnection> createConnection(Peer peer,
+    private Optional<PeerConnection> createConnection(Peer peer,
                                                              TorrentId torrentId,
                                                              SocketChannel channel,
                                                              boolean incoming) throws IOException {
@@ -91,7 +91,7 @@ class PeerConnectionFactory {
                 cryptoHandshakeProcessor.negotiateIncoming(peer, channel)
                 : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId);
 
-        DefaultPeerConnection connection = new DefaultPeerConnection(peer, channel, readerWriter);
+        PeerConnection connection = new DefaultPeerConnection(peer, channel, readerWriter);
         ConnectionHandler connectionHandler;
         if (incoming) {
             connectionHandler = connectionHandlerFactory.getIncomingHandler();
@@ -111,7 +111,7 @@ class PeerConnectionFactory {
         }
     }
 
-    private boolean initConnection(DefaultPeerConnection newConnection, ConnectionHandler connectionHandler) {
+    private boolean initConnection(PeerConnection newConnection, ConnectionHandler connectionHandler) {
         boolean success = connectionHandler.handleConnection(newConnection);
         if (success) {
             if (LOGGER.isDebugEnabled()) {

@@ -1,6 +1,5 @@
 package bt.net;
 
-import bt.BtException;
 import bt.event.EventSink;
 import bt.metainfo.TorrentId;
 import bt.module.BitTorrentProtocol;
@@ -22,7 +21,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.time.Duration;
-import java.util.Iterator;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -35,6 +34,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 /**
  *<p><b>Note that this class implements a service.
@@ -53,11 +53,11 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private ExecutorService executor;
     private ScheduledExecutorService cleaner;
 
-    private final Map<Peer, CompletableFuture<Optional<PeerConnection>>> pendingConnections;
-    private ConcurrentMap<Peer, DefaultPeerConnection> connections;
+    private Connections connections;
+    private Map<Peer, CompletableFuture<Optional<PeerConnection>>> pendingConnections;
     private ReentrantLock cleanerLock;
 
-    private Map<Peer, Long> unreachablePeers;
+    private ConcurrentMap<Peer, Long> unreachablePeers;
 
     private Duration peerConnectionInactivityThreshold;
 
@@ -82,8 +82,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         this.peerConnectionInactivityThreshold = config.getPeerConnectionInactivityThreshold();
 
+        this.connections = new Connections();
         this.pendingConnections = new ConcurrentHashMap<>();
-        this.connections = new ConcurrentHashMap<>();
         this.cleanerLock = new ReentrantLock();
 
         this.unreachablePeers = new ConcurrentHashMap<>();
@@ -95,11 +95,10 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         this.cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, "bt.net.pool.cleaner"));
         lifecycleBinder.onStartup("Schedule periodic cleanup of stale peer connections",
-                () -> cleaner.scheduleAtFixedRate(new Cleaner(config.getUnreachablePeerBanDuration()), 1000, 1000, TimeUnit.MILLISECONDS));
+                () -> cleaner.scheduleAtFixedRate(new Cleaner(config.getUnreachablePeerBanDuration()), 1, 1, TimeUnit.SECONDS));
 
         this.executor = Executors.newFixedThreadPool(config.getMaxPendingConnectionRequests(),
                 new ThreadFactory() {
-
                     private AtomicInteger threadCount = new AtomicInteger(1);
 
                     @Override
@@ -124,7 +123,12 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     @Override
     public PeerConnection getConnection(Peer peer) {
-        return connections.get(peer);
+        return connections.get(peer).orElse(null);
+    }
+
+    @Override
+    public Collection<PeerConnection> getConnections(TorrentId torrentId) {
+        return null;
     }
 
     @Override
@@ -138,9 +142,10 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             return CompletableFuture.completedFuture(Optional.empty());
         }
 
-        if (connections.size() >= config.getMaxPeerConnections()) {
+        if (connections.count() >= config.getMaxPeerConnections()) {
             // seems a bit like a hack. just a little bit
-            return CompletableFuture.supplyAsync(() -> {throw new BtException("Connections limit exceeded");}, executor);
+            return CompletableFuture.supplyAsync(
+                    () -> {throw new RuntimeException("Connections limit exceeded");}, executor);
         }
 
         synchronized (pendingConnections) {
@@ -151,10 +156,10 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
             connection = CompletableFuture.supplyAsync(() -> {
                 try {
-                    Optional<DefaultPeerConnection> newConnection =
+                    Optional<PeerConnection> newConnection =
                             connectionFactory.createOutgoingConnection(peer, torrentId);
                     if (newConnection.isPresent()) {
-                        return Optional.of((PeerConnection)addOrGetExisting(newConnection.get()));
+                        return Optional.of(addOrGetExisting(newConnection.get()));
                     } else {
                         return Optional.of((PeerConnection)newConnection.get());
                     }
@@ -219,15 +224,15 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 localAddress = serverChannel.getLocalAddress();
                 LOGGER.info("Opening server channel for incoming connections @ " + localAddress);
             } catch (IOException e) {
-                throw new BtException("Failed to create incoming connections listener " +
+                throw new RuntimeException("Failed to create incoming connections listener " +
                         "-- unexpected I/O exception happened when creating an incoming channel", e);
             }
 
             try {
                 while (!shutdown) {
-                    if (connections.size() < config.getMaxPeerConnections()) {
+                    if (connections.count() < config.getMaxPeerConnections()) {
                         SocketChannel channel = serverChannel.accept();
-                        if (connections.size() < config.getMaxPeerConnections()) {
+                        if (connections.count() < config.getMaxPeerConnections()) {
                             acceptIncomingConnection(channel);
                         } else {
                             rejectIncomingConnection(channel);
@@ -286,7 +291,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             }
 
             try {
-                Optional<DefaultPeerConnection> incomingConnection = connectionFactory.createIncomingConnection(peer, incomingChannel);
+                Optional<PeerConnection> incomingConnection = connectionFactory.createIncomingConnection(peer, incomingChannel);
                 if (incomingConnection.isPresent()) {
                     addOrGetExisting(incomingConnection.get());
                 }
@@ -296,25 +301,27 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         });
     }
 
-    private DefaultPeerConnection addOrGetExisting(DefaultPeerConnection newConnection) {
+    private PeerConnection addOrGetExisting(PeerConnection newConnection) {
+        Peer peer = newConnection.getRemotePeer();
         if (!addConnectionIfAbsent(newConnection)) {
             // check if it was already added simultaneously by another connection worker
-            DefaultPeerConnection existingConnection = connections.get(newConnection.getRemotePeer());
+            PeerConnection existingConnection = connections.get(peer)
+                    .orElseThrow(() -> new RuntimeException("Failed to add new connection for peer: " + peer));
             if (existingConnection == null) {
-                throw new BtException("Failed to add new connection for peer: " + newConnection.getRemotePeer());
+                throw new RuntimeException("Failed to add new connection for peer: " + newConnection.getRemotePeer());
             }
             newConnection = existingConnection;
         }
         return newConnection;
     }
 
-    private boolean addConnectionIfAbsent(DefaultPeerConnection newConnection) {
+    private boolean addConnectionIfAbsent(PeerConnection newConnection) {
         boolean added = false;
-        DefaultPeerConnection existingConnection = null;
+        PeerConnection existingConnection = null;
 
         cleanerLock.lock();
         try {
-            if (connections.size() >= config.getMaxPeerConnections()) {
+            if (connections.count() >= config.getMaxPeerConnections()) {
                 if (LOGGER.isTraceEnabled()) {
                     LOGGER.trace("Closing newly created connection with {} due to exceeding of connections limit",
                             newConnection.getRemotePeer());
@@ -351,47 +358,37 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         @Override
         public void run() {
-
-            if (connections.isEmpty()) {
+            if (connections.count() == 0) {
                 return;
             }
 
             cleanerLock.lock();
             try {
-                {
-                    Iterator<DefaultPeerConnection> iter = connections.values().iterator();
-                    while (iter.hasNext()) {
+                connections.visitConnections(connection -> {
+                    Peer peer = connection.getRemotePeer();
+                    if (connection.isClosed()) {
+                        purgeConnectionWithPeer(peer);
 
-                        DefaultPeerConnection connection = iter.next();
-                        if (connection.isClosed()) {
-                            purgeConnectionWithPeer(connection.getRemotePeer());
-                            iter.remove();
+                    } else if (System.currentTimeMillis() - connection.getLastActive()
+                            >= peerConnectionInactivityThreshold.toMillis()) {
 
-                        } else if (System.currentTimeMillis() - connection.getLastActive()
-                                >= peerConnectionInactivityThreshold.toMillis()) {
-
-                            if (LOGGER.isDebugEnabled()) {
-                                LOGGER.debug("Removing inactive peer connection: {}", connection.getRemotePeer());
-                            }
-                            purgeConnectionWithPeer(connection.getRemotePeer());
-                            iter.remove();
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Removing inactive peer connection: {}", peer);
                         }
-                        // can send keep-alives here based on lastActiveTime
+                        purgeConnectionWithPeer(peer);
                     }
-                }
+                    // can send keep-alives here based on lastActiveTime
+                });
 
-                {
-                    Iterator<Map.Entry<Peer, Long>> iter = unreachablePeers.entrySet().iterator();
-                    while (iter.hasNext()) {
-                        Map.Entry<Peer, Long> entry = iter.next();
-                        if (System.currentTimeMillis() - entry.getValue() >= unreachablePeerBanDuration.toMillis()) {
-                            if (LOGGER.isDebugEnabled()) {
-                                LOGGER.debug("Removing temporary ban for unreachable peer: {}", entry.getKey());
-                            }
-                            iter.remove();
+                unreachablePeers.forEach((peer, bannedAt) -> {
+                    if (System.currentTimeMillis() - bannedAt >= unreachablePeerBanDuration.toMillis()) {
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Removing temporary ban for unreachable peer: {}", peer);
                         }
+                        unreachablePeers.remove(peer);
                     }
-                }
+                });
+
             } finally {
                 cleanerLock.unlock();
             }
@@ -399,7 +396,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     }
 
     private void purgeConnectionWithPeer(Peer peer) {
-        DefaultPeerConnection purged = connections.remove(peer);
+        PeerConnection purged = connections.remove(peer);
         if (purged != null) {
             if (!purged.isClosed()) {
                 purged.closeQuietly();
@@ -410,18 +407,69 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     private void shutdown() {
         shutdownCleaner();
-        connections.values().forEach(DefaultPeerConnection::closeQuietly);
+        connections.visitConnections(PeerConnection::closeQuietly);
     }
 
     private void shutdownCleaner() {
         cleaner.shutdown();
         try {
-            cleaner.awaitTermination(1000, TimeUnit.MILLISECONDS);
+            cleaner.awaitTermination(1, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         if (!cleaner.isShutdown()) {
             cleaner.shutdownNow();
+        }
+    }
+
+    private static class Connections {
+        private ConcurrentMap<Peer, PeerConnection> connections;
+        private ConcurrentMap<TorrentId, Collection<PeerConnection>> connectionsByTorrent;
+
+        Connections() {
+            this.connections = new ConcurrentHashMap<>();
+            this.connectionsByTorrent = new ConcurrentHashMap<>();
+        }
+
+        int count() {
+            return connections.size();
+        }
+
+        synchronized PeerConnection remove(Peer peer) {
+            PeerConnection removed = connections.remove(peer);
+            if (removed != null) {
+                connectionsByTorrent.values().forEach(connections -> {
+                    connections.remove(removed);
+                    if (connections.isEmpty()) {
+                        connectionsByTorrent.remove(removed.getTorrentId());
+                    }
+                });
+            }
+            return removed;
+        }
+
+        synchronized PeerConnection putIfAbsent(Peer peer, PeerConnection connection) {
+            PeerConnection existing = connections.putIfAbsent(peer, connection);
+            TorrentId torrentId = connection.getTorrentId();
+            if (existing == null && torrentId != null) {
+                connectionsByTorrent.computeIfAbsent(torrentId, id -> ConcurrentHashMap.newKeySet()).add(connection);
+            }
+            return existing;
+        }
+
+        Optional<PeerConnection> get(Peer peer) {
+            return Optional.ofNullable(connections.get(peer));
+        }
+
+        void visitConnections(Consumer<PeerConnection> visitor) {
+            connections.values().forEach(visitor::accept);
+        }
+
+        void visitConnections(TorrentId torrentId, Consumer<PeerConnection> visitor) {
+            Collection<PeerConnection> connections = connectionsByTorrent.get(torrentId);
+            if (connections != null) {
+                connections.forEach(visitor::accept);
+            }
         }
     }
 }
