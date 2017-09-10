@@ -62,6 +62,24 @@ public class EventBus implements EventSink, EventSource {
         }
     }
 
+    @Override
+    public void fireTorrentStarted(TorrentId torrentId) {
+        long timestamp = System.currentTimeMillis();
+        if (hasListeners(TorrentStartedEvent.class)) {
+            long id = nextId();
+            fireEvent(new TorrentStartedEvent(id, timestamp, torrentId));
+        }
+    }
+
+    @Override
+    public void fireTorrentStopped(TorrentId torrentId) {
+        long timestamp = System.currentTimeMillis();
+        if (hasListeners(TorrentStoppedEvent.class)) {
+            long id = nextId();
+            fireEvent(new TorrentStoppedEvent(id, timestamp, torrentId));
+        }
+    }
+
     private boolean hasListeners(Class<? extends BaseEvent> eventType) {
         Collection<Consumer<? extends BaseEvent>> listeners = this.listeners.get(eventType);
         return listeners != null && !listeners.isEmpty();
@@ -108,6 +126,18 @@ public class EventBus implements EventSink, EventSource {
     @Override
     public EventSource onPeerBitfieldUpdated(Consumer<PeerBitfieldUpdatedEvent> listener) {
         addListener(PeerBitfieldUpdatedEvent.class, listener);
+        return this;
+    }
+
+    @Override
+    public EventSource onTorrentStarted(Consumer<TorrentStartedEvent> listener) {
+        addListener(TorrentStartedEvent.class, listener);
+        return this;
+    }
+
+    @Override
+    public EventSource onTorrentStopped(Consumer<TorrentStoppedEvent> listener) {
+        addListener(TorrentStoppedEvent.class, listener);
         return this;
     }
 

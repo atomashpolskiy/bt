@@ -26,4 +26,14 @@ public interface EventSource {
      * @since 1.5
      */
     EventSource onPeerBitfieldUpdated(Consumer<PeerBitfieldUpdatedEvent> listener);
+
+    /**
+     * @since 1.5
+     */
+    EventSource onTorrentStarted(Consumer<TorrentStartedEvent> listener);
+
+    /**
+     * @since 1.5
+     */
+    EventSource onTorrentStopped(Consumer<TorrentStoppedEvent> listener);
 }

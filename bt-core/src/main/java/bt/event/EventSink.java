@@ -28,4 +28,18 @@ public interface EventSink {
      * @since 1.5
      */
     void firePeerBitfieldUpdated(TorrentId torrentId, Peer peer, Bitfield bitfield);
+
+    /**
+     * Announce that the torrent has been started.
+     *
+     * @since 1.5
+     */
+    void fireTorrentStarted(TorrentId torrentId);
+
+    /**
+     * Announce that the torrent has been stopped.
+     *
+     * @since 1.5
+     */
+    void fireTorrentStopped(TorrentId torrentId);
 }
