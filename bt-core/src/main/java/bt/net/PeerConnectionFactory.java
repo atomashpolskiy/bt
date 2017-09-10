@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.Objects;
 import java.util.Optional;
@@ -20,18 +19,15 @@ class PeerConnectionFactory {
 
     private SocketChannelFactory socketChannelFactory;
     private IConnectionHandlerFactory connectionHandlerFactory;
-    private SharedSelector selector;
     private MSEHandshakeProcessor cryptoHandshakeProcessor;
 
     public PeerConnectionFactory(MessageHandler<Message> messageHandler,
                                  SocketChannelFactory socketChannelFactory,
                                  IConnectionHandlerFactory connectionHandlerFactory,
                                  TorrentRegistry torrentRegistry,
-                                 SharedSelector selector,
                                  Config config) {
         this.socketChannelFactory = socketChannelFactory;
         this.connectionHandlerFactory = connectionHandlerFactory;
-        this.selector = selector;
         this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(torrentRegistry, messageHandler,
                 config.getEncryptionPolicy(), getBufferSize(config.getMaxTransferBlockSize()), config.getMsePrivateKeySize());
     }
@@ -100,10 +96,6 @@ class PeerConnectionFactory {
         }
         boolean inited = initConnection(connection, connectionHandler);
         if (inited) {
-            // use atomic wakeup-and-register to prevent blocking of registration,
-            // if selection is resumed before call to register is performed
-            // (there is a race between message dispatcher and current thread)
-            selector.wakeupAndRegister(channel, SelectionKey.OP_READ, connection);
             return Optional.of(connection);
         } else {
             connection.closeQuietly();

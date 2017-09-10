@@ -1,5 +1,6 @@
 package bt.net;
 
+import bt.event.EventSource;
 import bt.metainfo.TorrentId;
 import bt.module.PeerConnectionSelector;
 import bt.protocol.Message;
@@ -15,6 +16,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -51,6 +53,7 @@ public class MessageDispatcher implements IMessageDispatcher {
     public MessageDispatcher(IRuntimeLifecycleBinder lifecycleBinder,
                              IPeerConnectionPool pool,
                              TorrentRegistry torrentRegistry,
+                             EventSource eventSource,
                              @PeerConnectionSelector SharedSelector selector,
                              Config config) {
 
@@ -60,7 +63,7 @@ public class MessageDispatcher implements IMessageDispatcher {
 
         Queue<PeerMessage> messages = new LinkedBlockingQueue<>(); // shared message queue
         initializeMessageLoop(lifecycleBinder, pool, messages, config);
-        initializeMessageReceiver(selector, lifecycleBinder, messages);
+        initializeMessageReceiver(eventSource, pool, selector, torrentRegistry, lifecycleBinder, messages);
     }
 
     private void initializeMessageLoop(IRuntimeLifecycleBinder lifecycleBinder,
@@ -80,13 +83,16 @@ public class MessageDispatcher implements IMessageDispatcher {
         });
     }
 
-    private void initializeMessageReceiver(SharedSelector selector,
+    private void initializeMessageReceiver(EventSource eventSource,
+                                           IPeerConnectionPool pool,
+                                           SharedSelector selector,
+                                           TorrentRegistry torrentRegistry,
                                            IRuntimeLifecycleBinder lifecycleBinder,
                                            Queue<PeerMessage> messages) {
         ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.net.message-receiver"));
         BiConsumer<Peer, Message> messageSink = (peer, message) ->
                 messages.add(new PeerMessage(Objects.requireNonNull(peer), Objects.requireNonNull(message)));
-        MessageReceivingLoop loop = new MessageReceivingLoop(selector, messageSink);
+        MessageReceivingLoop loop = new MessageReceivingLoop(eventSource, pool, selector, messageSink, torrentRegistry);
         lifecycleBinder.onStartup("Initialize message receiver", () -> executor.execute(loop));
         lifecycleBinder.onShutdown("Shutdown message receiver", () -> {
             try {
@@ -117,17 +123,101 @@ public class MessageDispatcher implements IMessageDispatcher {
 
     private class MessageReceivingLoop implements Runnable {
 
+        private static final int NO_OPS = 0;
+
+        private final EventSource eventSource;
+        private final IPeerConnectionPool pool;
         private final SharedSelector selector;
         private final BiConsumer<Peer, Message> messageSink;
+        private final TorrentRegistry torrentRegistry;
+
         private volatile boolean shutdown;
 
-        MessageReceivingLoop(SharedSelector selector, BiConsumer<Peer, Message> messageSink) {
+        MessageReceivingLoop(EventSource eventSource,
+                             IPeerConnectionPool pool,
+                             SharedSelector selector,
+                             BiConsumer<Peer, Message> messageSink,
+                             TorrentRegistry torrentRegistry) {
+            this.eventSource = eventSource;
+            this.pool = pool;
             this.selector = selector;
             this.messageSink = messageSink;
+            this.torrentRegistry = torrentRegistry;
+        }
+
+        private synchronized void onPeerConnected(Peer peer) {
+            PeerConnection connection = pool.getConnection(peer);
+            if (connection != null) {
+                try {
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Registering new connection for peer: {}", peer);
+                    }
+                    registerConnection(connection);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to register new connection for peer: " + peer, e);
+                }
+            }
+        }
+
+        private void registerConnection(PeerConnection connection) {
+            if (connection instanceof SocketPeerConnection) {
+                SocketChannel channel = ((SocketPeerConnection)connection).getChannel();
+                // use atomic wakeup-and-register to prevent blocking of registration,
+                // if selection is resumed before call to register is performed
+                // (there is a race between the message receiving loop and current thread)
+                // TODO: move this to the main loop instead?
+                int interestOps = getInterestOps(connection.getTorrentId());
+                selector.wakeupAndRegister(channel, interestOps, connection);
+            }
+        }
+
+        private int getInterestOps(TorrentId torrentId) {
+            Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrentId);
+            boolean active = descriptor.isPresent() && descriptor.get().isActive();
+            return active ? SelectionKey.OP_READ : NO_OPS;
+        }
+
+        private synchronized void onTorrentStarted(TorrentId torrentId) {
+            pool.visitConnections(torrentId, connection -> {
+                Peer peer = connection.getRemotePeer();
+                try {
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Activating connection for peer: {}", peer);
+                    }
+                    updateInterestOps(connection, SelectionKey.OP_READ);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to activate connection for peer: " + peer, e);
+                }
+            });
+        }
+
+        private synchronized void onTorrentStopped(TorrentId torrentId) {
+            pool.visitConnections(torrentId, connection -> {
+                Peer peer = connection.getRemotePeer();
+                try {
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("De-activating connection for peer: {}", peer);
+                    }
+                    updateInterestOps(connection, NO_OPS);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to de-activate connection for peer: " + peer, e);
+                }
+            });
+        }
+
+        private void updateInterestOps(PeerConnection connection, int interestOps) {
+            if (connection instanceof SocketPeerConnection) {
+                SocketChannel channel = ((SocketPeerConnection)connection).getChannel();
+                selector.keyFor(channel).ifPresent(key -> key.interestOps(interestOps));
+            }
         }
 
         @Override
         public void run() {
+            eventSource.onPeerConnected(e -> onPeerConnected(e.getPeer()));
+            eventSource.onTorrentStarted(e -> onTorrentStarted(e.getTorrentId()));
+            eventSource.onTorrentStopped(e -> onTorrentStopped(e.getTorrentId()));
+
             while (!shutdown) {
                 if (!selector.isOpen()) {
                     LOGGER.info("Selector is closed, stopping...");

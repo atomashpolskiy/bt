@@ -6,6 +6,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -112,5 +113,9 @@ public class SharedSelector extends Selector {
     @Override
     public void close() throws IOException {
         delegate.close();
+    }
+
+    public Optional<SelectionKey> keyFor(SelectableChannel channel) {
+        return Optional.ofNullable(channel.keyFor(delegate));
     }
 }

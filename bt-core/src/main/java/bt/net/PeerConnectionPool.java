@@ -54,7 +54,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private ScheduledExecutorService cleaner;
 
     private Connections connections;
-    private Map<Peer, CompletableFuture<Optional<PeerConnection>>> pendingConnections;
+    private final Map<Peer, CompletableFuture<Optional<PeerConnection>>> pendingConnections;
     private ReentrantLock cleanerLock;
 
     private ConcurrentMap<Peer, Long> unreachablePeers;
@@ -78,7 +78,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         SocketChannelFactory socketChannelFactory =
                 new SocketChannelFactory(selector, config.getAcceptorAddress(), config.getAcceptorPort());
         this.connectionFactory = new PeerConnectionFactory(messageHandler, socketChannelFactory,
-                connectionHandlerFactory, torrentRegistry, selector, config);
+                connectionHandlerFactory, torrentRegistry, config);
 
         this.peerConnectionInactivityThreshold = config.getPeerConnectionInactivityThreshold();
 
@@ -127,8 +127,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     }
 
     @Override
-    public Collection<PeerConnection> getConnections(TorrentId torrentId) {
-        return null;
+    public void visitConnections(TorrentId torrentId, Consumer<PeerConnection> visitor) {
+        connections.visitConnections(torrentId, visitor);
     }
 
     @Override
