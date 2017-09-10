@@ -65,4 +65,9 @@ public abstract class BaseEvent implements Comparable<BaseEvent> {
         BaseEvent that = (BaseEvent) o;
         return this.id == that.id;
     }
+
+    @Override
+    public String toString() {
+        return "[" + this.getClass().getSimpleName() + "] id {" + id + "}, timestamp {" + timestamp + "}";
+    }
 }

@@ -29,4 +29,10 @@ public class PeerBitfieldUpdatedEvent extends BaseEvent implements TorrentEvent 
     public Bitfield getBitfield() {
         return bitfield;
     }
+
+    @Override
+    public String toString() {
+        return "[" + this.getClass().getSimpleName() + "] id {" + getId() + "}, timestamp {" + getTimestamp() +
+                "}, torrent {" + torrentId + "}, peer {" + peer + "}";
+    }
 }

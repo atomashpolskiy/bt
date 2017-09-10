@@ -93,6 +93,10 @@ public class EventBus implements EventSink, EventSource {
         eventLock.readLock().lock();
         try {
             Collection<Consumer<? extends BaseEvent>> listeners = this.listeners.get(event.getClass());
+            if (LOGGER.isTraceEnabled()) {
+                int count = (listeners == null) ? 0 : listeners.size();
+                LOGGER.trace("Firing event: {}. Listeners count: {}", event, count);
+            }
             if (listeners != null && !listeners.isEmpty()) {
                 for (Consumer<? extends BaseEvent> listener : listeners) {
                     @SuppressWarnings("unchecked")

@@ -24,4 +24,10 @@ public class PeerConnectedEvent extends BaseEvent implements TorrentEvent {
     public Peer getPeer() {
         return peer;
     }
+
+    @Override
+    public String toString() {
+        return "[" + this.getClass().getSimpleName() + "] id {" + getId() + "}, timestamp {" + getTimestamp() +
+                "}, torrent {" + torrentId + "}, peer {" + peer + "}";
+    }
 }

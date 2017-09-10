@@ -15,4 +15,10 @@ public class TorrentStoppedEvent extends BaseEvent implements TorrentEvent {
     public TorrentId getTorrentId() {
         return torrentId;
     }
+
+    @Override
+    public String toString() {
+        return "[" + this.getClass().getSimpleName() + "] id {" + getId() + "}, timestamp {" + getTimestamp() +
+                "}, torrent {" + torrentId + "}";
+    }
 }
