@@ -135,14 +135,25 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     public CompletableFuture<Optional<PeerConnection>> requestConnection(TorrentId torrentId, Peer peer) {
         CompletableFuture<Optional<PeerConnection>> connection = getExistingOrPendingConnection(peer);
         if (connection != null) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Returning existing connection for peer: {}. Torrent: {}", peer, torrentId);
+            }
             return connection;
         }
 
         if (unreachablePeers.containsKey(peer)) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Will not attempt to establish connection to peer: {}. " +
+                        "Reason: peer is unreachable. Torrent: {}", peer, torrentId);
+            }
             return CompletableFuture.completedFuture(Optional.empty());
         }
 
         if (connections.count() >= config.getMaxPeerConnections()) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Will not attempt to establish connection to peer: {}. " +
+                        "Reason: connections limit exceeded. Torrent: {}", peer, torrentId);
+            }
             // seems a bit like a hack. just a little bit
             return CompletableFuture.supplyAsync(
                     () -> {throw new RuntimeException("Connections limit exceeded");}, executor);
@@ -151,6 +162,9 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         synchronized (pendingConnections) {
             connection = getExistingOrPendingConnection(peer);
             if (connection != null) {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Returning existing connection for peer: {}. Torrent: {}", peer, torrentId);
+                }
                 return connection;
             }
 
@@ -170,6 +184,9 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 }
             }, executor).whenComplete((acquiredConnection, throwable) -> {
                 if (acquiredConnection == null || throwable != null) {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Peer is unreachable: {}. Will prevent further attempts to establish connection.", peer);
+                    }
                     cleanerLock.lock();
                     try {
                         unreachablePeers.putIfAbsent(peer, System.currentTimeMillis());
@@ -179,8 +196,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
                 }
                 if (throwable != null) {
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Failed to establish outgoing connection to peer: " + peer, throwable);
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Failed to establish outgoing connection to peer: " + peer, throwable);
                     }
                 }
             });
@@ -255,8 +272,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         private void rejectIncomingConnection(SocketChannel channel) {
             try {
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Rejected incoming connection from {} due to exceeding of connections limit",
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Rejected incoming connection from {} due to exceeding of connections limit",
                             channel.getRemoteAddress());
                 }
                 channel.close();
@@ -322,8 +339,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         cleanerLock.lock();
         try {
             if (connections.count() >= config.getMaxPeerConnections()) {
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Closing newly created connection with {} due to exceeding of connections limit",
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Closing newly created connection with {} due to exceeding of connections limit",
                             newConnection.getRemotePeer());
                 }
                 newConnection.closeQuietly();
@@ -415,7 +432,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         try {
             cleaner.awaitTermination(1, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            LOGGER.warn("Interrupted while waiting for the cleaner's shutdown");
         }
         if (!cleaner.isShutdown()) {
             cleaner.shutdownNow();
