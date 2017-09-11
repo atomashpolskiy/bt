@@ -49,7 +49,7 @@ public class ChainProcessor<C extends ProcessingContext> implements Processor<C>
             @Override
             public void cancel() {
                 if (completed.compareAndSet(false, true)) {
-                    complete(context);
+                    ChainProcessor.this.cancel(context);
                 }
                 super.cancel();
             }
@@ -100,6 +100,14 @@ public class ChainProcessor<C extends ProcessingContext> implements Processor<C>
     private void complete(C context) {
         try {
             finalizer.finish(context);
+        } catch (Exception e) {
+            LOGGER.error("Failed to finalize context", e);
+        }
+    }
+
+    private void cancel(C context) {
+        try {
+            finalizer.stop(context);
         } catch (Exception e) {
             LOGGER.error("Failed to finalize context", e);
         }

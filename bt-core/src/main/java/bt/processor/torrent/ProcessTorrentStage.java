@@ -47,7 +47,7 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
                 Thread.sleep(1000);
                 if (context.getState().get().getPiecesRemaining() == 0) {
                     complete(context);
-                    return;
+                    break;
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
@@ -69,7 +69,7 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
 
     private void complete(C context) {
         try {
-            getDescriptor(context.getTorrentId().get()).complete();
+            context.getTorrentId().ifPresent(torrentId -> getDescriptor(torrentId).complete());
             onCompleted(context);
         } catch (Exception e) {
             LOGGER.error("Unexpected error", e);
