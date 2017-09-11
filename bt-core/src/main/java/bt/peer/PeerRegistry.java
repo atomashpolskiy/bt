@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -175,8 +176,11 @@ public class PeerRegistry implements IPeerRegistry {
         try {
             if (peerSource.update()) {
                 Collection<Peer> discoveredPeers = peerSource.getPeers();
-                for (Peer peer : discoveredPeers) {
+                Iterator<Peer> iter = discoveredPeers.iterator();
+                while (iter.hasNext()) {
+                    Peer peer = iter.next();
                     addPeer(torrentId, peer);
+                    iter.remove();
                 }
             }
         } catch (Exception e) {
