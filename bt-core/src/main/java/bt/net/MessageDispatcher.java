@@ -208,7 +208,13 @@ public class MessageDispatcher implements IMessageDispatcher {
         private void updateInterestOps(PeerConnection connection, int interestOps) {
             if (connection instanceof SocketPeerConnection) {
                 SocketChannel channel = ((SocketPeerConnection)connection).getChannel();
-                selector.keyFor(channel).ifPresent(key -> key.interestOps(interestOps));
+                selector.keyFor(channel).ifPresent(key -> {
+                    // synchronizing on the selection key,
+                    // as we will be using it in a separate, message receiving thread
+                    synchronized (key) {
+                        key.interestOps(interestOps);
+                    }
+                });
             }
         }
 
@@ -226,8 +232,18 @@ public class MessageDispatcher implements IMessageDispatcher {
 
                 try {
                     // wakeup periodically to check if there are unprocessed keys left
-                    while (selector.select(1000) == 0 && selector.selectedKeys().isEmpty()) {
+                    long t1 = System.nanoTime();
+                    long timeToBlockMillis = 1000;
+                    while (selector.select(timeToBlockMillis) == 0) {
                         Thread.yield();
+                        long t2 = System.nanoTime();
+                        // check that the selection timeout period is expired, before dealing with unprocessed keys;
+                        // it could be a call to wake up, that made the select() return,
+                        // and we don't want to perform extra work on each spin iteration
+                        if ((t2 - t1 >= timeToBlockMillis * 1000) && !selector.selectedKeys().isEmpty()) {
+                            // try to deal with unprocessed keys, left from the previous iteration
+                            break;
+                        }
                     }
 
                     Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
@@ -258,18 +274,25 @@ public class MessageDispatcher implements IMessageDispatcher {
         /**
          * @return true, if the key has been processed and can be removed
          */
-        private boolean processKey(SelectionKey key) {
-            Object obj = key.attachment();
-            if (obj == null || !(obj instanceof PeerConnection)) {
-                LOGGER.warn("Unexpected attachment in selection key: {}. Skipping..", obj);
-                return false;
-            }
+        private boolean processKey(final SelectionKey key) {
+            PeerConnection connection;
+            Peer peer;
 
-            PeerConnection connection = (PeerConnection) obj;
-            Peer peer = connection.getRemotePeer();
-            if (!key.isValid() || !key.isReadable()) {
-                LOGGER.warn("Selected connection for peer {}, but the key is cancelled or read op is not indicated. Skipping..", peer);
-                return false;
+            // synchronizing on the selection key,
+            // as we will be updating it in a separate, event-listening thread
+            synchronized (key) {
+                Object obj = key.attachment();
+                if (obj == null || !(obj instanceof PeerConnection)) {
+                    LOGGER.warn("Unexpected attachment in selection key: {}. Skipping..", obj);
+                    return false;
+                }
+
+                connection = (PeerConnection) obj;
+                peer = connection.getRemotePeer();
+                if (!key.isValid() || !key.isReadable()) {
+                    LOGGER.warn("Selected connection for peer {}, but the key is cancelled or read op is not indicated. Skipping..", peer);
+                    return false;
+                }
             }
 
             if (connection.isClosed()) {
