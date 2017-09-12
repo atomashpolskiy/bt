@@ -5,7 +5,7 @@ import bt.event.EventSource;
 import bt.metainfo.TorrentId;
 import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionPool;
-import bt.processor.BaseProcessingStage;
+import bt.processor.TerminateOnErrorProcessingStage;
 import bt.processor.ProcessingStage;
 import bt.processor.listener.ProcessingEvent;
 import bt.runtime.Config;
@@ -23,7 +23,7 @@ import bt.torrent.messaging.TorrentWorker;
 import java.util.Set;
 import java.util.function.Supplier;
 
-public class CreateSessionStage<C extends TorrentContext> extends BaseProcessingStage<C> {
+public class CreateSessionStage<C extends TorrentContext> extends TerminateOnErrorProcessingStage<C> {
 
     private TorrentRegistry torrentRegistry;
     private EventSource eventSource;

@@ -206,7 +206,7 @@ public class BtRuntime {
                 });
 
                 runHooks(LifecycleEvent.SHUTDOWN, this::onShutdownHookError);
-                shutdownExecutor(clientExecutor);
+                clientExecutor.shutdownNow();
             }
         }
     }
@@ -248,7 +248,7 @@ public class BtRuntime {
             });
         }
 
-        shutdownExecutor(executor);
+        shutdownGracefully(executor);
     }
 
     private String createErrorMessage(LifecycleEvent event, LifecycleBinding binding) {
@@ -267,7 +267,7 @@ public class BtRuntime {
         });
     }
 
-    private void shutdownExecutor(ExecutorService executor) {
+    private void shutdownGracefully(ExecutorService executor) {
         executor.shutdown();
         try {
             long timeout = config.getShutdownHookTimeout().toMillis();

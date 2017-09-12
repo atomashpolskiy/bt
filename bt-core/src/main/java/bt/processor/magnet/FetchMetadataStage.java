@@ -7,9 +7,9 @@ import bt.metainfo.TorrentId;
 import bt.metainfo.TorrentSource;
 import bt.net.InetPeer;
 import bt.peer.IPeerRegistry;
-import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
 import bt.processor.listener.ProcessingEvent;
+import bt.processor.TerminateOnErrorProcessingStage;
 import bt.runtime.Config;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
@@ -22,7 +22,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-public class FetchMetadataStage extends BaseProcessingStage<MagnetContext> {
+public class FetchMetadataStage extends TerminateOnErrorProcessingStage<MagnetContext> {
 
     private IMetadataService metadataService;
     private TorrentRegistry torrentRegistry;

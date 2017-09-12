@@ -2,7 +2,9 @@ package bt.processor;
 
 import bt.processor.listener.ListenerSource;
 
+import java.util.concurrent.CompletableFuture;
+
 public interface Processor<C extends ProcessingContext> {
 
-    ProcessingFuture process(C context, ListenerSource<C> listenerSource);
+    CompletableFuture<?> process(C context, ListenerSource<C> listenerSource);
 }

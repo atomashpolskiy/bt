@@ -1,11 +1,10 @@
 package bt;
 
-import bt.processor.DefaultProcessingFuture;
 import bt.processor.ProcessingContext;
-import bt.processor.ProcessingFuture;
 import bt.processor.Processor;
 import bt.processor.listener.ListenerSource;
 import bt.runtime.BtClient;
+import bt.runtime.BtRuntime;
 import bt.torrent.TorrentSessionState;
 
 import java.util.Optional;
@@ -22,18 +21,21 @@ import java.util.function.Consumer;
  */
 class DefaultClient<C extends ProcessingContext> implements BtClient {
 
+    private BtRuntime runtime;
     private Processor<C> processor;
     private ListenerSource<C> listenerSource;
     private C context;
 
-    private volatile Optional<ProcessingFuture> futureOptional;
+    private volatile Optional<CompletableFuture<?>> futureOptional;
     private volatile Optional<Consumer<TorrentSessionState>> listenerOptional;
 
     private volatile ScheduledExecutorService listenerExecutor;
 
-    public DefaultClient(Processor<C> processor,
+    public DefaultClient(BtRuntime runtime,
+                         Processor<C> processor,
                          C context,
                          ListenerSource<C> listenerSource) {
+        this.runtime = runtime;
         this.processor = processor;
         this.context = context;
         this.listenerSource = listenerSource;
@@ -75,26 +77,45 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
     }
 
     private CompletableFuture<?> doStartAsync() {
-        // TODO: this is a workaround for preserving the current public API with CompletableFuture
-        // we don't want the CompletableFuture to be present in ProcessingFuture interface,
-        // so we have to resort to a cast to get access to the actual future
-        DefaultProcessingFuture processingFuture = (DefaultProcessingFuture) processor.process(context, listenerSource);
+        ensureRuntimeStarted();
+        attachToRuntime();
 
-        processingFuture.getDelegate()
-                .whenComplete((r, t) -> notifyListener())
-                .whenComplete((r, t) -> shutdownListener());
+        CompletableFuture<?> future = processor.process(context, listenerSource);
 
-        this.futureOptional = Optional.of(processingFuture);
+        future.whenComplete((r, t) -> notifyListener())
+                .whenComplete((r, t) -> shutdownListener())
+                .whenComplete((r, t) -> stop());
 
-        return processingFuture.getDelegate();
+        this.futureOptional = Optional.of(future);
+
+        return future;
     }
 
     @Override
     public synchronized void stop() {
+        // order is important (more precisely, unsetting futureOptional BEFORE completing the future)
+        // to prevent attempt to detach the client after it has already been detached once
+        // (may happen when #stop() is called from the outside)
         if (futureOptional.isPresent()) {
-            futureOptional.get().cancel();
+            CompletableFuture<?> f = futureOptional.get();
             futureOptional = Optional.empty();
+            f.complete(null);
+            detachFromRuntime();
         }
+    }
+
+    private void ensureRuntimeStarted() {
+        if (!runtime.isRunning()) {
+            runtime.startup();
+        }
+    }
+
+    private void attachToRuntime() {
+        runtime.attachClient(this);
+    }
+
+    private void detachFromRuntime() {
+        runtime.detachClient(this);
     }
 
     @Override

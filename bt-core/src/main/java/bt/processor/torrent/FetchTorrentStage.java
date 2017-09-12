@@ -1,11 +1,11 @@
 package bt.processor.torrent;
 
 import bt.metainfo.Torrent;
-import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
+import bt.processor.TerminateOnErrorProcessingStage;
 import bt.processor.listener.ProcessingEvent;
 
-public class FetchTorrentStage extends BaseProcessingStage<TorrentContext> {
+public class FetchTorrentStage extends TerminateOnErrorProcessingStage<TorrentContext> {
 
     public FetchTorrentStage(ProcessingStage<TorrentContext> next) {
         super(next);

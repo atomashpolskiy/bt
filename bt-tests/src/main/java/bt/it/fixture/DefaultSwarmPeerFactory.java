@@ -46,7 +46,7 @@ class DefaultSwarmPeerFactory implements SwarmPeerFactory {
     private SwarmPeer createLeecher(BtRuntimeBuilder runtimeBuilder, boolean useMagnet) {
         int port = ports.next();
         BtRuntime runtime = createRuntime(runtimeBuilder, port);
-        return new LeecherPeer(createLocalRoot(port), torrentFiles, torrentSupplier, runtime, useMagnet);
+        return new LeecherPeer(createLocalRoot(port), torrentFiles, torrentSupplier, runtime, useMagnet, true);
     }
 
     private BtRuntime createRuntime(BtRuntimeBuilder runtimeBuilder, int port) {

@@ -19,12 +19,19 @@ class LeecherPeer extends SwarmPeer {
     private Path localRoot;
     private TorrentFiles files;
 
-    LeecherPeer(Path localRoot, TorrentFiles files, Supplier<Torrent> torrentSupplier, BtRuntime runtime, boolean useMagnet) {
+    LeecherPeer(Path localRoot,
+                TorrentFiles files,
+                Supplier<Torrent> torrentSupplier,
+                BtRuntime runtime,
+                boolean useMagnet,
+                boolean stopWhenDownloaded) {
+
         super(runtime);
 
         Torrent torrent = torrentSupplier.get();
 
         BtClientBuilder builder = Bt.client(runtime).storage(new FileSystemStorage(localRoot));
+
         if (useMagnet) {
             // TODO: this is a bandaid fix; the issue of connecting to peers when using magnets should be solved in a different way
             AnnounceKey announceKey = torrent.getAnnounceKey()
@@ -37,6 +44,11 @@ class LeecherPeer extends SwarmPeer {
         } else {
             builder = builder.torrent(torrentSupplier);
         }
+
+        if (stopWhenDownloaded) {
+            builder = builder.stopWhenDownloaded();
+        }
+
         this.handle = builder.build();
 
         this.localRoot = Objects.requireNonNull(localRoot);

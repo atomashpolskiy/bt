@@ -38,6 +38,8 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
 
     private List<Consumer<Torrent>> torrentConsumers;
 
+    private boolean stopWhenDownloaded;
+
     /**
      * @since 1.4
      */
@@ -167,6 +169,17 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
        return selector(RarestFirstSelector.randomizedRarest());
     }
 
+    /**
+     * Stop processing, when the data has been downloaded.
+     *
+     * @since 1.5
+     */
+    @SuppressWarnings("unchecked")
+    public B stopWhenDownloaded() {
+        this.stopWhenDownloaded = true;
+        return (B) this;
+    }
+
     @SuppressWarnings("unchecked")
     public B afterTorrentFetched(Consumer<Torrent> torrentConsumer) {
         if (torrentConsumers == null) {
@@ -198,13 +211,18 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
     protected <C extends ProcessingContext> void collectStageListeners(ListenerSource<C> listenerSource) {
         if (torrentConsumers != null) {
             BiFunction<C, ProcessingStage<C>, ProcessingStage<C>> listener = (context, next) -> {
-                Torrent torrent = context.getTorrent().get();
-                for (Consumer<Torrent> torrentConsumer : torrentConsumers) {
-                    torrentConsumer.accept(torrent);
-                }
+                context.getTorrent().ifPresent(torrent -> {
+                    for (Consumer<Torrent> torrentConsumer : torrentConsumers) {
+                        torrentConsumer.accept(torrent);
+                    }
+                });
                 return next;
             };
             listenerSource.addListener(ProcessingEvent.TORRENT_FETCHED, listener);
+        }
+
+        if (stopWhenDownloaded) {
+            listenerSource.addListener(ProcessingEvent.DOWNLOAD_COMPLETE, (context, next) -> null);
         }
     }
 

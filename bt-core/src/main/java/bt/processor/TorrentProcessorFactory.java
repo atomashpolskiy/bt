@@ -99,7 +99,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
         ProcessingStage<TorrentContext> stage0 = new FetchTorrentStage(stage1);
 
-        return new ChainProcessor<>(stage0, new TorrentContextFinalizer<>(torrentRegistry), executor);
+        return new ChainProcessor<>(stage0, executor, new TorrentContextFinalizer<>(torrentRegistry));
     }
 
     protected ChainProcessor<MagnetContext> createMagnetProcessor() {
@@ -117,7 +117,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         ProcessingStage<MagnetContext> stage0 = new CreateSessionStage<>(stage1, torrentRegistry, eventSource,
                 connectionPool, messageDispatcher, messagingAgents, config);
 
-        return new ChainProcessor<>(stage0, new TorrentContextFinalizer<>(torrentRegistry), executor);
+        return new ChainProcessor<>(stage0, executor, new TorrentContextFinalizer<>(torrentRegistry));
     }
 
     @SuppressWarnings("unchecked")

@@ -201,9 +201,7 @@ public class SharedTrackerModule implements Module {
                     return Collections.emptySet();
                 }
 
-                Set<Peer> snapshot = new HashSet<>((int)(peers.size() / 0.75) + 1);
-                Collections.addAll(snapshot, peers.toArray(new Peer[peers.size()]));
-                return snapshot;
+                return new HashSet<>(peers);
 
             } finally {
                 lock.readLock().unlock();

@@ -1,5 +1,6 @@
 package bt.it.fixture;
 
+import bt.runtime.BtClient;
 import org.junit.rules.ExternalResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,11 +40,27 @@ public class Swarm extends ExternalResource {
     }
 
     /**
+     * @return List of seeder handles (as of time of calling this method)
+     * @since 1.5
+     */
+    public List<BtClient> getSeederHandles() {
+        return peers.stream().filter(SwarmPeer::isSeeding).map(SwarmPeer::getHandle).collect(Collectors.toList());
+    }
+
+    /**
      * @return List of leechers (as of time of calling this method)
      * @since 1.0
      */
     public List<SwarmPeer> getLeechers() {
         return peers.stream().filter(peer -> !peer.isSeeding()).collect(Collectors.toList());
+    }
+
+    /**
+     * @return List of leecher handles (as of time of calling this method)
+     * @since 1.5
+     */
+    public List<BtClient> getLeecherHandles() {
+        return peers.stream().filter(peer -> !peer.isSeeding()).map(SwarmPeer::getHandle).collect(Collectors.toList());
     }
 
     @Override

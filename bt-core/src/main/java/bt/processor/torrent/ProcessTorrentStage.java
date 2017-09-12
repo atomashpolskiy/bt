@@ -2,8 +2,8 @@ package bt.processor.torrent;
 
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
+import bt.processor.TerminateOnErrorProcessingStage;
 import bt.processor.listener.ProcessingEvent;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
-public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessingStage<C> {
+public class ProcessTorrentStage<C extends TorrentContext> extends TerminateOnErrorProcessingStage<C> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProcessTorrentStage.class);
 
     private TorrentRegistry torrentRegistry;
@@ -40,6 +40,7 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
             context.setAnnouncer(announcer);
         }
 
+        descriptor.start();
         start(context);
 
         while (descriptor.isActive()) {
@@ -50,7 +51,7 @@ public class ProcessTorrentStage<C extends TorrentContext> extends BaseProcessin
                     break;
                 }
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Unexpectedly interrupted", e);
             }
         }
     }

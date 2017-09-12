@@ -1,8 +1,8 @@
 package bt.torrent;
 
 import bt.data.Bitfield;
-import bt.net.Peer;
 import bt.data.Bitfield.PieceStatus;
+import bt.net.Peer;
 
 import java.util.Map;
 import java.util.Optional;
@@ -15,9 +15,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class BitfieldBasedStatistics implements PieceStatistics {
 
-    private Bitfield localBitfield;
-    private Map<Peer, Bitfield> peerBitfields;
-    private int[] pieceTotals;
+    private final Bitfield localBitfield;
+    private final Map<Peer, Bitfield> peerBitfields;
+    private final int[] pieceTotals;
 
     public BitfieldBasedStatistics(Bitfield localBitfield) {
         this.localBitfield = localBitfield;
@@ -31,9 +31,13 @@ public class BitfieldBasedStatistics implements PieceStatistics {
 
         for (int i = 0; i < pieceTotals.length; i++) {
             if (bitfield.getPieceStatus(i) == PieceStatus.COMPLETE_VERIFIED) {
-                pieceTotals[i]++;
+                incrementPieceTotal(i);
             }
         }
+    }
+
+    private synchronized void incrementPieceTotal(int i) {
+        pieceTotals[i]++;
     }
 
     public void removeBitfield(Peer peer) {
@@ -44,9 +48,13 @@ public class BitfieldBasedStatistics implements PieceStatistics {
 
         for (int i = 0; i < pieceTotals.length; i++) {
             if (bitfield.getPieceStatus(i) == PieceStatus.COMPLETE_VERIFIED) {
-                pieceTotals[i]--;
+                decrementPieceTotal(i);
             }
         }
+    }
+
+    private synchronized void decrementPieceTotal(int i) {
+        pieceTotals[i]--;
     }
 
     private void validateBitfieldLength(Bitfield bitfield) {
@@ -67,7 +75,7 @@ public class BitfieldBasedStatistics implements PieceStatistics {
         }
 
         bitfield.markVerified(pieceIndex);
-        pieceTotals[pieceIndex]++;
+        incrementPieceTotal(pieceIndex);
     }
 
     public Optional<Bitfield> getPeerBitfield(Peer peer) {
@@ -75,7 +83,7 @@ public class BitfieldBasedStatistics implements PieceStatistics {
     }
 
     @Override
-    public int getCount(int pieceIndex) {
+    public synchronized int getCount(int pieceIndex) {
         return pieceTotals[pieceIndex];
     }
 

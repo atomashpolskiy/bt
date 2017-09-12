@@ -149,6 +149,11 @@ public class MessageDispatcher implements IMessageDispatcher {
             PeerConnection connection = pool.getConnection(peer);
             if (connection != null) {
                 try {
+                    // drain all buffers before registering
+                    Message message;
+                    while ((message = connection.readMessageNow()) != null) {
+                        messageSink.accept(peer, message);
+                    }
                     if (LOGGER.isTraceEnabled()) {
                         LOGGER.trace("Registering new connection for peer: {}", peer);
                     }

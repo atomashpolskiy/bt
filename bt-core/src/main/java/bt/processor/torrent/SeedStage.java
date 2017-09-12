@@ -1,13 +1,13 @@
 package bt.processor.torrent;
 
 import bt.metainfo.TorrentId;
-import bt.processor.BaseProcessingStage;
 import bt.processor.ProcessingStage;
+import bt.processor.TerminateOnErrorProcessingStage;
 import bt.processor.listener.ProcessingEvent;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 
-public class SeedStage<C extends TorrentContext> extends BaseProcessingStage<C> {
+public class SeedStage<C extends TorrentContext> extends TerminateOnErrorProcessingStage<C> {
 
     private TorrentRegistry torrentRegistry;
 
@@ -25,7 +25,7 @@ public class SeedStage<C extends TorrentContext> extends BaseProcessingStage<C> 
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Unexpectedly interrupted", e);
             }
         }
     }

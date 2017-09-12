@@ -77,9 +77,7 @@ public abstract class BaseClientBuilder<B extends BaseClientBuilder> {
         ListenerSource<C> listenerSource = new ListenerSource<>(contextType);
         collectStageListeners(listenerSource);
 
-        BtClient client = new DefaultClient<>(processor(runtime, contextType), context, listenerSource);
-
-        return new RuntimeAwareClient(runtime, client);
+        return new DefaultClient<>(runtime, processor(runtime, contextType), context, listenerSource);
     }
 
     /**

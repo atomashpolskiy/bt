@@ -3,7 +3,6 @@ package bt.it;
 import bt.it.fixture.BaseBtTest;
 import bt.it.fixture.SharedTrackerModule;
 import bt.it.fixture.Swarm;
-import bt.it.fixture.SwarmPeer;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.runtime.BtClient;
 import bt.runtime.Config;
@@ -11,12 +10,9 @@ import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 
@@ -26,9 +22,8 @@ public class Swarm_IT extends BaseBtTest {
 
     private static final Config CONFIG = new Config() {
         @Override
-        public int getMaxTransferBlockSize() {
-            // use smaller buffer size to trigger buffer compaction
-            return 10000;
+        public Duration getTrackerQueryInterval() {
+            return Duration.ofSeconds(5);
         }
 
         @Override
@@ -55,18 +50,12 @@ public class Swarm_IT extends BaseBtTest {
 
     @Test
     public void testSwarm_OneSeederOneLeecher() {
-
-        BtClient seeder = swarm.getSeeders().iterator().next().getHandle(),
-                      leecher = swarm.getLeechers().iterator().next().getHandle();
+        BtClient seeder = swarm.getSeederHandles().iterator().next();
+        BtClient leecher = swarm.getLeecherHandles().iterator().next();
 
         seeder.startAsync();
-
-        leecher.startAsync(state -> {
-            if (state.getPiecesRemaining() == 0) {
-                seeder.stop();
-                leecher.stop();
-            }
-        }, 1000).join();
+        leecher.startAsync().join();
+        seeder.stop();
 
         assertEquals(NUMBER_OF_SEEDERS + 1, swarm.getSeeders().size());
         assertEquals(NUMBER_OF_SEEDERS - 1, swarm.getLeechers().size());
@@ -74,20 +63,12 @@ public class Swarm_IT extends BaseBtTest {
 
     @Test
     public void testSwarm_ManySeedersOneLeecher() {
-
-        List<BtClient> seeders = swarm.getSeeders().stream()
-                .map(SwarmPeer::getHandle).collect(Collectors.toList());
-
-        BtClient leecher = swarm.getLeechers().iterator().next().getHandle();
+        List<BtClient> seeders = swarm.getSeederHandles();
+        BtClient leecher = swarm.getLeecherHandles().iterator().next();
 
         seeders.forEach(BtClient::startAsync);
-
-        leecher.startAsync(state -> {
-            if (state.getPiecesRemaining() == 0) {
-                seeders.forEach(BtClient::stop);
-                leecher.stop();
-            }
-        }, 1000).join();
+        leecher.startAsync().join();
+        seeders.forEach(BtClient::stop);
 
         assertEquals(NUMBER_OF_SEEDERS + 1, swarm.getSeeders().size());
         assertEquals(NUMBER_OF_SEEDERS - 1, swarm.getLeechers().size());
@@ -95,37 +76,15 @@ public class Swarm_IT extends BaseBtTest {
 
     @Test
     public void testSwarm_OneSeederManyLeechers() {
+        BtClient seeder = swarm.getSeederHandles().iterator().next();
+        List<BtClient> leechers = swarm.getLeecherHandles();
 
-        BtClient seeder = swarm.getSeeders().iterator().next().getHandle();
+        CompletableFuture<?>[] leecherFutures =
+                leechers.stream().map(BtClient::startAsync).toArray(CompletableFuture<?>[]::new);
 
-        List<BtClient> leechers = swarm.getLeechers().stream()
-                .map(SwarmPeer::getHandle).collect(Collectors.toList());
-
-        AtomicInteger leecherCount = new AtomicInteger(leechers.size());
-
-        CompletableFuture<?> seederFuture = seeder.startAsync(state -> {
-            if (leecherCount.get() == 0) {
-                leechers.forEach(BtClient::stop);
-                seeder.stop();
-            }
-        }, 5000);
-
-        ConcurrentMap<BtClient, Boolean> finishedLeechers = new ConcurrentHashMap<>();
-        leechers.forEach(leecher -> {
-            finishedLeechers.put(leecher, Boolean.FALSE);
-            leecher.startAsync(state -> {
-                if (state.getPiecesRemaining() == 0 && !finishedLeechers.get(leecher)) {
-                    synchronized (leechers) {
-                        if (!finishedLeechers.get(leecher)) {
-                            finishedLeechers.put(leecher, Boolean.TRUE);
-                            leecherCount.decrementAndGet();
-                        }
-                    }
-                }
-            }, 5000);
-        });
-
-        seederFuture.join();
+        seeder.startAsync();
+        CompletableFuture.allOf(leecherFutures).join();
+        seeder.stop();
 
         assertEquals(NUMBER_OF_SEEDERS * 2, swarm.getSeeders().size());
         assertEquals(0, swarm.getLeechers().size());
@@ -133,47 +92,15 @@ public class Swarm_IT extends BaseBtTest {
 
     @Test
     public void testSwarm_ManySeedersManyLeechers() {
+        List<BtClient> seeders = swarm.getSeederHandles();
+        List<BtClient> leechers = swarm.getLeecherHandles();
 
-        List<BtClient> seeders = swarm.getSeeders().stream()
-                .map(SwarmPeer::getHandle).collect(Collectors.toList());
+        CompletableFuture<?>[] leecherFutures =
+                leechers.stream().map(BtClient::startAsync).toArray(CompletableFuture<?>[]::new);
 
-        List<BtClient> leechers = swarm.getLeechers().stream()
-                .map(SwarmPeer::getHandle).collect(Collectors.toList());
-
-        AtomicInteger leecherCount = new AtomicInteger(leechers.size());
-
-        BtClient mainSeeder = seeders.iterator().next();
-        CompletableFuture<?> seederFuture = mainSeeder.startAsync(
-                state -> {
-                    if (leecherCount.get() == 0) {
-                        leechers.forEach(BtClient::stop);
-                        seeders.forEach(BtClient::stop);
-                        mainSeeder.stop();
-                    }
-                }, 5000
-        );
-
-        for (int i = 1; i < seeders.size(); i++) {
-            BtClient seeder = seeders.get(i);
-            seederFuture = seeder.startAsync();
-        }
-
-        ConcurrentMap<BtClient, Boolean> finishedLeechers = new ConcurrentHashMap<>();
-        leechers.forEach(leecher -> {
-            finishedLeechers.put(leecher, Boolean.FALSE);
-            leecher.startAsync(state -> {
-                if (state.getPiecesRemaining() == 0 && !finishedLeechers.get(leecher)) {
-                    synchronized (leechers) {
-                        if (!finishedLeechers.get(leecher)) {
-                            finishedLeechers.put(leecher, Boolean.TRUE);
-                            leecherCount.decrementAndGet();
-                        }
-                    }
-                }
-            }, 5000);
-        });
-
-        seederFuture.join();
+        seeders.forEach(BtClient::startAsync);
+        CompletableFuture.allOf(leecherFutures).join();
+        seeders.forEach(BtClient::stop);
 
         assertEquals(NUMBER_OF_SEEDERS * 2, swarm.getSeeders().size());
         assertEquals(0, swarm.getLeechers().size());

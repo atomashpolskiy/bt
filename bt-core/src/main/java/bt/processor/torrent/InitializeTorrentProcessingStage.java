@@ -3,7 +3,7 @@ package bt.processor.torrent;
 import bt.data.Bitfield;
 import bt.event.EventSink;
 import bt.metainfo.Torrent;
-import bt.processor.BaseProcessingStage;
+import bt.processor.TerminateOnErrorProcessingStage;
 import bt.processor.ProcessingStage;
 import bt.processor.listener.ProcessingEvent;
 import bt.runtime.Config;
@@ -25,7 +25,7 @@ import bt.torrent.selector.ValidatingSelector;
 
 import java.util.function.Predicate;
 
-public class InitializeTorrentProcessingStage<C extends TorrentContext> extends BaseProcessingStage<C> {
+public class InitializeTorrentProcessingStage<C extends TorrentContext> extends TerminateOnErrorProcessingStage<C> {
 
     private TorrentRegistry torrentRegistry;
     private IDataWorkerFactory dataWorkerFactory;
@@ -48,7 +48,6 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
     protected void doExecute(C context) {
         Torrent torrent = context.getTorrent().get();
         TorrentDescriptor descriptor = torrentRegistry.register(torrent, context.getStorage());
-        descriptor.start();
 
         Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();
         BitfieldBasedStatistics pieceStatistics = createPieceStatistics(bitfield);
