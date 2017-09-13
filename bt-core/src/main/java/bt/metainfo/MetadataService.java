@@ -199,13 +199,13 @@ public class MetadataService implements IMetadataService {
                 }
             }
 
-            if (infoMap.get(CREATION_DATE_KEY) != null) {
-                BigInteger epochMilli = (BigInteger) infoMap.get(CREATION_DATE_KEY).getValue();
-                torrent.setCreationDate(Instant.ofEpochMilli(epochMilli.intValueExact() * 1000));
+            if (root.get(CREATION_DATE_KEY) != null) {
+                BigInteger epochMilli = (BigInteger) root.get(CREATION_DATE_KEY).getValue();
+                torrent.setCreationDate(Instant.ofEpochMilli(epochMilli.intValueExact() * 1000L));
             }
 
-            if (infoMap.get(CREATED_BY_KEY) != null) {
-                byte[] createdBy = (byte[]) infoMap.get(CREATED_BY_KEY).getValue();
+            if (root.get(CREATED_BY_KEY) != null) {
+                byte[] createdBy = (byte[]) root.get(CREATED_BY_KEY).getValue();
                 torrent.setCreatedBy(new String(createdBy, defaultCharset));
             }
 
