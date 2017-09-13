@@ -12,6 +12,12 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 
+/**
+ * Basic implementation of event bus, that connects event producers and listeners.
+ * In this implementation all events are delivered synchronously.
+ *
+ * @since 1.5
+ */
 public class EventBus implements EventSink, EventSource {
     private static final Logger LOGGER = LoggerFactory.getLogger(EventBus.class);
 

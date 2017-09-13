@@ -4,6 +4,11 @@ import bt.data.Bitfield;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
 
+/**
+ * Indicates, that local information about some peer's data has been updated.
+ *
+ * @since 1.5
+ */
 public class PeerBitfieldUpdatedEvent extends BaseEvent implements TorrentEvent {
 
     private final TorrentId torrentId;
@@ -22,10 +27,16 @@ public class PeerBitfieldUpdatedEvent extends BaseEvent implements TorrentEvent 
         return torrentId;
     }
 
+    /**
+     * @since 1.5
+     */
     public Peer getPeer() {
         return peer;
     }
 
+    /**
+     * @since 1.5
+     */
     public Bitfield getBitfield() {
         return bitfield;
     }

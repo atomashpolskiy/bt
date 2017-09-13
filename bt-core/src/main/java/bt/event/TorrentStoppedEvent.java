@@ -2,6 +2,11 @@ package bt.event;
 
 import bt.metainfo.TorrentId;
 
+/**
+ * Indicates, that processing of some torrent has finished.
+ *
+ * @since 1.5
+ */
 public class TorrentStoppedEvent extends BaseEvent implements TorrentEvent {
 
     private final TorrentId torrentId;

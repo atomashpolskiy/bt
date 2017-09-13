@@ -9,8 +9,18 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Programmatic API for working with BEP-9 v1 magnet links.
+ *
+ * @since 1.3
+ */
 public class MagnetUri {
 
+    /**
+     * Start building a magnet link for a given torrent.
+     *
+     * @since 1.3
+     */
     public static Builder torrentId(TorrentId torrentId) {
         return new Builder(torrentId);
     }
@@ -30,37 +40,87 @@ public class MagnetUri {
         this.peerAddresses = (peerAddresses == null) ? Collections.emptyList() : peerAddresses;
     }
 
+    /**
+     * Represents the "xt" parameter.
+     * E.g. xt=urn:btih:af0d9aa01a9ae123a73802cfa58ccaf355eb19f1
+     *
+     * @return Torrent ID
+     * @since 1.3
+     */
     public TorrentId getTorrentId() {
         return torrentId;
     }
 
+    /**
+     * Represents the "dn" parameter. Value is URL decoded.
+     * E.g. dn=Some%20Display%20Name => "Some Display Name"
+     *
+     * @return Suggested display name for the torrent
+     * @since 1.3
+     */
     public Optional<String> getDisplayName() {
         return displayName;
     }
 
+    /**
+     * Represents the collection of values of "tr" parameters. Values are URL decoded.
+     * E.g. tr=http%3A%2F%2Fmytracker.com%3A6363&tr=udp%3A%2F%2Fothertrack.org%3A7777
+     * => ["http://mytracker.com:6363", "udp://othertrack.org:7777"]
+     *
+     * @return Collection of tracker URLs
+     * @since 1.3
+     */
     public Collection<String> getTrackerUrls() {
         return trackerUrls;
     }
 
+    /**
+     * Represents the collection of values of "x.pe" parameters. Values are URL decoded.
+     * E.g. x.pe=124.131.72.242%3A6891&x.pe=11.9.132.61%3A6900
+     * => [124.131.72.242:6891, 11.9.132.61:6900]
+     *
+     * @return Collection of well-known peer addresses
+     * @since 1.3
+     */
     public Collection<InetPeerAddress> getPeerAddresses() {
         return peerAddresses;
     }
 
+    /**
+     * @since 1.3
+     */
     public static class Builder {
         private TorrentId torrentId;
         private String displayName;
         private Collection<String> trackerUrls;
         private Collection<InetPeerAddress> peerAddresses;
 
+        /**
+         * @since 1.3
+         */
         public Builder(TorrentId torrentId) {
             this.torrentId = Objects.requireNonNull(torrentId);
         }
 
+        /**
+         * Set "dn" parameter.
+         * Caller must NOT perform URL encoding, otherwise the value will get encoded twice.
+         *
+         * @param displayName Suggested display name
+         * @since 1.3
+         */
         public Builder name(String displayName) {
             this.displayName = Objects.requireNonNull(displayName);
             return this;
         }
 
+        /**
+         * Add "tr" parameter.
+         * Caller must NOT perform URL encoding, otherwise the value will get encoded twice.
+         *
+         * @param trackerUrl Tracker URL
+         * @since 1.3
+         */
         public Builder tracker(String trackerUrl) {
             Objects.requireNonNull(trackerUrl);
             if (trackerUrls == null) {
@@ -70,6 +130,12 @@ public class MagnetUri {
             return this;
         }
 
+        /**
+         * Add "x.pe" parameter.
+         *
+         * @param peerAddress Well-known peer address
+         * @since 1.3
+         */
         public Builder peer(InetPeerAddress peerAddress) {
             Objects.requireNonNull(peerAddress);
             if (peerAddresses == null) {
@@ -79,6 +145,9 @@ public class MagnetUri {
             return this;
         }
 
+        /**
+         * @since 1.3
+         */
         public MagnetUri buildUri() {
             return new MagnetUri(torrentId, displayName, trackerUrls, peerAddresses);
         }

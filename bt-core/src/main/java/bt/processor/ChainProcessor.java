@@ -12,6 +12,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
 
+/**
+ * Base implementation of a generic asynchronous executor of processing chains.
+ *
+ * @param <C> Type of processing context
+ * @since 1.5
+ */
 public class ChainProcessor<C extends ProcessingContext> implements Processor<C> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ChainProcessor.class);
 
@@ -19,11 +25,27 @@ public class ChainProcessor<C extends ProcessingContext> implements Processor<C>
     private ExecutorService executor;
     private Optional<ContextFinalizer<C>> finalizer;
 
+    /**
+     * Create processor for a given processing chain.
+     *
+     * @param chainHead First stage
+     * @param executor Asynchronous facility to use for executing the processing chain
+     * @since 1.5
+     */
     public ChainProcessor(ProcessingStage<C> chainHead,
                           ExecutorService executor) {
         this(chainHead, executor, Optional.empty());
     }
 
+    /**
+     * Create processor for a given processing chain.
+     *
+     * @param chainHead First stage
+     * @param executor Asynchronous facility to use for executing the processing chain
+     * @param finalizer Context finalizer, that will be called,
+     *                  when torrent processing completes normally or terminates abruptly due to error
+     * @since 1.5
+     */
     public ChainProcessor(ProcessingStage<C> chainHead,
                           ExecutorService executor,
                           ContextFinalizer<C> finalizer) {

@@ -1,7 +1,7 @@
 package bt.processor;
 
 /**
- * Base class for processing stage implementations.
+ * Base class for chained processing stage implementations.
  *
  * @param <C> Type of processing context
  * @since 1.3

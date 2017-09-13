@@ -18,6 +18,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 
+/**
+ * @since 1.3
+ */
 public class UtMetadataMessageHandler implements MessageHandler<UtMetadata> {
     private final Collection<Class<? extends UtMetadata>> supportedTypes = Collections.singleton(UtMetadata.class);
 

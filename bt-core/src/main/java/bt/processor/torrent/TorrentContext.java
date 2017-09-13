@@ -15,6 +15,11 @@ import bt.torrent.selector.PieceSelector;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+/**
+ * Accumulates data, that is specific to standard torrent download/upload.
+ *
+ * @since 1.3
+ */
 public class TorrentContext implements ProcessingContext {
 
     private final PieceSelector pieceSelector;

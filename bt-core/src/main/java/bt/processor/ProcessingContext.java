@@ -7,7 +7,8 @@ import bt.torrent.TorrentSessionState;
 import java.util.Optional;
 
 /**
- * Aggregates all data, that is specific to and required for some processing chain.
+ * Aggregates all data, that is specific to and required for some processing chain,
+ * and is used to transfer the processing state between different stages of this chain.
  *
  * @since 1.3
  */

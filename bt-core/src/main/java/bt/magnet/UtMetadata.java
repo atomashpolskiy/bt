@@ -5,9 +5,32 @@ import bt.protocol.extended.ExtendedMessage;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * BEP-9 extension message.
+ *
+ * @since 1.3
+ */
 public class UtMetadata extends ExtendedMessage {
+
+    /**
+     * @since 1.3
+     */
     public enum Type {
-        REQUEST(0), DATA(1), REJECT(2);
+
+        /**
+         * @since 1.3
+         */
+        REQUEST(0),
+
+        /**
+         * @since 1.3
+         */
+        DATA(1),
+
+        /**
+         * @since 1.3
+         */
+        REJECT(2);
 
         private final int id;
 
@@ -50,14 +73,34 @@ public class UtMetadata extends ExtendedMessage {
         return totalSizeField;
     }
 
+    /**
+     * Create metadata request for a given piece.
+     *
+     * @param pieceIndex Piece index, non-negative
+     * @since 1.3
+     */
     public static UtMetadata request(int pieceIndex) {
         return new UtMetadata(Type.REQUEST, pieceIndex);
     }
 
+    /**
+     * Create metadata response for a given piece.
+     *
+     * @param pieceIndex Piece index, non-negative
+     * @param totalSize Total size of the torrent's metadata, in bytes
+     * @param data Requested piece's data
+     * @since 1.3
+     */
     public static UtMetadata data(int pieceIndex, int totalSize, byte[] data) {
         return new UtMetadata(Type.DATA, pieceIndex, totalSize, Objects.requireNonNull(data));
     }
 
+    /**
+     * Create metadata rejection response for a given piece.
+     *
+     * @param pieceIndex Piece index, non-negative
+     * @since 1.3
+     */
     public static UtMetadata reject(int pieceIndex) {
         return new UtMetadata(Type.REJECT, pieceIndex);
     }
@@ -84,18 +127,36 @@ public class UtMetadata extends ExtendedMessage {
         this.data = Optional.ofNullable(data);
     }
 
+    /**
+     * @return Type of this metadata message
+     * @since 1.3
+     */
     public Type getType() {
         return type;
     }
 
+    /**
+     * @return Piece index, non-negative
+     * @since 1.3
+     */
     public int getPieceIndex() {
         return pieceIndex;
     }
 
+    /**
+     * @return Piece's data, when {@link #getType()} is {@link Type#DATA},
+     *         or {@link Optional#empty()} otherwise
+     * @since 1.3
+     */
     public Optional<byte[]> getData() {
         return data;
     }
 
+    /**
+     * @return Total size of the torrent's metadata, when {@link #getType()} is {@link Type#DATA},
+     *         or {@link Optional#empty()} otherwise
+     * @since 1.3
+     */
     public Optional<Integer> getTotalSize() {
         return totalSize;
     }
