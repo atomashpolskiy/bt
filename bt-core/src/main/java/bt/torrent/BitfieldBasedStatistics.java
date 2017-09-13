@@ -9,7 +9,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Provides piece statistics based on peer bitfields
+ * Acts as a storage for peers' bitfields and provides aggregate piece statistics.
+ * This class is thread-safe.
  *
  * @since 1.0
  */
@@ -19,12 +20,23 @@ public class BitfieldBasedStatistics implements PieceStatistics {
     private final Map<Peer, Bitfield> peerBitfields;
     private final int[] pieceTotals;
 
+    /**
+     * Create statistics, based on the local peer's bitfield.
+     *
+     * @since 1.0
+     */
     public BitfieldBasedStatistics(Bitfield localBitfield) {
         this.localBitfield = localBitfield;
         this.peerBitfields = new ConcurrentHashMap<>();
         this.pieceTotals = new int[localBitfield.getPiecesTotal()];
     }
 
+    /**
+     * Add peer's bitfield.
+     * For each piece, that the peer has, total count will be incremented by 1.
+     *
+     * @since 1.0
+     */
     public void addBitfield(Peer peer, Bitfield bitfield) {
         validateBitfieldLength(bitfield);
         peerBitfields.put(peer, bitfield);
@@ -40,6 +52,12 @@ public class BitfieldBasedStatistics implements PieceStatistics {
         pieceTotals[i]++;
     }
 
+    /**
+     * Remove peer's bitfield.
+     * For each piece, that the peer has, total count will be decremented by 1.
+     *
+     * @since 1.0
+     */
     public void removeBitfield(Peer peer) {
         Bitfield bitfield = peerBitfields.remove(peer);
         if (bitfield == null) {
@@ -64,6 +82,12 @@ public class BitfieldBasedStatistics implements PieceStatistics {
         }
     }
 
+    /**
+     * Update peer's bitfield by indicating that the peer has a given piece.
+     * Total count of the specified piece will be incremented by 1.
+     *
+     * @since 1.0
+     */
     public void addPiece(Peer peer, Integer pieceIndex) {
         Bitfield bitfield = peerBitfields.get(peer);
         if (bitfield == null) {
@@ -74,10 +98,21 @@ public class BitfieldBasedStatistics implements PieceStatistics {
             }
         }
 
-        bitfield.markVerified(pieceIndex);
-        incrementPieceTotal(pieceIndex);
+        markPieceVerified(bitfield, pieceIndex);
     }
 
+    private synchronized void markPieceVerified(Bitfield bitfield, Integer pieceIndex) {
+        if (!bitfield.isVerified(pieceIndex)) {
+            bitfield.markVerified(pieceIndex);
+            incrementPieceTotal(pieceIndex);
+        }
+    }
+
+    /**
+     * Get peer's bitfield, if present.
+     *
+     * @since 1.0
+     */
     public Optional<Bitfield> getPeerBitfield(Peer peer) {
         return Optional.ofNullable(peerBitfields.get(peer));
     }
