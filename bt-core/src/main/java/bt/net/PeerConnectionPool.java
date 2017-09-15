@@ -135,7 +135,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     public CompletableFuture<Optional<PeerConnection>> requestConnection(TorrentId torrentId, Peer peer) {
         CompletableFuture<Optional<PeerConnection>> connection = getExistingOrPendingConnection(peer);
         if (connection != null) {
-            if (LOGGER.isDebugEnabled()) {
+            if (connection.isDone() && LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Returning existing connection for peer: {}. Torrent: {}", peer, torrentId);
             }
             return connection;
@@ -162,7 +162,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         synchronized (pendingConnections) {
             connection = getExistingOrPendingConnection(peer);
             if (connection != null) {
-                if (LOGGER.isDebugEnabled()) {
+                if (connection.isDone() && LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Returning existing connection for peer: {}. Torrent: {}", peer, torrentId);
                 }
                 return connection;
