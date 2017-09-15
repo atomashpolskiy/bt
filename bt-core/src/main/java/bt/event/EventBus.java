@@ -163,11 +163,11 @@ public class EventBus implements EventSink, EventSource {
 
         eventLock.writeLock().lock();
         try {
-            Consumer<E> safeListener = e -> {
+            Consumer<E> safeListener = event -> {
                 try {
-                    listener.accept(e);
-                } catch (Exception e1) {
-                    LOGGER.error("Listener invocation failed", e);
+                    listener.accept(event);
+                } catch (Exception ex) {
+                    LOGGER.error("Listener invocation failed", ex);
                 }
             };
             listeners.add(safeListener);
