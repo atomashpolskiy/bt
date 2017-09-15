@@ -78,22 +78,9 @@ class MSEHandshakeProcessor {
          */
 
         // check if the encryption negotiation can be skipped or preemptively aborted
-        EncryptionPolicy peerEncryptionPolicy = peer.getOptions().getEncryptionPolicy();
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("Peer {} has encryption policy: {}", peer, peerEncryptionPolicy);
-        }
-        assertPolicyIsCompatible(peerEncryptionPolicy);
 
         ByteBuffer in = ByteBuffer.allocateDirect(bufferSize);
         ByteBuffer out = ByteBuffer.allocateDirect(bufferSize);
-
-        if (peerEncryptionPolicy == EncryptionPolicy.REQUIRE_PLAINTEXT ||
-                (peerEncryptionPolicy == EncryptionPolicy.PREFER_PLAINTEXT &&
-                        (localEncryptionPolicy == EncryptionPolicy.PREFER_PLAINTEXT
-                                || localEncryptionPolicy == EncryptionPolicy.REQUIRE_PLAINTEXT))) {
-            // if peer requires plaintext and we support it, then do not negotiate encryption and use plaintext right away
-            return createReaderWriter(peer, channel, in, out);
-        }
 
         ByteChannelReader reader = reader(channel);
 
