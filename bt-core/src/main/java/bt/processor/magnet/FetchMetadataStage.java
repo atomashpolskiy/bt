@@ -85,10 +85,6 @@ public class FetchMetadataStage extends TerminateOnErrorProcessingStage<MagnetCo
 //        TrackerAnnouncer announcer = new TrackerAnnouncer(trackerService, torrentId, null);
 //        announcer.start();
 
-        context.getMagnetUri().getPeerAddresses().forEach(address -> {
-            peerRegistry.addPeer(torrentId, new InetPeer(address));
-        });
-
         Torrent torrent = metadataConsumer.waitForTorrent();
         torrent = amendTorrent(torrent, context.getMagnetUri().getDisplayName());
 
