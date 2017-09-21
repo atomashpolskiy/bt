@@ -43,9 +43,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -456,38 +453,40 @@ public class MessageDispatcher implements IMessageDispatcher {
      */
     private static class LoopControl {
 
-        private ReentrantLock lock;
-        private Condition timer;
-
         private long maxTimeToSleep;
         private int messagesProcessed;
         private long timeToSleep;
 
         LoopControl(long maxTimeToSleep) {
             this.maxTimeToSleep = maxTimeToSleep;
+            reset();
+        }
 
-            lock = new ReentrantLock();
-            timer = lock.newCondition();
+        private void reset() {
+            messagesProcessed = 0;
+            timeToSleep = 1;
         }
 
         void incrementProcessed() {
             messagesProcessed++;
-            timeToSleep = 1;
         }
 
-        void iterationFinished() {
-            if (messagesProcessed == 0) {
-                lock.lock();
+        synchronized void iterationFinished() {
+            if (messagesProcessed > 0) {
+                reset();
+            } else {
                 try {
-                    timer.await(timeToSleep, TimeUnit.MILLISECONDS);
+                    wait(timeToSleep);
                 } catch (InterruptedException e) {
-                    // ignore
-                } finally {
-                    lock.unlock();
+                    throw new RuntimeException("Unexpectedly interrupted", e);
                 }
-                timeToSleep = Math.min(timeToSleep << 1, maxTimeToSleep);
+
+                if (timeToSleep < maxTimeToSleep) {
+                    timeToSleep = Math.min(timeToSleep << 1, maxTimeToSleep);
+                } else {
+                    timeToSleep = maxTimeToSleep;
+                }
             }
-            messagesProcessed = 0;
         }
     }
 
