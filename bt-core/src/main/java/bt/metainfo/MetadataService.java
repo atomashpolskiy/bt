@@ -217,6 +217,7 @@ public class MetadataService implements IMetadataService {
 
             if (root.get(CREATION_DATE_KEY) != null) {
                 BigInteger epochMilli = (BigInteger) root.get(CREATION_DATE_KEY).getValue();
+                // TODO: some torrents contain bogus values here (like 101010101010), which causes an exception
                 torrent.setCreationDate(Instant.ofEpochMilli(epochMilli.intValueExact() * 1000L));
             }
 
