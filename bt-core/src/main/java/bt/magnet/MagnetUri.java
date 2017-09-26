@@ -69,7 +69,7 @@ public class MagnetUri {
 
     /**
      * Represents the "dn" parameter. Value is URL decoded.
-     * E.g. dn=Some%20Display%20Name => "Some Display Name"
+     * E.g. dn=Some%20Display%20Name =&gt; "Some Display Name"
      *
      * @return Suggested display name for the torrent
      * @since 1.3
@@ -80,8 +80,8 @@ public class MagnetUri {
 
     /**
      * Represents the collection of values of "tr" parameters. Values are URL decoded.
-     * E.g. tr=http%3A%2F%2Fmytracker.com%3A6363&tr=udp%3A%2F%2Fothertrack.org%3A7777
-     * => ["http://mytracker.com:6363", "udp://othertrack.org:7777"]
+     * E.g. {@code tr=http%3A%2F%2Fmytracker.com%3A6363&tr=udp%3A%2F%2Fothertrack.org%3A7777}
+     * =&gt; ["http://mytracker.com:6363", "udp://othertrack.org:7777"]
      *
      * @return Collection of tracker URLs
      * @since 1.3
@@ -92,8 +92,8 @@ public class MagnetUri {
 
     /**
      * Represents the collection of values of "x.pe" parameters. Values are URL decoded.
-     * E.g. x.pe=124.131.72.242%3A6891&x.pe=11.9.132.61%3A6900
-     * => [124.131.72.242:6891, 11.9.132.61:6900]
+     * E.g. {@code x.pe=124.131.72.242%3A6891&x.pe=11.9.132.61%3A6900}
+     * =&gt; [124.131.72.242:6891, 11.9.132.61:6900]
      *
      * @return Collection of well-known peer addresses
      * @since 1.3
