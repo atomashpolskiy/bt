@@ -4,7 +4,7 @@
     <parent>
         <artifactId>bt-parent</artifactId>
         <groupId>com.github.atomashpolskiy</groupId>
-        <version>1.5-SNAPSHOT</version>
+        <version>1.5</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -23,7 +23,7 @@
             <dependency>
                 <groupId>mldht.core</groupId>
                 <artifactId>libmldht</artifactId>
-                <version>0.1.0</version>
+                <version>1.5</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
