@@ -4,7 +4,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 ## 1.5
 
-#### Date:
+#### Date: 09/26/2017
 
 #### Changes/New Features:
 

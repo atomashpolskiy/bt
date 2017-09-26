@@ -59,7 +59,7 @@ A full-featured BitTorrent implementation in Java 8
 
 ## Usage
 
-Most recent version available in Maven Central is **1.4**.
+Most recent version available in Maven Central is **1.5**.
 
 Declare the following dependencies in your project’s **pom.xml**:
 
@@ -124,14 +124,11 @@ BtClient client = Bt.client()
         .magnet("magnet:?xt=urn:btih:af0d9aa01a9ae123a73802cfa58ccaf355eb19f1")
         .autoLoadModules()
         .module(dhtModule)
+        .stopWhenDownloaded()
         .build();
 
 // launch
-client.startAsync(state -> {
-    if (state.getPiecesRemaining() == 0) {
-        client.stop();
-    }
-}, 1000).join();
+client.startAsync().join();
 ```
 
 ## What makes Bt stand out from the crowd
