@@ -257,8 +257,9 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 localAddress = serverChannel.getLocalAddress();
                 LOGGER.info("Opening server channel for incoming connections @ " + localAddress);
             } catch (IOException e) {
-                throw new RuntimeException("Failed to create incoming connections listener " +
+                LOGGER.error("Failed to create incoming connections listener " +
                         "-- unexpected I/O exception happened when creating an incoming channel", e);
+                return;
             }
 
             try {
