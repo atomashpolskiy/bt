@@ -26,6 +26,7 @@ import bt.metainfo.TorrentId;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 import bt.runtime.Config;
+import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.google.inject.Module;
 import org.slf4j.Logger;
@@ -55,7 +56,7 @@ public class Main {
     private static final long STATS_DUMP_INTERVAL_SECONDS = 15;
 
     static {
-        FS = Jimfs.newFileSystem();
+        FS = Jimfs.newFileSystem(Configuration.unix());
         RUNTIME = createRuntime();
         STATS = new ConcurrentHashMap<>();
         STATS_WRITER = Executors.newSingleThreadScheduledExecutor(r -> {
