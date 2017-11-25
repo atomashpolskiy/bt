@@ -44,6 +44,7 @@ A full-featured BitTorrent implementation in Java 8
 * **[RELEASE NOTES](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.md#bt-release-notes)** – list of features, bugfixes and improments for each version
 * **[UPGRADE INSTRUCTIONS](https://github.com/atomashpolskiy/bt/blob/master/UPGRADE.md#upgrade-instructions)** – version migration guide
 * **[FORUM](https://groups.google.com/forum/#!forum/bttorrent)** – Google group for support and feedback
+* **[TROUBLESHOOTING](https://github.com/atomashpolskiy/bt/blob/master/README.md#troubleshooting)** - solutions for some common problems
 * **[LICENSE](https://github.com/atomashpolskiy/bt/blob/master/LICENSE)** – licensed under Apache License 2.0
 
 ## Runnable apps and demos
@@ -160,6 +161,26 @@ Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` t
 ### And much more...
 
 * _**check out [Release Notes](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.md#bt-release-notes) for details!**_
+
+## Troubleshooting
+
+### Can't connect to peers, everything else seems to work
+
+If you're using an Oracle JDK, make sure that you have installed [Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy](http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html).
+
+### Other BitTorrent clients can't connect to a Bt client / No incoming connections when seeding
+
+If you're behind a firewall and/or a NAT (e.g. a router), make sure they are configured to allow incoming TCP and UDP connections on the ports used by Bt. Default Bt ports are 6891 and 49001 for BitTorrent and DHT respectively. NAT must additionally be configured to forward all incoming traffic on these ports to the host, that Bt is running on.
+
+Many popular BitTorrent clients use UPnP and NAT-PMP to automatically configure port forwarding on NATs. Bt does not support this yet, but I'll be happy to receive a PR with a new module or provide a link to your repository in this README. Some Java UPnP implementations can be found by googling [java upnp](https://www.google.ru/search?q=java+upnp).
+
+### There are exceptions in the build log (but the build completes successfully)
+
+This is perfectly fine. Some of the tests verify that the exceptions are thrown in certain cases, hence the exception messages.
+
+### Can't run the CLI on Windows (java.io.IOException: Cannot run program "/bin/stty")
+
+CLI GUI indeed does not work on Windows. Run in headless mode by using `-H` flag.
 
 ## Support and feedback
 
