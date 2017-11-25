@@ -44,7 +44,7 @@ A full-featured BitTorrent implementation in Java 8
 * **[RELEASE NOTES](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.md#bt-release-notes)** – list of features, bugfixes and improments for each version
 * **[UPGRADE INSTRUCTIONS](https://github.com/atomashpolskiy/bt/blob/master/UPGRADE.md#upgrade-instructions)** – version migration guide
 * **[FORUM](https://groups.google.com/forum/#!forum/bttorrent)** – Google group for support and feedback
-* **[TROUBLESHOOTING](https://github.com/atomashpolskiy/bt/blob/master/README.md#troubleshooting)** - solutions for some common problems
+* **[TROUBLESHOOTING](#troubleshooting)** - solutions for some common problems
 * **[LICENSE](https://github.com/atomashpolskiy/bt/blob/master/LICENSE)** – licensed under Apache License 2.0
 
 ## Runnable apps and demos
