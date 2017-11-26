@@ -16,6 +16,7 @@
 
 package bt.module;
 
+import bt.net.PeerConnectionAcceptor;
 import bt.peer.PeerSourceFactory;
 import bt.tracker.TrackerFactory;
 import com.google.inject.Binder;
@@ -36,6 +37,7 @@ public class ServiceModuleExtender {
     private Multibinder<PeerSourceFactory> peerSourceFactories;
     private MapBinder<String, TrackerFactory> trackerFactories;
     private Multibinder<Object> messagingAgents;
+    private Multibinder<PeerConnectionAcceptor> connectionAcceptors;
 
     ServiceModuleExtender(Binder binder) {
         this.binder = binder;
@@ -45,6 +47,7 @@ public class ServiceModuleExtender {
         contributePeerSourceFactories();
         contributeTrackerFactories();
         contributeMessagingAgents();
+        contributeConnectionAcceptors();
 
         return this;
     }
@@ -139,6 +142,30 @@ public class ServiceModuleExtender {
         return this;
     }
 
+    /**
+     * Contribute a peer connection acceptor type.
+     *
+     * @since 1.6
+     */
+    public ServiceModuleExtender addConnectionAcceptor(Class<? extends PeerConnectionAcceptor> connectionAcceptorType) {
+        Objects.requireNonNull(connectionAcceptorType);
+
+        contributeConnectionAcceptors().addBinding().to(connectionAcceptorType);
+        return this;
+    }
+
+    /**
+     * Contribute a peer connection acceptor.
+     *
+     * @since 1.6
+     */
+    public ServiceModuleExtender addConnectionAcceptor(PeerConnectionAcceptor connectionAcceptor) {
+        Objects.requireNonNull(connectionAcceptor);
+
+        contributeConnectionAcceptors().addBinding().toInstance(connectionAcceptor);
+        return this;
+    }
+
     private Multibinder<PeerSourceFactory> contributePeerSourceFactories() {
         if (peerSourceFactories == null) {
             peerSourceFactories = Multibinder.newSetBinder(binder, PeerSourceFactory.class);
@@ -158,5 +185,12 @@ public class ServiceModuleExtender {
             messagingAgents = Multibinder.newSetBinder(binder, Object.class, MessagingAgents.class);
         }
         return messagingAgents;
+    }
+
+    private Multibinder<PeerConnectionAcceptor> contributeConnectionAcceptors() {
+        if (connectionAcceptors == null) {
+            connectionAcceptors = Multibinder.newSetBinder(binder, PeerConnectionAcceptor.class);
+        }
+        return connectionAcceptors;
     }
 }

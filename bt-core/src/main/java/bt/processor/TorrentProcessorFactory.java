@@ -21,8 +21,8 @@ import bt.event.EventSource;
 import bt.metainfo.IMetadataService;
 import bt.module.ClientExecutor;
 import bt.module.MessagingAgents;
+import bt.net.IConnectionSource;
 import bt.net.IMessageDispatcher;
-import bt.net.IPeerConnectionPool;
 import bt.peer.IPeerRegistry;
 import bt.processor.magnet.FetchMetadataStage;
 import bt.processor.magnet.InitializeMagnetTorrentProcessingStage;
@@ -53,7 +53,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
     private ITrackerService trackerService;
     private ExecutorService executor;
     private IPeerRegistry peerRegistry;
-    private IPeerConnectionPool connectionPool;
+    private IConnectionSource connectionSource;
     private IMessageDispatcher messageDispatcher;
     private Set<Object> messagingAgents;
     private IMetadataService metadataService;
@@ -69,7 +69,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
                                    ITrackerService trackerService,
                                    @ClientExecutor ExecutorService executor,
                                    IPeerRegistry peerRegistry,
-                                   IPeerConnectionPool connectionPool,
+                                   IConnectionSource connectionSource,
                                    IMessageDispatcher messageDispatcher,
                                    @MessagingAgents Set<Object> messagingAgents,
                                    IMetadataService metadataService,
@@ -81,7 +81,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         this.trackerService = trackerService;
         this.executor = executor;
         this.peerRegistry = peerRegistry;
-        this.connectionPool = connectionPool;
+        this.connectionSource = connectionSource;
         this.messageDispatcher = messageDispatcher;
         this.messagingAgents = messagingAgents;
         this.metadataService = metadataService;
@@ -111,7 +111,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
                 dataWorkerFactory, eventSink, config);
 
         ProcessingStage<TorrentContext> stage1 = new CreateSessionStage<>(stage2, torrentRegistry, eventSource,
-                connectionPool, messageDispatcher, messagingAgents, config);
+                connectionSource, messageDispatcher, messagingAgents, config);
 
         ProcessingStage<TorrentContext> stage0 = new FetchTorrentStage(stage1);
 
@@ -131,7 +131,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
                 trackerService, peerRegistry, config);
 
         ProcessingStage<MagnetContext> stage0 = new CreateSessionStage<>(stage1, torrentRegistry, eventSource,
-                connectionPool, messageDispatcher, messagingAgents, config);
+                connectionSource, messageDispatcher, messagingAgents, config);
 
         return new ChainProcessor<>(stage0, executor, new TorrentContextFinalizer<>(torrentRegistry));
     }

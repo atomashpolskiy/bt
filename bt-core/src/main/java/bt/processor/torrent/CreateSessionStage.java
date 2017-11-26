@@ -19,8 +19,8 @@ package bt.processor.torrent;
 import bt.data.Bitfield;
 import bt.event.EventSource;
 import bt.metainfo.TorrentId;
+import bt.net.IConnectionSource;
 import bt.net.IMessageDispatcher;
-import bt.net.IPeerConnectionPool;
 import bt.processor.TerminateOnErrorProcessingStage;
 import bt.processor.ProcessingStage;
 import bt.processor.listener.ProcessingEvent;
@@ -43,7 +43,7 @@ public class CreateSessionStage<C extends TorrentContext> extends TerminateOnErr
 
     private TorrentRegistry torrentRegistry;
     private EventSource eventSource;
-    private IPeerConnectionPool connectionPool;
+    private IConnectionSource connectionSource;
     private IMessageDispatcher messageDispatcher;
     private Set<Object> messagingAgents;
     private Config config;
@@ -51,14 +51,14 @@ public class CreateSessionStage<C extends TorrentContext> extends TerminateOnErr
     public CreateSessionStage(ProcessingStage<C> next,
                               TorrentRegistry torrentRegistry,
                               EventSource eventSource,
-                              IPeerConnectionPool connectionPool,
+                              IConnectionSource connectionSource,
                               IMessageDispatcher messageDispatcher,
                               Set<Object> messagingAgents,
                               Config config) {
         super(next);
         this.torrentRegistry = torrentRegistry;
         this.eventSource = eventSource;
-        this.connectionPool = connectionPool;
+        this.connectionSource = connectionSource;
         this.messageDispatcher = messageDispatcher;
         this.messagingAgents = messagingAgents;
         this.config = config;
@@ -75,7 +75,7 @@ public class CreateSessionStage<C extends TorrentContext> extends TerminateOnErr
         Supplier<Bitfield> bitfieldSupplier = context::getBitfield;
         Supplier<Assignments> assignmentsSupplier = context::getAssignments;
         Supplier<BitfieldBasedStatistics> statisticsSupplier = context::getPieceStatistics;
-        TorrentWorker torrentWorker = new TorrentWorker(torrentId, messageDispatcher, connectionPool, peerWorkerFactory,
+        TorrentWorker torrentWorker = new TorrentWorker(torrentId, messageDispatcher, connectionSource, peerWorkerFactory,
                 bitfieldSupplier, assignmentsSupplier, statisticsSupplier, eventSource, config);
 
         context.setState(new DefaultTorrentSessionState(descriptor, torrentWorker));

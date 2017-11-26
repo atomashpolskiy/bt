@@ -16,39 +16,31 @@
 
 package bt.net;
 
-import bt.metainfo.TorrentId;
-
-import java.util.function.Consumer;
+import java.net.SocketAddress;
 
 /**
- * Provides connection pooling.
+ * Encapsulates a procedure for establishing the connection.
  *
- * @since 1.0
+ * @since 1.6
  */
-public interface IPeerConnectionPool {
+public interface ConnectionRoutine {
 
     /**
-     * @return Connection for a given peer, if exists; null otherwise
-     * @since 1.0
+     * @since 1.6
      */
-    PeerConnection getConnection(Peer peer);
+    SocketAddress getRemoteAddress();
 
     /**
-     * Visit connections for a given torrent ID.
+     * Try to establish the connection.
      *
-     * @since 1.5
-     */
-    void visitConnections(TorrentId torrentId, Consumer<PeerConnection> visitor);
-
-    /**
-     * @return Number of established connections
      * @since 1.6
      */
-    int size();
+    ConnectionResult establish();
 
     /**
-     * @return Newly added or existing connection
+     * Cancel connection establishing and release related resources.
+     *
      * @since 1.6
      */
-    PeerConnection addConnectionIfAbsent(PeerConnection connection);
+    void cancel();
 }

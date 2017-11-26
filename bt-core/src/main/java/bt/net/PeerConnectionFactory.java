@@ -26,26 +26,33 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.time.Duration;
 import java.util.Objects;
-import java.util.Optional;
 
-class PeerConnectionFactory {
+public class PeerConnectionFactory implements IPeerConnectionFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionFactory.class);
 
-    private SocketChannelFactory socketChannelFactory;
+    private static final Duration socketTimeout = Duration.ofSeconds(30);
+
+    private Selector selector;
     private IConnectionHandlerFactory connectionHandlerFactory;
     private MSEHandshakeProcessor cryptoHandshakeProcessor;
 
-    public PeerConnectionFactory(MessageHandler<Message> messageHandler,
-                                 SocketChannelFactory socketChannelFactory,
+    private InetSocketAddress localOutgoingSocketAddress;
+
+    public PeerConnectionFactory(Selector selector,
                                  IConnectionHandlerFactory connectionHandlerFactory,
+                                 MessageHandler<Message> messageHandler,
                                  TorrentRegistry torrentRegistry,
                                  Config config) {
-        this.socketChannelFactory = socketChannelFactory;
+        this.selector = selector;
         this.connectionHandlerFactory = connectionHandlerFactory;
         this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(torrentRegistry, messageHandler,
                 config.getEncryptionPolicy(), getBufferSize(config.getMaxTransferBlockSize()), config.getMsePrivateKeySize());
+        this.localOutgoingSocketAddress = new InetSocketAddress(config.getAcceptorAddress(), 0);
     }
 
     private static int getBufferSize(long maxTransferBlockSize) {
@@ -55,7 +62,8 @@ class PeerConnectionFactory {
         return (int) (maxTransferBlockSize) * 2;
     }
 
-    public Optional<PeerConnection> createOutgoingConnection(Peer peer, TorrentId torrentId) {
+    @Override
+    public ConnectionResult createOutgoingConnection(Peer peer, TorrentId torrentId) {
         Objects.requireNonNull(peer);
 
         InetAddress inetAddress = peer.getInetAddress();
@@ -63,7 +71,7 @@ class PeerConnectionFactory {
 
         SocketChannel channel = null;
         try {
-            channel = socketChannelFactory.getChannel(inetAddress, port);
+            channel = getChannel(inetAddress, port);
             return createConnection(peer, torrentId, channel, false);
         } catch (IOException e) {
             if (LOGGER.isDebugEnabled()) {
@@ -71,11 +79,22 @@ class PeerConnectionFactory {
                         peer, e.getClass().getName(), e.getMessage());
             }
             closeQuietly(channel);
-            return Optional.empty();
+            return ConnectionResult.failure("I/O error", e);
         }
     }
 
-    public Optional<PeerConnection> createIncomingConnection(Peer peer, SocketChannel channel) {
+    private SocketChannel getChannel(InetAddress inetAddress, int port) throws IOException {
+        InetSocketAddress remoteAddress = new InetSocketAddress(inetAddress, port);
+        SocketChannel outgoingChannel = selector.provider().openSocketChannel();
+        outgoingChannel.socket().bind(localOutgoingSocketAddress);
+        outgoingChannel.socket().setSoTimeout((int) socketTimeout.toMillis());
+        outgoingChannel.socket().setSoLinger(false, 0);
+        outgoingChannel.connect(remoteAddress);
+        return outgoingChannel;
+    }
+
+    @Override
+    public ConnectionResult createIncomingConnection(Peer peer, SocketChannel channel) {
         try {
             return createConnection(peer, null, channel, true);
         } catch (IOException e) {
@@ -84,14 +103,14 @@ class PeerConnectionFactory {
                         peer, e.getClass().getName(), e.getMessage());
             }
             closeQuietly(channel);
-            return Optional.empty();
+            return ConnectionResult.failure("I/O error", e);
         }
     }
 
-    private Optional<PeerConnection> createConnection(Peer peer,
-                                                             TorrentId torrentId,
-                                                             SocketChannel channel,
-                                                             boolean incoming) throws IOException {
+    private ConnectionResult createConnection(Peer peer,
+                                              TorrentId torrentId,
+                                              SocketChannel channel,
+                                              boolean incoming) throws IOException {
         // sanity check
         if (!incoming && torrentId == null) {
             throw new IllegalStateException("Requested outgoing connection without torrent ID. Peer: " + peer);
@@ -112,10 +131,10 @@ class PeerConnectionFactory {
         }
         boolean inited = initConnection(connection, connectionHandler);
         if (inited) {
-            return Optional.of(connection);
+            return ConnectionResult.success(connection);
         } else {
             connection.closeQuietly();
-            return Optional.empty();
+            return ConnectionResult.failure("Handshake failed");
         }
     }
 

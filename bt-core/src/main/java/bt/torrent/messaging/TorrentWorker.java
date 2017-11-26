@@ -19,8 +19,8 @@ package bt.torrent.messaging;
 import bt.data.Bitfield;
 import bt.event.EventSource;
 import bt.metainfo.TorrentId;
+import bt.net.IConnectionSource;
 import bt.net.IMessageDispatcher;
-import bt.net.IPeerConnectionPool;
 import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Interested;
@@ -60,7 +60,7 @@ public class TorrentWorker {
     private IMessageDispatcher dispatcher;
     private Config config;
 
-    private final IPeerConnectionPool connectionPool;
+    private final IConnectionSource connectionSource;
     private IPeerWorkerFactory peerWorkerFactory;
     private ConcurrentMap<Peer, PieceAnnouncingPeerWorker> peerMap;
     private final int MAX_CONCURRENT_ACTIVE_CONNECTIONS;
@@ -76,7 +76,7 @@ public class TorrentWorker {
 
     public TorrentWorker(TorrentId torrentId,
                          IMessageDispatcher dispatcher,
-                         IPeerConnectionPool connectionPool,
+                         IConnectionSource connectionSource,
                          IPeerWorkerFactory peerWorkerFactory,
                          Supplier<Bitfield> bitfieldSupplier,
                          Supplier<Assignments> assignmentsSupplier,
@@ -87,7 +87,7 @@ public class TorrentWorker {
         this.dispatcher = dispatcher;
         this.config = config;
 
-        this.connectionPool = connectionPool;
+        this.connectionSource = connectionSource;
         this.peerWorkerFactory = peerWorkerFactory;
         this.peerMap = new ConcurrentHashMap<>();
         this.MAX_CONCURRENT_ACTIVE_CONNECTIONS = config.getMaxConcurrentlyActivePeerConnectionsPerTorrent();
@@ -414,7 +414,7 @@ public class TorrentWorker {
         // TODO: Store discovered peers to use them later,
         // when some of the currently connected peers disconnects
         if (mightAddPeer(peer)) {
-            connectionPool.requestConnection(torrentId, peer);
+            connectionSource.getConnectionAsync(peer, torrentId);
         }
     }
 

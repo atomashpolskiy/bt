@@ -27,16 +27,24 @@ import bt.event.EventSink;
 import bt.event.EventSource;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.MetadataService;
+import bt.net.ConnectionSource;
+import bt.net.IConnectionHandlerFactory;
+import bt.net.IConnectionSource;
 import bt.net.IMessageDispatcher;
+import bt.net.IPeerConnectionFactory;
 import bt.net.IPeerConnectionPool;
 import bt.net.MessageDispatcher;
+import bt.net.PeerConnectionFactory;
 import bt.net.PeerConnectionPool;
 import bt.net.SharedSelector;
+import bt.net.SocketChannelConnectionAcceptor;
 import bt.peer.IPeerRegistry;
 import bt.peer.PeerRegistry;
 import bt.peer.PeerSourceFactory;
 import bt.processor.ProcessorFactory;
 import bt.processor.TorrentProcessorFactory;
+import bt.protocol.Message;
+import bt.protocol.handler.MessageHandler;
 import bt.runtime.Config;
 import bt.service.ApplicationService;
 import bt.service.ClasspathApplicationService;
@@ -135,12 +143,14 @@ public class ServiceModule implements Module {
     public void configure(Binder binder) {
 
         ServiceModule.extend(binder).initAllExtensions()
-                .addTrackerFactory(UdpTrackerFactory.class, "udp");
+                .addTrackerFactory(UdpTrackerFactory.class, "udp")
+                .addConnectionAcceptor(SocketChannelConnectionAcceptor.class);
 
         binder.bind(Config.class).toInstance(config);
 
         // core services that contribute startup lifecycle bindings and should be instantiated eagerly
         binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).asEagerSingleton();
+        binder.bind(IConnectionSource.class).to(ConnectionSource.class).asEagerSingleton();
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).asEagerSingleton();
         binder.bind(IPeerRegistry.class).to(PeerRegistry.class).asEagerSingleton();
 
@@ -216,5 +226,24 @@ public class ServiceModule implements Module {
                 LifecycleBinding.bind(shutdownRoutine).description("Shutdown selector").build());
 
         return selector;
+    }
+
+    @Provides
+    @Singleton
+    public IPeerConnectionFactory providePeerConnectionFactory(
+            @PeerConnectionSelector SharedSelector selector,
+            IConnectionHandlerFactory connectionHandlerFactory,
+            @BitTorrentProtocol MessageHandler<Message> bittorrentProtocol,
+            TorrentRegistry torrentRegistry) {
+        return new PeerConnectionFactory(selector, connectionHandlerFactory, bittorrentProtocol, torrentRegistry, config);
+    }
+
+    @Provides
+    @Singleton
+    public SocketChannelConnectionAcceptor provideSocketChannelConnectionAcceptor(
+            @PeerConnectionSelector SharedSelector selector,
+            IPeerRegistry peerRegistry,
+            IPeerConnectionFactory connectionFactory) {
+        return new SocketChannelConnectionAcceptor(selector, peerRegistry, connectionFactory, config);
     }
 }

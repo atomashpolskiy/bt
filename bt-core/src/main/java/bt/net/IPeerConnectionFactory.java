@@ -18,37 +18,22 @@ package bt.net;
 
 import bt.metainfo.TorrentId;
 
-import java.util.function.Consumer;
+import java.nio.channels.SocketChannel;
 
 /**
- * Provides connection pooling.
+ * Used for creating peer connections, both incoming and outgoing.
  *
- * @since 1.0
+ * @since 1.6
  */
-public interface IPeerConnectionPool {
+public interface IPeerConnectionFactory {
 
     /**
-     * @return Connection for a given peer, if exists; null otherwise
-     * @since 1.0
-     */
-    PeerConnection getConnection(Peer peer);
-
-    /**
-     * Visit connections for a given torrent ID.
-     *
-     * @since 1.5
-     */
-    void visitConnections(TorrentId torrentId, Consumer<PeerConnection> visitor);
-
-    /**
-     * @return Number of established connections
      * @since 1.6
      */
-    int size();
+    ConnectionResult createOutgoingConnection(Peer peer, TorrentId torrentId);
 
     /**
-     * @return Newly added or existing connection
      * @since 1.6
      */
-    PeerConnection addConnectionIfAbsent(PeerConnection connection);
+    ConnectionResult createIncomingConnection(Peer peer, SocketChannel channel);
 }
