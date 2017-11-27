@@ -23,7 +23,7 @@ import bt.metainfo.TorrentId;
  *
  * @since 1.5
  */
-public interface TorrentEvent {
+public interface TorrentEvent extends Event {
 
     /**
      * @since 1.5

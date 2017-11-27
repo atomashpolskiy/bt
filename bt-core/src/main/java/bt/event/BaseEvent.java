@@ -23,7 +23,7 @@ package bt.event;
  *
  * @since 1.5
  */
-public abstract class BaseEvent implements Comparable<BaseEvent> {
+public abstract class BaseEvent implements Comparable<BaseEvent>, Event {
 
     private final long id;
     private final Object objectId;
@@ -43,20 +43,12 @@ public abstract class BaseEvent implements Comparable<BaseEvent> {
         this.timestamp = timestamp;
     }
 
-    /**
-     * @return Unique event ID
-     * @since 1.5
-     */
+    @Override
     public Object getId() {
         return objectId;
     }
 
-    /**
-     * Relative time of event. Should NOT be used for ordering of events.
-     *
-     * @return Timestamp
-     * @since 1.5
-     */
+    @Override
     public long getTimestamp() {
         return timestamp;
     }
