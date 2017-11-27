@@ -41,6 +41,8 @@ import bt.net.SocketChannelConnectionAcceptor;
 import bt.peer.IPeerRegistry;
 import bt.peer.PeerRegistry;
 import bt.peer.PeerSourceFactory;
+import bt.peer.lan.Cookie;
+import bt.peer.lan.LocalServiceDiscoveryService;
 import bt.processor.ProcessorFactory;
 import bt.processor.TorrentProcessorFactory;
 import bt.protocol.Message;
@@ -71,6 +73,7 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
 import java.util.concurrent.ExecutorService;
 
@@ -153,6 +156,7 @@ public class ServiceModule implements Module {
         binder.bind(IConnectionSource.class).to(ConnectionSource.class).asEagerSingleton();
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).asEagerSingleton();
         binder.bind(IPeerRegistry.class).to(PeerRegistry.class).asEagerSingleton();
+        binder.bind(LocalServiceDiscoveryService.class).asEagerSingleton();
 
         // other services
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
@@ -244,6 +248,13 @@ public class ServiceModule implements Module {
             @PeerConnectionSelector SharedSelector selector,
             IPeerRegistry peerRegistry,
             IPeerConnectionFactory connectionFactory) {
-        return new SocketChannelConnectionAcceptor(selector, peerRegistry, connectionFactory, config);
+        InetSocketAddress localAddress = new InetSocketAddress(config.getAcceptorAddress(), config.getAcceptorPort());
+        return new SocketChannelConnectionAcceptor(selector, peerRegistry, connectionFactory, localAddress);
+    }
+
+    @Provides
+    @Singleton
+    public Cookie provideLocalServiceDiscoveryCookie() {
+        return Cookie.newCookie();
     }
 }

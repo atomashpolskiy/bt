@@ -17,7 +17,6 @@
 package bt.net;
 
 import bt.peer.IPeerRegistry;
-import bt.runtime.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +37,7 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
     private final Selector selector;
     private final IPeerRegistry peerRegistry;
     private final IPeerConnectionFactory connectionFactory;
-    private final Config config;
+    private final InetSocketAddress localAddress;
 
     private ServerSocketChannel serverChannel;
 
@@ -46,12 +45,16 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
             Selector selector,
             IPeerRegistry peerRegistry,
             IPeerConnectionFactory connectionFactory,
-            Config config) {
+            InetSocketAddress localAddress) {
 
         this.selector = selector;
         this.peerRegistry = peerRegistry;
         this.connectionFactory = connectionFactory;
-        this.config = config;
+        this.localAddress = localAddress;
+    }
+
+    public InetSocketAddress getLocalAddress() {
+        return localAddress;
     }
 
     @Override
@@ -92,14 +95,16 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
         }
     }
 
+    /**
+     * @return Local socket channel, used for accepting the incoming connections
+     */
     private ServerSocketChannel getServerChannel() throws IOException {
         if (serverChannel == null) {
-            SocketAddress localAddress = new InetSocketAddress(config.getAcceptorAddress(), config.getAcceptorPort());
             ServerSocketChannel _serverChannel = selector.provider().openServerSocketChannel();
             _serverChannel.bind(localAddress);
             _serverChannel.configureBlocking(true);
             serverChannel = _serverChannel;
-            LOGGER.info("Opening server channel for incoming connections @ {}", serverChannel.getLocalAddress());
+            LOGGER.info("Opening server channel for incoming connections @ {}", localAddress);
         }
         return serverChannel;
     }
