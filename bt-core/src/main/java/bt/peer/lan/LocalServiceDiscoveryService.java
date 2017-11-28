@@ -28,12 +28,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -47,25 +45,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryService {
+public class LocalServiceDiscoveryService {
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalServiceDiscoveryService.class);
 
-    private static final int IP4_BYTES = 4;
-    private static final int IP6_BYTES = 16;
-
-    private final Cookie cookie;
-    private final Set<SocketChannelConnectionAcceptor> socketAcceptors;
     private final IRuntimeLifecycleBinder lifecycleBinder;
     private final Config config;
 
     private final LinkedHashSet<TorrentId> announceQueue;
     private final BlockingQueue<Event> events;
 
-    private final Selector selector;
-    private volatile Collection<LocalServiceDiscoveryAnnouncer> announcers;
+    private final Collection<AnnounceGroupChannel> groupChannels;
+    private final Collection<LocalServiceDiscoveryAnnouncer> announcers;
 
     private final AtomicBoolean scheduled; // true, if periodic announce has been scheduled
-    private volatile boolean shutdown;
+    private final AtomicBoolean shutdown;
 
     public LocalServiceDiscoveryService(Cookie cookie,
                                         Set<SocketChannelConnectionAcceptor> socketAcceptors,
@@ -73,18 +66,40 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
                                         EventSource eventSource,
                                         IRuntimeLifecycleBinder lifecycleBinder,
                                         Config config) {
-        this.cookie = cookie;
-        this.socketAcceptors = socketAcceptors;
-        this.selector = selector;
+
         this.lifecycleBinder = lifecycleBinder;
         this.config = config;
         this.announceQueue = new LinkedHashSet<>();
         this.events = new LinkedBlockingQueue<>();
 
+        LocalServiceDiscoveryInfo info = new LocalServiceDiscoveryInfo(socketAcceptors, config.getLocalServiceDiscoveryAnnounceGroups());
+        this.groupChannels = createGroupsChannels(info.getCompatibleGroups(), selector);
+        this.announcers = createAnnouncers(groupChannels, cookie, info.getLocalPorts());
+
         this.scheduled = new AtomicBoolean(false);
+        this.shutdown = new AtomicBoolean(false);
 
         eventSource.onTorrentStarted(this::onTorrentStarted);
         eventSource.onTorrentStopped(this::onTorrentStopped);
+    }
+
+    private Collection<AnnounceGroupChannel> createGroupsChannels(
+            Collection<AnnounceGroup> announceGroups,
+            Selector selector) {
+
+        return announceGroups.stream()
+                .map(g -> new AnnounceGroupChannel(g, selector))
+                .collect(Collectors.toList());
+    }
+
+    private Collection<LocalServiceDiscoveryAnnouncer> createAnnouncers(
+            Collection<AnnounceGroupChannel> groupChannels,
+            Cookie cookie,
+            Set<Integer> localPorts) {
+
+        return groupChannels.stream()
+                .map(channel -> new LocalServiceDiscoveryAnnouncer(channel, cookie, localPorts))
+                .collect(Collectors.toList());
     }
 
     private void schedulePeriodicAnnounce() {
@@ -94,7 +109,6 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
         lifecycleBinder.onShutdown(executor::shutdownNow);
     }
 
-    @Override
     public void announce() {
         if (announceQueue.isEmpty() && events.isEmpty()) {
             return;
@@ -163,6 +177,9 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
         statusChanges.forEach((id, statusChange) -> {
             if (statusChange == StatusChange.STARTED) {
                 announceQueue.add(id);
+                if (ids.size() < k) {
+                    ids.add(id);
+                }
             }
         });
         return ids;
@@ -170,58 +187,13 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
 
     private void announce(Collection<TorrentId> ids) {
         // TODO: announce in parallel?
-        getAnnouncers().forEach(a -> {
+        announcers.forEach(a -> {
             try {
                 a.announce(ids);
             } catch (IOException e) {
                 LOGGER.error("Failed to announce to group: " + a.getGroup().getAddress(), e);
             }
         });
-    }
-
-    private Collection<LocalServiceDiscoveryAnnouncer> getAnnouncers() {
-        if (announcers == null) {
-            Set<Integer> localPorts = new HashSet<>();
-            boolean acceptIP4 = false;
-            boolean acceptIP6 = false;
-
-            for (SocketChannelConnectionAcceptor acceptor : socketAcceptors) {
-                InetSocketAddress address = acceptor.getLocalAddress();
-                if (isIP4(address)) {
-                    acceptIP4 = true;
-                    localPorts.add(acceptor.getLocalAddress().getPort());
-                } else if (isIP6(address)) {
-                    acceptIP6 = true;
-                    localPorts.add(acceptor.getLocalAddress().getPort());
-                } else {
-                    LOGGER.warn("Unexpected address (not IP4/IP6): " + address);
-                }
-            }
-
-            announcers = getAnnouncers(config.getLocalServiceDiscoveryAnnounceGroups(), acceptIP4, acceptIP6, localPorts);
-
-            if (shutdown) {
-                // in case shutdown was called just before assigning announcers
-                shutdownAnnouncers();
-            }
-        }
-        return announcers;
-    }
-
-    private Collection<LocalServiceDiscoveryAnnouncer> getAnnouncers(
-            Collection<AnnounceGroup> groups, boolean acceptIP4, boolean acceptIP6, Collection<Integer> localPorts) {
-        return groups.stream()
-                .filter(group -> (isIP4(group.getAddress()) && acceptIP4) || (isIP6(group.getAddress()) && acceptIP6))
-                .map(group -> new LocalServiceDiscoveryAnnouncer(selector, group, cookie, localPorts))
-                .collect(Collectors.toList());
-    }
-
-    private static boolean isIP4(InetSocketAddress address) {
-        return address.getAddress().getAddress().length == IP4_BYTES;
-    }
-
-    private static boolean isIP6(InetSocketAddress address) {
-        return address.getAddress().getAddress().length == IP6_BYTES;
     }
 
     private void onTorrentStarted(TorrentStartedEvent event) {
@@ -237,15 +209,9 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
         events.add(event);
     }
 
-    @Override
     public void shutdown() {
-        shutdown = true;
-        shutdownAnnouncers();
-    }
-
-    private void shutdownAnnouncers() {
-        if (announcers != null) {
-            announcers.forEach(LocalServiceDiscoveryAnnouncer::shutdown);
+        if (shutdown.compareAndSet(false, true)) {
+            groupChannels.forEach(AnnounceGroupChannel::shutdown);
         }
     }
 }

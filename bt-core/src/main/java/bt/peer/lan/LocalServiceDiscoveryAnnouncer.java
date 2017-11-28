@@ -18,96 +18,49 @@ package bt.peer.lan;
 
 import bt.metainfo.TorrentId;
 import bt.protocol.Protocols;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.Selector;
 import java.nio.charset.Charset;
 import java.util.Collection;
+import java.util.Set;
 
 class LocalServiceDiscoveryAnnouncer {
-    private static final Logger LOGGER = LoggerFactory.getLogger(LocalServiceDiscoveryAnnouncer.class);
-
     private static final Charset ascii = Charset.forName("ASCII");
 
-    private final AnnounceGroup group;
+    private final AnnounceGroupChannel channel;
     private final Cookie cookie;
-    private final Collection<Integer> localPorts;
-
-    private final Selector selector;
-    private volatile DatagramChannel channel;
-    private final Object channelLock;
-
-    private volatile boolean shutdown;
+    private final Set<Integer> localPorts;
 
     public LocalServiceDiscoveryAnnouncer(
-            Selector selector,
-            AnnounceGroup group,
+            AnnounceGroupChannel channel,
             Cookie cookie,
-            Collection<Integer> localPorts) {
+            Set<Integer> localPorts) {
 
-        this.selector = selector;
-        this.group = group;
+        this.channel = channel;
         this.cookie = cookie;
         this.localPorts = localPorts;
-        this.channelLock = new Object();
     }
 
     public AnnounceGroup getGroup() {
-        return group;
+        return channel.getGroup();
     }
 
     public void announce(Collection<TorrentId> ids) throws IOException {
-        if (shutdown) {
-            return;
-        }
-
         ByteBuffer[] bufs = new ByteBuffer[localPorts.size()];
         int i = 0;
         for (Integer port : localPorts) {
             bufs[i] = ByteBuffer.wrap(buildMessage(ids, port));
             i++;
         }
-        try {
-            DatagramChannel channel = getChannel();
-            for (ByteBuffer buf : bufs) {
-                if (shutdown) {
-                    break;
-                }
-                channel.send(buf, group.getAddress());
-            }
-        } catch (IOException e) {
+        for (ByteBuffer buf : bufs) {
             try {
-                channel.close();
-            } catch (IOException e1) {
-                LOGGER.error("Failed to close channel", e);
-            } finally {
-                channel = null; // reset channel
-            }
-            throw e;
-        }
-    }
-
-    private DatagramChannel getChannel() throws IOException {
-        if (channel == null) {
-            synchronized (channelLock) {
-                if (channel == null && !shutdown) {
-                    DatagramChannel _channel = selector.provider().openDatagramChannel();
-                    _channel.setOption(StandardSocketOptions.IP_MULTICAST_TTL, group.getTimeToLive());
-                    channel = _channel;
-
-                    if (shutdown) {
-                        // in case shutdown was called just before assigning channel
-                        closeChannel();
-                    }
-                }
+                channel.send(buf);
+            } catch (IOException e) {
+                channel.closeQuietly();
+                throw e;
             }
         }
-        return channel;
     }
 
     /*
@@ -126,9 +79,9 @@ class LocalServiceDiscoveryAnnouncer {
         buf.append("BT-SEARCH * HTTP/1.1\r\n");
 
         buf.append("Host: ");
-        buf.append(group.getAddress().getAddress().toString().substring(1));
+        buf.append(channel.getGroup().getAddress().getAddress().toString().substring(1));
         buf.append(":");
-        buf.append(group.getAddress().getPort());
+        buf.append(channel.getGroup().getAddress().getPort());
         buf.append("\r\n");
 
         buf.append("Port: ");
@@ -149,21 +102,5 @@ class LocalServiceDiscoveryAnnouncer {
         buf.append("\r\n");
 
         return buf.toString().getBytes(ascii);
-    }
-
-    public void shutdown() {
-        shutdown = true;
-        closeChannel();
-    }
-
-    private void closeChannel() {
-        DatagramChannel _channel = channel;
-        if (_channel != null && _channel.isOpen()) {
-            try {
-                _channel.close();
-            } catch (IOException e) {
-                LOGGER.error("Failed to close channel", e);
-            }
-        }
     }
 }

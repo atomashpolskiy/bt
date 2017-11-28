@@ -43,7 +43,6 @@ import bt.peer.IPeerRegistry;
 import bt.peer.PeerRegistry;
 import bt.peer.PeerSourceFactory;
 import bt.peer.lan.Cookie;
-import bt.peer.lan.ILocalServiceDiscoveryService;
 import bt.peer.lan.LocalServiceDiscoveryService;
 import bt.processor.ProcessorFactory;
 import bt.processor.TorrentProcessorFactory;
@@ -166,8 +165,8 @@ public class ServiceModule implements Module {
         binder.bind(IConnectionSource.class).to(ConnectionSource.class).asEagerSingleton();
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).asEagerSingleton();
         binder.bind(IPeerRegistry.class).to(PeerRegistry.class).asEagerSingleton();
-        binder.bind(ILocalServiceDiscoveryService.class)
-                .to(Key.get(ILocalServiceDiscoveryService.class, LocalServiceDiscoveryServiceBinding.class))
+        binder.bind(LocalServiceDiscoveryService.class)
+                .to(Key.get(LocalServiceDiscoveryService.class, LocalServiceDiscoveryServiceBinding.class))
                 .asEagerSingleton();
 
         // other services
@@ -278,7 +277,7 @@ public class ServiceModule implements Module {
     @Provides
     @Singleton
     @LocalServiceDiscoveryServiceBinding
-    public ILocalServiceDiscoveryService provideLocalServiceDiscoveryService(
+    public LocalServiceDiscoveryService provideLocalServiceDiscoveryService(
             Cookie cookie,
             Set<PeerConnectionAcceptor> connectionAcceptors,
             @PeerConnectionSelector SharedSelector selector,
@@ -290,7 +289,7 @@ public class ServiceModule implements Module {
                 .map(a -> (SocketChannelConnectionAcceptor)a)
                 .collect(Collectors.toSet());
 
-        ILocalServiceDiscoveryService service =  new LocalServiceDiscoveryService(
+        LocalServiceDiscoveryService service =  new LocalServiceDiscoveryService(
                 cookie, socketAcceptors, selector, eventSource, lifecycleBinder, config);
 
         lifecycleBinder.onShutdown(service::shutdown);
