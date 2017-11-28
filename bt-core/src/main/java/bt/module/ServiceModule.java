@@ -85,9 +85,6 @@ import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -294,13 +291,8 @@ public class ServiceModule implements Module {
                 .collect(Collectors.toSet());
 
         ILocalServiceDiscoveryService service =  new LocalServiceDiscoveryService(
-                cookie, socketAcceptors, selector, eventSource, config);
+                cookie, socketAcceptors, selector, eventSource, lifecycleBinder, config);
 
-        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "lsd-announcer"));
-        long intervalMillis = config.getLocalServiceDiscoveryAnnounceInterval().toMillis();
-        Runnable r = () -> executor.scheduleWithFixedDelay(service::announce, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
-        lifecycleBinder.onStartup(LifecycleBinding.bind(r).description("Start Local Service Discovery announcer").async().build());
-        lifecycleBinder.onShutdown(executor::shutdownNow);
         lifecycleBinder.onShutdown(service::shutdown);
 
         return service;

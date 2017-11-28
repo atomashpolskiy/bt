@@ -23,6 +23,7 @@ import bt.event.TorrentStoppedEvent;
 import bt.metainfo.TorrentId;
 import bt.net.SocketChannelConnectionAcceptor;
 import bt.runtime.Config;
+import bt.service.IRuntimeLifecycleBinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +40,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryService {
@@ -50,6 +55,7 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
 
     private final Cookie cookie;
     private final Set<SocketChannelConnectionAcceptor> socketAcceptors;
+    private final IRuntimeLifecycleBinder lifecycleBinder;
     private final Config config;
 
     private final LinkedHashSet<TorrentId> announceQueue;
@@ -57,22 +63,35 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
 
     private final Selector selector;
     private volatile Collection<LocalServiceDiscoveryAnnouncer> announcers;
+
+    private final AtomicBoolean scheduled; // true, if periodic announce has been scheduled
     private volatile boolean shutdown;
 
     public LocalServiceDiscoveryService(Cookie cookie,
                                         Set<SocketChannelConnectionAcceptor> socketAcceptors,
                                         Selector selector,
                                         EventSource eventSource,
+                                        IRuntimeLifecycleBinder lifecycleBinder,
                                         Config config) {
         this.cookie = cookie;
         this.socketAcceptors = socketAcceptors;
         this.selector = selector;
+        this.lifecycleBinder = lifecycleBinder;
         this.config = config;
         this.announceQueue = new LinkedHashSet<>();
         this.events = new LinkedBlockingQueue<>();
 
+        this.scheduled = new AtomicBoolean(false);
+
         eventSource.onTorrentStarted(this::onTorrentStarted);
         eventSource.onTorrentStopped(this::onTorrentStopped);
+    }
+
+    private void schedulePeriodicAnnounce() {
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "lsd-announcer"));
+        long intervalMillis = config.getLocalServiceDiscoveryAnnounceInterval().toMillis();
+        executor.scheduleWithFixedDelay(this::announce, 0, intervalMillis, TimeUnit.MILLISECONDS);
+        lifecycleBinder.onShutdown(executor::shutdownNow);
     }
 
     @Override
@@ -207,6 +226,11 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
 
     private void onTorrentStarted(TorrentStartedEvent event) {
         events.add(event);
+        if (scheduled.compareAndSet(false, true)) {
+            // schedule periodic announce immediately after the first torrent has been started
+            // TODO: immediately announce each time a torrent is started (but no more than 1 announce per minute)
+            schedulePeriodicAnnounce();
+        }
     }
 
     private void onTorrentStopped(TorrentStoppedEvent event) {
