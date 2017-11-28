@@ -34,6 +34,7 @@ import bt.net.IMessageDispatcher;
 import bt.net.IPeerConnectionFactory;
 import bt.net.IPeerConnectionPool;
 import bt.net.MessageDispatcher;
+import bt.net.PeerConnectionAcceptor;
 import bt.net.PeerConnectionFactory;
 import bt.net.PeerConnectionPool;
 import bt.net.SharedSelector;
@@ -42,6 +43,7 @@ import bt.peer.IPeerRegistry;
 import bt.peer.PeerRegistry;
 import bt.peer.PeerSourceFactory;
 import bt.peer.lan.Cookie;
+import bt.peer.lan.ILocalServiceDiscoveryService;
 import bt.peer.lan.LocalServiceDiscoveryService;
 import bt.processor.ProcessorFactory;
 import bt.processor.TorrentProcessorFactory;
@@ -66,6 +68,8 @@ import bt.tracker.TrackerFactory;
 import bt.tracker.TrackerService;
 import bt.tracker.udp.UdpTrackerFactory;
 import com.google.inject.Binder;
+import com.google.inject.BindingAnnotation;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -73,9 +77,18 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
 
 import java.io.IOException;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * This module contributes all core services,
@@ -156,7 +169,9 @@ public class ServiceModule implements Module {
         binder.bind(IConnectionSource.class).to(ConnectionSource.class).asEagerSingleton();
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).asEagerSingleton();
         binder.bind(IPeerRegistry.class).to(PeerRegistry.class).asEagerSingleton();
-        binder.bind(LocalServiceDiscoveryService.class).asEagerSingleton();
+        binder.bind(ILocalServiceDiscoveryService.class)
+                .to(Key.get(ILocalServiceDiscoveryService.class, LocalServiceDiscoveryServiceBinding.class))
+                .asEagerSingleton();
 
         // other services
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
@@ -256,5 +271,38 @@ public class ServiceModule implements Module {
     @Singleton
     public Cookie provideLocalServiceDiscoveryCookie() {
         return Cookie.newCookie();
+    }
+
+    @Target({ ElementType.PARAMETER, ElementType.FIELD, ElementType.METHOD })
+    @Retention(RetentionPolicy.RUNTIME)
+    @BindingAnnotation
+    @interface LocalServiceDiscoveryServiceBinding {}
+
+    @Provides
+    @Singleton
+    @LocalServiceDiscoveryServiceBinding
+    public ILocalServiceDiscoveryService provideLocalServiceDiscoveryService(
+            Cookie cookie,
+            Set<PeerConnectionAcceptor> connectionAcceptors,
+            @PeerConnectionSelector SharedSelector selector,
+            EventSource eventSource,
+            IRuntimeLifecycleBinder lifecycleBinder) {
+
+        Set<SocketChannelConnectionAcceptor> socketAcceptors = connectionAcceptors.stream()
+                .filter(a -> a instanceof SocketChannelConnectionAcceptor)
+                .map(a -> (SocketChannelConnectionAcceptor)a)
+                .collect(Collectors.toSet());
+
+        ILocalServiceDiscoveryService service =  new LocalServiceDiscoveryService(
+                cookie, socketAcceptors, selector, eventSource, config);
+
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "lsd-announcer"));
+        long intervalMillis = config.getLocalServiceDiscoveryAnnounceInterval().toMillis();
+        Runnable r = () -> executor.scheduleWithFixedDelay(service::announce, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
+        lifecycleBinder.onStartup(LifecycleBinding.bind(r).description("Start Local Service Discovery announcer").async().build());
+        lifecycleBinder.onShutdown(executor::shutdownNow);
+        lifecycleBinder.onShutdown(service::shutdown);
+
+        return service;
     }
 }

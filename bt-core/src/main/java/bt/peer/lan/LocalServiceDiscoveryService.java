@@ -21,133 +21,131 @@ import bt.event.EventSource;
 import bt.event.TorrentStartedEvent;
 import bt.event.TorrentStoppedEvent;
 import bt.metainfo.TorrentId;
-import bt.net.PeerConnectionAcceptor;
 import bt.net.SocketChannelConnectionAcceptor;
 import bt.runtime.Config;
-import bt.service.IRuntimeLifecycleBinder;
-import bt.service.LifecycleBinding;
-import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.Selector;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-/**
- * Performs periodic announces of currently active torrents to specific multicast groups.
- * See BEP-14 for more details.
- *
- * @since 1.6
- */
-public class LocalServiceDiscoveryService {
+public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryService {
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalServiceDiscoveryService.class);
+
+    private static final int IP4_BYTES = 4;
+    private static final int IP6_BYTES = 16;
 
     private final Cookie cookie;
     private final Set<SocketChannelConnectionAcceptor> socketAcceptors;
     private final Config config;
-    private final ScheduledExecutorService executor;
 
     private final LinkedHashSet<TorrentId> announceQueue;
     private final BlockingQueue<Event> events;
 
+    private final Selector selector;
     private volatile Collection<LocalServiceDiscoveryAnnouncer> announcers;
     private volatile boolean shutdown;
 
-    @Inject
     public LocalServiceDiscoveryService(Cookie cookie,
-                                        Set<PeerConnectionAcceptor> connectionAcceptors,
+                                        Set<SocketChannelConnectionAcceptor> socketAcceptors,
+                                        Selector selector,
                                         EventSource eventSource,
-                                        IRuntimeLifecycleBinder lifecycleBinder,
                                         Config config) {
         this.cookie = cookie;
-        this.socketAcceptors = connectionAcceptors.stream()
-                .filter(a -> a instanceof SocketChannelConnectionAcceptor)
-                .map(a -> (SocketChannelConnectionAcceptor)a)
-                .collect(Collectors.toSet());
-
+        this.socketAcceptors = socketAcceptors;
+        this.selector = selector;
         this.config = config;
         this.announceQueue = new LinkedHashSet<>();
         this.events = new LinkedBlockingQueue<>();
 
         eventSource.onTorrentStarted(this::onTorrentStarted);
         eventSource.onTorrentStopped(this::onTorrentStopped);
-
-        this.executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "lsd-announcer"));
-        long intervalMillis = config.getLocalServiceDiscoveryAnnounceInterval().toMillis();
-        Runnable r = () -> executor.scheduleWithFixedDelay(() -> {
-            try {
-                announce();
-            } catch (Exception e) {
-                LOGGER.error("Failed to announce", e);
-            }
-        }, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
-        lifecycleBinder.onStartup(LifecycleBinding.bind(r).description("Start Local Service Discovery announcer").async().build());
-        lifecycleBinder.onShutdown(executor::shutdownNow);
-        lifecycleBinder.onShutdown(this::shutdown);
     }
 
+    @Override
     public void announce() {
         if (announceQueue.isEmpty() && events.isEmpty()) {
             return;
         }
 
-        Collection<TorrentId> activeIds = collectCurrentlyActiveTorrents(events);
-        Collection<TorrentId> idsToAnnounce = collectNextTorrents(activeIds);
+        try {
+            Map<TorrentId, StatusChange> statusChanges = foldStartStopEvents(events);
+            Collection<TorrentId> idsToAnnounce = collectNextTorrents(statusChanges);
 
-        if (idsToAnnounce.size() > 0) {
-            announce(idsToAnnounce);
+            if (idsToAnnounce.size() > 0) {
+                announce(idsToAnnounce);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to announce", e);
         }
     }
 
-    private Collection<TorrentId> collectCurrentlyActiveTorrents(BlockingQueue<Event> events) {
+    private enum StatusChange {
+        STARTED, STOPPED
+    }
+
+    /**
+     * Folds started/stopped events into a map of status changes
+     */
+    private Map<TorrentId, StatusChange> foldStartStopEvents(BlockingQueue<Event> events) {
         int k = events.size(); // decide on the number of events to process upfront
 
-        Set<TorrentId> ids = new HashSet<>(k * 2);
+        Map<TorrentId, StatusChange> statusChanges = new HashMap<>(k * 2);
         Event event;
         while (--k >= 0 && (event = events.poll()) != null) {
             if (event instanceof TorrentStartedEvent) {
-                ids.add(((TorrentStartedEvent) event).getTorrentId());
+                statusChanges.put(((TorrentStartedEvent) event).getTorrentId(), StatusChange.STARTED);
             } else if (event instanceof TorrentStoppedEvent) {
-                ids.remove(((TorrentStoppedEvent) event).getTorrentId());
+                statusChanges.put(((TorrentStoppedEvent) event).getTorrentId(), StatusChange.STOPPED);
             } else {
                 LOGGER.warn("Unexpected event type: " + event.getClass().getName() + ". Skipping...");
             }
         }
-        return ids;
+        return statusChanges;
     }
 
     /**
      * Collect next few IDs to announce and additionally remove all inactive IDs from the queue.
      */
-    private Collection<TorrentId> collectNextTorrents(Collection<TorrentId> activeIds) {
+    private Collection<TorrentId> collectNextTorrents(Map<TorrentId, StatusChange> statusChanges) {
         int k = config.getLocalServiceDiscoveryMaxTorrentsPerAnnounce();
         List<TorrentId> ids = new ArrayList<>(k * 2);
         Iterator<TorrentId> iter = announceQueue.iterator();
         while (iter.hasNext()) {
             TorrentId id = iter.next();
-            if (activeIds.contains(id)) {
+            StatusChange statusChange = statusChanges.get(id);
+            if (statusChange == null) {
                 if (ids.size() < k) {
                     iter.remove(); // temporary remove from the queue
                     ids.add(id);
                     announceQueue.add(id); // add to the end of the queue
                 }
-            } else {
+            } else if (statusChange == StatusChange.STOPPED) {
                 // remove inactive
                 iter.remove();
             }
+            // last case is that the torrent has been stopped and started in between the announces,
+            // which means that we should leave it in the announce queue
         }
+        // add all new started torrents to the announce queue
+        statusChanges.forEach((id, statusChange) -> {
+            if (statusChange == StatusChange.STARTED) {
+                announceQueue.add(id);
+            }
+        });
         return ids;
     }
 
@@ -164,14 +162,24 @@ public class LocalServiceDiscoveryService {
 
     private Collection<LocalServiceDiscoveryAnnouncer> getAnnouncers() {
         if (announcers == null) {
-            // todo: filter ip4 and ip6 groups based on acceptors
-            Collection<Integer> localPorts = socketAcceptors.stream()
-                    .map(a -> a.getLocalAddress().getPort())
-                    .collect(Collectors.toSet());
+            Set<Integer> localPorts = new HashSet<>();
+            boolean acceptIP4 = false;
+            boolean acceptIP6 = false;
 
-            announcers = config.getLocalServiceDiscoveryAnnounceGroups().stream()
-                    .map(group -> new LocalServiceDiscoveryAnnouncer(group, cookie, localPorts))
-                    .collect(Collectors.toList());
+            for (SocketChannelConnectionAcceptor acceptor : socketAcceptors) {
+                InetSocketAddress address = acceptor.getLocalAddress();
+                if (isIP4(address)) {
+                    acceptIP4 = true;
+                    localPorts.add(acceptor.getLocalAddress().getPort());
+                } else if (isIP6(address)) {
+                    acceptIP6 = true;
+                    localPorts.add(acceptor.getLocalAddress().getPort());
+                } else {
+                    LOGGER.warn("Unexpected address (not IP4/IP6): " + address);
+                }
+            }
+
+            announcers = getAnnouncers(config.getLocalServiceDiscoveryAnnounceGroups(), acceptIP4, acceptIP6, localPorts);
 
             if (shutdown) {
                 // in case shutdown was called just before assigning announcers
@@ -179,6 +187,22 @@ public class LocalServiceDiscoveryService {
             }
         }
         return announcers;
+    }
+
+    private Collection<LocalServiceDiscoveryAnnouncer> getAnnouncers(
+            Collection<AnnounceGroup> groups, boolean acceptIP4, boolean acceptIP6, Collection<Integer> localPorts) {
+        return groups.stream()
+                .filter(group -> (isIP4(group.getAddress()) && acceptIP4) || (isIP6(group.getAddress()) && acceptIP6))
+                .map(group -> new LocalServiceDiscoveryAnnouncer(selector, group, cookie, localPorts))
+                .collect(Collectors.toList());
+    }
+
+    private static boolean isIP4(InetSocketAddress address) {
+        return address.getAddress().getAddress().length == IP4_BYTES;
+    }
+
+    private static boolean isIP6(InetSocketAddress address) {
+        return address.getAddress().getAddress().length == IP6_BYTES;
     }
 
     private void onTorrentStarted(TorrentStartedEvent event) {
@@ -189,6 +213,7 @@ public class LocalServiceDiscoveryService {
         events.add(event);
     }
 
+    @Override
     public void shutdown() {
         shutdown = true;
         shutdownAnnouncers();

@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
-import java.nio.channels.spi.SelectorProvider;
+import java.nio.channels.Selector;
 import java.nio.charset.Charset;
 import java.util.Collection;
 
@@ -38,16 +38,19 @@ class LocalServiceDiscoveryAnnouncer {
     private final Cookie cookie;
     private final Collection<Integer> localPorts;
 
+    private final Selector selector;
     private volatile DatagramChannel channel;
     private final Object channelLock;
 
     private volatile boolean shutdown;
 
     public LocalServiceDiscoveryAnnouncer(
+            Selector selector,
             AnnounceGroup group,
             Cookie cookie,
             Collection<Integer> localPorts) {
 
+        this.selector = selector;
         this.group = group;
         this.cookie = cookie;
         this.localPorts = localPorts;
@@ -93,7 +96,7 @@ class LocalServiceDiscoveryAnnouncer {
         if (channel == null) {
             synchronized (channelLock) {
                 if (channel == null && !shutdown) {
-                    DatagramChannel _channel = SelectorProvider.provider().openDatagramChannel();
+                    DatagramChannel _channel = selector.provider().openDatagramChannel();
                     _channel.setOption(StandardSocketOptions.IP_MULTICAST_TTL, group.getTimeToLive());
                     channel = _channel;
 
