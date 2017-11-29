@@ -2,6 +2,18 @@
 
 For the latest information visit project web site: http://atomashpolskiy.github.io/bt/
 
+## 1.6
+
+#### Date:
+
+#### Official BEPs:
+
+* [BEP-14: Local Service Discovery](http://www.bittorrent.org/beps/bep_0014.html)
+
+#### Bug Fixes/Improvements:
+
+* PeerTracker example does not work on Windows
+
 ## 1.5
 
 #### Date: 09/26/2017
