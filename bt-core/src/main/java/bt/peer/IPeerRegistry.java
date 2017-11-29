@@ -20,8 +20,6 @@ import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.tracker.AnnounceKey;
 
-import java.net.InetSocketAddress;
-
 /**
  * Shared registry of all peers, known to the current runtime.
  *
@@ -36,14 +34,6 @@ public interface IPeerRegistry {
      * @since 1.0
      */
     Peer getLocalPeer();
-
-    /**
-     * Get peer for an internet address
-     * or create and return a new one with default options, if it does not exist.
-     *
-     * @since 1.2
-     */
-    Peer getPeerForAddress(InetSocketAddress address);
 
     /**
      * Add peer for a given torrent and notify all peer consumers.

@@ -20,6 +20,7 @@ import bt.BtException;
 import bt.metainfo.TorrentId;
 import bt.peer.IPeerRegistry;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 /**
  *<p><b>Note that this class implements a service.
@@ -29,10 +30,10 @@ public class HandshakeFactory implements IHandshakeFactory {
 
     private static final int HANDSHAKE_RESERVED_LENGTH = 8;
 
-    private IPeerRegistry peerRegistry;
+    private Provider<IPeerRegistry> peerRegistry; // TODO: workaround for circular DI deps, maybe get rid of this completely?
 
     @Inject
-    public HandshakeFactory(IPeerRegistry peerRegistry) {
+    public HandshakeFactory(Provider<IPeerRegistry> peerRegistry) {
         this.peerRegistry = peerRegistry;
     }
 
@@ -40,7 +41,7 @@ public class HandshakeFactory implements IHandshakeFactory {
     public Handshake createHandshake(TorrentId torrentId) {
         try {
             return new Handshake(new byte[HANDSHAKE_RESERVED_LENGTH], torrentId,
-                    peerRegistry.getLocalPeer().getPeerId().orElseThrow(() -> new BtException("Local peer is missing ID")));
+                    peerRegistry.get().getLocalPeer().getPeerId().orElseThrow(() -> new BtException("Local peer is missing ID")));
         } catch (InvalidMessageException e) {
             throw new BtException("Failed to create handshake", e);
         }

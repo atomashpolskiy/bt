@@ -20,32 +20,36 @@ import bt.net.InternetProtocolUtils;
 import bt.net.SocketChannelConnectionAcceptor;
 
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.ProtocolFamily;
 import java.net.StandardProtocolFamily;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static bt.net.InternetProtocolUtils.isIP4;
 import static bt.net.InternetProtocolUtils.isIP6;
+import static java.util.Collections.unmodifiableCollection;
+import static java.util.Collections.unmodifiableSet;
 
-/**
- * Utility class, that provides necessary info for LSD service, based on application configuration.
- */
-class LocalServiceDiscoveryInfo {
+public class LocalServiceDiscoveryInfo implements ILocalServiceDiscoveryInfo {
 
     private final Set<Integer> localPorts;
     private final Collection<AnnounceGroup> compatibleGroups;
+    private final Collection<NetworkInterface> networkInterfaces;
 
     public LocalServiceDiscoveryInfo(
             Set<SocketChannelConnectionAcceptor> socketAcceptors,
             Collection<AnnounceGroup> announceGroups) {
 
-        this.localPorts = collectLocalPorts(socketAcceptors);
+        this.localPorts = unmodifiableSet(collectLocalPorts(socketAcceptors));
 
+        Collection<NetworkInterface> networkInterfaces = new HashSet<>();
         boolean acceptIP4 = false;
         boolean acceptIP6 = false;
         for (SocketChannelConnectionAcceptor acceptor : socketAcceptors) {
+            networkInterfaces.add(acceptor.getNetworkInterface());
             InetSocketAddress address = acceptor.getLocalAddress();
             ProtocolFamily protocolFamily = InternetProtocolUtils.getProtocolFamily(address.getAddress());
             if (protocolFamily == StandardProtocolFamily.INET) {
@@ -58,7 +62,8 @@ class LocalServiceDiscoveryInfo {
             }
         }
 
-        this.compatibleGroups = collectCompatibleGroups(announceGroups, acceptIP4, acceptIP6);
+        this.compatibleGroups = unmodifiableCollection(collectCompatibleGroups(announceGroups, acceptIP4, acceptIP6));
+        this.networkInterfaces = unmodifiableCollection(networkInterfaces);
     }
 
     private Set<Integer> collectLocalPorts(Set<SocketChannelConnectionAcceptor> socketAcceptors) {
@@ -75,11 +80,18 @@ class LocalServiceDiscoveryInfo {
                 .collect(Collectors.toList());
     }
 
+    @Override
     public Set<Integer> getLocalPorts() {
         return localPorts;
     }
 
+    @Override
     public Collection<AnnounceGroup> getCompatibleGroups() {
         return compatibleGroups;
+    }
+
+    @Override
+    public Collection<NetworkInterface> getNetworkInterfaces() {
+        return networkInterfaces;
     }
 }

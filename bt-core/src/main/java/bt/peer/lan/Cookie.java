@@ -16,11 +16,10 @@
 
 package bt.peer.lan;
 
-import java.io.IOException;
 import java.util.Random;
 
 /**
- * Opaque value, allowing the sending client to filter out its own announces if it receives them via multicast loopback.
+ * Opaque valueStr, allowing the sending client to filter out its own announces if it receives them via multicast loopback.
  *
  * @since 1.6
  */
@@ -31,14 +30,44 @@ public class Cookie {
      * @since 1.6
      */
     public static Cookie newCookie() {
-        int value = new Random().nextInt() & 0x7fffffff; // need positive value
+        int value = new Random().nextInt() & 0x7fffffff; // need positive valueStr
         return new Cookie(value);
     }
 
-    private final String value;
+    /**
+     * Parse cookie from its' string representation.
+     *
+     * @since 1.6
+     */
+    public static Cookie fromString(String s) {
+        return new Cookie(Integer.parseInt(s));
+    }
 
-    private Cookie(Number value) {
-        this.value = value.toString();
+    /**
+     * Check if two cookies have the same value.
+     *
+     * @return true if cookies have the same value
+     * @since 1.6
+     */
+    public static boolean sameValue(Cookie c1, Cookie c2) {
+        return c1.value == c2.value;
+    }
+
+    /**
+     * @return Maximum number of chars in the string representation
+     * @since 1.6
+     */
+    public static int maxLength() {
+        return 10; // max digits in positive integer
+    }
+
+    private final int value;
+
+    private Cookie(int value) {
+        if (value < 0) {
+            throw new IllegalArgumentException("Negative valueStr: " + value);
+        }
+        this.value = value;
     }
 
     /**
@@ -46,11 +75,8 @@ public class Cookie {
      *
      * @since 1.6
      */
-    public void appendTo(Appendable appendable) {
-        try {
-            appendable.append(value);
-        } catch (IOException e) {
-            throw new RuntimeException("Unexpected error", e);
-        }
+    @Override
+    public String toString() {
+        return String.valueOf(value);
     }
 }

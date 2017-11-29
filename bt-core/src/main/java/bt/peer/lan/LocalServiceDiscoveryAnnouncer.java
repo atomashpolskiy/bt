@@ -17,16 +17,16 @@
 package bt.peer.lan;
 
 import bt.metainfo.TorrentId;
-import bt.protocol.Protocols;
+import bt.runtime.Config;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.Set;
 
 class LocalServiceDiscoveryAnnouncer {
-    private static final Charset ascii = Charset.forName("ASCII");
+
+    private final ByteBuffer sendBuffer;
 
     private final AnnounceGroupChannel channel;
     private final Cookie cookie;
@@ -35,11 +35,19 @@ class LocalServiceDiscoveryAnnouncer {
     public LocalServiceDiscoveryAnnouncer(
             AnnounceGroupChannel channel,
             Cookie cookie,
-            Set<Integer> localPorts) {
+            Set<Integer> localPorts,
+            Config config) {
+
+        this.sendBuffer = createBuffer(config);
 
         this.channel = channel;
         this.cookie = cookie;
         this.localPorts = localPorts;
+    }
+
+    private static ByteBuffer createBuffer(Config config) {
+        int maxMessageSize = AnnounceMessage.calculateMessageSize(config.getLocalServiceDiscoveryMaxTorrentsPerAnnounce());
+        return ByteBuffer.allocateDirect(maxMessageSize);
     }
 
     public AnnounceGroup getGroup() {
@@ -47,15 +55,15 @@ class LocalServiceDiscoveryAnnouncer {
     }
 
     public void announce(Collection<TorrentId> ids) throws IOException {
-        ByteBuffer[] bufs = new ByteBuffer[localPorts.size()];
-        int i = 0;
         for (Integer port : localPorts) {
-            bufs[i] = ByteBuffer.wrap(buildMessage(ids, port));
-            i++;
-        }
-        for (ByteBuffer buf : bufs) {
+            AnnounceMessage message = buildMessage(port, ids);
+
+            sendBuffer.clear();
+            message.writeTo(sendBuffer, channel.getGroup().getAddress());
+            sendBuffer.flip();
+
             try {
-                channel.send(buf);
+                channel.send(sendBuffer);
             } catch (IOException e) {
                 channel.closeQuietly();
                 throw e;
@@ -63,44 +71,9 @@ class LocalServiceDiscoveryAnnouncer {
         }
     }
 
-    /*
-        BT-SEARCH * HTTP/1.1\r\n
-        Host: <host>\r\n
-        Port: <port>\r\n
-        Infohash: <ihash>\r\n
-        ...
-        cookie: <cookie (optional)>\r\n
-        \r\n
-        \r\n
-     */
-    private byte[] buildMessage(Collection<TorrentId> ids, int localPort) {
-        StringBuilder buf = new StringBuilder();
-
-        buf.append("BT-SEARCH * HTTP/1.1\r\n");
-
-        buf.append("Host: ");
-        buf.append(channel.getGroup().getAddress().getAddress().toString().substring(1));
-        buf.append(":");
-        buf.append(channel.getGroup().getAddress().getPort());
-        buf.append("\r\n");
-
-        buf.append("Port: ");
-        buf.append(localPort);
-        buf.append("\r\n");
-
-        ids.forEach(id -> {
-            buf.append("Infohash: ");
-            buf.append(Protocols.toHex(id.getBytes()));
-            buf.append("\r\n");
-        });
-
-        buf.append("cookie: ");
-        cookie.appendTo(buf);
-        buf.append("\r\n");
-
-        buf.append("\r\n");
-        buf.append("\r\n");
-
-        return buf.toString().getBytes(ascii);
+    private AnnounceMessage buildMessage(int port, Collection<TorrentId> ids) {
+        AnnounceMessage.Builder builder = AnnounceMessage.builder().cookie(cookie).port(port);
+        ids.forEach(builder::torrentId);
+        return builder.build();
     }
 }

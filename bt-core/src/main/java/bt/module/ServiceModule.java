@@ -39,10 +39,17 @@ import bt.net.PeerConnectionFactory;
 import bt.net.PeerConnectionPool;
 import bt.net.SharedSelector;
 import bt.net.SocketChannelConnectionAcceptor;
+import bt.peer.IPeerCache;
 import bt.peer.IPeerRegistry;
+import bt.peer.PeerCache;
 import bt.peer.PeerRegistry;
 import bt.peer.PeerSourceFactory;
+import bt.peer.lan.AnnounceGroupChannel;
 import bt.peer.lan.Cookie;
+import bt.peer.lan.ILocalServiceDiscoveryInfo;
+import bt.peer.lan.ILocalServiceDiscoveryService;
+import bt.peer.lan.LocalServiceDiscoveryInfo;
+import bt.peer.lan.LocalServiceDiscoveryPeerSourceFactory;
 import bt.peer.lan.LocalServiceDiscoveryService;
 import bt.processor.ProcessorFactory;
 import bt.processor.TorrentProcessorFactory;
@@ -67,8 +74,6 @@ import bt.tracker.TrackerFactory;
 import bt.tracker.TrackerService;
 import bt.tracker.udp.UdpTrackerFactory;
 import com.google.inject.Binder;
-import com.google.inject.BindingAnnotation;
-import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -76,12 +81,9 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
 
 import java.io.IOException;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
+import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
@@ -156,7 +158,8 @@ public class ServiceModule implements Module {
 
         ServiceModule.extend(binder).initAllExtensions()
                 .addTrackerFactory(UdpTrackerFactory.class, "udp")
-                .addConnectionAcceptor(SocketChannelConnectionAcceptor.class);
+                .addConnectionAcceptor(SocketChannelConnectionAcceptor.class)
+                .addPeerSourceFactory(LocalServiceDiscoveryPeerSourceFactory.class);
 
         binder.bind(Config.class).toInstance(config);
 
@@ -165,9 +168,7 @@ public class ServiceModule implements Module {
         binder.bind(IConnectionSource.class).to(ConnectionSource.class).asEagerSingleton();
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).asEagerSingleton();
         binder.bind(IPeerRegistry.class).to(PeerRegistry.class).asEagerSingleton();
-        binder.bind(LocalServiceDiscoveryService.class)
-                .to(Key.get(LocalServiceDiscoveryService.class, LocalServiceDiscoveryServiceBinding.class))
-                .asEagerSingleton();
+        binder.bind(ILocalServiceDiscoveryService.class).to(LocalServiceDiscoveryService.class).asEagerSingleton();
 
         // other services
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
@@ -178,6 +179,7 @@ public class ServiceModule implements Module {
         binder.bind(TorrentRegistry.class).to(AdhocTorrentRegistry.class).in(Singleton.class);
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
         binder.bind(ProcessorFactory.class).to(TorrentProcessorFactory.class).in(Singleton.class);
+        binder.bind(IPeerCache.class).to(PeerCache.class).in(Singleton.class);
 
         // single instance of event bus provides two different injectable services
         binder.bind(EventSink.class).to(EventBus.class).in(Singleton.class);
@@ -257,10 +259,10 @@ public class ServiceModule implements Module {
     @Singleton
     public SocketChannelConnectionAcceptor provideSocketChannelConnectionAcceptor(
             @PeerConnectionSelector SharedSelector selector,
-            IPeerRegistry peerRegistry,
+            IPeerCache peerCache,
             IPeerConnectionFactory connectionFactory) {
         InetSocketAddress localAddress = new InetSocketAddress(config.getAcceptorAddress(), config.getAcceptorPort());
-        return new SocketChannelConnectionAcceptor(selector, peerRegistry, connectionFactory, localAddress);
+        return new SocketChannelConnectionAcceptor(selector, peerCache, connectionFactory, localAddress);
     }
 
     @Provides
@@ -269,31 +271,34 @@ public class ServiceModule implements Module {
         return Cookie.newCookie();
     }
 
-    @Target({ ElementType.PARAMETER, ElementType.FIELD, ElementType.METHOD })
-    @Retention(RetentionPolicy.RUNTIME)
-    @BindingAnnotation
-    @interface LocalServiceDiscoveryServiceBinding {}
-
     @Provides
     @Singleton
-    @LocalServiceDiscoveryServiceBinding
-    public LocalServiceDiscoveryService provideLocalServiceDiscoveryService(
-            Cookie cookie,
-            Set<PeerConnectionAcceptor> connectionAcceptors,
-            @PeerConnectionSelector SharedSelector selector,
-            EventSource eventSource,
-            IRuntimeLifecycleBinder lifecycleBinder) {
+    public ILocalServiceDiscoveryInfo provideLocalServiceDiscoveryInfo(
+            Set<PeerConnectionAcceptor> connectionAcceptors) {
 
         Set<SocketChannelConnectionAcceptor> socketAcceptors = connectionAcceptors.stream()
                 .filter(a -> a instanceof SocketChannelConnectionAcceptor)
                 .map(a -> (SocketChannelConnectionAcceptor)a)
                 .collect(Collectors.toSet());
 
-        LocalServiceDiscoveryService service =  new LocalServiceDiscoveryService(
-                cookie, socketAcceptors, selector, eventSource, lifecycleBinder, config);
+        return new LocalServiceDiscoveryInfo(socketAcceptors, config.getLocalServiceDiscoveryAnnounceGroups());
+    }
 
-        lifecycleBinder.onShutdown(service::shutdown);
+    @Provides
+    @Singleton
+    public Collection<AnnounceGroupChannel> provideGroupChannels(
+            ILocalServiceDiscoveryInfo info,
+            @PeerConnectionSelector SharedSelector selector,
+            IRuntimeLifecycleBinder lifecycleBinder) {
 
-        return service;
+        Collection<AnnounceGroupChannel> groupChannels = info.getCompatibleGroups().stream()
+                .map(g -> new AnnounceGroupChannel(g, selector, info.getNetworkInterfaces()))
+                .collect(Collectors.toList());
+
+        lifecycleBinder.onShutdown(() -> {
+            groupChannels.forEach(AnnounceGroupChannel::closeQuietly);
+        });
+
+        return groupChannels;
     }
 }

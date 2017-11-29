@@ -16,13 +16,16 @@
 
 package bt.net;
 
-import bt.peer.IPeerRegistry;
+import bt.peer.IPeerCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -35,7 +38,7 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
     private static final Logger LOGGER = LoggerFactory.getLogger(SocketChannelConnectionAcceptor.class);
 
     private final Selector selector;
-    private final IPeerRegistry peerRegistry;
+    private final IPeerCache peerCache;
     private final IPeerConnectionFactory connectionFactory;
     private final InetSocketAddress localAddress;
 
@@ -43,18 +46,33 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
 
     public SocketChannelConnectionAcceptor(
             Selector selector,
-            IPeerRegistry peerRegistry,
+            IPeerCache peerCache,
             IPeerConnectionFactory connectionFactory,
             InetSocketAddress localAddress) {
 
         this.selector = selector;
-        this.peerRegistry = peerRegistry;
+        this.peerCache = peerCache;
         this.connectionFactory = connectionFactory;
         this.localAddress = localAddress;
     }
 
+    /**
+     * @since 1.6
+     */
     public InetSocketAddress getLocalAddress() {
         return localAddress;
+    }
+
+    /**
+     * @since 1.6
+     */
+    public NetworkInterface getNetworkInterface() {
+        InetAddress address = localAddress.getAddress();
+        try {
+            return NetworkInterface.getByInetAddress(address);
+        } catch (SocketException e) {
+            throw new RuntimeException("Failed to get network interface for address: " + address, e);
+        }
     }
 
     @Override
@@ -134,7 +152,7 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
 
     private ConnectionResult createConnection(SocketChannel incomingChannel, SocketAddress remoteAddress) {
         try {
-            Peer peer = peerRegistry.getPeerForAddress((InetSocketAddress) remoteAddress);
+            Peer peer = peerCache.getPeerForAddress((InetSocketAddress) remoteAddress);
             return connectionFactory.createIncomingConnection(peer, incomingChannel);
         } catch (Exception e) {
             LOGGER.error("Failed to establish incoming connection from peer: " + remoteAddress, e);

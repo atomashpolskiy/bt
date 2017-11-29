@@ -21,14 +21,13 @@ import bt.event.EventSource;
 import bt.event.TorrentStartedEvent;
 import bt.event.TorrentStoppedEvent;
 import bt.metainfo.TorrentId;
-import bt.net.SocketChannelConnectionAcceptor;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
+import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.channels.Selector;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -45,7 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-public class LocalServiceDiscoveryService {
+public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryService {
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalServiceDiscoveryService.class);
 
     private final IRuntimeLifecycleBinder lifecycleBinder;
@@ -54,15 +53,14 @@ public class LocalServiceDiscoveryService {
     private final LinkedHashSet<TorrentId> announceQueue;
     private final BlockingQueue<Event> events;
 
-    private final Collection<AnnounceGroupChannel> groupChannels;
     private final Collection<LocalServiceDiscoveryAnnouncer> announcers;
 
     private final AtomicBoolean scheduled; // true, if periodic announce has been scheduled
-    private final AtomicBoolean shutdown;
 
+    @Inject
     public LocalServiceDiscoveryService(Cookie cookie,
-                                        Set<SocketChannelConnectionAcceptor> socketAcceptors,
-                                        Selector selector,
+                                        ILocalServiceDiscoveryInfo info,
+                                        Collection<AnnounceGroupChannel> groupChannels,
                                         EventSource eventSource,
                                         IRuntimeLifecycleBinder lifecycleBinder,
                                         Config config) {
@@ -72,24 +70,15 @@ public class LocalServiceDiscoveryService {
         this.announceQueue = new LinkedHashSet<>();
         this.events = new LinkedBlockingQueue<>();
 
-        LocalServiceDiscoveryInfo info = new LocalServiceDiscoveryInfo(socketAcceptors, config.getLocalServiceDiscoveryAnnounceGroups());
-        this.groupChannels = createGroupsChannels(info.getCompatibleGroups(), selector);
         this.announcers = createAnnouncers(groupChannels, cookie, info.getLocalPorts());
 
         this.scheduled = new AtomicBoolean(false);
-        this.shutdown = new AtomicBoolean(false);
 
-        eventSource.onTorrentStarted(this::onTorrentStarted);
-        eventSource.onTorrentStopped(this::onTorrentStopped);
-    }
-
-    private Collection<AnnounceGroupChannel> createGroupsChannels(
-            Collection<AnnounceGroup> announceGroups,
-            Selector selector) {
-
-        return announceGroups.stream()
-                .map(g -> new AnnounceGroupChannel(g, selector))
-                .collect(Collectors.toList());
+        // do not enable LSD if there are no groups to announce to
+        if (groupChannels.size() > 0) {
+            eventSource.onTorrentStarted(this::onTorrentStarted);
+            eventSource.onTorrentStopped(this::onTorrentStopped);
+        }
     }
 
     private Collection<LocalServiceDiscoveryAnnouncer> createAnnouncers(
@@ -98,7 +87,7 @@ public class LocalServiceDiscoveryService {
             Set<Integer> localPorts) {
 
         return groupChannels.stream()
-                .map(channel -> new LocalServiceDiscoveryAnnouncer(channel, cookie, localPorts))
+                .map(channel -> new LocalServiceDiscoveryAnnouncer(channel, cookie, localPorts, config))
                 .collect(Collectors.toList());
     }
 
@@ -109,7 +98,10 @@ public class LocalServiceDiscoveryService {
         lifecycleBinder.onShutdown(executor::shutdownNow);
     }
 
-    public void announce() {
+    // TODO: using synchronized for now, because this method is available from the public API
+    // (however, it's unlikely to be called from anywhere other than tests)
+    @Override
+    public synchronized void announce() {
         if (announceQueue.isEmpty() && events.isEmpty()) {
             return;
         }
@@ -207,11 +199,5 @@ public class LocalServiceDiscoveryService {
 
     private void onTorrentStopped(TorrentStoppedEvent event) {
         events.add(event);
-    }
-
-    public void shutdown() {
-        if (shutdown.compareAndSet(false, true)) {
-            groupChannels.forEach(AnnounceGroupChannel::shutdown);
-        }
     }
 }
