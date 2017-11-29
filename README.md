@@ -197,6 +197,7 @@ Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new featu
 * [BEP-10: Extension Protocol](http://bittorrent.org/beps/bep_0010.html)
 * [BEP-11: Peer Exchange (PEX)](http://bittorrent.org/beps/bep_0011.html)
 * [BEP-12: Multitracker metadata extension](http://bittorrent.org/beps/bep_0012.html)
+* [BEP-14: Local Service Discovery](http://bittorrent.org/beps/bep_0014.html)
 * [BEP-15: UDP Tracker Protocol](http://bittorrent.org/beps/bep_0015.html)
 * [BEP-20: Peer ID Conventions](http://bittorrent.org/beps/bep_0020.html)
 * [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
