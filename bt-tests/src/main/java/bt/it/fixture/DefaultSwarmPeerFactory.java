@@ -21,8 +21,6 @@ import bt.runtime.BtRuntime;
 import bt.runtime.BtRuntimeBuilder;
 import bt.runtime.Config;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.nio.file.Path;
 import java.util.PrimitiveIterator;
 import java.util.function.Supplier;
@@ -67,13 +65,8 @@ class DefaultSwarmPeerFactory implements SwarmPeerFactory {
 
     private BtRuntime createRuntime(BtRuntimeBuilder runtimeBuilder, int port) {
         Config config = runtimeBuilder.getConfig();
-        config.setAcceptorAddress(localhostAddress());
         config.setAcceptorPort(port);
         return runtimeBuilder.build();
-    }
-
-    protected static InetAddress localhostAddress() {
-        return Inet4Address.getLoopbackAddress();
     }
 
     private Path createLocalRoot(int port) {
