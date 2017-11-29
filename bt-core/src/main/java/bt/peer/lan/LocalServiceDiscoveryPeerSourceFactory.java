@@ -70,7 +70,7 @@ public class LocalServiceDiscoveryPeerSourceFactory implements PeerSourceFactory
 
     private static ByteBuffer createBuffer(Config config) {
         int maxMessageSize = AnnounceMessage.calculateMessageSize(config.getLocalServiceDiscoveryMaxTorrentsPerAnnounce());
-        return ByteBuffer.allocateDirect(maxMessageSize);
+        return ByteBuffer.allocateDirect(maxMessageSize * 2);
     }
 
     private void schedulePeriodicPeerCollection(IRuntimeLifecycleBinder lifecycleBinder) {

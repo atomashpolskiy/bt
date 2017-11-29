@@ -47,7 +47,7 @@ class LocalServiceDiscoveryAnnouncer {
 
     private static ByteBuffer createBuffer(Config config) {
         int maxMessageSize = AnnounceMessage.calculateMessageSize(config.getLocalServiceDiscoveryMaxTorrentsPerAnnounce());
-        return ByteBuffer.allocateDirect(maxMessageSize);
+        return ByteBuffer.allocateDirect(maxMessageSize * 2);
     }
 
     public AnnounceGroup getGroup() {

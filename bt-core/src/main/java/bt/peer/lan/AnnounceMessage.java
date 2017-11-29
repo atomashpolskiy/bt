@@ -27,6 +27,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+import static bt.net.InternetProtocolUtils.getLiteralIP;
+
 class AnnounceMessage {
     private static final Charset ascii = Charset.forName("ASCII");
     private static final String DELIMITER = "\r\n";
@@ -35,10 +37,10 @@ class AnnounceMessage {
 
     public static int calculateMessageSize(int numberOfTorrentIds) {
         return HEADER.length()
-                + 6 + 39 /*IPv6 literal max length*/ + 5 + DELIMITER.length() /*port literal max length*/ // "Host: <ip>:<port>\r\n"
+                + 6 + 4*8+7+2 /*IPv6 literal max length*/ + 1/*colon*/ + 5/*port*/ + DELIMITER.length() /*port literal max length*/ // "Host: <ip>:<port>\r\n"
                 + 6 + 5 /*port literal max length*/ + DELIMITER.length() // "Port: <port>\r\n"
                 + (10 + 40 /*infohash length in hex*/ + DELIMITER.length()) * numberOfTorrentIds // "Infohash: <infohash>\r\n"
-                + 8 + Cookie.maxLength() + DELIMITER.length() // "cookie: <cookie>\r\n"
+                + 8 + (Cookie.maxLength()*2)/*pessimistic estimate for other libs*/ + DELIMITER.length() // "cookie: <cookie>\r\n"
                 + DELIMITER.length() * 2; // "\r\n\r\n"
     }
 
@@ -92,7 +94,7 @@ class AnnounceMessage {
         buf.append(HEADER);
 
         buf.append("Host: ");
-        buf.append(recipient.getAddress().toString().substring(1));
+        buf.append(getLiteralIP(recipient.getAddress()));
         buf.append(":");
         buf.append(recipient.getPort());
         buf.append("\r\n");
@@ -152,7 +154,12 @@ class AnnounceMessage {
                     break;
                 }
                 case "cookie": {
-                    builder.cookie(Cookie.fromString(value));
+                    try {
+                        builder.cookie(Cookie.fromString(value));
+                    } catch (Exception e) {
+                        // unsupported cookie format -- not ours
+                        builder.cookie(Cookie.unknownCookie());
+                    }
                     break;
                 }
                 case "Infohash": {
@@ -214,6 +221,9 @@ class AnnounceMessage {
         }
 
         AnnounceMessage build() {
+            if (cookie == null) {
+                throw new IllegalStateException("Can't build message: missing cookie");
+            }
             if (ids == null) {
                 throw new IllegalStateException("Can't build message: no torrents");
             }

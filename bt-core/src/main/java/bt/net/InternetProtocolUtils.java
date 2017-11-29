@@ -56,4 +56,19 @@ public class InternetProtocolUtils {
     public static boolean isIP6(InetSocketAddress address) {
         return getProtocolFamily(address.getAddress()) == StandardProtocolFamily.INET6;
     }
+
+    /**
+     * Returns {@link InetAddress#toString()} without the hostname part and forward slash.
+     *
+     * @since 1.6
+     */
+    public static String getLiteralIP(InetAddress address) {
+        String s = address.toString();
+        int k = s.indexOf('/');
+        if (k >= 0) {
+            // slash is never the last character
+            s = s.substring(k + 1);
+        }
+        return s;
+    }
 }

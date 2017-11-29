@@ -24,6 +24,21 @@ import java.util.Random;
  * @since 1.6
  */
 public class Cookie {
+    private static final int UNDEFINED = -1;
+
+    /**
+     * Cookie, that does not have a well-defined value. Never the same as any other cookie.
+     *
+     * @since 1.6
+     */
+    public static Cookie unknownCookie() {
+        return UNKNOWN_COOKIE;
+    }
+
+    private static final Cookie UNKNOWN_COOKIE = new UnknownCookie();
+
+    private static class UnknownCookie extends Cookie {
+    }
 
     /**
      * @return New cookie
@@ -37,10 +52,11 @@ public class Cookie {
     /**
      * Parse cookie from its' string representation.
      *
+     * @throws Exception if the cookie can't be parsed
      * @since 1.6
      */
-    public static Cookie fromString(String s) {
-        return new Cookie(Integer.parseInt(s));
+    public static Cookie fromString(String s) throws Exception {
+        return new Cookie(Integer.parseInt(s, 16));
     }
 
     /**
@@ -50,7 +66,7 @@ public class Cookie {
      * @since 1.6
      */
     public static boolean sameValue(Cookie c1, Cookie c2) {
-        return c1.value == c2.value;
+        return c1.value != UNDEFINED && c2.value != UNDEFINED && c1.value == c2.value;
     }
 
     /**
@@ -58,16 +74,23 @@ public class Cookie {
      * @since 1.6
      */
     public static int maxLength() {
-        return 10; // max digits in positive integer
+        return 8; // max digits in integer hex representation
     }
 
     private final int value;
+    private final String valueStr;
+
+    private Cookie() {
+        this.value = UNDEFINED;
+        this.valueStr = null;
+    }
 
     private Cookie(int value) {
         if (value < 0) {
             throw new IllegalArgumentException("Negative valueStr: " + value);
         }
         this.value = value;
+        this.valueStr = Integer.toString(value, 16);
     }
 
     /**
@@ -77,6 +100,6 @@ public class Cookie {
      */
     @Override
     public String toString() {
-        return String.valueOf(value);
+        return valueStr;
     }
 }
