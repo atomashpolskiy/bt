@@ -143,9 +143,6 @@ public class PeerRegistry implements IPeerRegistry {
 
     private void queryTrackers(TorrentId torrentId, Optional<AnnounceKey> torrentAnnounceKey, Collection<AnnounceKey> extraAnnounceKeys) {
         torrentAnnounceKey.ifPresent(announceKey -> {
-            if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Querying tracker peer source (announce key: {}) for torrent id: {}", announceKey, torrentId);
-            }
             try {
                 queryTracker(torrentId, announceKey);
             } catch (Exception e) {
@@ -153,9 +150,6 @@ public class PeerRegistry implements IPeerRegistry {
             }
         });
         extraAnnounceKeys.forEach(announceKey -> {
-            if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Querying tracker peer source (announce key: {}) for torrent id: {}", announceKey, torrentId);
-            }
             try {
                 queryTracker(torrentId, announceKey);
             } catch (Exception e) {
@@ -166,6 +160,9 @@ public class PeerRegistry implements IPeerRegistry {
 
     private void queryTracker(TorrentId torrentId, AnnounceKey announceKey) {
         if (mightCreateTracker(announceKey)) {
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Querying tracker peer source (announce key: {}) for torrent id: {}", announceKey, torrentId);
+            }
             queryPeerSource(torrentId, trackerPeerSourceFactory.getPeerSource(torrentId, announceKey));
         }
     }

@@ -26,23 +26,17 @@ import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.net.InetAddress;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.Assert.assertEquals;
 
-public class Swarm_IT extends BaseBtTest {
+public class Swarm_LocalServiceDiscoveryIT extends BaseBtTest {
 
     private static final int NUMBER_OF_SEEDERS = 5;
 
     private static final Config CONFIG = new Config() {
-        @Override
-        public InetAddress getAcceptorAddress() {
-            return InetAddress.getLoopbackAddress();
-        }
-
         @Override
         public Duration getTrackerQueryInterval() {
             return Duration.ofSeconds(5);
@@ -59,7 +53,7 @@ public class Swarm_IT extends BaseBtTest {
             .config(CONFIG)
             .seeders(NUMBER_OF_SEEDERS)
             .leechers(NUMBER_OF_SEEDERS)
-            .module(new SharedTrackerModule())
+            // not adding the SharedTrackerModule: LSD is the only source of peers
             .useInMemoryFileSystem()
             .build();
 

@@ -26,6 +26,7 @@ import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.net.InetAddress;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -37,6 +38,11 @@ public class Swarm_EncryptedIT extends BaseBtTest {
     private static final int NUMBER_OF_SEEDERS = 5;
 
     private static final Config CONFIG = new Config() {
+        @Override
+        public InetAddress getAcceptorAddress() {
+            return InetAddress.getLoopbackAddress();
+        }
+
         @Override
         public Duration getTrackerQueryInterval() {
             return Duration.ofSeconds(5);

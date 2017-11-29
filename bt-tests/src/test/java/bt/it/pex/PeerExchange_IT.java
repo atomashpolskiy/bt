@@ -30,6 +30,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -52,6 +53,10 @@ public class PeerExchange_IT extends BaseBtTest {
     public Swarm swarm = buildSwarm()
             .seeders(PEER_COUNT)
             .config(new Config() {
+                @Override
+                public InetAddress getAcceptorAddress() {
+                    return InetAddress.getLoopbackAddress();
+                }
                 @Override
                 public Duration getPeerDiscoveryInterval() {
                     return Duration.ofSeconds(1);
