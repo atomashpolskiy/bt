@@ -18,7 +18,6 @@ package bt.peer.lan;
 
 import bt.metainfo.TorrentId;
 import org.junit.Test;
-import sun.jvm.hotspot.utilities.Assert;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -49,13 +48,13 @@ public class AnnounceMessageTest {
     @Test
     public void testMessage_Size_SingleTorrent() {
         int actualLength = MESSAGE_BODY_WITHOUT_INFOHASH.length() + INFOHASH_HEADER.length();
-        Assert.that(actualLength <= calculateMessageSize(1), "Actual length is bigger than estimate");
+        assertTrue("Actual length is bigger than estimate", actualLength <= calculateMessageSize(1));
     }
 
     @Test
     public void testMessage_Size_SeveralTorrents() {
         int actualLength = MESSAGE_BODY_WITHOUT_INFOHASH.length() + INFOHASH_HEADER.length() * 5;
-        Assert.that(actualLength <= calculateMessageSize(5), "Actual length is bigger than estimate");
+        assertTrue("Actual length is bigger than estimate", actualLength <= calculateMessageSize(5));
     }
 
     /******************************************/
