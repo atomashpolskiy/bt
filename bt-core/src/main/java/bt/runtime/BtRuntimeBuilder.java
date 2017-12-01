@@ -167,7 +167,9 @@ public class BtRuntimeBuilder {
      * @since 1.0
      */
     public BtRuntime build() {
-        BtRuntime runtime = new BtRuntime(createInjector(), config);
+        Injector injector = createInjector();
+        Config config = Objects.requireNonNull(injector.getInstance(Config.class), "Missing config binding");
+        BtRuntime runtime = new BtRuntime(injector, config);
         if (shouldDisableAutomaticShutdown) {
             runtime.disableAutomaticShutdown();
         }
@@ -200,6 +202,18 @@ public class BtRuntimeBuilder {
             }
         });
 
+        customModules.forEach((k, v) -> {
+            boolean overridesStandardModule = standardModules.containsKey(k);
+            boolean overridesStandardExtension = standardExtensions.containsKey(k);
+            if (autoLoadedModules.containsKey(k)) {
+                LOGGER.info("Overriding auto-loaded module {}", k.getName());
+            } else if (overridesStandardModule || overridesStandardExtension) {
+                LOGGER.info("Overriding standard " + (overridesStandardModule ? "module" : "extension") + " {}", k.getName());
+            } else {
+                LOGGER.info("Loading module {}", k.getName());
+            }
+        });
+
         autoLoadedModules.forEach((k, v) -> {
             boolean overridesStandardModule = standardModules.containsKey(k);
             boolean overridesStandardExtension = standardExtensions.containsKey(k);
@@ -212,18 +226,6 @@ public class BtRuntimeBuilder {
                 } else {
                     LOGGER.info("Auto-loading module {} with default configuration", k.getName());
                 }
-            }
-        });
-
-        customModules.forEach((k, v) -> {
-            boolean overridesStandardModule = standardModules.containsKey(k);
-            boolean overridesStandardExtension = standardExtensions.containsKey(k);
-            if (autoLoadedModules.containsKey(k)) {
-                LOGGER.info("Overriding auto-loaded module {}", k.getName());
-            } else if (overridesStandardModule || overridesStandardExtension) {
-                LOGGER.info("Overriding standard " + (overridesStandardModule ? "module" : "extension") + " {}", k.getName());
-            } else {
-                LOGGER.info("Loading module {}", k.getName());
             }
         });
 
