@@ -21,6 +21,8 @@ import bt.module.ServiceModule;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 
+import java.util.Objects;
+
 public class PeerExchangeModule implements Module {
 
     private PeerExchangeConfig config;
@@ -30,7 +32,7 @@ public class PeerExchangeModule implements Module {
     }
 
     public PeerExchangeModule(PeerExchangeConfig config) {
-        this.config = config;
+        this.config = Objects.requireNonNull(config);
     }
 
     @Override

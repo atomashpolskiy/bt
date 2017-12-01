@@ -40,7 +40,7 @@ class BtRuntimeFactory {
     }
 
     public BtRuntimeBuilder builder(Config config) {
-        return new BtRuntimeBuilder(config) {
+        BtRuntimeBuilder builder = new BtRuntimeBuilder(config) {
             @Override
             public BtRuntime build() {
                 modules.forEach(super::module);
@@ -49,6 +49,8 @@ class BtRuntimeFactory {
                 return runtime;
             }
         };
+        builder.disableStandardExtensions();
+        return builder;
     }
 
     public void shutdown() {

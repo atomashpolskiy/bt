@@ -20,6 +20,8 @@ import bt.BtException;
 import bt.module.BtModuleProvider;
 import bt.module.ProtocolModule;
 import bt.module.ServiceModule;
+import bt.peer.lan.LocalServiceDiscoveryModule;
+import bt.peerexchange.PeerExchangeModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -51,6 +53,7 @@ public class BtRuntimeBuilder {
 
     private boolean shouldDisableAutomaticShutdown;
     private boolean shouldAutoLoadModules;
+    private boolean shouldDisableStandardExtensions;
 
     /**
      * Create runtime builder with default config.
@@ -150,6 +153,17 @@ public class BtRuntimeBuilder {
     }
 
     /**
+     * If this options is set, Bt will not automatically load standard extensions, such as PEX or LSD.
+     * May be used to selectively enable only a subset of standard extensions.
+     *
+     * @since 1.6
+     */
+    public BtRuntimeBuilder disableStandardExtensions() {
+        this.shouldDisableStandardExtensions = true;
+        return this;
+    }
+
+    /**
      * @since 1.0
      */
     public BtRuntime build() {
@@ -162,40 +176,79 @@ public class BtRuntimeBuilder {
 
     @SuppressWarnings("unchecked")
     private Injector createInjector() {
-        Collection<Module> standardModules = collectModules(standardProviders());
+        Map<Class<? extends Module>, Module> standardModules = mapByClass(collectModules(standardProviders()));
 
-        Collection<Module> customModules;
+        Map<Class<? extends Module>, Module> standardExtensions;
+        if (shouldDisableStandardExtensions) {
+            standardExtensions = new HashMap<>();
+        } else {
+            standardExtensions = mapByClass(collectModules(standardExtensionProviders()));
+        }
+
+        Map<Class<? extends Module>, Module> autoLoadedModules;
         if (shouldAutoLoadModules) {
-            Map<Class<? extends Module>, Module> autoLoadedProviders = mapByClass(collectModules(autoLoadedProviders()));
-            Map<Class<? extends Module>, Module> customProviders = mapByClass(collectModules(customProviders()));
+            autoLoadedModules = mapByClass(collectModules(autoLoadedProviders()));
+        } else {
+            autoLoadedModules = new HashMap<>();
+        }
 
-            autoLoadedProviders.forEach((k, v) -> {
-                if (!customProviders.containsKey(k)) {
+        Map<Class<? extends Module>, Module> customModules = mapByClass(collectModules(customProviders()));
+
+        standardExtensions.forEach((k, v) -> {
+            if (!autoLoadedModules.containsKey(k) && !customModules.containsKey(k)) {
+                LOGGER.info("Loading standard extension module {}", k.getName());
+            }
+        });
+
+        autoLoadedModules.forEach((k, v) -> {
+            boolean overridesStandardModule = standardModules.containsKey(k);
+            boolean overridesStandardExtension = standardExtensions.containsKey(k);
+            boolean overridenByCustomModule = customModules.containsKey(k);
+            if (!overridenByCustomModule) {
+                if (overridesStandardModule || overridesStandardExtension) {
+                    // don't log if there is a custom module, that will override the auto-loaded version
+                    LOGGER.info("Overriding standard " + (overridesStandardModule ? "module" : "extension") +
+                            " {} with auto-loaded version", k.getName());
+                } else {
                     LOGGER.info("Auto-loading module {} with default configuration", k.getName());
                 }
-            });
+            }
+        });
 
-            customProviders.forEach((k, v) -> {
-                if (autoLoadedProviders.containsKey(k)) {
-                    LOGGER.info("Overriding auto-loaded module {}", k.getName());
-                } else {
-                    LOGGER.info("Loading module {}", k.getName());
-                }
-            });
-            autoLoadedProviders.putAll(customProviders);
-            customModules = autoLoadedProviders.values();
-        } else {
-            customModules = collectModules(customProviders());
-        }
+        customModules.forEach((k, v) -> {
+            boolean overridesStandardModule = standardModules.containsKey(k);
+            boolean overridesStandardExtension = standardExtensions.containsKey(k);
+            if (autoLoadedModules.containsKey(k)) {
+                LOGGER.info("Overriding auto-loaded module {}", k.getName());
+            } else if (overridesStandardModule || overridesStandardExtension) {
+                LOGGER.info("Overriding standard " + (overridesStandardModule ? "module" : "extension") + " {}", k.getName());
+            } else {
+                LOGGER.info("Loading module {}", k.getName());
+            }
+        });
 
-        Injector injector;
-        if (customModules.size() > 0) {
-            Module customModule = Modules.override(standardModules).with(customModules);
-            injector = Guice.createInjector(customModule);
-        } else {
-            injector = Guice.createInjector(standardModules);
-        }
-        return injector;
+        standardModules.putAll(standardExtensions);
+
+        return createInjector(
+                standardModules,
+                standardExtensions,
+                autoLoadedModules,
+                customModules);
+    }
+
+    private Injector createInjector(
+            Map<Class<? extends Module>, Module> standardModules,
+            Map<Class<? extends Module>, Module> standardExtensions,
+            Map<Class<? extends Module>, Module> autoLoadedModules,
+            Map<Class<? extends Module>, Module> customModules) {
+
+        Module combinedModule = Arrays.asList(customModules, autoLoadedModules, standardExtensions, standardModules)
+                .stream().sequential()
+                .filter(map -> !map.isEmpty())
+                .map(map -> Modules.combine(map.values()))
+                .reduce(null, (m1, m2) -> (m1 == null) ? m2 : Modules.override(m1).with(m2));
+
+        return Guice.createInjector(combinedModule);
     }
 
     @SuppressWarnings("unchecked")
@@ -208,7 +261,13 @@ public class BtRuntimeBuilder {
 
     @SuppressWarnings("unchecked")
     private <T> Map<Class<? extends T>, T> mapByClass(Collection<T> collection) {
-        return collection.stream().collect(HashMap::new, (m, o) -> m.put((Class<T>)o.getClass(), o), Map::putAll);
+        return collection.stream().collect(HashMap::new, (m, o) -> {
+            Class<T> moduleType = (Class<T>) o.getClass();
+            if (m.containsKey(moduleType)) {
+                throw new IllegalStateException("Duplicate module: " + moduleType.getName());
+            }
+            m.put(moduleType, o);
+        }, Map::putAll);
     }
 
     private Collection<BtModuleProvider> standardProviders() {
@@ -216,6 +275,13 @@ public class BtRuntimeBuilder {
         standardProviders.add(() -> new ServiceModule(config));
         standardProviders.add(ProtocolModule::new);
         return standardProviders;
+    }
+
+    private Collection<BtModuleProvider> standardExtensionProviders() {
+        Collection<BtModuleProvider> standardExtensionProviders = new ArrayList<>();
+        standardExtensionProviders.add(PeerExchangeModule::new);
+        standardExtensionProviders.add(LocalServiceDiscoveryModule::new);
+        return standardExtensionProviders;
     }
 
     private Collection<BtModuleProvider> customProviders() {

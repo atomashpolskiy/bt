@@ -77,6 +77,7 @@ public class PeerExchange_IT extends BaseBtTest {
                 }
             }))
             .module(new SharedTrackerModule(new PEXPeerFilter(PEER_COUNT, 1)))
+            .module(new PeerExchangeModule())
             .useInMemoryFileSystem()
             .build();
 

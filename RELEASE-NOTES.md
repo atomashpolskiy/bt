@@ -13,6 +13,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 #### Bug Fixes/Improvements:
 
 * PeerTracker example does not work on Windows
+* Allow to selectively enable only a subset of standard extensions, like PEX and LSD
 
 ## 1.5
 

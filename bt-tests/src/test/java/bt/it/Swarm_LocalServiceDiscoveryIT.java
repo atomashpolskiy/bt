@@ -19,6 +19,7 @@ package bt.it;
 import bt.it.fixture.BaseBtTest;
 import bt.it.fixture.SharedTrackerModule;
 import bt.it.fixture.Swarm;
+import bt.peer.lan.LocalServiceDiscoveryModule;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.runtime.BtClient;
 import bt.runtime.Config;
@@ -51,6 +52,7 @@ public class Swarm_LocalServiceDiscoveryIT extends BaseBtTest {
     @Rule
     public Swarm swarm = buildSwarm()
             .config(CONFIG)
+            .module(new LocalServiceDiscoveryModule())
             .seeders(NUMBER_OF_SEEDERS)
             .leechers(NUMBER_OF_SEEDERS)
             // not adding the SharedTrackerModule: LSD is the only source of peers
