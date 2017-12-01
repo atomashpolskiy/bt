@@ -22,7 +22,6 @@ import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.peer.PeerSource;
 import bt.peer.PeerSourceFactory;
-import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.LifecycleBinding;
 import com.google.inject.Inject;
@@ -56,7 +55,7 @@ public class LocalServiceDiscoveryPeerSourceFactory implements PeerSourceFactory
     public LocalServiceDiscoveryPeerSourceFactory(Collection<AnnounceGroupChannel> groupChannels,
                                                   IRuntimeLifecycleBinder lifecycleBinder,
                                                   Cookie cookie,
-                                                  Config config) {
+                                                  LocalServiceDiscoveryConfig config) {
         this.receiveBuffer = createBuffer(config);
         this.groupChannels = groupChannels;
         this.cookie = cookie;
@@ -68,7 +67,7 @@ public class LocalServiceDiscoveryPeerSourceFactory implements PeerSourceFactory
         }
     }
 
-    private static ByteBuffer createBuffer(Config config) {
+    private static ByteBuffer createBuffer(LocalServiceDiscoveryConfig config) {
         int maxMessageSize = AnnounceMessage.calculateMessageSize(config.getLocalServiceDiscoveryMaxTorrentsPerAnnounce());
         return ByteBuffer.allocateDirect(maxMessageSize * 2);
     }

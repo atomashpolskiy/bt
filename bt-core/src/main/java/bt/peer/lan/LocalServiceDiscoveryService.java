@@ -21,7 +21,6 @@ import bt.event.EventSource;
 import bt.event.TorrentStartedEvent;
 import bt.event.TorrentStoppedEvent;
 import bt.metainfo.TorrentId;
-import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
@@ -48,7 +47,7 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalServiceDiscoveryService.class);
 
     private final IRuntimeLifecycleBinder lifecycleBinder;
-    private final Config config;
+    private final LocalServiceDiscoveryConfig config;
 
     private final LinkedHashSet<TorrentId> announceQueue;
     private final BlockingQueue<Event> events;
@@ -63,7 +62,7 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
                                         Collection<AnnounceGroupChannel> groupChannels,
                                         EventSource eventSource,
                                         IRuntimeLifecycleBinder lifecycleBinder,
-                                        Config config) {
+                                        LocalServiceDiscoveryConfig config) {
 
         this.lifecycleBinder = lifecycleBinder;
         this.config = config;

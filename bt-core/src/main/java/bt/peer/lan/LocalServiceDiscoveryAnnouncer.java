@@ -17,7 +17,6 @@
 package bt.peer.lan;
 
 import bt.metainfo.TorrentId;
-import bt.runtime.Config;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,7 +35,7 @@ class LocalServiceDiscoveryAnnouncer {
             AnnounceGroupChannel channel,
             Cookie cookie,
             Set<Integer> localPorts,
-            Config config) {
+            LocalServiceDiscoveryConfig config) {
 
         this.sendBuffer = createBuffer(config);
 
@@ -45,7 +44,7 @@ class LocalServiceDiscoveryAnnouncer {
         this.localPorts = localPorts;
     }
 
-    private static ByteBuffer createBuffer(Config config) {
+    private static ByteBuffer createBuffer(LocalServiceDiscoveryConfig config) {
         int maxMessageSize = AnnounceMessage.calculateMessageSize(config.getLocalServiceDiscoveryMaxTorrentsPerAnnounce());
         return ByteBuffer.allocateDirect(maxMessageSize * 2);
     }

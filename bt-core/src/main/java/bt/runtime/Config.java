@@ -16,16 +16,11 @@
 
 package bt.runtime;
 
-import bt.peer.lan.AnnounceGroup;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.service.NetworkUtil;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collection;
 
 /**
  * Provides runtime configuration parameters.
@@ -61,9 +56,6 @@ public class Config {
     private int metadataExchangeMaxSize;
     private int msePrivateKeySize;
     private int numberOfPeersToRequestFromTracker;
-    private Duration localServiceDiscoveryAnnounceInterval;
-    private int localServiceDiscoveryMaxTorrentsPerAnnounce;
-    private Collection<AnnounceGroup> localServiceDiscoveryAnnounceGroups;
 
     /**
      * Create a config with default parameters.
@@ -98,18 +90,6 @@ public class Config {
         this.metadataExchangeMaxSize = 2 * 1024 * 1024; // 2 MB
         this.msePrivateKeySize = 20; // 20 bytes
         this.numberOfPeersToRequestFromTracker = 50;
-        this.localServiceDiscoveryAnnounceInterval = Duration.ofSeconds(60);
-        this.localServiceDiscoveryMaxTorrentsPerAnnounce = 5;
-
-        try {
-            InetAddress ip4multicast = InetAddress.getByName("239.192.152.143");
-            InetAddress ip6multicast = InetAddress.getByName("[ff15::efc0:988f]");
-            this.localServiceDiscoveryAnnounceGroups = Arrays.asList(
-                    new AnnounceGroup(new InetSocketAddress(ip4multicast, 6771), 1),
-                    new AnnounceGroup(new InetSocketAddress(ip6multicast, 6771), 1));
-        } catch (UnknownHostException e) {
-            // can't happen
-        }
     }
 
     /**
@@ -146,9 +126,6 @@ public class Config {
         this.metadataExchangeMaxSize = config.getMetadataExchangeMaxSize();
         this.msePrivateKeySize = config.getMsePrivateKeySize();
         this.numberOfPeersToRequestFromTracker = config.getNumberOfPeersToRequestFromTracker();
-        this.localServiceDiscoveryAnnounceInterval = config.getLocalServiceDiscoveryAnnounceInterval();
-        this.localServiceDiscoveryMaxTorrentsPerAnnounce = config.getLocalServiceDiscoveryMaxTorrentsPerAnnounce();
-        this.localServiceDiscoveryAnnounceGroups = config.getLocalServiceDiscoveryAnnounceGroups();
     }
 
     /**
@@ -588,52 +565,5 @@ public class Config {
      */
     public int getNumberOfPeersToRequestFromTracker() {
         return numberOfPeersToRequestFromTracker;
-    }
-
-    /**
-     * @param localServiceDiscoveryAnnounceInterval Interval of LSD announce
-     * @since 1.6
-     */
-    public void setLocalServiceDiscoveryAnnounceInterval(Duration localServiceDiscoveryAnnounceInterval) {
-        this.localServiceDiscoveryAnnounceInterval = localServiceDiscoveryAnnounceInterval;
-    }
-
-    /**
-     * @since 1.6
-     */
-    public Duration getLocalServiceDiscoveryAnnounceInterval() {
-        return localServiceDiscoveryAnnounceInterval;
-    }
-
-    /**
-     * @param localServiceDiscoveryMaxTorrentsPerAnnounce Max number of infohashes to include into an LSD announce.
-     *                                                    BEP-14 recommends no more than 5 due to possible UDP datagram fragmentation
-     * @since 1.6
-     */
-    public void setLocalServiceDiscoveryMaxTorrentsPerAnnounce(int localServiceDiscoveryMaxTorrentsPerAnnounce) {
-        this.localServiceDiscoveryMaxTorrentsPerAnnounce = localServiceDiscoveryMaxTorrentsPerAnnounce;
-    }
-
-    /**
-     * @since 1.6
-     */
-    public int getLocalServiceDiscoveryMaxTorrentsPerAnnounce() {
-        return localServiceDiscoveryMaxTorrentsPerAnnounce;
-    }
-
-    /**
-     * @param localServiceDiscoveryAnnounceGroups ASM multicast groups for Local Service Discovery.
-     *                                            BEP-14 defaults are 239.192.152.143:6771 and [ff15::efc0:988f]:6771
-     * @since 1.6
-     */
-    public void setLocalServiceDiscoveryAnnounceGroups(Collection<AnnounceGroup> localServiceDiscoveryAnnounceGroups) {
-        this.localServiceDiscoveryAnnounceGroups = localServiceDiscoveryAnnounceGroups;
-    }
-
-    /**
-     * @since 1.6
-     */
-    public Collection<AnnounceGroup> getLocalServiceDiscoveryAnnounceGroups() {
-        return localServiceDiscoveryAnnounceGroups;
     }
 }
