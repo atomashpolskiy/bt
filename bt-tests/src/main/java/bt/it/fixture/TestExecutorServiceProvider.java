@@ -16,18 +16,24 @@
 
 package bt.it.fixture;
 
-import bt.module.ClientExecutor;
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Singleton;
+import bt.runtime.Config;
+import bt.service.ExecutorServiceProvider;
+import com.google.inject.Inject;
 
-import java.util.concurrent.ExecutorService;
+import static bt.net.InternetProtocolUtils.getLiteralIP;
 
-class TestExecutorModule implements Module {
+public class TestExecutorServiceProvider extends ExecutorServiceProvider {
+    private static final String PREFIX_FORMAT = "bt.it.executor-thread-%s-%d";
+
+    private final String prefix;
+
+    @Inject
+    public TestExecutorServiceProvider(Config config) {
+        this.prefix = String.format(PREFIX_FORMAT, getLiteralIP(config.getAcceptorAddress()), config.getAcceptorPort());
+    }
 
     @Override
-    public void configure(Binder binder) {
-        binder.bind(ExecutorService.class).annotatedWith(ClientExecutor.class)
-                .toProvider(TestExecutorServiceProvider.class).in(Singleton.class);
+    protected String getNamePrefix() {
+        return prefix;
     }
 }

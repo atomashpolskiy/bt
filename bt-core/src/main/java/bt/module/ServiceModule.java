@@ -172,7 +172,6 @@ public class ServiceModule implements Module {
         binder.bind(EventSink.class).to(EventBus.class).in(Singleton.class);
         binder.bind(EventSource.class).to(EventBus.class).in(Singleton.class);
 
-        // TODO: register a shutdown hook in the runtime
         binder.bind(ExecutorService.class).annotatedWith(ClientExecutor.class)
                 .toProvider(ExecutorServiceProvider.class).in(Singleton.class);
     }

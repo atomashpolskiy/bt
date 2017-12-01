@@ -19,6 +19,7 @@ package bt.service;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -49,7 +50,7 @@ public class ExecutorServiceProvider implements Provider<ExecutorService> {
 
                         @Override
                         public Thread newThread(Runnable r) {
-                            return new Thread(r, "bt.service.executor-thread-" + threadId.getAndIncrement());
+                            return new Thread(r, Objects.requireNonNull(getNamePrefix()) + "-" + threadId.getAndIncrement());
                         }
                     });
                 }
@@ -57,5 +58,12 @@ public class ExecutorServiceProvider implements Provider<ExecutorService> {
         }
 
         return executorService;
+    }
+
+    /**
+     * @since 1.6
+     */
+    protected String getNamePrefix() {
+        return "bt.service.executor-thread";
     }
 }
