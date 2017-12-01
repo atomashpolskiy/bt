@@ -72,7 +72,8 @@ public class LocalServiceDiscoveryModule implements Module {
     @Provides
     @Singleton
     public ILocalServiceDiscoveryInfo provideLocalServiceDiscoveryInfo(
-            Set<PeerConnectionAcceptor> connectionAcceptors) {
+            Set<PeerConnectionAcceptor> connectionAcceptors,
+            LocalServiceDiscoveryConfig config) {
 
         Set<SocketChannelConnectionAcceptor> socketAcceptors = connectionAcceptors.stream()
                 .filter(a -> a instanceof SocketChannelConnectionAcceptor)

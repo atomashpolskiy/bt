@@ -144,12 +144,11 @@ public class ServiceModule implements Module {
 
     @Override
     public void configure(Binder binder) {
+        binder.bind(Config.class).toInstance(config);
 
         ServiceModule.extend(binder).initAllExtensions()
                 .addTrackerFactory(UdpTrackerFactory.class, "udp")
                 .addConnectionAcceptor(SocketChannelConnectionAcceptor.class);
-
-        binder.bind(Config.class).toInstance(config);
 
         // core services that contribute startup lifecycle bindings and should be instantiated eagerly
         binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).asEagerSingleton();
@@ -197,7 +196,10 @@ public class ServiceModule implements Module {
 
     @Provides
     @Singleton
-    public IDataWorkerFactory provideDataWorkerFactory(IRuntimeLifecycleBinder lifecycleBinder, ChunkVerifier verifier) {
+    public IDataWorkerFactory provideDataWorkerFactory(
+            IRuntimeLifecycleBinder lifecycleBinder,
+            ChunkVerifier verifier,
+            Config config) {
         return new DataWorkerFactory(lifecycleBinder, verifier, config.getMaxIOQueueSize());
     }
 
@@ -237,7 +239,8 @@ public class ServiceModule implements Module {
             @PeerConnectionSelector SharedSelector selector,
             IConnectionHandlerFactory connectionHandlerFactory,
             @BitTorrentProtocol MessageHandler<Message> bittorrentProtocol,
-            TorrentRegistry torrentRegistry) {
+            TorrentRegistry torrentRegistry,
+            Config config) {
         return new PeerConnectionFactory(selector, connectionHandlerFactory, bittorrentProtocol, torrentRegistry, config);
     }
 
@@ -246,7 +249,8 @@ public class ServiceModule implements Module {
     public SocketChannelConnectionAcceptor provideSocketChannelConnectionAcceptor(
             @PeerConnectionSelector SharedSelector selector,
             IPeerCache peerCache,
-            IPeerConnectionFactory connectionFactory) {
+            IPeerConnectionFactory connectionFactory,
+            Config config) {
         InetSocketAddress localAddress = new InetSocketAddress(config.getAcceptorAddress(), config.getAcceptorPort());
         return new SocketChannelConnectionAcceptor(selector, peerCache, connectionFactory, localAddress);
     }
