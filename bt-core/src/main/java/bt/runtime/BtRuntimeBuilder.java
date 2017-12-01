@@ -227,8 +227,6 @@ public class BtRuntimeBuilder {
             }
         });
 
-        standardModules.putAll(standardExtensions);
-
         return createInjector(
                 standardModules,
                 standardExtensions,
@@ -242,7 +240,7 @@ public class BtRuntimeBuilder {
             Map<Class<? extends Module>, Module> autoLoadedModules,
             Map<Class<? extends Module>, Module> customModules) {
 
-        Module combinedModule = Arrays.asList(customModules, autoLoadedModules, standardExtensions, standardModules)
+        Module combinedModule = Arrays.asList(standardModules, standardExtensions, autoLoadedModules, customModules)
                 .stream().sequential()
                 .filter(map -> !map.isEmpty())
                 .map(map -> Modules.combine(map.values()))
