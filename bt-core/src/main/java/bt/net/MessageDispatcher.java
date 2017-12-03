@@ -354,6 +354,7 @@ public class MessageDispatcher implements IMessageDispatcher {
                 } else if (message == null) {
                     break;
                 } else {
+                    // TODO: always accept message, even if error happened
                     messageSink.accept(peer, message);
                 }
             }

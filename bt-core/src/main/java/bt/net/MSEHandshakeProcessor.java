@@ -24,6 +24,7 @@ import bt.protocol.Protocols;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.protocol.crypto.MSECipher;
 import bt.protocol.handler.MessageHandler;
+import bt.runtime.Config;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import org.slf4j.Logger;
@@ -58,19 +59,19 @@ class MSEHandshakeProcessor {
     private final MSEKeyPairGenerator keyGenerator;
     private final TorrentRegistry torrentRegistry;
     private final MessageHandler<Message> messageHandler;
+    private final IBufferManager bufferManager;
     private final EncryptionPolicy localEncryptionPolicy;
-    private final int bufferSize;
 
     MSEHandshakeProcessor(TorrentRegistry torrentRegistry,
                           MessageHandler<Message> messageHandler,
-                          EncryptionPolicy localEncryptionPolicy,
-                          int bufferSize,
-                          int privateKeySize) {
-        this.keyGenerator = new MSEKeyPairGenerator(privateKeySize);
+                          IBufferManager bufferManager,
+                          Config config) {
+
+        this.keyGenerator = new MSEKeyPairGenerator(config.getMsePrivateKeySize());
         this.torrentRegistry = torrentRegistry;
         this.messageHandler = messageHandler;
-        this.localEncryptionPolicy = localEncryptionPolicy;
-        this.bufferSize = bufferSize;
+        this.bufferManager = bufferManager;
+        this.localEncryptionPolicy = config.getEncryptionPolicy();
     }
 
     PeerConnectionMessageWorker negotiateOutgoing(Peer peer, ByteChannel channel, TorrentId torrentId) throws IOException {
@@ -95,8 +96,8 @@ class MSEHandshakeProcessor {
 
         // check if the encryption negotiation can be skipped or preemptively aborted
 
-        ByteBuffer in = ByteBuffer.allocateDirect(bufferSize);
-        ByteBuffer out = ByteBuffer.allocateDirect(bufferSize);
+        ByteBuffer in = bufferManager.getInBuffer(peer);
+        ByteBuffer out = bufferManager.getOutBuffer(peer);
 
         ByteChannelReader reader = reader(channel);
 
@@ -262,8 +263,8 @@ class MSEHandshakeProcessor {
          * 5. A->B: ENCRYPT2(Payload Stream)
          */
 
-        ByteBuffer in = ByteBuffer.allocateDirect(bufferSize);
-        ByteBuffer out = ByteBuffer.allocateDirect(bufferSize);
+        ByteBuffer in = bufferManager.getInBuffer(peer);
+        ByteBuffer out = bufferManager.getOutBuffer(peer);
         ByteChannelReader reader = reader(channel);
 
         // 1. A->B: Diffie Hellman Ya, PadA

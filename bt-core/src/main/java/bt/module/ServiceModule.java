@@ -27,7 +27,9 @@ import bt.event.EventSink;
 import bt.event.EventSource;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.MetadataService;
+import bt.net.BufferManager;
 import bt.net.ConnectionSource;
+import bt.net.IBufferManager;
 import bt.net.IConnectionHandlerFactory;
 import bt.net.IConnectionSource;
 import bt.net.IMessageDispatcher;
@@ -166,6 +168,7 @@ public class ServiceModule implements Module {
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
         binder.bind(ProcessorFactory.class).to(TorrentProcessorFactory.class).in(Singleton.class);
         binder.bind(IPeerCache.class).to(PeerCache.class).in(Singleton.class);
+        binder.bind(IBufferManager.class).to(BufferManager.class).in(Singleton.class);
 
         // single instance of event bus provides two different injectable services
         binder.bind(EventSink.class).to(EventBus.class).in(Singleton.class);
@@ -240,8 +243,9 @@ public class ServiceModule implements Module {
             IConnectionHandlerFactory connectionHandlerFactory,
             @BitTorrentProtocol MessageHandler<Message> bittorrentProtocol,
             TorrentRegistry torrentRegistry,
+            IBufferManager bufferManager,
             Config config) {
-        return new PeerConnectionFactory(selector, connectionHandlerFactory, bittorrentProtocol, torrentRegistry, config);
+        return new PeerConnectionFactory(selector, connectionHandlerFactory, bittorrentProtocol, torrentRegistry, bufferManager, config);
     }
 
     @Provides

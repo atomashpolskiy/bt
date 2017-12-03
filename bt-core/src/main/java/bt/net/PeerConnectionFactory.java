@@ -47,19 +47,12 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
                                  IConnectionHandlerFactory connectionHandlerFactory,
                                  MessageHandler<Message> messageHandler,
                                  TorrentRegistry torrentRegistry,
+                                 IBufferManager bufferManager,
                                  Config config) {
         this.selector = selector;
         this.connectionHandlerFactory = connectionHandlerFactory;
-        this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(torrentRegistry, messageHandler,
-                config.getEncryptionPolicy(), getBufferSize(config.getMaxTransferBlockSize()), config.getMsePrivateKeySize());
+        this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(torrentRegistry, messageHandler, bufferManager, config);
         this.localOutgoingSocketAddress = new InetSocketAddress(config.getAcceptorAddress(), 0);
-    }
-
-    private static int getBufferSize(long maxTransferBlockSize) {
-        if (maxTransferBlockSize > ((Integer.MAX_VALUE - 13) / 2)) {
-            throw new IllegalArgumentException("Transfer block size is too large: " + maxTransferBlockSize);
-        }
-        return (int) (maxTransferBlockSize) * 2;
     }
 
     @Override
