@@ -16,12 +16,17 @@
 
 package bt.net;
 
-import bt.metainfo.TorrentId;
 import bt.net.pipeline.ChannelHandler;
 
 import java.nio.channels.SelectableChannel;
 
 public interface DataReceiver {
 
-    void registerChannel(TorrentId torrentId, SelectableChannel channel, ChannelHandler handler);
+    void registerChannel(SelectableChannel channel, ChannelHandler handler);
+
+    void unregisterChannel(SelectableChannel channel);
+
+    void activateChannel(SelectableChannel channel);
+
+    void deactivateChannel(SelectableChannel channel);
 }

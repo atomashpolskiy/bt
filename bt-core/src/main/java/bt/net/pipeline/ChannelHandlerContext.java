@@ -20,6 +20,14 @@ public interface ChannelHandlerContext {
 
     ChannelHandler handler();
 
+    void fireChannelRegistered();
+
+    void fireChannelUnregistered();
+
+    void fireChannelActive();
+
+    void fireChannelInactive();
+
     void fireDataReceived();
 
     void fireDataSent();

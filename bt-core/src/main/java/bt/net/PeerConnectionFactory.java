@@ -16,6 +16,7 @@
 
 package bt.net;
 
+import bt.event.EventSource;
 import bt.metainfo.TorrentId;
 import bt.net.buffer.IBufferManager;
 import bt.net.crypto.CipherBufferMutator;
@@ -57,6 +58,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
     private IBufferManager bufferManager;
     private MSEHandshakeProcessor cryptoHandshakeProcessor;
     private DataReceiver dataReceiver;
+    private EventSource eventSource;
 
     private InetSocketAddress localOutgoingSocketAddress;
 
@@ -67,6 +69,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
                                  TorrentRegistry torrentRegistry,
                                  IBufferManager bufferManager,
                                  DataReceiver dataReceiver,
+                                 EventSource eventSource,
                                  Config config) {
 
         this.protocol = protocol;
@@ -76,6 +79,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
         this.bufferManager = bufferManager;
         this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(torrentRegistry, protocol, config);
         this.dataReceiver = dataReceiver;
+        this.eventSource = eventSource;
         this.localOutgoingSocketAddress = new InetSocketAddress(config.getAcceptorAddress(), 0);
     }
 
@@ -143,8 +147,8 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
                 : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId, in, out);
 
         ChannelPipeline pipeline = createPipeline(peer, channel, in, out, cipherOptional);
-        ChannelHandler channelHandler = new SocketChannelHandler(peer, channel, in, out, pipeline::bindHandler);
-        dataReceiver.registerChannel(torrentId, channel, channelHandler);
+        ChannelHandler channelHandler = new SocketChannelHandler(peer, channel, in, out, pipeline::bindHandler, dataReceiver);
+        channelHandler.register();
 
         PeerConnection connection = new SocketPeerConnection(peer, channel, pipeline);
         ConnectionHandler connectionHandler;
@@ -155,11 +159,25 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
         }
         boolean inited = initConnection(connection, connectionHandler);
         if (inited) {
+            subscribeHandler(connection.getTorrentId(), channelHandler);
             return ConnectionResult.success(connection);
         } else {
             connection.closeQuietly();
             return ConnectionResult.failure("Handshake failed");
         }
+    }
+
+    private void subscribeHandler(TorrentId torrentId, ChannelHandler channelHandler) {
+        eventSource.onTorrentStarted(event -> {
+            if (event.getTorrentId().equals(torrentId)) {
+                channelHandler.activate();
+            }
+        });
+        eventSource.onTorrentStopped(event -> {
+            if (event.getTorrentId().equals(torrentId)) {
+                channelHandler.deactivate();
+            }
+        });
     }
 
     private ChannelPipeline createPipeline(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out, Optional<MSECipher> cipherOptional) {

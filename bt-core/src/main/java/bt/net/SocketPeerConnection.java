@@ -103,7 +103,7 @@ public class SocketPeerConnection implements PeerConnection {
                     try {
                         condition.await(timeout < WAIT_BETWEEN_READS? timeout : WAIT_BETWEEN_READS, TimeUnit.MILLISECONDS);
                     } catch (InterruptedException e) {
-                        // continue..
+                        throw new RuntimeException("Unexpectedly interrupted", e);
                     }
                     remaining -= WAIT_BETWEEN_READS;
                     message = readMessageNow();

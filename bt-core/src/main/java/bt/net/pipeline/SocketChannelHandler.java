@@ -16,6 +16,7 @@
 
 package bt.net.pipeline;
 
+import bt.net.DataReceiver;
 import bt.net.Peer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,24 +35,51 @@ public class SocketChannelHandler implements ChannelHandler {
     private final ByteBuffer inboundBuffer;
     private final ByteBuffer outboundBuffer;
     private final ChannelHandlerContext context;
+    private final DataReceiver dataReceiver;
 
     public SocketChannelHandler(
             Peer peer,
             SocketChannel channel,
             ByteBuffer inboundBuffer,
             ByteBuffer outboundBuffer,
-            Function<ChannelHandler, ChannelHandlerContext> contextFactory) {
+            Function<ChannelHandler, ChannelHandlerContext> contextFactory,
+            DataReceiver dataReceiver) {
 
         this.peer = peer;
         this.channel = channel;
         this.inboundBuffer = inboundBuffer;
         this.outboundBuffer = outboundBuffer;
         this.context = contextFactory.apply(this);
+        this.dataReceiver = dataReceiver;
     }
 
     @Override
     public Peer peer() {
         return peer;
+    }
+
+    @Override
+    public void register() {
+        dataReceiver.registerChannel(channel, this);
+        context.fireChannelRegistered();
+    }
+
+    @Override
+    public void unregister() {
+        dataReceiver.unregisterChannel(channel);
+        context.fireChannelUnregistered();
+    }
+
+    @Override
+    public void activate() {
+        dataReceiver.activateChannel(channel);
+        context.fireChannelActive();
+    }
+
+    @Override
+    public void deactivate() {
+        dataReceiver.deactivateChannel(channel);
+        context.fireChannelInactive();
     }
 
     @Override
@@ -94,30 +122,13 @@ public class SocketChannelHandler implements ChannelHandler {
         }
     }
 
-    @Override
-    public void fireChannelRegistered() {
-
-    }
-
-//    public void fireChannelUnregistered() {
-//
-//    }
-
-    @Override
-    public void fireChannelActive() {
-
-    }
-
-    @Override
-    public void fireChannelInactive() {
-
-    }
-
     private void closeChannel() {
         try {
             channel.close();
         } catch (IOException e) {
             LOGGER.error("Failed to close channel for peer: " + peer, e);
+        } finally {
+            unregister();
         }
     }
 }

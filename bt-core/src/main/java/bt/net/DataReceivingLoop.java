@@ -16,13 +16,9 @@
 
 package bt.net;
 
-import bt.event.EventSource;
-import bt.metainfo.TorrentId;
 import bt.module.PeerConnectionSelector;
 import bt.net.pipeline.ChannelHandler;
 import bt.service.IRuntimeLifecycleBinder;
-import bt.torrent.TorrentDescriptor;
-import bt.torrent.TorrentRegistry;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,10 +28,6 @@ import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.util.Iterator;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -44,24 +36,14 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
 
     private static final int NO_OPS = 0;
 
-    private final EventSource eventSource;
     private final SharedSelector selector;
-    private final TorrentRegistry torrentRegistry;
-
-    private final ConcurrentMap<TorrentId, Set<SelectableChannel>> channels;
 
     private volatile boolean shutdown;
 
     @Inject
-    public DataReceivingLoop(EventSource eventSource,
-                             @PeerConnectionSelector SharedSelector selector,
-                             TorrentRegistry torrentRegistry,
+    public DataReceivingLoop(@PeerConnectionSelector SharedSelector selector,
                              IRuntimeLifecycleBinder lifecycleBinder) {
-        this.eventSource = eventSource;
         this.selector = selector;
-        this.torrentRegistry = torrentRegistry;
-
-        this.channels = new ConcurrentHashMap<>();
 
         schedule(lifecycleBinder);
     }
@@ -98,37 +80,49 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
 //    }
 
     @Override
-    public synchronized void registerChannel(TorrentId torrentId, SelectableChannel channel, ChannelHandler handler) {
+    public void registerChannel(SelectableChannel channel, ChannelHandler handler) {
         // use atomic wakeup-and-register to prevent blocking of registration,
         // if selection is resumed before call to register is performed
         // (there is a race between the message receiving loop and current thread)
         // TODO: move this to the main loop instead?
-        int interestOps = getInterestOps(torrentId);
-        selector.wakeupAndRegister(channel, interestOps, handler);
-        handler.fireChannelRegistered();
-        channels.computeIfAbsent(torrentId, it -> ConcurrentHashMap.newKeySet()).add(channel);
+        selector.wakeupAndRegister(channel, SelectionKey.OP_READ, handler);
     }
 
-    private int getInterestOps(TorrentId torrentId) {
-        Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrentId);
-        boolean active = descriptor.isPresent() && descriptor.get().isActive();
-        return active ? SelectionKey.OP_READ : NO_OPS;
+    @Override
+    public void unregisterChannel(SelectableChannel channel) {
+        selector.keyFor(channel).ifPresent(SelectionKey::cancel);
     }
 
-    private synchronized void onTorrentStarted(TorrentId torrentId) {
-        updateInterestOps(torrentId, SelectionKey.OP_READ);
+    @Override
+    public void activateChannel(SelectableChannel channel) {
+        updateInterestOps(channel, SelectionKey.OP_READ);
     }
 
-    private synchronized void onTorrentStopped(TorrentId torrentId) {
-        updateInterestOps(torrentId, NO_OPS);
+    @Override
+    public void deactivateChannel(SelectableChannel channel) {
+        updateInterestOps(channel, NO_OPS);
     }
 
-    private synchronized void updateInterestOps(TorrentId torrentId, int interestOps) {
-        Set<SelectableChannel> _channels = channels.get(torrentId);
-        if (_channels != null && _channels.size() > 0) {
-            _channels.forEach(channel -> updateInterestOps(channel, interestOps));
-        }
-    }
+//    private int getInterestOps(TorrentId torrentId) {
+//        Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrentId);
+//        boolean active = descriptor.isPresent() && descriptor.get().isActive();
+//        return active ? SelectionKey.OP_READ : NO_OPS;
+//    }
+//
+//    private synchronized void onTorrentStarted(TorrentId torrentId) {
+//        updateInterestOps(torrentId, SelectionKey.OP_READ);
+//    }
+//
+//    private synchronized void onTorrentStopped(TorrentId torrentId) {
+//        updateInterestOps(torrentId, NO_OPS);
+//    }
+//
+//    private synchronized void updateInterestOps(TorrentId torrentId, int interestOps) {
+//        Set<SelectableChannel> _channels = channels.get(torrentId);
+//        if (_channels != null && _channels.size() > 0) {
+//            _channels.forEach(channel -> updateInterestOps(channel, interestOps));
+//        }
+//    }
 
     private void updateInterestOps(SelectableChannel channel, int interestOps) {
         selector.keyFor(channel).ifPresent(key -> {
@@ -136,22 +130,12 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
             // as we will be using it in a separate, message receiving thread
             synchronized (key) {
                 key.interestOps(interestOps);
-
-                ChannelHandler handler = getHandler(key);
-                if ((interestOps & SelectionKey.OP_READ) == 1) {
-                    handler.fireChannelActive();
-                } else {
-                    handler.fireChannelInactive();
-                }
             }
         });
     }
 
     @Override
     public void run() {
-        eventSource.onTorrentStarted(e -> onTorrentStarted(e.getTorrentId()));
-        eventSource.onTorrentStopped(e -> onTorrentStopped(e.getTorrentId()));
-
         while (!shutdown) {
             if (!selector.isOpen()) {
                 LOGGER.info("Selector is closed, stopping...");

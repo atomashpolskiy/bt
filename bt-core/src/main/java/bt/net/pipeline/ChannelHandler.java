@@ -22,11 +22,13 @@ public interface ChannelHandler {
 
     Peer peer();
 
-    void fireChannelRegistered();
+    void register();
 
-    void fireChannelActive();
+    void unregister();
 
-    void fireChannelInactive();
+    void activate();
+
+    void deactivate();
 
     void fireChannelReady();
 

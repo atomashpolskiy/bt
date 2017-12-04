@@ -133,6 +133,26 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
 
             @Override
+            public void fireChannelRegistered() {
+                // TODO
+            }
+
+            @Override
+            public void fireChannelUnregistered() {
+                // TODO
+            }
+
+            @Override
+            public void fireChannelActive() {
+                // TODO
+            }
+
+            @Override
+            public void fireChannelInactive() {
+                // TODO
+            }
+
+            @Override
             public void fireDataReceived() {
                 DefaultChannelPipeline.this.fireDataReceived();
             }

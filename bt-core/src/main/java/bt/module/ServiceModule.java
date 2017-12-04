@@ -252,9 +252,10 @@ public class ServiceModule implements Module {
             IChannelPipelineFactory channelPipelineFactory,
             IBufferManager bufferManager,
             DataReceiver dataReceiver,
+            EventSource eventSource,
             Config config) {
         return new PeerConnectionFactory(selector, connectionHandlerFactory, channelPipelineFactory,
-                bittorrentProtocol, torrentRegistry, bufferManager, dataReceiver, config);
+                bittorrentProtocol, torrentRegistry, bufferManager, dataReceiver, eventSource, config);
     }
 
     @Provides
