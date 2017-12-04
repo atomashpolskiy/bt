@@ -33,7 +33,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * @since 1.0
  */
-class SocketPeerConnection implements PeerConnection {
+public class SocketPeerConnection implements PeerConnection {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SocketPeerConnection.class);
 

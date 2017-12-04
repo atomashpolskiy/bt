@@ -141,6 +141,14 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
         });
     }
 
+    @Override
+    public boolean isSupportedAndActive(TorrentId torrentId) {
+        Optional<TorrentDescriptor> descriptor = getDescriptor(torrentId);
+        // it's OK if descriptor is not present -- torrent might be being fetched at the time
+        return getTorrentIds().contains(torrentId)
+                && (!descriptor.isPresent() || descriptor.get().isActive());
+    }
+
     private void addShutdownHook(TorrentId torrentId, TorrentDescriptor descriptor) {
         lifecycleBinder.onShutdown("Closing data descriptor for torrent ID: " + torrentId, () -> {
             if (descriptor.getDataDescriptor() != null) {

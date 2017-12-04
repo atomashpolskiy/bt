@@ -20,10 +20,6 @@ import bt.metainfo.TorrentId;
 import bt.net.BigIntegers;
 import bt.net.ByteChannelReader;
 import bt.net.Peer;
-import bt.net.buffer.IBufferManager;
-import bt.net.pipeline.ChannelPipeline;
-import bt.net.pipeline.ChannelPipelineBuilder;
-import bt.net.pipeline.IChannelPipelineFactory;
 import bt.protocol.DecodingContext;
 import bt.protocol.Handshake;
 import bt.protocol.Message;
@@ -64,28 +60,22 @@ public class MSEHandshakeProcessor {
     private static final byte[] VC_RAW_BYTES = new byte[8];
 
     private final MSEKeyPairGenerator keyGenerator;
-    private final IChannelPipelineFactory channelPipelineFactory;
     private final TorrentRegistry torrentRegistry;
     private final MessageHandler<Message> protocol;
-    private final IBufferManager bufferManager;
     private final EncryptionPolicy localEncryptionPolicy;
 
     public MSEHandshakeProcessor(
-            IChannelPipelineFactory channelPipelineFactory,
             TorrentRegistry torrentRegistry,
             MessageHandler<Message> protocol,
-            IBufferManager bufferManager,
             Config config) {
 
         this.keyGenerator = new MSEKeyPairGenerator(config.getMsePrivateKeySize());
-        this.channelPipelineFactory = channelPipelineFactory;
         this.torrentRegistry = torrentRegistry;
         this.protocol = protocol;
-        this.bufferManager = bufferManager;
         this.localEncryptionPolicy = config.getEncryptionPolicy();
     }
 
-    public ChannelPipeline negotiateOutgoing(Peer peer, ByteChannel channel, TorrentId torrentId) throws IOException {
+    public Optional<MSECipher> negotiateOutgoing(Peer peer, ByteChannel channel, TorrentId torrentId, ByteBuffer in, ByteBuffer out) throws IOException {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Negotiating encryption for outgoing connection: {}", peer);
         }
@@ -106,9 +96,6 @@ public class MSEHandshakeProcessor {
          */
 
         // check if the encryption negotiation can be skipped or preemptively aborted
-
-        ByteBuffer in = bufferManager.getInBuffer(peer);
-        ByteBuffer out = bufferManager.getOutBuffer(peer);
 
         ByteChannelReader reader = reader(channel);
 
@@ -242,11 +229,11 @@ public class MSEHandshakeProcessor {
         switch (negotiatedEncryptionPolicy) {
             case REQUIRE_PLAINTEXT:
             case PREFER_PLAINTEXT: {
-                return createPipeline(peer, channel, in, out, null);
+                return Optional.empty();
             }
             case PREFER_ENCRYPTED:
             case REQUIRE_ENCRYPTED: {
-                return createPipeline(peer, channel, in, out, cipher);
+                return Optional.of(cipher);
             }
             default: {
                 throw new IllegalStateException("Unknown encryption policy: " + negotiatedEncryptionPolicy.name());
@@ -254,7 +241,7 @@ public class MSEHandshakeProcessor {
         }
     }
 
-    public ChannelPipeline negotiateIncoming(Peer peer, ByteChannel channel) throws IOException {
+    public Optional<MSECipher> negotiateIncoming(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out) throws IOException {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Negotiating encryption for incoming connection: {}", peer);
         }
@@ -274,8 +261,6 @@ public class MSEHandshakeProcessor {
          * 5. A->B: ENCRYPT2(Payload Stream)
          */
 
-        ByteBuffer in = bufferManager.getInBuffer(peer);
-        ByteBuffer out = bufferManager.getOutBuffer(peer);
         ByteChannelReader reader = reader(channel);
 
         // 1. A->B: Diffie Hellman Ya, PadA
@@ -297,7 +282,7 @@ public class MSEHandshakeProcessor {
         if (consumed > 0 && context.getMessage() instanceof Handshake) {
             // decoding was successful, can use plaintext (if supported)
             assertPolicyIsCompatible(EncryptionPolicy.REQUIRE_PLAINTEXT);
-            return createPipeline(peer, channel, in, out, null);
+            return Optional.empty();
         }
 
         int phase1Min = keyGenerator.getPublicKeySize();
@@ -437,11 +422,11 @@ public class MSEHandshakeProcessor {
         switch (negotiatedEncryptionPolicy) {
             case REQUIRE_PLAINTEXT:
             case PREFER_PLAINTEXT: {
-                return createPipeline(peer, channel, in, out, null);
+                return Optional.empty();
             }
             case PREFER_ENCRYPTED:
             case REQUIRE_ENCRYPTED: {
-                return createPipeline(peer, channel, in, out, cipher);
+                return Optional.of(cipher);
             }
             default: {
                 throw new IllegalStateException("Unknown encryption policy: " + negotiatedEncryptionPolicy.name());
@@ -458,21 +443,6 @@ public class MSEHandshakeProcessor {
             throw new RuntimeException("Encryption policies are incompatible: peer's (" + peerEncryptionPolicy.name()
                     + "), local (" + localEncryptionPolicy.name() + ")");
         }
-    }
-
-    private ChannelPipeline createPipeline(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out, MSECipher cipher) {
-        ChannelPipelineBuilder builder = channelPipelineFactory.buildPipeline(peer);
-        builder.channel(channel);
-        builder.protocol(protocol);
-        builder.inboundBuffer(in);
-        builder.outboundBuffer(out);
-
-        if (cipher != null) {
-            builder.decoders(new CipherBufferMutator(cipher.getDecryptionCipher()));
-            builder.encoders(new CipherBufferMutator(cipher.getEncryptionCipher()));
-        }
-
-        return builder.build();
     }
 
     private byte[] getPadding(int length) {

@@ -102,4 +102,6 @@ public interface TorrentRegistry {
      * @since 1.3
      */
     TorrentDescriptor register(TorrentId torrentId);
+
+    boolean isSupportedAndActive(TorrentId torrentId);
 }

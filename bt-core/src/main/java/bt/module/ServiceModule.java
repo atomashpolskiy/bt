@@ -27,6 +27,8 @@ import bt.event.EventSink;
 import bt.event.EventSource;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.MetadataService;
+import bt.net.DataReceiver;
+import bt.net.DataReceivingLoop;
 import bt.net.buffer.BufferManager;
 import bt.net.ConnectionSource;
 import bt.net.buffer.IBufferManager;
@@ -159,6 +161,7 @@ public class ServiceModule implements Module {
         binder.bind(IConnectionSource.class).to(ConnectionSource.class).asEagerSingleton();
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).asEagerSingleton();
         binder.bind(IPeerRegistry.class).to(PeerRegistry.class).asEagerSingleton();
+        binder.bind(DataReceiver.class).to(DataReceivingLoop.class).asEagerSingleton();
 
         // other services
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
@@ -248,8 +251,10 @@ public class ServiceModule implements Module {
             TorrentRegistry torrentRegistry,
             IChannelPipelineFactory channelPipelineFactory,
             IBufferManager bufferManager,
+            DataReceiver dataReceiver,
             Config config) {
-        return new PeerConnectionFactory(selector, connectionHandlerFactory, channelPipelineFactory, bittorrentProtocol, torrentRegistry, bufferManager, config);
+        return new PeerConnectionFactory(selector, connectionHandlerFactory, channelPipelineFactory,
+                bittorrentProtocol, torrentRegistry, bufferManager, dataReceiver, config);
     }
 
     @Provides

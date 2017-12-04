@@ -21,6 +21,7 @@ import bt.net.buffer.BufferMutator;
 import bt.net.buffer.IBufferManager;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
+import com.google.inject.Inject;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
@@ -31,6 +32,7 @@ public class ChannelPipelineFactory implements IChannelPipelineFactory {
 
     private final IBufferManager bufferManager;
 
+    @Inject
     public ChannelPipelineFactory(IBufferManager bufferManager) {
         this.bufferManager = bufferManager;
     }
@@ -51,7 +53,7 @@ public class ChannelPipelineFactory implements IChannelPipelineFactory {
                 ByteBuffer _inboundBuffer = inboundBuffer.orElseGet(() -> bufferManager.getInBuffer(peer));
                 ByteBuffer _outboundBuffer = outboundBuffer.orElseGet(() -> bufferManager.getOutBuffer(peer));
 
-                return new DefaultChannelPipeline(peer, channel, protocol, _inboundBuffer, _outboundBuffer, decoders, encoders);
+                return new DefaultChannelPipeline(peer, protocol, _inboundBuffer, _outboundBuffer, decoders, encoders);
             }
         };
     }

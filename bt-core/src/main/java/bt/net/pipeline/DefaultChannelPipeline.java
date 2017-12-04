@@ -22,14 +22,11 @@ import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 
 import java.nio.ByteBuffer;
-import java.nio.channels.ByteChannel;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class DefaultChannelPipeline implements ChannelPipeline {
-
-    private final ByteChannel channel;
 
     private final MessageDeserializer deserializer;
     private final MessageSerializer serializer;
@@ -48,14 +45,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     public DefaultChannelPipeline(
             Peer peer,
-            ByteChannel channel,
             MessageHandler<Message> protocol,
             ByteBuffer inboundBuffer,
             ByteBuffer outboundBuffer,
             List<BufferMutator> decoders,
             List<BufferMutator> encoders) {
 
-        this.channel = channel;
         this.deserializer = new MessageDeserializer(peer, protocol);
         this.serializer = new MessageSerializer(peer, protocol);
         this.inboundBuffer = inboundBuffer;
@@ -82,10 +77,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             inboundBuffer.position(decodedDataOffset);
             inboundBuffer.limit(undecodedDataOffset);
-            Message message = deserializer.deserialize(inboundBuffer);
-            if (message != null) {
-                inboundQueue.add(message);
-                decodedDataOffset = inboundBuffer.position();
+            Message message;
+            for (;;) {
+                message = deserializer.deserialize(inboundBuffer);
+                if (message == null) {
+                    break;
+                } else {
+                    inboundQueue.add(message);
+                    decodedDataOffset = inboundBuffer.position();
+                }
             }
         }
     }

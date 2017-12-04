@@ -18,10 +18,15 @@ package bt.net;
 
 import bt.metainfo.TorrentId;
 import bt.net.buffer.IBufferManager;
+import bt.net.crypto.CipherBufferMutator;
 import bt.net.crypto.MSEHandshakeProcessor;
+import bt.net.pipeline.ChannelHandler;
 import bt.net.pipeline.ChannelPipeline;
+import bt.net.pipeline.ChannelPipelineBuilder;
 import bt.net.pipeline.IChannelPipelineFactory;
+import bt.net.pipeline.SocketChannelHandler;
 import bt.protocol.Message;
+import bt.protocol.crypto.MSECipher;
 import bt.protocol.handler.MessageHandler;
 import bt.runtime.Config;
 import bt.torrent.TorrentRegistry;
@@ -31,32 +36,46 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.ByteChannel;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 
 public class PeerConnectionFactory implements IPeerConnectionFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionFactory.class);
 
     private static final Duration socketTimeout = Duration.ofSeconds(30);
 
+    private MessageHandler<Message> protocol;
+
     private Selector selector;
     private IConnectionHandlerFactory connectionHandlerFactory;
+    private IChannelPipelineFactory channelPipelineFactory;
+    private IBufferManager bufferManager;
     private MSEHandshakeProcessor cryptoHandshakeProcessor;
+    private DataReceiver dataReceiver;
 
     private InetSocketAddress localOutgoingSocketAddress;
 
     public PeerConnectionFactory(Selector selector,
                                  IConnectionHandlerFactory connectionHandlerFactory,
                                  IChannelPipelineFactory channelPipelineFactory,
-                                 MessageHandler<Message> messageHandler,
+                                 MessageHandler<Message> protocol,
                                  TorrentRegistry torrentRegistry,
                                  IBufferManager bufferManager,
+                                 DataReceiver dataReceiver,
                                  Config config) {
+
+        this.protocol = protocol;
         this.selector = selector;
         this.connectionHandlerFactory = connectionHandlerFactory;
-        this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(channelPipelineFactory, torrentRegistry, messageHandler, bufferManager, config);
+        this.channelPipelineFactory = channelPipelineFactory;
+        this.bufferManager = bufferManager;
+        this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(torrentRegistry, protocol, config);
+        this.dataReceiver = dataReceiver;
         this.localOutgoingSocketAddress = new InetSocketAddress(config.getAcceptorAddress(), 0);
     }
 
@@ -116,9 +135,14 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
 
         channel.configureBlocking(false);
 
-        ChannelPipeline pipeline = incoming ?
-                cryptoHandshakeProcessor.negotiateIncoming(peer, channel)
-                : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId);
+        ByteBuffer in = bufferManager.getInBuffer(peer);
+        ByteBuffer out = bufferManager.getOutBuffer(peer);
+
+        Optional<MSECipher> cipherOptional = incoming ?
+                cryptoHandshakeProcessor.negotiateIncoming(peer, channel, in, out)
+                : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId, in, out);
+
+        ChannelPipeline pipeline = createPipeline(peer, channel, in, out, cipherOptional);
 
         PeerConnection connection = new SocketPeerConnection(peer, channel, pipeline);
         ConnectionHandler connectionHandler;
@@ -129,11 +153,28 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
         }
         boolean inited = initConnection(connection, connectionHandler);
         if (inited) {
+            ChannelHandler channelHandler = new SocketChannelHandler(peer, channel, in, out, pipeline);
+            dataReceiver.registerChannel(torrentId, channel, channelHandler);
             return ConnectionResult.success(connection);
         } else {
             connection.closeQuietly();
             return ConnectionResult.failure("Handshake failed");
         }
+    }
+
+    private ChannelPipeline createPipeline(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out, Optional<MSECipher> cipherOptional) {
+        ChannelPipelineBuilder builder = channelPipelineFactory.buildPipeline(peer);
+        builder.channel(channel);
+        builder.protocol(protocol);
+        builder.inboundBuffer(in);
+        builder.outboundBuffer(out);
+
+        cipherOptional.ifPresent(cipher -> {
+            builder.decoders(new CipherBufferMutator(cipher.getDecryptionCipher()));
+            builder.encoders(new CipherBufferMutator(cipher.getEncryptionCipher()));
+        });
+
+        return builder.build();
     }
 
     private boolean initConnection(PeerConnection newConnection, ConnectionHandler connectionHandler) {
