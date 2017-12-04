@@ -85,17 +85,23 @@ public class SocketChannelHandler implements ChannelHandler {
     @Override
     public void fireChannelReady() {
         try {
-            int read;
-            while ((read = channel.read(inboundBuffer)) > 0) {
+            int readLast, readTotal = 0;
+            boolean processed = false;
+            while ((readLast = channel.read(inboundBuffer)) > 0) {
+                processed = false;
+                readTotal += readLast;
                 if (!inboundBuffer.hasRemaining()) {
                     context.fireDataReceived();
+                    processed = true;
                     if (!inboundBuffer.hasRemaining()) {
-                        closeChannel();
                         throw new IllegalStateException("Insufficient space in buffer");
                     }
                 }
             }
-            if (read == -1) {
+            if (readTotal > 0 && !processed) {
+                context.fireDataReceived();
+            }
+            if (readLast == -1) {
                 closeChannel();
                 throw new EOFException();
             }

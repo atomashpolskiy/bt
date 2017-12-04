@@ -41,7 +41,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     // inbound buffer parameters
     private int decodedDataOffset;
     private int undecodedDataOffset;
-    private int undecodedDataLimit;
 
     private ChannelHandlerContext context;
 
@@ -55,9 +54,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         this.deserializer = new MessageDeserializer(peer, protocol);
         this.serializer = new MessageSerializer(peer, protocol);
+
         this.inboundBuffer = inboundBuffer;
-        this.undecodedDataLimit = inboundBuffer.position();
+        if (inboundBuffer.position() > 0) {
+            // process existing data immediately (e.g. there might be leftovers from MSE handshake)
+            fireDataReceived();
+        }
+
         this.outboundBuffer = outboundBuffer;
+
         this.decoders = decoders;
         this.encoders = encoders;
         this.inboundQueue = new LinkedBlockingQueue<>();
@@ -71,8 +76,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void fireDataReceived() {
+        int undecodedDataLimit = inboundBuffer.position();
         if (undecodedDataOffset < undecodedDataLimit) {
-            inboundBuffer.limit(undecodedDataLimit);
+            inboundBuffer.flip();
             decoders.forEach(mutator -> {
                 inboundBuffer.position(undecodedDataOffset);
                 mutator.mutate(inboundBuffer);
@@ -91,6 +97,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     decodedDataOffset = inboundBuffer.position();
                 }
             }
+
+            inboundBuffer.clear();
+            inboundBuffer.position(undecodedDataLimit);
+            if (!inboundBuffer.hasRemaining()) {
+                inboundBuffer.position(decodedDataOffset);
+                inboundBuffer.compact();
+                inboundBuffer.clear();
+                inboundBuffer.position(undecodedDataLimit);
+            }
         }
     }
 
@@ -98,15 +113,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public boolean send(Message message) {
         checkHandlerIsBound();
 
-        int position = outboundBuffer.position();
+        outboundBuffer.clear();
         boolean serialized = serializer.serialize(message, outboundBuffer);
         if (serialized) {
             encoders.forEach(mutator -> {
-                outboundBuffer.position(position);
+                outboundBuffer.flip();
                 mutator.mutate(outboundBuffer);
             });
+            outboundBuffer.flip();
+            context.fireDataSent();
         }
-        outboundBuffer.position(position);
+
         return serialized;
     }
 
