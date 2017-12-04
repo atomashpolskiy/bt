@@ -468,8 +468,8 @@ public class MSEHandshakeProcessor {
         builder.outboundBuffer(out);
 
         if (cipher != null) {
-            builder.inboundMutators(new CipherBufferMutator(cipher.getDecryptionCipher()));
-            builder.outboundMutators(new CipherBufferMutator(cipher.getEncryptionCipher()));
+            builder.decoders(new CipherBufferMutator(cipher.getDecryptionCipher()));
+            builder.encoders(new CipherBufferMutator(cipher.getEncryptionCipher()));
         }
 
         return builder.build();

@@ -16,11 +16,28 @@
 
 package bt.net.pipeline;
 
+import bt.net.Peer;
+import bt.protocol.EncodingContext;
 import bt.protocol.Message;
+import bt.protocol.handler.MessageHandler;
 
-public interface ChannelPipeline {
+import java.nio.ByteBuffer;
 
-    Message receive();
+/**
+ * Encodes and writes messages to a byte buffer.
+ */
+class MessageSerializer {
 
-    boolean send(Message message);
+    private final EncodingContext context;
+    private final MessageHandler<Message> protocol;
+
+    public MessageSerializer(Peer peer,
+                             MessageHandler<Message> protocol) {
+        this.context = new EncodingContext(peer);
+        this.protocol = protocol;
+    }
+
+    public boolean serialize(Message message, ByteBuffer buffer) {
+        return protocol.encode(context, message, buffer);
+    }
 }

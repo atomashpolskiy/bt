@@ -45,13 +45,13 @@ public class ChannelPipelineFactory implements IChannelPipelineFactory {
                     MessageHandler<Message> protocol,
                     Optional<ByteBuffer> inboundBuffer,
                     Optional<ByteBuffer> outboundBuffer,
-                    List<BufferMutator> inboundMutators,
-                    List<BufferMutator> outboundMutators) {
+                    List<BufferMutator> decoders,
+                    List<BufferMutator> encoders) {
 
                 ByteBuffer _inboundBuffer = inboundBuffer.orElseGet(() -> bufferManager.getInBuffer(peer));
                 ByteBuffer _outboundBuffer = outboundBuffer.orElseGet(() -> bufferManager.getOutBuffer(peer));
 
-                return new DefaultChannelPipeline(peer, channel, protocol, _inboundBuffer, _outboundBuffer, inboundMutators, outboundMutators);
+                return new DefaultChannelPipeline(peer, channel, protocol, _inboundBuffer, _outboundBuffer, decoders, encoders);
             }
         };
     }

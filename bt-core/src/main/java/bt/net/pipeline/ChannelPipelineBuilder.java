@@ -37,8 +37,8 @@ public abstract class ChannelPipelineBuilder {
     private MessageHandler<Message> protocol;
     private ByteBuffer inboundBuffer;
     private ByteBuffer outboundBuffer;
-    private List<BufferMutator> inboundMutators;
-    private List<BufferMutator> outboundMutators;
+    private List<BufferMutator> decoders;
+    private List<BufferMutator> encoders;
 
     ChannelPipelineBuilder(Peer peer) {
         this.peer = Objects.requireNonNull(peer);
@@ -64,24 +64,25 @@ public abstract class ChannelPipelineBuilder {
         return this;
     }
 
-    public ChannelPipelineBuilder inboundMutators(BufferMutator mutator, BufferMutator... otherMutators) {
-        Objects.requireNonNull(mutator);
-        inboundMutators = new ArrayList<>();
-        inboundMutators.add(mutator);
-        if (otherMutators != null) {
-            inboundMutators.addAll(Arrays.asList(otherMutators));
-        }
+    public ChannelPipelineBuilder decoders(BufferMutator firstDecoder, BufferMutator... otherDecoders) {
+        Objects.requireNonNull(firstDecoder);
+        decoders = asList(firstDecoder, otherDecoders);
         return this;
     }
 
-    public ChannelPipelineBuilder outboundMutators(BufferMutator mutator, BufferMutator... otherMutators) {
-        Objects.requireNonNull(mutator);
-        outboundMutators = new ArrayList<>();
-        outboundMutators.add(mutator);
-        if (otherMutators != null) {
-            outboundMutators.addAll(Arrays.asList(otherMutators));
-        }
+    public ChannelPipelineBuilder encoders(BufferMutator firstEncoder, BufferMutator... otherEncoders) {
+        Objects.requireNonNull(firstEncoder);
+        encoders = asList(firstEncoder, otherEncoders);
         return this;
+    }
+
+    private List<BufferMutator> asList(BufferMutator firstMutator, BufferMutator... otherMutators) {
+        List<BufferMutator> mutators = new ArrayList<>();
+        mutators.add(firstMutator);
+        if (otherMutators != null) {
+            mutators.addAll(Arrays.asList(otherMutators));
+        }
+        return mutators;
     }
 
     public ChannelPipeline build() {
@@ -90,10 +91,10 @@ public abstract class ChannelPipelineBuilder {
 
         Optional<ByteBuffer> _inboundBuffer = Optional.ofNullable(inboundBuffer);
         Optional<ByteBuffer> _outboundBuffer = Optional.ofNullable(outboundBuffer);
-        List<BufferMutator> _inboundMutators = (inboundMutators == null) ? Collections.emptyList() : inboundMutators;
-        List<BufferMutator> _outboundMutators = (outboundMutators == null) ? Collections.emptyList() : outboundMutators;
+        List<BufferMutator> _decoders = (decoders == null) ? Collections.emptyList() : decoders;
+        List<BufferMutator> _encoders = (encoders == null) ? Collections.emptyList() : encoders;
 
-        return doBuild(peer, channel, protocol, _inboundBuffer, _outboundBuffer, _inboundMutators, _outboundMutators);
+        return doBuild(peer, channel, protocol, _inboundBuffer, _outboundBuffer, _decoders, _encoders);
     }
 
     protected abstract ChannelPipeline doBuild(
@@ -102,6 +103,6 @@ public abstract class ChannelPipelineBuilder {
             MessageHandler<Message> protocol,
             Optional<ByteBuffer> inboundBuffer,
             Optional<ByteBuffer> outboundBuffer,
-            List<BufferMutator> inboundMutators,
-            List<BufferMutator> outboundMutators);
+            List<BufferMutator> decoders,
+            List<BufferMutator> encoders);
 }

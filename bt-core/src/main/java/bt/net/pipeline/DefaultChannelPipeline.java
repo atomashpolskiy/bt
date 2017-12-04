@@ -24,18 +24,27 @@ import bt.protocol.handler.MessageHandler;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class DefaultChannelPipeline implements ChannelPipeline {
 
     private final ByteChannel channel;
 
-    private final MessageReader reader;
-    private final MessageWriter writer;
+    private final MessageDeserializer deserializer;
+    private final MessageSerializer serializer;
 
     private final ByteBuffer inboundBuffer;
     private final ByteBuffer outboundBuffer;
-    private final List<BufferMutator> inboundMutators;
-    private final List<BufferMutator> outboundMutators;
+    private final List<BufferMutator> decoders;
+    private final List<BufferMutator> encoders;
+
+    private final Queue<Message> inboundQueue;
+
+    // inbound buffer parameters
+    private volatile int decodedDataOffset;
+    private volatile int undecodedDataOffset;
+    private volatile int undecodedDataLimit;
 
     public DefaultChannelPipeline(
             Peer peer,
@@ -43,27 +52,54 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             MessageHandler<Message> protocol,
             ByteBuffer inboundBuffer,
             ByteBuffer outboundBuffer,
-            List<BufferMutator> inboundMutators,
-            List<BufferMutator> outboundMutators) {
+            List<BufferMutator> decoders,
+            List<BufferMutator> encoders) {
 
         this.channel = channel;
-        this.reader = new MessageReader(peer, channel, protocol, inboundBuffer);
-        this.writer = new MessageWriter(channel, peer, protocol, outboundBuffer);
+        this.deserializer = new MessageDeserializer(peer, protocol);
+        this.serializer = new MessageSerializer(peer, protocol);
         this.inboundBuffer = inboundBuffer;
+        this.undecodedDataLimit = inboundBuffer.position();
         this.outboundBuffer = outboundBuffer;
-        this.inboundMutators = inboundMutators;
-        this.outboundMutators = outboundMutators;
+        this.decoders = decoders;
+        this.encoders = encoders;
+        this.inboundQueue = new LinkedBlockingQueue<>();
     }
 
     @Override
     public Message receive() {
+        return inboundQueue.poll();
+    }
 
+    void fireDataReceived() {
+        if (undecodedDataOffset < undecodedDataLimit) {
+            inboundBuffer.limit(undecodedDataLimit);
+            decoders.forEach(mutator -> {
+                inboundBuffer.position(undecodedDataOffset);
+                mutator.mutate(inboundBuffer);
+            });
+            undecodedDataOffset = undecodedDataLimit;
 
-        return null;
+            inboundBuffer.position(decodedDataOffset);
+            inboundBuffer.limit(undecodedDataOffset);
+            Message message = deserializer.deserialize(inboundBuffer);
+            if (message != null) {
+                inboundQueue.add(message);
+                decodedDataOffset = inboundBuffer.position();
+            }
+        }
     }
 
     @Override
     public boolean send(Message message) {
-        return false;
+        int position = outboundBuffer.position();
+        boolean serialized = serializer.serialize(message, outboundBuffer);
+        if (serialized) {
+            encoders.forEach(mutator -> {
+                outboundBuffer.position(position);
+                mutator.mutate(outboundBuffer);
+            });
+        }
+        return serialized;
     }
 }
