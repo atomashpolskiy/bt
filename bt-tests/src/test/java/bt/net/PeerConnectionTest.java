@@ -17,6 +17,8 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.net.pipeline.MessageReader;
+import bt.net.pipeline.MessageWriter;
 import bt.protocol.Bitfield;
 import bt.protocol.EncodingContext;
 import bt.protocol.Handshake;

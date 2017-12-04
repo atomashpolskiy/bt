@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package bt.net;
+package bt.net.buffer;
 
+import bt.net.buffer.Buffers;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;

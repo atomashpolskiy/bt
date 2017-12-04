@@ -17,6 +17,9 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.net.buffer.IBufferManager;
+import bt.net.crypto.MSEHandshakeProcessor;
+import bt.net.pipeline.ChannelPipeline;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 import bt.runtime.Config;
@@ -111,11 +114,11 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
 
         channel.configureBlocking(false);
 
-        PeerConnectionMessageWorker readerWriter = incoming ?
+        ChannelPipeline pipeline = incoming ?
                 cryptoHandshakeProcessor.negotiateIncoming(peer, channel)
                 : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId);
 
-        PeerConnection connection = new SocketPeerConnection(peer, channel, readerWriter);
+        PeerConnection connection = new SocketPeerConnection(peer, channel, pipeline);
         ConnectionHandler connectionHandler;
         if (incoming) {
             connectionHandler = connectionHandlerFactory.getIncomingHandler();

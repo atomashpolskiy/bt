@@ -17,13 +17,13 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.net.pipeline.ChannelPipeline;
 import bt.protocol.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -43,7 +43,7 @@ class SocketPeerConnection implements PeerConnection {
     private final Peer remotePeer;
 
     private final SocketChannel channel;
-    private final PeerConnectionMessageWorker readerWriter;
+    private final ChannelPipeline pipeline;
 
     private volatile boolean closed;
     private final AtomicLong lastActive;
@@ -53,11 +53,11 @@ class SocketPeerConnection implements PeerConnection {
 
     SocketPeerConnection(Peer remotePeer,
                          SocketChannel channel,
-                         PeerConnectionMessageWorker readerWriter) {
+                         ChannelPipeline pipeline) {
         this.torrentId = new AtomicReference<>();
         this.remotePeer = remotePeer;
         this.channel = channel;
-        this.readerWriter = readerWriter;
+        this.pipeline = pipeline;
         this.lastActive = new AtomicLong();
         this.readLock = new ReentrantLock(true);
         this.condition = this.readLock.newCondition();
@@ -78,10 +78,8 @@ class SocketPeerConnection implements PeerConnection {
 
     @Override
     public synchronized Message readMessageNow() throws IOException {
-        Message message = null;
-        Optional<Message> messageOptional = readerWriter.readMessage();
-        if (messageOptional.isPresent()) {
-            message = messageOptional.get();
+        Message message = pipeline.receive();
+        if (message != null) {
             updateLastActive();
             if (LOGGER.isTraceEnabled()) {
                 LOGGER.trace("Received message from peer: " + remotePeer + " -- " + message);
@@ -136,7 +134,9 @@ class SocketPeerConnection implements PeerConnection {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Sending message to peer: " + remotePeer + " -- " + message);
         }
-        readerWriter.writeMessage(message);
+        if (!pipeline.send(message)) {
+            throw new RuntimeException("Failed to send message"); // TODO: this is temp, so that I don't forget to change
+        }
     }
 
     private void updateLastActive() {

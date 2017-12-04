@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package bt.net;
+package bt.net.buffer;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;

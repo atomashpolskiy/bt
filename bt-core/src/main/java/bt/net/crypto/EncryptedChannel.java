@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package bt.net;
+package bt.net.crypto;
 
 import javax.crypto.Cipher;
 import java.io.IOException;

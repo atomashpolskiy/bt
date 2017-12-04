@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package bt.net;
+package bt.net.pipeline;
 
+import bt.net.Peer;
 import bt.protocol.EncodingContext;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
