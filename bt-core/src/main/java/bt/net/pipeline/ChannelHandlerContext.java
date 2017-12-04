@@ -16,19 +16,11 @@
 
 package bt.net.pipeline;
 
-import bt.net.Peer;
+public interface ChannelHandlerContext {
 
-public interface ChannelHandler {
+    ChannelHandler handler();
 
-    Peer peer();
+    void fireDataReceived();
 
-    void fireChannelRegistered();
-
-    void fireChannelActive();
-
-    void fireChannelInactive();
-
-    void fireChannelReady();
-
-    void tryFlush();
+    void fireDataSent();
 }

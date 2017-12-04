@@ -26,11 +26,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -59,17 +57,15 @@ public class MessageDispatcher implements IMessageDispatcher {
         this.suppliers = new ConcurrentHashMap<>();
         this.torrentRegistry = torrentRegistry;
 
-        Queue<PeerMessage> messages = new LinkedBlockingQueue<>(); // shared message queue
-        initializeMessageLoop(lifecycleBinder, pool, messages, config);
+        initializeMessageLoop(lifecycleBinder, pool, config);
     }
 
     private void initializeMessageLoop(IRuntimeLifecycleBinder lifecycleBinder,
                                        IPeerConnectionPool pool,
-                                       Queue<PeerMessage> messages,
                                        Config config) {
         ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.net.message-dispatcher"));
         LoopControl loopControl = new LoopControl(config.getMaxMessageProcessingInterval().toMillis());
-        MessageDispatchingLoop loop = new MessageDispatchingLoop(pool, loopControl, messages::poll);
+        MessageDispatchingLoop loop = new MessageDispatchingLoop(pool, loopControl);
         lifecycleBinder.onStartup("Initialize message dispatcher", () -> executor.execute(loop));
         lifecycleBinder.onShutdown("Shutdown message dispatcher", () -> {
             try {
@@ -80,61 +76,54 @@ public class MessageDispatcher implements IMessageDispatcher {
         });
     }
 
-    private class PeerMessage {
-        private final Peer peer;
-        private final Message message;
-
-        public PeerMessage(Peer peer, Message message) {
-            this.peer = peer;
-            this.message = message;
-        }
-
-        public Peer getPeer() {
-            return peer;
-        }
-
-        public Message getMessage() {
-            return message;
-        }
-    }
 
     private class MessageDispatchingLoop implements Runnable {
 
         private final IPeerConnectionPool pool;
         private final LoopControl loopControl;
-        private final Supplier<PeerMessage> messageSource;
 
         private volatile boolean shutdown;
 
-        MessageDispatchingLoop(IPeerConnectionPool pool, LoopControl loopControl, Supplier<PeerMessage> messageSource) {
+        MessageDispatchingLoop(IPeerConnectionPool pool, LoopControl loopControl) {
             this.pool = pool;
             this.loopControl = loopControl;
-            this.messageSource = messageSource;
         }
 
         @Override
         public void run() {
             while (!shutdown) {
-                // TODO: restrict max amount of incoming messages per iteration
-                PeerMessage envelope;
-                while ((envelope = messageSource.get()) != null) {
-                    loopControl.incrementProcessed();
+                if (!consumers.isEmpty()) {
+                    outer:
+                    for (Map.Entry<Peer, Collection<Consumer<Message>>> entry : consumers.entrySet()) {
+                        Peer peer = entry.getKey();
+                        Collection<Consumer<Message>> consumers = entry.getValue();
 
-                    Peer peer = envelope.getPeer();
-                    Message message = envelope.getMessage();
+                        PeerConnection connection = pool.getConnection(peer);
+                        if (connection != null && !connection.isClosed()) {
+                            if (torrentRegistry.isSupportedAndActive(connection.getTorrentId())) {
+                                Message message;
+                                for (;;) {
+                                    try {
+                                        message = connection.readMessageNow();
+                                    } catch (Exception e) {
+                                        LOGGER.error("Error when reading message from peer connection: " + peer, e);
+                                        continue outer;
+                                    }
 
-                    Collection<Consumer<Message>> peerConsumers = consumers.get(peer);
-                    if (peerConsumers != null && peerConsumers.size() > 0) {
-                        for (Consumer<Message> consumer : peerConsumers) {
-                            try {
-                                consumer.accept(message);
-                            } catch (Exception e) {
-                                LOGGER.error("Unexpected exception when processing message " + message + " for peer " + peer, e);
+                                    if (message != null) {
+                                        loopControl.incrementProcessed();
+                                        for (Consumer<Message> consumer : consumers) {
+                                            try {
+                                                consumer.accept(message);
+                                            } catch (Exception e) {
+                                                LOGGER.warn("Error in message consumer", e);
+                                            }
+                                        }
+                                    } else {
+                                        continue outer;
+                                    }
+                                }
                             }
-                        }
-                    } else {
-                        if (LOGGER.isDebugEnabled()) {
-                            LOGGER.debug("Discarding message {} for peer {}, because no consumers were registered", message, peer);
                         }
                     }
                 }

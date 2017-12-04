@@ -39,9 +39,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final Queue<Message> inboundQueue;
 
     // inbound buffer parameters
-    private volatile int decodedDataOffset;
-    private volatile int undecodedDataOffset;
-    private volatile int undecodedDataLimit;
+    private int decodedDataOffset;
+    private int undecodedDataOffset;
+    private int undecodedDataLimit;
+
+    private ChannelHandlerContext context;
 
     public DefaultChannelPipeline(
             Peer peer,
@@ -63,10 +65,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public Message receive() {
+        checkHandlerIsBound();
+
         return inboundQueue.poll();
     }
 
-    void fireDataReceived() {
+    private void fireDataReceived() {
         if (undecodedDataOffset < undecodedDataLimit) {
             inboundBuffer.limit(undecodedDataLimit);
             decoders.forEach(mutator -> {
@@ -92,6 +96,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public boolean send(Message message) {
+        checkHandlerIsBound();
+
         int position = outboundBuffer.position();
         boolean serialized = serializer.serialize(message, outboundBuffer);
         if (serialized) {
@@ -100,6 +106,42 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 mutator.mutate(outboundBuffer);
             });
         }
+        outboundBuffer.position(position);
         return serialized;
+    }
+
+    private void checkHandlerIsBound() {
+        if (context == null) {
+            throw new IllegalStateException("Channel handler is not bound");
+        }
+    }
+
+    @Override
+    public ChannelHandlerContext bindHandler(ChannelHandler handler) {
+        if (context != null) {
+            if (handler == context.handler()) {
+                return context;
+            } else {
+                throw new IllegalStateException("Already bound to different handler");
+            }
+        }
+
+        context = new ChannelHandlerContext() {
+            @Override
+            public ChannelHandler handler() {
+                return handler;
+            }
+
+            @Override
+            public void fireDataReceived() {
+                DefaultChannelPipeline.this.fireDataReceived();
+            }
+
+            @Override
+            public void fireDataSent() {
+                handler.tryFlush();
+            }
+        };
+        return context;
     }
 }

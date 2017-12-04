@@ -143,6 +143,8 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
                 : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId, in, out);
 
         ChannelPipeline pipeline = createPipeline(peer, channel, in, out, cipherOptional);
+        ChannelHandler channelHandler = new SocketChannelHandler(peer, channel, in, out, pipeline::bindHandler);
+        dataReceiver.registerChannel(torrentId, channel, channelHandler);
 
         PeerConnection connection = new SocketPeerConnection(peer, channel, pipeline);
         ConnectionHandler connectionHandler;
@@ -153,8 +155,6 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
         }
         boolean inited = initConnection(connection, connectionHandler);
         if (inited) {
-            ChannelHandler channelHandler = new SocketChannelHandler(peer, channel, in, out, pipeline);
-            dataReceiver.registerChannel(torrentId, channel, channelHandler);
             return ConnectionResult.success(connection);
         } else {
             connection.closeQuietly();

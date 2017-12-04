@@ -17,31 +17,36 @@
 package bt.net.pipeline;
 
 import bt.net.Peer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.function.Function;
 
 public class SocketChannelHandler implements ChannelHandler {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SocketChannelHandler.class);
 
     private final Peer peer;
     private final SocketChannel channel;
     private final ByteBuffer inboundBuffer;
     private final ByteBuffer outboundBuffer;
-    private final ChannelPipeline pipeline;
+    private final ChannelHandlerContext context;
 
     public SocketChannelHandler(
             Peer peer,
             SocketChannel channel,
             ByteBuffer inboundBuffer,
             ByteBuffer outboundBuffer,
-            ChannelPipeline pipeline) {
+            Function<ChannelHandler, ChannelHandlerContext> contextFactory) {
 
         this.peer = peer;
         this.channel = channel;
         this.inboundBuffer = inboundBuffer;
         this.outboundBuffer = outboundBuffer;
-        this.pipeline = pipeline;
+        this.context = contextFactory.apply(this);
     }
 
     @Override
@@ -52,9 +57,40 @@ public class SocketChannelHandler implements ChannelHandler {
     @Override
     public void fireChannelReady() {
         try {
-            channel.read(inboundBuffer);
+            int read;
+            while ((read = channel.read(inboundBuffer)) > 0) {
+                if (!inboundBuffer.hasRemaining()) {
+                    context.fireDataReceived();
+                    if (!inboundBuffer.hasRemaining()) {
+                        closeChannel();
+                        throw new IllegalStateException("Insufficient space in buffer");
+                    }
+                }
+            }
+            if (read == -1) {
+                closeChannel();
+                throw new EOFException();
+            }
+
         } catch (IOException e) {
-            e.printStackTrace();
+            closeChannel();
+            throw new RuntimeException("Unexpected I/O error", e);
+        }
+    }
+
+    @Override
+    public void tryFlush() {
+        while (outboundBuffer.hasRemaining()) {
+            int written;
+            try {
+                written = channel.write(outboundBuffer);
+            } catch (IOException e) {
+                closeChannel();
+                throw new RuntimeException("Unexpected I/O error", e);
+            }
+            if (written == 0) {
+                break;
+            }
         }
     }
 
@@ -63,9 +99,9 @@ public class SocketChannelHandler implements ChannelHandler {
 
     }
 
-    public void fireChannelUnregistered() {
-
-    }
+//    public void fireChannelUnregistered() {
+//
+//    }
 
     @Override
     public void fireChannelActive() {
@@ -75,5 +111,13 @@ public class SocketChannelHandler implements ChannelHandler {
     @Override
     public void fireChannelInactive() {
 
+    }
+
+    private void closeChannel() {
+        try {
+            channel.close();
+        } catch (IOException e) {
+            LOGGER.error("Failed to close channel for peer: " + peer, e);
+        }
     }
 }

@@ -23,4 +23,6 @@ public interface ChannelPipeline {
     Message receive();
 
     boolean send(Message message);
+
+    ChannelHandlerContext bindHandler(ChannelHandler handler);
 }

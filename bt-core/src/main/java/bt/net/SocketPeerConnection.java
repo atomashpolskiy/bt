@@ -180,8 +180,4 @@ public class SocketPeerConnection implements PeerConnection {
     public long getLastActive() {
         return lastActive.get();
     }
-
-    public SocketChannel getChannel() {
-        return channel;
-    }
 }
