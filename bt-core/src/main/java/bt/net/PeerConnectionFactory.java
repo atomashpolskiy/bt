@@ -20,6 +20,7 @@ import bt.metainfo.TorrentId;
 import bt.net.buffer.IBufferManager;
 import bt.net.crypto.MSEHandshakeProcessor;
 import bt.net.pipeline.ChannelPipeline;
+import bt.net.pipeline.IChannelPipelineFactory;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 import bt.runtime.Config;
@@ -48,13 +49,14 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
 
     public PeerConnectionFactory(Selector selector,
                                  IConnectionHandlerFactory connectionHandlerFactory,
+                                 IChannelPipelineFactory channelPipelineFactory,
                                  MessageHandler<Message> messageHandler,
                                  TorrentRegistry torrentRegistry,
                                  IBufferManager bufferManager,
                                  Config config) {
         this.selector = selector;
         this.connectionHandlerFactory = connectionHandlerFactory;
-        this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(torrentRegistry, messageHandler, bufferManager, config);
+        this.cryptoHandshakeProcessor = new MSEHandshakeProcessor(channelPipelineFactory, torrentRegistry, messageHandler, bufferManager, config);
         this.localOutgoingSocketAddress = new InetSocketAddress(config.getAcceptorAddress(), 0);
     }
 

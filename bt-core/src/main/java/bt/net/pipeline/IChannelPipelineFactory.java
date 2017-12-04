@@ -16,10 +16,9 @@
 
 package bt.net.pipeline;
 
-import bt.protocol.Message;
+import bt.net.Peer;
 
-public interface ChannelPipeline {
-    Message receive();
+public interface IChannelPipelineFactory {
 
-    boolean send(Message message);
+    ChannelPipelineBuilder buildPipeline(Peer peer);
 }

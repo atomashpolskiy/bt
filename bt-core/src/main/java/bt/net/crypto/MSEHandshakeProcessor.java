@@ -20,9 +20,10 @@ import bt.metainfo.TorrentId;
 import bt.net.BigIntegers;
 import bt.net.ByteChannelReader;
 import bt.net.Peer;
-import bt.net.buffer.BufferMutator;
 import bt.net.buffer.IBufferManager;
 import bt.net.pipeline.ChannelPipeline;
+import bt.net.pipeline.ChannelPipelineBuilder;
+import bt.net.pipeline.IChannelPipelineFactory;
 import bt.protocol.DecodingContext;
 import bt.protocol.Handshake;
 import bt.protocol.Message;
@@ -46,8 +47,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
@@ -65,17 +64,21 @@ public class MSEHandshakeProcessor {
     private static final byte[] VC_RAW_BYTES = new byte[8];
 
     private final MSEKeyPairGenerator keyGenerator;
+    private final IChannelPipelineFactory channelPipelineFactory;
     private final TorrentRegistry torrentRegistry;
     private final MessageHandler<Message> protocol;
     private final IBufferManager bufferManager;
     private final EncryptionPolicy localEncryptionPolicy;
 
-    public MSEHandshakeProcessor(TorrentRegistry torrentRegistry,
-                          MessageHandler<Message> protocol,
-                          IBufferManager bufferManager,
-                          Config config) {
+    public MSEHandshakeProcessor(
+            IChannelPipelineFactory channelPipelineFactory,
+            TorrentRegistry torrentRegistry,
+            MessageHandler<Message> protocol,
+            IBufferManager bufferManager,
+            Config config) {
 
         this.keyGenerator = new MSEKeyPairGenerator(config.getMsePrivateKeySize());
+        this.channelPipelineFactory = channelPipelineFactory;
         this.torrentRegistry = torrentRegistry;
         this.protocol = protocol;
         this.bufferManager = bufferManager;
@@ -243,7 +246,7 @@ public class MSEHandshakeProcessor {
             }
             case PREFER_ENCRYPTED:
             case REQUIRE_ENCRYPTED: {
-                return createPipeline(peer, encryptedChannel, in, out, cipher);
+                return createPipeline(peer, channel, in, out, cipher);
             }
             default: {
                 throw new IllegalStateException("Unknown encryption policy: " + negotiatedEncryptionPolicy.name());
@@ -438,7 +441,7 @@ public class MSEHandshakeProcessor {
             }
             case PREFER_ENCRYPTED:
             case REQUIRE_ENCRYPTED: {
-                return createPipeline(peer, encryptedChannel, in, out, cipher);
+                return createPipeline(peer, channel, in, out, cipher);
             }
             default: {
                 throw new IllegalStateException("Unknown encryption policy: " + negotiatedEncryptionPolicy.name());
@@ -458,9 +461,18 @@ public class MSEHandshakeProcessor {
     }
 
     private ChannelPipeline createPipeline(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out, MSECipher cipher) {
-        List<BufferMutator>  inboundMutators = (cipher == null) ? Collections.emptyList() : Collections.singletonList(new CipherBufferMutator(cipher.getDecryptionCipher()));
-        List<BufferMutator>  outboundMutators = (cipher == null) ? Collections.emptyList() : Collections.singletonList(new CipherBufferMutator(cipher.getEncryptionCipher()));
-        return new ChannelPipeline(peer, channel, protocol, in, out, inboundMutators, outboundMutators);
+        ChannelPipelineBuilder builder = channelPipelineFactory.buildPipeline(peer);
+        builder.channel(channel);
+        builder.protocol(protocol);
+        builder.inboundBuffer(in);
+        builder.outboundBuffer(out);
+
+        if (cipher != null) {
+            builder.inboundMutators(new CipherBufferMutator(cipher.getDecryptionCipher()));
+            builder.outboundMutators(new CipherBufferMutator(cipher.getEncryptionCipher()));
+        }
+
+        return builder.build();
     }
 
     private byte[] getPadding(int length) {

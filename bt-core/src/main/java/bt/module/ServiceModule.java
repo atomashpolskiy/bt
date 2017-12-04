@@ -40,6 +40,8 @@ import bt.net.PeerConnectionFactory;
 import bt.net.PeerConnectionPool;
 import bt.net.SharedSelector;
 import bt.net.SocketChannelConnectionAcceptor;
+import bt.net.pipeline.ChannelPipelineFactory;
+import bt.net.pipeline.IChannelPipelineFactory;
 import bt.peer.IPeerCache;
 import bt.peer.IPeerRegistry;
 import bt.peer.PeerCache;
@@ -169,6 +171,7 @@ public class ServiceModule implements Module {
         binder.bind(ProcessorFactory.class).to(TorrentProcessorFactory.class).in(Singleton.class);
         binder.bind(IPeerCache.class).to(PeerCache.class).in(Singleton.class);
         binder.bind(IBufferManager.class).to(BufferManager.class).in(Singleton.class);
+        binder.bind(IChannelPipelineFactory.class).to(ChannelPipelineFactory.class).in(Singleton.class);
 
         // single instance of event bus provides two different injectable services
         binder.bind(EventSink.class).to(EventBus.class).in(Singleton.class);
@@ -243,9 +246,10 @@ public class ServiceModule implements Module {
             IConnectionHandlerFactory connectionHandlerFactory,
             @BitTorrentProtocol MessageHandler<Message> bittorrentProtocol,
             TorrentRegistry torrentRegistry,
+            IChannelPipelineFactory channelPipelineFactory,
             IBufferManager bufferManager,
             Config config) {
-        return new PeerConnectionFactory(selector, connectionHandlerFactory, bittorrentProtocol, torrentRegistry, bufferManager, config);
+        return new PeerConnectionFactory(selector, connectionHandlerFactory, channelPipelineFactory, bittorrentProtocol, torrentRegistry, bufferManager, config);
     }
 
     @Provides
