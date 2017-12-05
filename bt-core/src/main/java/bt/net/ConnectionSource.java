@@ -129,7 +129,12 @@ public class ConnectionSource implements IConnectionSource {
                     ConnectionResult connectionResult =
                             connectionFactory.createOutgoingConnection(peer, torrentId);
                     if (connectionResult.isSuccess()) {
-                        return ConnectionResult.success(connectionPool.addConnectionIfAbsent(connectionResult.getConnection()));
+                        PeerConnection established = connectionResult.getConnection();
+                        PeerConnection added = connectionPool.addConnectionIfAbsent(established);
+                        if (added != established) {
+                            established.closeQuietly();
+                        }
+                        return ConnectionResult.success(added);
                     } else {
                         return connectionResult;
                     }
