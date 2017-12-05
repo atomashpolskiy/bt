@@ -16,13 +16,13 @@
 
 package bt.net;
 
-import bt.net.pipeline.ChannelHandler;
+import bt.net.pipeline.ChannelHandlerContext;
 
 import java.nio.channels.SelectableChannel;
 
 public interface DataReceiver {
 
-    void registerChannel(SelectableChannel channel, ChannelHandler handler);
+    void registerChannel(SelectableChannel channel, ChannelHandlerContext context);
 
     void unregisterChannel(SelectableChannel channel);
 

@@ -65,6 +65,9 @@ public class BufferManager implements IBufferManager {
 
         if (buffer == null) {
             buffer = ByteBuffer.allocateDirect(bufferSize);
+        } else {
+            // reset buffer before re-using
+            buffer.clear();
         }
         return new DefaultBorrowedBuffer<>(buffer);
     }
@@ -103,7 +106,9 @@ public class BufferManager implements IBufferManager {
                 throw new IllegalStateException("Buffer is locked and can't be released");
             }
             try {
-                getReleasedBuffersDeque(ByteBuffer.class).add(new SoftReference<>(buffer));
+                if (buffer != null) {
+                    getReleasedBuffersDeque(ByteBuffer.class).add(new SoftReference<>(buffer));
+                }
             } finally {
                 buffer = null;
                 lock.unlock();

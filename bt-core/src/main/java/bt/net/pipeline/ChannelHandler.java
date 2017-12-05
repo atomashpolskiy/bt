@@ -17,10 +17,17 @@
 package bt.net.pipeline;
 
 import bt.net.Peer;
+import bt.protocol.Message;
 
 public interface ChannelHandler {
 
     Peer peer();
+
+    boolean send(Message message);
+
+    Message receive();
+
+    void read();
 
     void register();
 
@@ -30,7 +37,9 @@ public interface ChannelHandler {
 
     void deactivate();
 
-    void fireChannelReady();
+    void flush();
 
-    void tryFlush();
+    void close();
+
+    boolean isClosed();
 }

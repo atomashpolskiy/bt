@@ -20,9 +20,9 @@ import bt.protocol.Message;
 
 public interface ChannelPipeline {
 
-    Message receive();
+    Message decode();
 
-    boolean send(Message message);
+    boolean encode(Message message);
 
     ChannelHandlerContext bindHandler(ChannelHandler handler);
 }

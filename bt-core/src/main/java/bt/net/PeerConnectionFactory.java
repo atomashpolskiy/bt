@@ -171,7 +171,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
         ChannelHandler channelHandler = new SocketChannelHandler(peer, channel, in, out, pipeline::bindHandler, dataReceiver);
         channelHandler.register();
 
-        PeerConnection connection = new SocketPeerConnection(peer, channel, pipeline);
+        PeerConnection connection = new SocketPeerConnection(peer, channelHandler);
         ConnectionHandler connectionHandler;
         if (incoming) {
             connectionHandler = connectionHandlerFactory.getIncomingHandler();

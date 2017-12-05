@@ -70,6 +70,8 @@ public interface BorrowedBuffer<T extends Buffer> {
      *
      * This method will block the calling thread until the buffer is in UNLOCKED state.
      *
+     * This method has no effect, if the buffer has already been released.
+     *
      * @since 1.6
      */
     void release();

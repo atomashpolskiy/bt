@@ -18,7 +18,9 @@ package bt.net.pipeline;
 
 public interface ChannelHandlerContext {
 
-    ChannelHandler handler();
+    ChannelPipeline pipeline();
+
+    void fireChannelReady();
 
     void fireChannelRegistered();
 
@@ -29,6 +31,4 @@ public interface ChannelHandlerContext {
     void fireChannelInactive();
 
     void fireDataReceived();
-
-    void fireDataSent();
 }

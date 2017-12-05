@@ -43,7 +43,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private int decodedDataOffset;
     private int undecodedDataOffset;
 
-    private ChannelHandlerContext context;
+    private DefaultChannelHandlerContext context;
 
     public DefaultChannelPipeline(
             Peer peer,
@@ -68,7 +68,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public Message receive() {
+    public Message decode() {
         checkHandlerIsBound();
 
         return inboundQueue.poll();
@@ -119,7 +119,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public boolean send(Message message) {
+    public boolean encode(Message message) {
         checkHandlerIsBound();
 
         ByteBuffer buffer = outboundBuffer.lockAndGet();
@@ -128,16 +128,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             return false;
         }
 
-        boolean written = false;
         try {
-            written = writeMessageToBuffer(message, buffer);
+            return writeMessageToBuffer(message, buffer);
         } finally {
             outboundBuffer.unlock();
         }
-        if (written) {
-            context.fireDataSent();
-        }
-        return written;
     }
 
     private boolean writeMessageToBuffer(Message message, ByteBuffer buffer) {
@@ -169,42 +164,57 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
 
-        context = new ChannelHandlerContext() {
-            @Override
-            public ChannelHandler handler() {
-                return handler;
-            }
-
-            @Override
-            public void fireChannelRegistered() {
-                // TODO
-            }
-
-            @Override
-            public void fireChannelUnregistered() {
-                // TODO
-            }
-
-            @Override
-            public void fireChannelActive() {
-                // TODO
-            }
-
-            @Override
-            public void fireChannelInactive() {
-                // TODO
-            }
-
-            @Override
-            public void fireDataReceived() {
-                DefaultChannelPipeline.this.fireDataReceived();
-            }
-
-            @Override
-            public void fireDataSent() {
-                handler.tryFlush();
-            }
-        };
+        context = new DefaultChannelHandlerContext(handler, this);
         return context;
+    }
+
+    private class DefaultChannelHandlerContext implements ChannelHandlerContext {
+
+        private final ChannelHandler handler;
+        private final DefaultChannelPipeline pipeline;
+
+        DefaultChannelHandlerContext(ChannelHandler handler, DefaultChannelPipeline pipeline) {
+            this.handler = handler;
+            this.pipeline = pipeline;
+        }
+
+        ChannelHandler handler() {
+            return handler;
+        }
+
+        @Override
+        public ChannelPipeline pipeline() {
+            return pipeline;
+        }
+
+        @Override
+        public void fireChannelReady() {
+            handler.read();
+        }
+
+        @Override
+        public void fireChannelRegistered() {
+            // TODO
+        }
+
+        @Override
+        public void fireChannelUnregistered() {
+            // TODO
+        }
+
+        @Override
+        public void fireChannelActive() {
+            // TODO
+        }
+
+        @Override
+        public void fireChannelInactive() {
+            // TODO
+        }
+
+        @Override
+        public void fireDataReceived() {
+            pipeline.fireDataReceived();
+        }
     }
 }

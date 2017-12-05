@@ -17,7 +17,7 @@
 package bt.net;
 
 import bt.module.PeerConnectionSelector;
-import bt.net.pipeline.ChannelHandler;
+import bt.net.pipeline.ChannelHandlerContext;
 import bt.service.IRuntimeLifecycleBinder;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
@@ -60,32 +60,13 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
         });
     }
 
-    //    private synchronized void onPeerConnected(Peer peer) {
-//        PeerConnection connection = pool.getConnection(peer);
-//        if (connection != null) {
-//            try {
-//                // drain all buffers before registering
-//                Message message;
-//                while ((message = connection.readMessageNow()) != null) {
-//                    messageSink.accept(peer, message);
-//                }
-//                if (LOGGER.isTraceEnabled()) {
-//                    LOGGER.trace("Registering new connection for peer: {}", peer);
-//                }
-//                registerConnection(connection);
-//            } catch (Exception e) {
-//                LOGGER.error("Failed to register new connection for peer: " + peer, e);
-//            }
-//        }
-//    }
-
     @Override
-    public void registerChannel(SelectableChannel channel, ChannelHandler handler) {
+    public void registerChannel(SelectableChannel channel, ChannelHandlerContext context) {
         // use atomic wakeup-and-register to prevent blocking of registration,
         // if selection is resumed before call to register is performed
         // (there is a race between the message receiving loop and current thread)
         // TODO: move this to the main loop instead?
-        selector.wakeupAndRegister(channel, SelectionKey.OP_READ, handler);
+        selector.wakeupAndRegister(channel, SelectionKey.OP_READ, context);
     }
 
     @Override
@@ -102,27 +83,6 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
     public void deactivateChannel(SelectableChannel channel) {
         updateInterestOps(channel, NO_OPS);
     }
-
-//    private int getInterestOps(TorrentId torrentId) {
-//        Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrentId);
-//        boolean active = descriptor.isPresent() && descriptor.get().isActive();
-//        return active ? SelectionKey.OP_READ : NO_OPS;
-//    }
-//
-//    private synchronized void onTorrentStarted(TorrentId torrentId) {
-//        updateInterestOps(torrentId, SelectionKey.OP_READ);
-//    }
-//
-//    private synchronized void onTorrentStopped(TorrentId torrentId) {
-//        updateInterestOps(torrentId, NO_OPS);
-//    }
-//
-//    private synchronized void updateInterestOps(TorrentId torrentId, int interestOps) {
-//        Set<SelectableChannel> _channels = channels.get(torrentId);
-//        if (_channels != null && _channels.size() > 0) {
-//            _channels.forEach(channel -> updateInterestOps(channel, interestOps));
-//        }
-//    }
 
     private void updateInterestOps(SelectableChannel channel, int interestOps) {
         selector.keyFor(channel).ifPresent(key -> {
@@ -187,75 +147,27 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
      * @return true, if the key has been processed and can be removed
      */
     private boolean processKey(final SelectionKey key) {
-        ChannelHandler handler;
-        Peer peer;
+        ChannelHandlerContext handler;
 
         // synchronizing on the selection key,
         // as we will be updating it in a separate, event-listening thread
         synchronized (key) {
-            handler = getHandler(key);
-            peer = handler.peer();
+            handler = getHandlerContext(key);
             if (!key.isValid() || !key.isReadable()) {
-                LOGGER.warn("Selected connection for peer {}, but the key is cancelled or read op is not indicated. Skipping..", peer);
                 return false;
             }
         }
 
-//        if (connection.isClosed()) {
-//            LOGGER.warn("Selected connection for peer {}, but the connection has already been closed. Skipping..", peer);
-//            throw new RuntimeException("Connection closed");
-//        }
-
-//        TorrentId torrentId = connection.getTorrentId();
-//        if (torrentId == null) {
-//            LOGGER.warn("Selected connection for peer {}, but the connection does not indicate a torrent ID. Skipping..", peer);
-//            return false;
-//        } else if (!torrentRegistry.isSupportedAndActive(torrentId)) {
-//            LOGGER.warn("Selected connection for peer {}, but the torrent ID is unknown or inactive: {}. Skipping..", peer, torrentId);
-//            return false;
-//        }
-
         handler.fireChannelReady();
-//        while (true) {
-//            Message message = null;
-//            boolean error = false;
-//            try {
-//                message = connection.readMessageNow();
-//            } catch (EOFException e) {
-//                if (LOGGER.isDebugEnabled()) {
-//                    LOGGER.debug("Received EOF from peer: {}. Disconnecting...", peer);
-//                }
-//                error = true;
-//            } catch (IOException e) {
-//                if (LOGGER.isDebugEnabled()) {
-//                    LOGGER.debug("I/O error when reading message from peer: {}. Reason: {} ({})",
-//                            peer, e.getClass().getName(), e.getMessage());
-//                }
-//                error = true;
-//            } catch (Exception e) {
-//                LOGGER.error("Unexpected error when reading message from peer: " + peer, e);
-//                error = true;
-//            }
-//            if (error) {
-//                connection.closeQuietly();
-//                key.cancel();
-//                break;
-//            } else if (message == null) {
-//                break;
-//            } else {
-//                // TODO: always accept message, even if error happened
-//                messageSink.accept(peer, message);
-//            }
-//        }
         return true;
     }
 
-    private ChannelHandler getHandler(SelectionKey key) {
+    private ChannelHandlerContext getHandlerContext(SelectionKey key) {
         Object obj = key.attachment();
-        if (obj == null || !(obj instanceof ChannelHandler)) {
+        if (obj == null || !(obj instanceof ChannelHandlerContext)) {
             throw new RuntimeException("Unexpected attachment in selection key: " + obj);
         }
-        return (ChannelHandler) obj;
+        return (ChannelHandlerContext) obj;
     }
 
     public void shutdown() {
