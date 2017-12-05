@@ -52,6 +52,17 @@ public class Swarm_EncryptedIT extends BaseBtTest {
         public EncryptionPolicy getEncryptionPolicy() {
             return EncryptionPolicy.REQUIRE_ENCRYPTED;
         }
+
+        @Override
+        public int getTransferBlockSize() {
+            return 1024;
+        }
+
+        @Override
+        public int getMaxTransferBlockSize() {
+            // trigger buffer compaction
+            return 4*1024;
+        }
     };
 
     @Rule

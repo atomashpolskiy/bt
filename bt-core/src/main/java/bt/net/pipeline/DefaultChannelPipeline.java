@@ -103,8 +103,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (!inboundBuffer.hasRemaining()) {
                 inboundBuffer.position(decodedDataOffset);
                 inboundBuffer.compact();
-                inboundBuffer.clear();
-                inboundBuffer.position(undecodedDataLimit);
+                undecodedDataOffset -= decodedDataOffset;
+                inboundBuffer.position(undecodedDataOffset);
+                decodedDataOffset = 0;
             }
         }
     }
