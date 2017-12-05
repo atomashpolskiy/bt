@@ -16,31 +16,30 @@
 
 package bt.net.buffer;
 
-import bt.net.Peer;
 import bt.runtime.Config;
 import com.google.inject.Inject;
 
+import java.lang.ref.SoftReference;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.util.Map;
+import java.util.Deque;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.locks.ReentrantLock;
 
 // TODO: unassociate buffers from disconnected peers; re-use existing unassociated buffers; dispose of excessive buffers
 public class BufferManager implements IBufferManager {
 
-    private final ConcurrentMap<Peer, ByteBuffer> inBuffers;
-    private final ConcurrentMap<Peer, ByteBuffer> outBuffers;
+    private ConcurrentMap<Class<?>, Deque<SoftReference<?>>> releasedBuffers;
 
     private final int bufferSize;
-    private final ReentrantLock allocationLock;
 
     @Inject
     public BufferManager(Config config) {
-        this.inBuffers = new ConcurrentHashMap<>();
-        this.outBuffers = new ConcurrentHashMap<>();
         this.bufferSize = getBufferSize(config.getMaxTransferBlockSize());
-        this.allocationLock = new ReentrantLock();
+        this.releasedBuffers = new ConcurrentHashMap<>();
     }
 
     private static int getBufferSize(long maxTransferBlockSize) {
@@ -51,29 +50,72 @@ public class BufferManager implements IBufferManager {
     }
 
     @Override
-    public ByteBuffer getInBuffer(Peer peer) {
-        return getOrAllocateBuffer(peer, inBuffers);
-    }
+    @SuppressWarnings("unchecked")
+    public BorrowedBuffer<ByteBuffer> borrowByteBuffer() {
+        Deque<SoftReference<?>> deque = getReleasedBuffersDeque(ByteBuffer.class);
+        SoftReference<ByteBuffer> ref;
+        ByteBuffer buffer = null;
+        do {
+            ref = (SoftReference<ByteBuffer>) deque.pollLast();
+            if (ref != null) {
+                buffer = ref.get();
+            }
+            // check if the referenced buffer has been garbage collected
+        } while (ref != null && buffer == null);
 
-    @Override
-    public ByteBuffer getOutBuffer(Peer peer) {
-        return getOrAllocateBuffer(peer, outBuffers);
-    }
-
-    private ByteBuffer getOrAllocateBuffer(Peer peer, Map<Peer, ByteBuffer> existingBuffers) {
-        ByteBuffer buffer = existingBuffers.get(peer);
         if (buffer == null) {
-            allocationLock.lock();
-            try {
-                buffer = existingBuffers.get(peer);
-                if (buffer == null) {
-                    buffer = ByteBuffer.allocateDirect(bufferSize);
-                    existingBuffers.put(peer, buffer);
-                }
-            } finally {
-                allocationLock.unlock();
+            buffer = ByteBuffer.allocateDirect(bufferSize);
+        }
+        return new DefaultBorrowedBuffer<>(buffer);
+    }
+
+    private <T extends Buffer> Deque<SoftReference<?>> getReleasedBuffersDeque(Class<T> bufferType) {
+        return releasedBuffers.computeIfAbsent(bufferType, it -> new LinkedBlockingDeque<>());
+    }
+
+    private class DefaultBorrowedBuffer<T extends Buffer> implements BorrowedBuffer<T> {
+
+        private volatile T buffer;
+        private final ReentrantLock lock;
+
+        DefaultBorrowedBuffer(T buffer) {
+            this.buffer = Objects.requireNonNull(buffer);
+            this.lock = new ReentrantLock();
+        }
+
+        @Override
+        public T lockAndGet() {
+            lock.lock();
+            checkNotReleased();
+            return buffer;
+        }
+
+        @Override
+        public void unlock() {
+            checkNotReleased();
+            lock.unlock();
+        }
+
+        private void checkNotReleased() {
+            if (buffer == null) {
+                throw new IllegalStateException("Buffer has been released");
             }
         }
-        return buffer;
+
+        @Override
+        public void release() {
+            lock.lock();
+            // check if lockAndGet() has been called by the current thread and not followed by unlock()
+            if (lock.getHoldCount() > 1) {
+                lock.unlock(); // make sure to unlock the lock before throwing an exception
+                throw new IllegalStateException("Buffer is locked and can't be released");
+            }
+            try {
+                getReleasedBuffersDeque(ByteBuffer.class).add(new SoftReference<>(buffer));
+            } finally {
+                buffer = null;
+                lock.unlock();
+            }
+        }
     }
 }

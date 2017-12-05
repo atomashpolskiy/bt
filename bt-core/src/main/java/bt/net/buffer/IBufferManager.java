@@ -16,13 +16,9 @@
 
 package bt.net.buffer;
 
-import bt.net.Peer;
-
 import java.nio.ByteBuffer;
 
 public interface IBufferManager {
 
-    ByteBuffer getInBuffer(Peer peer);
-
-    ByteBuffer getOutBuffer(Peer peer);
+    BorrowedBuffer<ByteBuffer> borrowByteBuffer();
 }
