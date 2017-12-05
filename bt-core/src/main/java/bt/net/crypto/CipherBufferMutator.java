@@ -42,7 +42,6 @@ public class CipherBufferMutator implements BufferMutator {
                 throw new RuntimeException(e);
             }
             buffer.put(bytes);
-            buffer.position(position);
         }
     }
 }
