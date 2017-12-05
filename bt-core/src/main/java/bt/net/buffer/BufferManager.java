@@ -86,20 +86,12 @@ public class BufferManager implements IBufferManager {
         @Override
         public T lockAndGet() {
             lock.lock();
-            checkNotReleased();
             return buffer;
         }
 
         @Override
         public void unlock() {
-            checkNotReleased();
             lock.unlock();
-        }
-
-        private void checkNotReleased() {
-            if (buffer == null) {
-                throw new IllegalStateException("Buffer has been released");
-            }
         }
 
         @Override

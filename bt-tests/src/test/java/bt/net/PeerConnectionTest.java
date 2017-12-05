@@ -110,10 +110,10 @@ public class PeerConnectionTest {
     }
 
     private PeerConnection createConnection(Peer peer, SocketChannel channel, MessageHandler<Message> protocol) {
-        ByteBuffer in = ByteBuffer.allocate(BUFFER_SIZE);
-        ByteBuffer out = ByteBuffer.allocate(BUFFER_SIZE);
+//        ByteBuffer in = ByteBuffer.allocate(BUFFER_SIZE);
+//        ByteBuffer out = ByteBuffer.allocate(BUFFER_SIZE);
         ChannelPipeline pipeline = channelPipelineFactory.buildPipeline(peer)
-                .channel(channel).protocol(protocol).inboundBuffer(in).outboundBuffer(out).build();
+                .channel(channel).protocol(protocol).build();
 //        ChannelHandler handler = new SocketChannelHandler(peer, channel, in, out, pipeline::bindHandler, )
         return new SocketPeerConnection(peer, channel, pipeline);
     }

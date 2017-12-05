@@ -17,6 +17,7 @@
 package bt.net.pipeline;
 
 import bt.net.Peer;
+import bt.net.buffer.BorrowedBuffer;
 import bt.net.buffer.BufferMutator;
 import bt.net.buffer.IBufferManager;
 import bt.protocol.Message;
@@ -45,13 +46,13 @@ public class ChannelPipelineFactory implements IChannelPipelineFactory {
                     Peer peer,
                     ByteChannel channel,
                     MessageHandler<Message> protocol,
-                    Optional<ByteBuffer> inboundBuffer,
-                    Optional<ByteBuffer> outboundBuffer,
+                    Optional<BorrowedBuffer<ByteBuffer>> inboundBuffer,
+                    Optional<BorrowedBuffer<ByteBuffer>> outboundBuffer,
                     List<BufferMutator> decoders,
                     List<BufferMutator> encoders) {
 
-                ByteBuffer _inboundBuffer = inboundBuffer.orElseGet(() -> bufferManager.getInBuffer(peer));
-                ByteBuffer _outboundBuffer = outboundBuffer.orElseGet(() -> bufferManager.getOutBuffer(peer));
+                BorrowedBuffer<ByteBuffer> _inboundBuffer = inboundBuffer.orElseGet(bufferManager::borrowByteBuffer);
+                BorrowedBuffer<ByteBuffer> _outboundBuffer = outboundBuffer.orElseGet(bufferManager::borrowByteBuffer);
 
                 return new DefaultChannelPipeline(peer, protocol, _inboundBuffer, _outboundBuffer, decoders, encoders);
             }

@@ -17,6 +17,7 @@
 package bt.net.pipeline;
 
 import bt.net.Peer;
+import bt.net.buffer.BorrowedBuffer;
 import bt.net.buffer.BufferMutator;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
@@ -31,8 +32,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final MessageDeserializer deserializer;
     private final MessageSerializer serializer;
 
-    private final ByteBuffer inboundBuffer;
-    private final ByteBuffer outboundBuffer;
+    private final BorrowedBuffer<ByteBuffer> inboundBuffer;
+    private final BorrowedBuffer<ByteBuffer> outboundBuffer;
     private final List<BufferMutator> decoders;
     private final List<BufferMutator> encoders;
 
@@ -47,8 +48,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public DefaultChannelPipeline(
             Peer peer,
             MessageHandler<Message> protocol,
-            ByteBuffer inboundBuffer,
-            ByteBuffer outboundBuffer,
+            BorrowedBuffer<ByteBuffer> inboundBuffer,
+            BorrowedBuffer<ByteBuffer> outboundBuffer,
             List<BufferMutator> decoders,
             List<BufferMutator> encoders) {
 
@@ -56,10 +57,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         this.serializer = new MessageSerializer(peer, protocol);
 
         this.inboundBuffer = inboundBuffer;
-        if (inboundBuffer.position() > 0) {
-            // process existing data immediately (e.g. there might be leftovers from MSE handshake)
-            fireDataReceived();
-        }
+        // process existing data immediately (e.g. there might be leftovers from MSE handshake)
+        fireDataReceived();
 
         this.outboundBuffer = outboundBuffer;
 
@@ -76,35 +75,44 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void fireDataReceived() {
-        int undecodedDataLimit = inboundBuffer.position();
+        ByteBuffer buffer = inboundBuffer.lockAndGet();
+        try {
+            processInboundData(buffer);
+        } finally {
+            inboundBuffer.unlock();
+        }
+    }
+
+    private void processInboundData(ByteBuffer buffer) {
+        int undecodedDataLimit = buffer.position();
         if (undecodedDataOffset < undecodedDataLimit) {
-            inboundBuffer.flip();
+            buffer.flip();
             decoders.forEach(mutator -> {
-                inboundBuffer.position(undecodedDataOffset);
-                mutator.mutate(inboundBuffer);
+                buffer.position(undecodedDataOffset);
+                mutator.mutate(buffer);
             });
             undecodedDataOffset = undecodedDataLimit;
 
-            inboundBuffer.position(decodedDataOffset);
-            inboundBuffer.limit(undecodedDataOffset);
+            buffer.position(decodedDataOffset);
+            buffer.limit(undecodedDataOffset);
             Message message;
             for (;;) {
-                message = deserializer.deserialize(inboundBuffer);
+                message = deserializer.deserialize(buffer);
                 if (message == null) {
                     break;
                 } else {
                     inboundQueue.add(message);
-                    decodedDataOffset = inboundBuffer.position();
+                    decodedDataOffset = buffer.position();
                 }
             }
 
-            inboundBuffer.clear();
-            inboundBuffer.position(undecodedDataLimit);
-            if (!inboundBuffer.hasRemaining()) {
-                inboundBuffer.position(decodedDataOffset);
-                inboundBuffer.compact();
+            buffer.clear();
+            buffer.position(undecodedDataLimit);
+            if (!buffer.hasRemaining()) {
+                buffer.position(decodedDataOffset);
+                buffer.compact();
                 undecodedDataOffset -= decodedDataOffset;
-                inboundBuffer.position(undecodedDataOffset);
+                buffer.position(undecodedDataOffset);
                 decodedDataOffset = 0;
             }
         }
@@ -114,18 +122,35 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public boolean send(Message message) {
         checkHandlerIsBound();
 
-        outboundBuffer.clear();
-        boolean serialized = serializer.serialize(message, outboundBuffer);
-        if (serialized) {
-            encoders.forEach(mutator -> {
-                outboundBuffer.flip();
-                mutator.mutate(outboundBuffer);
-            });
-            outboundBuffer.flip();
-            context.fireDataSent();
+        ByteBuffer buffer = outboundBuffer.lockAndGet();
+        if (buffer == null) {
+            // buffer has been released
+            return false;
         }
 
-        return serialized;
+        boolean written = false;
+        try {
+            written = writeMessageToBuffer(message, buffer);
+        } finally {
+            outboundBuffer.unlock();
+        }
+        if (written) {
+            context.fireDataSent();
+        }
+        return written;
+    }
+
+    private boolean writeMessageToBuffer(Message message, ByteBuffer buffer) {
+        buffer.clear();
+        boolean written = serializer.serialize(message, buffer);
+        if (written) {
+            encoders.forEach(mutator -> {
+                buffer.flip();
+                mutator.mutate(buffer);
+            });
+            buffer.flip();
+        }
+        return written;
     }
 
     private void checkHandlerIsBound() {

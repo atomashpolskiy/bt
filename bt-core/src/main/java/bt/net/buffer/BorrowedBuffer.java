@@ -48,8 +48,7 @@ public interface BorrowedBuffer<T extends Buffer> {
      *
      * This method will block the calling thread until the buffer is in UNLOCKED state.
      *
-     * @return Buffer
-     * @throws IllegalStateException if the buffer has already been released
+     * @return Buffer or null if the buffer has already been released
      * @since 1.6
      */
     T lockAndGet();
@@ -57,7 +56,6 @@ public interface BorrowedBuffer<T extends Buffer> {
     /**
      * Unlock the buffer, thus allowing to {@link #release()} it.
      *
-     * @throws IllegalStateException if the buffer has already been released
      * @throws IllegalMonitorStateException if the buffer is not locked or is locked by a different thread
      * @since 1.6
      */

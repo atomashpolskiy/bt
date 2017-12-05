@@ -18,6 +18,7 @@ package bt.net;
 
 import bt.event.EventSource;
 import bt.metainfo.TorrentId;
+import bt.net.buffer.BorrowedBuffer;
 import bt.net.buffer.IBufferManager;
 import bt.net.crypto.CipherBufferMutator;
 import bt.net.crypto.MSEHandshakeProcessor;
@@ -86,22 +87,23 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
     @Override
     public ConnectionResult createOutgoingConnection(Peer peer, TorrentId torrentId) {
         Objects.requireNonNull(peer);
+        Objects.requireNonNull(torrentId);
 
         InetAddress inetAddress = peer.getInetAddress();
         int port = peer.getPort();
 
-        SocketChannel channel = null;
+        SocketChannel channel;
         try {
             channel = getChannel(inetAddress, port);
-            return createConnection(peer, torrentId, channel, false);
-        } catch (IOException e) {
+        } catch (Exception e) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Failed to establish ougoing connection to peer: {}. Reason: {} ({})",
+                LOGGER.debug("Failed to establish connection with peer: {}. Reason: {} ({})",
                         peer, e.getClass().getName(), e.getMessage());
             }
-            closeQuietly(channel);
             return ConnectionResult.failure("I/O error", e);
         }
+
+        return createConnection(peer, torrentId, channel, false);
     }
 
     private SocketChannel getChannel(InetAddress inetAddress, int port) throws IOException {
@@ -116,22 +118,34 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
 
     @Override
     public ConnectionResult createIncomingConnection(Peer peer, SocketChannel channel) {
+        return createConnection(peer, null, channel, true);
+    }
+
+    private ConnectionResult createConnection(Peer peer, TorrentId torrentId, SocketChannel channel, boolean incoming) {
+        BorrowedBuffer<ByteBuffer> in = bufferManager.borrowByteBuffer();
+        BorrowedBuffer<ByteBuffer> out = bufferManager.borrowByteBuffer();
         try {
-            return createConnection(peer, null, channel, true);
-        } catch (IOException e) {
+            return _createConnection(peer, torrentId, channel, incoming, in, out);
+        } catch (Exception e) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Failed to establish incoming connection from peer: {}. Reason: {} ({})",
+                LOGGER.debug("Failed to establish connection with peer: {}. Reason: {} ({})",
                         peer, e.getClass().getName(), e.getMessage());
             }
             closeQuietly(channel);
+            releaseBuffer(in);
+            releaseBuffer(out);
             return ConnectionResult.failure("I/O error", e);
         }
     }
 
-    private ConnectionResult createConnection(Peer peer,
-                                              TorrentId torrentId,
-                                              SocketChannel channel,
-                                              boolean incoming) throws IOException {
+    private ConnectionResult _createConnection(
+            Peer peer,
+            TorrentId torrentId,
+            SocketChannel channel,
+            boolean incoming,
+            BorrowedBuffer<ByteBuffer> in,
+            BorrowedBuffer<ByteBuffer> out) throws IOException {
+
         // sanity check
         if (!incoming && torrentId == null) {
             throw new IllegalStateException("Requested outgoing connection without torrent ID. Peer: " + peer);
@@ -139,12 +153,19 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
 
         channel.configureBlocking(false);
 
-        ByteBuffer in = bufferManager.getInBuffer(peer);
-        ByteBuffer out = bufferManager.getOutBuffer(peer);
-
-        Optional<MSECipher> cipherOptional = incoming ?
-                cryptoHandshakeProcessor.negotiateIncoming(peer, channel, in, out)
-                : cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId, in, out);
+        ByteBuffer inBuffer = in.lockAndGet();
+        ByteBuffer outBuffer = out.lockAndGet();
+        Optional<MSECipher> cipherOptional;
+        try {
+            if (incoming) {
+                cipherOptional = cryptoHandshakeProcessor.negotiateIncoming(peer, channel, inBuffer, outBuffer);
+            } else {
+                cipherOptional = cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId, inBuffer, outBuffer);
+            }
+        } finally {
+            in.unlock();
+            out.unlock();
+        }
 
         ChannelPipeline pipeline = createPipeline(peer, channel, in, out, cipherOptional);
         ChannelHandler channelHandler = new SocketChannelHandler(peer, channel, in, out, pipeline::bindHandler, dataReceiver);
@@ -180,7 +201,13 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
         });
     }
 
-    private ChannelPipeline createPipeline(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out, Optional<MSECipher> cipherOptional) {
+    private ChannelPipeline createPipeline(
+            Peer peer,
+            ByteChannel channel,
+            BorrowedBuffer<ByteBuffer> in,
+            BorrowedBuffer<ByteBuffer> out,
+            Optional<MSECipher> cipherOptional) {
+
         ChannelPipelineBuilder builder = channelPipelineFactory.buildPipeline(peer);
         builder.channel(channel);
         builder.protocol(protocol);
@@ -225,6 +252,14 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
                     // ignore
                 }
             }
+        }
+    }
+
+    private void releaseBuffer(BorrowedBuffer<ByteBuffer> buffer) {
+        try {
+            buffer.release();
+        } catch (Exception e) {
+            LOGGER.error("Failed to release buffer", e);
         }
     }
 }

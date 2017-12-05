@@ -17,6 +17,7 @@
 package bt.net.pipeline;
 
 import bt.net.Peer;
+import bt.net.buffer.BorrowedBuffer;
 import bt.net.buffer.BufferMutator;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
@@ -35,8 +36,8 @@ public abstract class ChannelPipelineBuilder {
     private final Peer peer;
     private ByteChannel channel;
     private MessageHandler<Message> protocol;
-    private ByteBuffer inboundBuffer;
-    private ByteBuffer outboundBuffer;
+    private BorrowedBuffer<ByteBuffer> inboundBuffer;
+    private BorrowedBuffer<ByteBuffer> outboundBuffer;
     private List<BufferMutator> decoders;
     private List<BufferMutator> encoders;
 
@@ -54,12 +55,12 @@ public abstract class ChannelPipelineBuilder {
         return this;
     }
 
-    public ChannelPipelineBuilder inboundBuffer(ByteBuffer inboundBuffer) {
+    public ChannelPipelineBuilder inboundBuffer(BorrowedBuffer<ByteBuffer> inboundBuffer) {
         this.inboundBuffer = Objects.requireNonNull(inboundBuffer);
         return this;
     }
 
-    public ChannelPipelineBuilder outboundBuffer(ByteBuffer outboundBuffer) {
+    public ChannelPipelineBuilder outboundBuffer(BorrowedBuffer<ByteBuffer> outboundBuffer) {
         this.outboundBuffer = Objects.requireNonNull(outboundBuffer);
         return this;
     }
@@ -89,8 +90,8 @@ public abstract class ChannelPipelineBuilder {
         Objects.requireNonNull(channel, "Missing channel");
         Objects.requireNonNull(protocol, "Missing protocol");
 
-        Optional<ByteBuffer> _inboundBuffer = Optional.ofNullable(inboundBuffer);
-        Optional<ByteBuffer> _outboundBuffer = Optional.ofNullable(outboundBuffer);
+        Optional<BorrowedBuffer<ByteBuffer>> _inboundBuffer = Optional.ofNullable(inboundBuffer);
+        Optional<BorrowedBuffer<ByteBuffer>> _outboundBuffer = Optional.ofNullable(outboundBuffer);
         List<BufferMutator> _decoders = (decoders == null) ? Collections.emptyList() : decoders;
         List<BufferMutator> _encoders = (encoders == null) ? Collections.emptyList() : encoders;
 
@@ -101,8 +102,8 @@ public abstract class ChannelPipelineBuilder {
             Peer peer,
             ByteChannel channel,
             MessageHandler<Message> protocol,
-            Optional<ByteBuffer> inboundBuffer,
-            Optional<ByteBuffer> outboundBuffer,
+            Optional<BorrowedBuffer<ByteBuffer>> inboundBuffer,
+            Optional<BorrowedBuffer<ByteBuffer>> outboundBuffer,
             List<BufferMutator> decoders,
             List<BufferMutator> encoders);
 }

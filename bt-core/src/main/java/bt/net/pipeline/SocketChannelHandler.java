@@ -18,6 +18,7 @@ package bt.net.pipeline;
 
 import bt.net.DataReceiver;
 import bt.net.Peer;
+import bt.net.buffer.BorrowedBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,16 +33,16 @@ public class SocketChannelHandler implements ChannelHandler {
 
     private final Peer peer;
     private final SocketChannel channel;
-    private final ByteBuffer inboundBuffer;
-    private final ByteBuffer outboundBuffer;
+    private final BorrowedBuffer<ByteBuffer> inboundBuffer;
+    private final BorrowedBuffer<ByteBuffer> outboundBuffer;
     private final ChannelHandlerContext context;
     private final DataReceiver dataReceiver;
 
     public SocketChannelHandler(
             Peer peer,
             SocketChannel channel,
-            ByteBuffer inboundBuffer,
-            ByteBuffer outboundBuffer,
+            BorrowedBuffer<ByteBuffer> inboundBuffer,
+            BorrowedBuffer<ByteBuffer> outboundBuffer,
             Function<ChannelHandler, ChannelHandlerContext> contextFactory,
             DataReceiver dataReceiver) {
 
@@ -85,16 +86,30 @@ public class SocketChannelHandler implements ChannelHandler {
     @Override
     public void fireChannelReady() {
         try {
+            processInboundData();
+        } catch (IOException e) {
+            shutdown();
+            throw new RuntimeException("Unexpected I/O error", e);
+        }
+    }
+
+    private void processInboundData() throws IOException {
+        ByteBuffer buffer = inboundBuffer.lockAndGet();
+
+        try {
             int readLast, readTotal = 0;
             boolean processed = false;
-            while ((readLast = channel.read(inboundBuffer)) > 0) {
+            while ((readLast = channel.read(buffer)) > 0) {
                 processed = false;
                 readTotal += readLast;
-                if (!inboundBuffer.hasRemaining()) {
+                if (!buffer.hasRemaining()) {
+                    // TODO: currently this will be executed in the same thread,
+                    // but still would be nice to unlock the buffer prior to firing the event,
+                    // so that in future we would not need to rewrite this part of code
                     context.fireDataReceived();
                     processed = true;
-                    if (!inboundBuffer.hasRemaining()) {
-                        throw new IllegalStateException("Insufficient space in buffer");
+                    if (!buffer.hasRemaining()) {
+                        throw new IOException("Can't receive data: insufficient space in the incoming buffer");
                     }
                 }
             }
@@ -102,30 +117,35 @@ public class SocketChannelHandler implements ChannelHandler {
                 context.fireDataReceived();
             }
             if (readLast == -1) {
-                closeChannel();
                 throw new EOFException();
             }
-
-        } catch (IOException e) {
-            closeChannel();
-            throw new RuntimeException("Unexpected I/O error", e);
+        } finally {
+            inboundBuffer.unlock();
         }
     }
 
     @Override
     public void tryFlush() {
-        while (outboundBuffer.hasRemaining()) {
-            int written;
-            try {
-                written = channel.write(outboundBuffer);
-            } catch (IOException e) {
-                closeChannel();
-                throw new RuntimeException("Unexpected I/O error", e);
-            }
-            if (written == 0) {
-                break;
-            }
+        ByteBuffer buffer = outboundBuffer.lockAndGet();
+        try {
+            while (buffer.hasRemaining() && channel.write(buffer) > 0)
+                ;
+            outboundBuffer.unlock();
+        } catch (IOException e) {
+            outboundBuffer.unlock(); // can't use finally block due to possibility of double-unlock
+            shutdown();
+            throw new RuntimeException("Unexpected I/O error", e);
         }
+    }
+
+    private void shutdown() {
+        try {
+            unregister();
+        } catch (Exception e) {
+            LOGGER.error("Failed to unregister channel", e);
+        }
+        closeChannel();
+        releaseBuffers();
     }
 
     private void closeChannel() {
@@ -133,8 +153,19 @@ public class SocketChannelHandler implements ChannelHandler {
             channel.close();
         } catch (IOException e) {
             LOGGER.error("Failed to close channel for peer: " + peer, e);
-        } finally {
-            unregister();
+        }
+    }
+
+    private void releaseBuffers() {
+        releaseBuffer(inboundBuffer);
+        releaseBuffer(outboundBuffer);
+    }
+
+    private void releaseBuffer(BorrowedBuffer<ByteBuffer> buffer) {
+        try {
+            buffer.release();
+        } catch (Exception e) {
+            LOGGER.error("Failed to release buffer", e);
         }
     }
 }
