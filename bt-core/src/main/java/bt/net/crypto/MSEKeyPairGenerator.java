@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.Random;
+import java.security.SecureRandom;
 
 class MSEKeyPairGenerator {
 
@@ -38,17 +38,19 @@ class MSEKeyPairGenerator {
 
     static final int PUBLIC_KEY_BYTES = 96;
 
+    private final SecureRandom random;
     private final int privateKeySize;
 
     MSEKeyPairGenerator(int privateKeySize) {
         if (privateKeySize < 16 || privateKeySize > 512) {
             throw new IllegalArgumentException("Illegal key size: " + privateKeySize + "; expected 16..512 bytes");
         }
+        this.random = new SecureRandom();
         this.privateKeySize = privateKeySize;
     }
 
     KeyPair generateKeyPair() {
-        MSEPrivateKey privateKey = new MSEPrivateKey(privateKeySize);
+        MSEPrivateKey privateKey = new MSEPrivateKey(privateKeySize, random);
         MSEPublicKey publicKey = privateKey.getPublicKey();
         return new KeyPair(publicKey, privateKey);
     }
@@ -111,17 +113,16 @@ class MSEKeyPairGenerator {
         /**
          * @param size Key size in bytes
          */
-        MSEPrivateKey(int size) {
-            this.value = generatePrivateKey(size);
+        MSEPrivateKey(int size, SecureRandom random) {
+            this.value = generatePrivateKey(size, random);
             this.lock = new Object();
         }
 
         // private key: random N bit integer
-        private BigInteger generatePrivateKey(int size) {
-            Random r = new Random();
+        private BigInteger generatePrivateKey(int size, SecureRandom random) {
             byte[] bytes = new byte[size];
             for (int i = 0; i < size; i++) {
-                bytes[i] = (byte) r.nextInt(256);
+                bytes[i] = (byte) random.nextInt(256);
             }
             return BigIntegers.decodeUnsigned(ByteBuffer.wrap(bytes), size);
         }
