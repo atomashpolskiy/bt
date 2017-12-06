@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package bt.net;
+package bt.net.crypto;
+
+import bt.net.BigIntegers;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;

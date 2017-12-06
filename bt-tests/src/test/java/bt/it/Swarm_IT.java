@@ -22,7 +22,6 @@ import bt.it.fixture.Swarm;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.runtime.BtClient;
 import bt.runtime.Config;
-import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -52,6 +51,17 @@ public class Swarm_IT extends BaseBtTest {
         public EncryptionPolicy getEncryptionPolicy() {
             return EncryptionPolicy.REQUIRE_PLAINTEXT;
         }
+
+        @Override
+        public int getTransferBlockSize() {
+            return 1024;
+        }
+
+        @Override
+        public int getMaxTransferBlockSize() {
+            // trigger buffer compaction
+            return 4*1024;
+        }
     };
 
     @Rule
@@ -62,13 +72,6 @@ public class Swarm_IT extends BaseBtTest {
             .module(new SharedTrackerModule())
             .useInMemoryFileSystem()
             .build();
-
-    @After
-    public void after() {
-        // TODO: workaround to shutdown swarm _before_ BaseBtTest removes files;
-        // need to come up with something better to not write this everywhere
-        swarm.shutdown();
-    }
 
     @Test
     public void testSwarm_OneSeederOneLeecher() {

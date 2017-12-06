@@ -14,6 +14,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 * PeerTracker example does not work on Windows
 * Allow to selectively enable only a subset of standard extensions, like PEX and LSD
+* Re-use native memory messaging buffers between different peer connections
 
 ## 1.5
 

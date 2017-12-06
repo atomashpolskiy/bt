@@ -14,30 +14,30 @@
  * limitations under the License.
  */
 
-package bt.net;
+package bt.net.pipeline;
 
+import bt.net.Peer;
+import bt.protocol.EncodingContext;
 import bt.protocol.Message;
+import bt.protocol.handler.MessageHandler;
 
-import java.io.IOException;
-import java.util.Optional;
+import java.nio.ByteBuffer;
 
-class DelegatingPeerConnectionMessageWorker implements PeerConnectionMessageWorker {
+/**
+ * Encodes and writes messages to a byte buffer.
+ */
+class MessageSerializer {
 
-    private final MessageReader reader;
-    private final MessageWriter writer;
+    private final EncodingContext context;
+    private final MessageHandler<Message> protocol;
 
-    public DelegatingPeerConnectionMessageWorker(MessageReader reader, MessageWriter writer) {
-        this.reader = reader;
-        this.writer = writer;
+    public MessageSerializer(Peer peer,
+                             MessageHandler<Message> protocol) {
+        this.context = new EncodingContext(peer);
+        this.protocol = protocol;
     }
 
-    @Override
-    public Optional<Message> readMessage() throws IOException {
-        return Optional.ofNullable(reader.readMessage());
-    }
-
-    @Override
-    public void writeMessage(Message message) throws IOException {
-        writer.writeMessage(message);
+    public boolean serialize(Message message, ByteBuffer buffer) {
+        return protocol.encode(context, message, buffer);
     }
 }

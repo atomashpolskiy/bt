@@ -27,7 +27,11 @@ import bt.event.EventSink;
 import bt.event.EventSource;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.MetadataService;
+import bt.net.DataReceiver;
+import bt.net.DataReceivingLoop;
+import bt.net.buffer.BufferManager;
 import bt.net.ConnectionSource;
+import bt.net.buffer.IBufferManager;
 import bt.net.IConnectionHandlerFactory;
 import bt.net.IConnectionSource;
 import bt.net.IMessageDispatcher;
@@ -38,6 +42,8 @@ import bt.net.PeerConnectionFactory;
 import bt.net.PeerConnectionPool;
 import bt.net.SharedSelector;
 import bt.net.SocketChannelConnectionAcceptor;
+import bt.net.pipeline.ChannelPipelineFactory;
+import bt.net.pipeline.IChannelPipelineFactory;
 import bt.peer.IPeerCache;
 import bt.peer.IPeerRegistry;
 import bt.peer.PeerCache;
@@ -155,6 +161,7 @@ public class ServiceModule implements Module {
         binder.bind(IConnectionSource.class).to(ConnectionSource.class).asEagerSingleton();
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).asEagerSingleton();
         binder.bind(IPeerRegistry.class).to(PeerRegistry.class).asEagerSingleton();
+        binder.bind(DataReceiver.class).to(DataReceivingLoop.class).asEagerSingleton();
 
         // other services
         binder.bind(IMetadataService.class).to(MetadataService.class).in(Singleton.class);
@@ -166,6 +173,8 @@ public class ServiceModule implements Module {
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
         binder.bind(ProcessorFactory.class).to(TorrentProcessorFactory.class).in(Singleton.class);
         binder.bind(IPeerCache.class).to(PeerCache.class).in(Singleton.class);
+        binder.bind(IBufferManager.class).to(BufferManager.class).in(Singleton.class);
+        binder.bind(IChannelPipelineFactory.class).to(ChannelPipelineFactory.class).in(Singleton.class);
 
         // single instance of event bus provides two different injectable services
         binder.bind(EventSink.class).to(EventBus.class).in(Singleton.class);
@@ -240,8 +249,13 @@ public class ServiceModule implements Module {
             IConnectionHandlerFactory connectionHandlerFactory,
             @BitTorrentProtocol MessageHandler<Message> bittorrentProtocol,
             TorrentRegistry torrentRegistry,
+            IChannelPipelineFactory channelPipelineFactory,
+            IBufferManager bufferManager,
+            DataReceiver dataReceiver,
+            EventSource eventSource,
             Config config) {
-        return new PeerConnectionFactory(selector, connectionHandlerFactory, bittorrentProtocol, torrentRegistry, config);
+        return new PeerConnectionFactory(selector, connectionHandlerFactory, channelPipelineFactory,
+                bittorrentProtocol, torrentRegistry, bufferManager, dataReceiver, eventSource, config);
     }
 
     @Provides

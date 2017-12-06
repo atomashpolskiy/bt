@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-package bt.net;
+package bt.net.crypto;
 
 import bt.metainfo.TorrentId;
+import bt.net.BigIntegers;
+import bt.net.ByteChannelReader;
+import bt.net.Peer;
 import bt.protocol.DecodingContext;
 import bt.protocol.Handshake;
 import bt.protocol.Message;
@@ -24,6 +27,7 @@ import bt.protocol.Protocols;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.protocol.crypto.MSECipher;
 import bt.protocol.handler.MessageHandler;
+import bt.runtime.Config;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import org.slf4j.Logger;
@@ -47,7 +51,7 @@ import java.util.Random;
  *
  * This class is not a part of the public API and is subject to change.
  */
-class MSEHandshakeProcessor {
+public class MSEHandshakeProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(MSEHandshakeProcessor.class);
 
     private static final Duration receiveTimeout = Duration.ofSeconds(10);
@@ -57,23 +61,21 @@ class MSEHandshakeProcessor {
 
     private final MSEKeyPairGenerator keyGenerator;
     private final TorrentRegistry torrentRegistry;
-    private final MessageHandler<Message> messageHandler;
+    private final MessageHandler<Message> protocol;
     private final EncryptionPolicy localEncryptionPolicy;
-    private final int bufferSize;
 
-    MSEHandshakeProcessor(TorrentRegistry torrentRegistry,
-                          MessageHandler<Message> messageHandler,
-                          EncryptionPolicy localEncryptionPolicy,
-                          int bufferSize,
-                          int privateKeySize) {
-        this.keyGenerator = new MSEKeyPairGenerator(privateKeySize);
+    public MSEHandshakeProcessor(
+            TorrentRegistry torrentRegistry,
+            MessageHandler<Message> protocol,
+            Config config) {
+
+        this.keyGenerator = new MSEKeyPairGenerator(config.getMsePrivateKeySize());
         this.torrentRegistry = torrentRegistry;
-        this.messageHandler = messageHandler;
-        this.localEncryptionPolicy = localEncryptionPolicy;
-        this.bufferSize = bufferSize;
+        this.protocol = protocol;
+        this.localEncryptionPolicy = config.getEncryptionPolicy();
     }
 
-    PeerConnectionMessageWorker negotiateOutgoing(Peer peer, ByteChannel channel, TorrentId torrentId) throws IOException {
+    public Optional<MSECipher> negotiateOutgoing(Peer peer, ByteChannel channel, TorrentId torrentId, ByteBuffer in, ByteBuffer out) throws IOException {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Negotiating encryption for outgoing connection: {}", peer);
         }
@@ -94,9 +96,6 @@ class MSEHandshakeProcessor {
          */
 
         // check if the encryption negotiation can be skipped or preemptively aborted
-
-        ByteBuffer in = ByteBuffer.allocateDirect(bufferSize);
-        ByteBuffer out = ByteBuffer.allocateDirect(bufferSize);
 
         ByteChannelReader reader = reader(channel);
 
@@ -230,11 +229,11 @@ class MSEHandshakeProcessor {
         switch (negotiatedEncryptionPolicy) {
             case REQUIRE_PLAINTEXT:
             case PREFER_PLAINTEXT: {
-                return createReaderWriter(peer, channel, in, out);
+                return Optional.empty();
             }
             case PREFER_ENCRYPTED:
             case REQUIRE_ENCRYPTED: {
-                return createReaderWriter(peer, encryptedChannel, in, out);
+                return Optional.of(cipher);
             }
             default: {
                 throw new IllegalStateException("Unknown encryption policy: " + negotiatedEncryptionPolicy.name());
@@ -242,7 +241,7 @@ class MSEHandshakeProcessor {
         }
     }
 
-    PeerConnectionMessageWorker negotiateIncoming(Peer peer, ByteChannel channel) throws IOException {
+    public Optional<MSECipher> negotiateIncoming(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out) throws IOException {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Negotiating encryption for incoming connection: {}", peer);
         }
@@ -262,8 +261,6 @@ class MSEHandshakeProcessor {
          * 5. A->B: ENCRYPT2(Payload Stream)
          */
 
-        ByteBuffer in = ByteBuffer.allocateDirect(bufferSize);
-        ByteBuffer out = ByteBuffer.allocateDirect(bufferSize);
         ByteChannelReader reader = reader(channel);
 
         // 1. A->B: Diffie Hellman Ya, PadA
@@ -277,7 +274,7 @@ class MSEHandshakeProcessor {
         DecodingContext context = new DecodingContext(peer);
         int consumed = 0;
         try {
-             consumed = messageHandler.decode(context, in);
+             consumed = protocol.decode(context, in);
         } catch (Exception e) {
             // ignore
         }
@@ -285,7 +282,7 @@ class MSEHandshakeProcessor {
         if (consumed > 0 && context.getMessage() instanceof Handshake) {
             // decoding was successful, can use plaintext (if supported)
             assertPolicyIsCompatible(EncryptionPolicy.REQUIRE_PLAINTEXT);
-            return createReaderWriter(peer, channel, in, out);
+            return Optional.empty();
         }
 
         int phase1Min = keyGenerator.getPublicKeySize();
@@ -425,11 +422,11 @@ class MSEHandshakeProcessor {
         switch (negotiatedEncryptionPolicy) {
             case REQUIRE_PLAINTEXT:
             case PREFER_PLAINTEXT: {
-                return createReaderWriter(peer, channel, in, out);
+                return Optional.empty();
             }
             case PREFER_ENCRYPTED:
             case REQUIRE_ENCRYPTED: {
-                return createReaderWriter(peer, encryptedChannel, in, out);
+                return Optional.of(cipher);
             }
             default: {
                 throw new IllegalStateException("Unknown encryption policy: " + negotiatedEncryptionPolicy.name());
@@ -446,12 +443,6 @@ class MSEHandshakeProcessor {
             throw new RuntimeException("Encryption policies are incompatible: peer's (" + peerEncryptionPolicy.name()
                     + "), local (" + localEncryptionPolicy.name() + ")");
         }
-    }
-
-    private PeerConnectionMessageWorker createReaderWriter(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out) {
-        MessageReader reader = new MessageReader(peer, channel, messageHandler, in);
-        MessageWriter writer = new MessageWriter(channel, peer, messageHandler, out);
-        return new DelegatingPeerConnectionMessageWorker(reader, writer);
     }
 
     private byte[] getPadding(int length) {

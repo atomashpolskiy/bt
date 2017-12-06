@@ -77,11 +77,18 @@ public class IncomingConnectionListener {
 
     private void establishConnection(ConnectionRoutine connectionRoutine) {
         connectionExecutor.submit(() -> {
+            boolean added = false;
             if (!shutdown) {
                 ConnectionResult connectionResult = connectionRoutine.establish();
-                if (!shutdown && connectionResult.isSuccess() && mightAddConnection()) {
-                    connectionPool.addConnectionIfAbsent(connectionResult.getConnection());
+                if (connectionResult.isSuccess()) {
+                    if (!shutdown && mightAddConnection()) {
+                        connectionPool.addConnectionIfAbsent(connectionResult.getConnection());
+                        added = true;
+                    }
                 }
+            }
+            if (!added) {
+                connectionRoutine.cancel();
             }
         });
     }

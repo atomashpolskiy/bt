@@ -22,14 +22,11 @@ import bt.it.fixture.Swarm;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.runtime.BtClient;
 import bt.runtime.Config;
-import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.net.InetAddress;
 import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import static org.junit.Assert.assertEquals;
 
@@ -52,6 +49,17 @@ public class Swarm_EncryptedIT extends BaseBtTest {
         public EncryptionPolicy getEncryptionPolicy() {
             return EncryptionPolicy.REQUIRE_ENCRYPTED;
         }
+
+        @Override
+        public int getTransferBlockSize() {
+            return 1024;
+        }
+
+        @Override
+        public int getMaxTransferBlockSize() {
+            // trigger buffer compaction
+            return 4*1024;
+        }
     };
 
     @Rule
@@ -62,13 +70,6 @@ public class Swarm_EncryptedIT extends BaseBtTest {
             .module(new SharedTrackerModule())
             .useInMemoryFileSystem()
             .build();
-
-    @After
-    public void after() {
-        // TODO: workaround to shutdown swarm _before_ BaseBtTest removes files;
-        // need to come up with something better to not write this everywhere
-        swarm.shutdown();
-    }
 
     @Test
     public void testSwarm_OneSeederOneLeecher() {
@@ -81,50 +82,5 @@ public class Swarm_EncryptedIT extends BaseBtTest {
 
         assertEquals(NUMBER_OF_SEEDERS + 1, swarm.getSeeders().size());
         assertEquals(NUMBER_OF_SEEDERS - 1, swarm.getLeechers().size());
-    }
-
-    @Test
-    public void testSwarm_ManySeedersOneLeecher() {
-        List<BtClient> seeders = swarm.getSeederHandles();
-        BtClient leecher = swarm.getLeecherHandles().iterator().next();
-
-        seeders.forEach(BtClient::startAsync);
-        leecher.startAsync().join();
-        seeders.forEach(BtClient::stop);
-
-        assertEquals(NUMBER_OF_SEEDERS + 1, swarm.getSeeders().size());
-        assertEquals(NUMBER_OF_SEEDERS - 1, swarm.getLeechers().size());
-    }
-
-    @Test
-    public void testSwarm_OneSeederManyLeechers() {
-        BtClient seeder = swarm.getSeederHandles().iterator().next();
-        List<BtClient> leechers = swarm.getLeecherHandles();
-
-        CompletableFuture<?>[] leecherFutures =
-                leechers.stream().map(BtClient::startAsync).toArray(CompletableFuture<?>[]::new);
-
-        seeder.startAsync();
-        CompletableFuture.allOf(leecherFutures).join();
-        seeder.stop();
-
-        assertEquals(NUMBER_OF_SEEDERS * 2, swarm.getSeeders().size());
-        assertEquals(0, swarm.getLeechers().size());
-    }
-
-    @Test
-    public void testSwarm_ManySeedersManyLeechers() {
-        List<BtClient> seeders = swarm.getSeederHandles();
-        List<BtClient> leechers = swarm.getLeecherHandles();
-
-        CompletableFuture<?>[] leecherFutures =
-                leechers.stream().map(BtClient::startAsync).toArray(CompletableFuture<?>[]::new);
-
-        seeders.forEach(BtClient::startAsync);
-        CompletableFuture.allOf(leecherFutures).join();
-        seeders.forEach(BtClient::stop);
-
-        assertEquals(NUMBER_OF_SEEDERS * 2, swarm.getSeeders().size());
-        assertEquals(0, swarm.getLeechers().size());
     }
 }

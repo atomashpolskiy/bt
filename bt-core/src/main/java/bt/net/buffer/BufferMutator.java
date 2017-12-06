@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-package bt.net;
+package bt.net.buffer;
 
-import bt.protocol.Message;
+import java.nio.ByteBuffer;
 
-import java.io.IOException;
-import java.util.Optional;
+/**
+ * @since 1.6
+ */
+public interface BufferMutator {
 
-interface PeerConnectionMessageWorker {
-
-    Optional<Message> readMessage() throws IOException;
-
-    void writeMessage(Message message) throws IOException;
+    /**
+     * Mutates the data between buffer's position and limit.
+     * When this method has returned, buffer's position will be equal to its' limit.
+     *
+     * @since 1.6
+     */
+    void mutate(ByteBuffer buffer);
 }
