@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ExecutorServiceProvider implements Provider<ExecutorService> {
 
-    private ExecutorService executorService;
+    private volatile ExecutorService executorService;
     private final Object lock;
 
     @Inject

@@ -96,7 +96,9 @@ public class BEString implements BEObject<byte[]> {
     public String toString() {
         if (stringValue == null) {
             synchronized (lock) {
-                stringValue = new String(content, defaultCharset);
+                if (stringValue == null) {
+                    stringValue = new String(content, defaultCharset);
+                }
             }
         }
         return stringValue;

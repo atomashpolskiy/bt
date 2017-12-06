@@ -33,7 +33,7 @@ class TestFileSystemStorage extends ExternalResource implements Storage {
     private static final String ROOT_PATH = "target/rt";
 
     private File rootDirectory;
-    private Storage delegate;
+    private volatile Storage delegate;
     private final Object lock;
 
     private Collection<StorageUnit> units;
