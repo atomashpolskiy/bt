@@ -17,13 +17,11 @@
 package bt.it;
 
 import bt.it.fixture.BaseBtTest;
-import bt.it.fixture.SharedTrackerModule;
 import bt.it.fixture.Swarm;
 import bt.peer.lan.LocalServiceDiscoveryModule;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.runtime.BtClient;
 import bt.runtime.Config;
-import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -58,13 +56,6 @@ public class Swarm_LocalServiceDiscoveryIT extends BaseBtTest {
             // not adding the SharedTrackerModule: LSD is the only source of peers
             .useInMemoryFileSystem()
             .build();
-
-    @After
-    public void after() {
-        // TODO: workaround to shutdown swarm _before_ BaseBtTest removes files;
-        // need to come up with something better to not write this everywhere
-        swarm.shutdown();
-    }
 
     @Test
     public void testSwarm_OneSeederOneLeecher() {
