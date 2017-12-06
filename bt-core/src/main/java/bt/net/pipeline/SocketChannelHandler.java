@@ -17,7 +17,6 @@
 package bt.net.pipeline;
 
 import bt.net.DataReceiver;
-import bt.net.Peer;
 import bt.net.buffer.BorrowedBuffer;
 import bt.protocol.Message;
 import org.slf4j.Logger;
@@ -33,7 +32,6 @@ import java.util.function.Function;
 public class SocketChannelHandler implements ChannelHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(SocketChannelHandler.class);
 
-    private final Peer peer;
     private final SocketChannel channel;
     private final BorrowedBuffer<ByteBuffer> inboundBuffer;
     private final BorrowedBuffer<ByteBuffer> outboundBuffer;
@@ -45,14 +43,12 @@ public class SocketChannelHandler implements ChannelHandler {
     private final AtomicBoolean shutdown;
 
     public SocketChannelHandler(
-            Peer peer,
             SocketChannel channel,
             BorrowedBuffer<ByteBuffer> inboundBuffer,
             BorrowedBuffer<ByteBuffer> outboundBuffer,
             Function<ChannelHandler, ChannelHandlerContext> contextFactory,
             DataReceiver dataReceiver) {
 
-        this.peer = peer;
         this.channel = channel;
         this.inboundBuffer = inboundBuffer;
         this.outboundBuffer = outboundBuffer;
@@ -62,11 +58,6 @@ public class SocketChannelHandler implements ChannelHandler {
         this.inboundBufferLock = new Object();
         this.outboundBufferLock = new Object();
         this.shutdown = new AtomicBoolean(false);
-    }
-
-    @Override
-    public Peer peer() {
-        return peer;
     }
 
     @Override
@@ -191,7 +182,7 @@ public class SocketChannelHandler implements ChannelHandler {
         try {
             channel.close();
         } catch (IOException e) {
-            LOGGER.error("Failed to close channel for peer: " + peer, e);
+            LOGGER.error("Failed to close channel", e);
         }
     }
 
