@@ -16,6 +16,7 @@
 
 package bt.protocol.crypto;
 
+import bt.BtException;
 import bt.metainfo.TorrentId;
 
 import javax.crypto.Cipher;
@@ -41,6 +42,26 @@ public class MSECipher {
 
     private final Cipher incomingCipher;
     private final Cipher outgoingCipher;
+
+    /**
+     * @throws BtException if the check can't be performed,
+     *                     e.g. when the MSE-specific cipher transformation is not supported in the current JDK.
+     * @since 1.6
+     */
+    public static boolean isKeySizeSupported(int keySize) throws BtException {
+        if (keySize <= 0) {
+            throw new IllegalArgumentException("Negative key size: " + keySize);
+        }
+
+        int maxAllowedKeySizeBits;
+        try {
+            maxAllowedKeySizeBits = Cipher.getMaxAllowedKeyLength(transformation);
+        } catch (NoSuchAlgorithmException e) {
+            throw new BtException("Transformation is not supported: " + transformation);
+        }
+
+        return (keySize * 8) <= maxAllowedKeySizeBits;
+    }
 
     /**
      * Create MSE cipher for connection initiator

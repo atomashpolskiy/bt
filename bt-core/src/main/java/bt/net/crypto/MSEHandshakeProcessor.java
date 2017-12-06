@@ -64,18 +64,65 @@ public class MSEHandshakeProcessor {
     private final MessageHandler<Message> protocol;
     private final EncryptionPolicy localEncryptionPolicy;
 
+    // indicates, that MSE encryption negotiation procedure should not be used
+    private final boolean mseDisabled;
+
     public MSEHandshakeProcessor(
             TorrentRegistry torrentRegistry,
             MessageHandler<Message> protocol,
             Config config) {
 
-        this.keyGenerator = new MSEKeyPairGenerator(config.getMsePrivateKeySize());
+        this.localEncryptionPolicy = config.getEncryptionPolicy();
+
+        int msePrivateKeySize = config.getMsePrivateKeySize();
+        boolean mseDisabled = !MSECipher.isKeySizeSupported(msePrivateKeySize);
+        if (mseDisabled) {
+            String message = String.format(
+                    "Current Bt runtime is configured to use private key size of %d bytes for Message Stream Encryption (MSE),"
+                            + " and the preferred encryption policy is %s."
+                            + " The aforementioned key size is not allowed in the current JDK configuration."
+                            + " Hence, MSE encryption negotiation procedure will NOT be used",
+                            msePrivateKeySize, localEncryptionPolicy.name());
+
+            String postfix = " To fix this problem, please do one of the following:"
+                            + " (a) update your JDK or Java runtime environment settings for unlimited cryptography support;"
+                            + " (b) specify a different private key size (not recommended)";
+
+            switch (localEncryptionPolicy) {
+                case REQUIRE_PLAINTEXT:
+                case PREFER_PLAINTEXT:
+                case PREFER_ENCRYPTED: {
+                    message += ", and all peer connections will be established in plaintext by using the standard BitTorrent handshake."
+                            + " This may negatively affect the number of peers, which can be connected to."
+                            + postfix;
+                    LOGGER.warn(message);
+                    break;
+                }
+                case REQUIRE_ENCRYPTED: {
+                    message += ", and considering the requirement for mandatory encryption, this effectively means,"
+                            + " that no peer connections will ever be established."
+                            + postfix
+                            + "; (c) choose a more permissive encryption policy";
+                    throw new IllegalStateException(message);
+                }
+                default: {
+                    throw new IllegalStateException("Unknown encryption policy: " + localEncryptionPolicy.name());
+                }
+            }
+
+        }
+        this.mseDisabled = mseDisabled;
+
+        this.keyGenerator = new MSEKeyPairGenerator(msePrivateKeySize);
         this.torrentRegistry = torrentRegistry;
         this.protocol = protocol;
-        this.localEncryptionPolicy = config.getEncryptionPolicy();
     }
 
     public Optional<MSECipher> negotiateOutgoing(Peer peer, ByteChannel channel, TorrentId torrentId, ByteBuffer in, ByteBuffer out) throws IOException {
+        if (mseDisabled) {
+            return Optional.empty();
+        }
+
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Negotiating encryption for outgoing connection: {}", peer);
         }
@@ -242,6 +289,10 @@ public class MSEHandshakeProcessor {
     }
 
     public Optional<MSECipher> negotiateIncoming(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out) throws IOException {
+        if (mseDisabled) {
+            return Optional.empty();
+        }
+
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Negotiating encryption for incoming connection: {}", peer);
         }

@@ -46,6 +46,7 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.security.Security;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
@@ -84,6 +85,7 @@ public class CliClient  {
         this.options = options;
 
         configureLogging(options.getLogLevel());
+        configureSecurity();
 
         Collection<KeyStrokeBinding> keyBindings = Collections.singletonList(
                 new KeyStrokeBinding(KeyStroke.fromString("p"), this::togglePause));
@@ -190,6 +192,18 @@ public class CliClient  {
             }
         }
         Configurator.setLevel("bt", log4jLogLevel);
+    }
+
+    private void configureSecurity() {
+        // Starting with JDK 8u152 this is a way to programmatically allow unlimited encryption
+        // See http://www.oracle.com/technetwork/java/javase/8u152-relnotes-3850503.html
+        String key = "crypto.policy";
+        String value = "unlimited";
+        try {
+            Security.setProperty(key, value);
+        } catch (Exception e) {
+            LOGGER.error(String.format("Failed to set security property '%s' to '%s'", key, value), e);
+        }
     }
 
     private static URL toUrl(File file) {
