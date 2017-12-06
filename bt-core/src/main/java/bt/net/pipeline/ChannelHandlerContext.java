@@ -16,19 +16,46 @@
 
 package bt.net.pipeline;
 
+/**
+ * Provides the means to notify the messaging pipeline about certain events.
+ *
+ * @since 1.6
+ */
 public interface ChannelHandlerContext {
 
+    /**
+     * @since 1.6
+     */
     ChannelPipeline pipeline();
 
+    /**
+     * Signal, that the channel is ready for reading
+     *
+     * @since 1.6
+     */
     void fireChannelReady();
 
+    /**
+     * @since 1.6
+     */
     void fireChannelRegistered();
 
+    /**
+     * @since 1.6
+     */
     void fireChannelUnregistered();
 
+    /**
+     * @since 1.6
+     */
     void fireChannelActive();
 
+    /**
+     * @since 1.6
+     */
     void fireChannelInactive();
 
+    // TODO: I guess this can be removed
+    // we can instead use a series of ChannelPipeline.decode() invocations for the same effect
     void fireDataReceived();
 }

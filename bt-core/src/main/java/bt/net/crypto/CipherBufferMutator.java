@@ -21,10 +21,18 @@ import bt.net.buffer.BufferMutator;
 import javax.crypto.Cipher;
 import java.nio.ByteBuffer;
 
+/**
+ * Mutator, that performs encryption or decryption of data.
+ *
+ * @since 1.6
+ */
 public class CipherBufferMutator implements BufferMutator {
 
     private final Cipher cipher;
 
+    /**
+     * @since 1.6
+     */
     public CipherBufferMutator(Cipher cipher) {
         this.cipher = cipher;
     }
