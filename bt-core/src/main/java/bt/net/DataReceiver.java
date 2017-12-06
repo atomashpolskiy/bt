@@ -20,13 +20,36 @@ import bt.net.pipeline.ChannelHandlerContext;
 
 import java.nio.channels.SelectableChannel;
 
+/**
+ * @since 1.6
+ */
 public interface DataReceiver {
 
+    /**
+     * Register a channel.
+     *
+     * @param channel Channel to be registered
+     * @param context Context with callbacks for registration/selection/interest change events.
+     * @since 1.6
+     */
     void registerChannel(SelectableChannel channel, ChannelHandlerContext context);
 
+    /**
+     * @since 1.6
+     */
     void unregisterChannel(SelectableChannel channel);
 
+    /**
+     * Activate selection for the provided channel.
+     *
+     * @since 1.6
+     */
     void activateChannel(SelectableChannel channel);
 
+    /**
+     * De-activate selection for the provided channel.
+     *
+     * @since 1.6
+     */
     void deactivateChannel(SelectableChannel channel);
 }
