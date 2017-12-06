@@ -95,7 +95,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
         SocketChannel channel;
         try {
             channel = getChannel(inetAddress, port);
-        } catch (Exception e) {
+        } catch (IOException e) {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Failed to establish connection with peer: {}. Reason: {} ({})",
                         peer, e.getClass().getName(), e.getMessage());
@@ -134,7 +134,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
             closeQuietly(channel);
             releaseBuffer(in);
             releaseBuffer(out);
-            return ConnectionResult.failure("I/O error", e);
+            return ConnectionResult.failure("Unexpected error", e);
         }
     }
 
