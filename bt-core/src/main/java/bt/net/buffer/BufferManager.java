@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.locks.ReentrantLock;
 
-// TODO: unassociate buffers from disconnected peers; re-use existing unassociated buffers; dispose of excessive buffers
 public class BufferManager implements IBufferManager {
 
     private ConcurrentMap<Class<?>, Deque<SoftReference<?>>> releasedBuffers;
