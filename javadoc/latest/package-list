@@ -12,7 +12,10 @@ bt.magnet
 bt.metainfo
 bt.module
 bt.net
+bt.net.buffer
+bt.net.crypto
 bt.net.extended
+bt.net.pipeline
 bt.peer
 bt.peer.lan
 bt.peerexchange
