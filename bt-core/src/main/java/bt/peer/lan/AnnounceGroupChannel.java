@@ -115,7 +115,10 @@ public class AnnounceGroupChannel {
             } else {
                 _channel.bind(new InetSocketAddress(Inet6Address.getByName("[::]"), port));
             }
-            _channel.setOption(StandardSocketOptions.IP_MULTICAST_TTL, group.getTimeToLive());
+            int timeToLive = group.getTimeToLive();
+            if (timeToLive != 1) {
+                _channel.setOption(StandardSocketOptions.IP_MULTICAST_TTL, timeToLive);
+            }
 
             for (NetworkInterface iface : networkInterfaces) {
                 _channel.join(group.getAddress().getAddress(), iface);
