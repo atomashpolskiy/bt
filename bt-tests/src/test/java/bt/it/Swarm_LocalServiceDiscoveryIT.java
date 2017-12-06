@@ -58,48 +58,6 @@ public class Swarm_LocalServiceDiscoveryIT extends BaseBtTest {
             .build();
 
     @Test
-    public void testSwarm_OneSeederOneLeecher() {
-        BtClient seeder = swarm.getSeederHandles().iterator().next();
-        BtClient leecher = swarm.getLeecherHandles().iterator().next();
-
-        seeder.startAsync();
-        leecher.startAsync().join();
-        seeder.stop();
-
-        assertEquals(NUMBER_OF_SEEDERS + 1, swarm.getSeeders().size());
-        assertEquals(NUMBER_OF_SEEDERS - 1, swarm.getLeechers().size());
-    }
-
-    @Test
-    public void testSwarm_ManySeedersOneLeecher() {
-        List<BtClient> seeders = swarm.getSeederHandles();
-        BtClient leecher = swarm.getLeecherHandles().iterator().next();
-
-        seeders.forEach(BtClient::startAsync);
-        leecher.startAsync().join();
-        seeders.forEach(BtClient::stop);
-
-        assertEquals(NUMBER_OF_SEEDERS + 1, swarm.getSeeders().size());
-        assertEquals(NUMBER_OF_SEEDERS - 1, swarm.getLeechers().size());
-    }
-
-    @Test
-    public void testSwarm_OneSeederManyLeechers() {
-        BtClient seeder = swarm.getSeederHandles().iterator().next();
-        List<BtClient> leechers = swarm.getLeecherHandles();
-
-        CompletableFuture<?>[] leecherFutures =
-                leechers.stream().map(BtClient::startAsync).toArray(CompletableFuture<?>[]::new);
-
-        seeder.startAsync();
-        CompletableFuture.allOf(leecherFutures).join();
-        seeder.stop();
-
-        assertEquals(NUMBER_OF_SEEDERS * 2, swarm.getSeeders().size());
-        assertEquals(0, swarm.getLeechers().size());
-    }
-
-    @Test
     public void testSwarm_ManySeedersManyLeechers() {
         List<BtClient> seeders = swarm.getSeederHandles();
         List<BtClient> leechers = swarm.getLeecherHandles();
