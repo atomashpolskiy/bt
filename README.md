@@ -6,7 +6,7 @@
 <sup>
 A full-featured BitTorrent implementation in Java 8
 <br/><a href="http://bittorrent.org/beps/bep_0011.html">peer exchange</a> | <a href="http://bittorrent.org/beps/bep_0009.html">magnet links</a> | <a href="http://bittorrent.org/beps/bep_0005.html">DHT</a> | <a href="http://wiki.vuze.com/w/Message_Stream_Encryption">encryption</a> | <a href="http://bittorrent.org/beps/bep_0014.html">LSD</a> | <a href="http://bittorrent.org/beps/bep_0027.html">private trackers</a> | <a href="http://bittorrent.org/beps/bep_0010.html">extended protocol</a>
-</sup> 
+</sup>
 </strong></p>
 
 <p align="center">
@@ -37,6 +37,10 @@ A full-featured BitTorrent implementation in Java 8
     <a href="https://codecov.io/gh/atomashpolskiy/bt">
         <img src="https://img.shields.io/codecov/c/github/atomashpolskiy/bt/master.svg"
              alt="Coverage">
+    </a>
+    <a href="https://www.codetriage.com/atomashpolskiy/bt">
+        <img src="https://www.codetriage.com/atomashpolskiy/bt/badges/users.svg"
+             alt="Help Contribute to Open Source">
     </a>
 </p>
 
@@ -70,7 +74,7 @@ Declare the following dependencies in your project’s **pom.xml**:
     <artifactId>bt-core</artifactId>
     <version>${bt-version}</version>
 </dependency>
-<!-- for the sake of keeping the core with minimum number of 3-rd party 
+<!-- for the sake of keeping the core with minimum number of 3-rd party
      dependencies HTTP tracker support is shipped as a separate module;
      you may omit this dependency if only UDP trackers are going to be used -->
 <dependency>
