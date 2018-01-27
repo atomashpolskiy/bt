@@ -10,7 +10,4 @@ else
     GPG_KEYNAME="-Dgpg.keyname=${GPG_KEYNAME}"
 fi
 
-eval $(gpg-agent --daemon --no-grab)
-export GPG_TTY=$(tty)
-export GPG_AGENT_INFO
 mvn -Darguments="${GPG_KEYNAME}" -Prelease release:perform
