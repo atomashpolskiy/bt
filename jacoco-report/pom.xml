@@ -4,7 +4,7 @@
     <parent>
         <artifactId>bt-parent</artifactId>
         <groupId>com.github.atomashpolskiy</groupId>
-        <version>1.6</version>
+        <version>1.7-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
