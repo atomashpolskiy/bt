@@ -16,10 +16,10 @@
 
 package bt.data.file;
 
+import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-import java.util.ArrayList;
+import java.nio.file.FileSystem;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +28,14 @@ import static org.junit.Assert.assertEquals;
 
 public class PathNormalizerTest {
 
-    private PathNormalizer normalizer = new PathNormalizer();
+    private FileSystem fileSystem;
+    private PathNormalizer normalizer;
+
+    @Before
+    public void setUp() throws Exception {
+        fileSystem = new MockFileSystem();
+        normalizer = new PathNormalizer(fileSystem);
+    }
 
     @Test
     public void testNormalizer_000() {
@@ -242,26 +249,19 @@ public class PathNormalizerTest {
     }
 
     private void verifyNormalization(String expected, List<String> path) {
-        expected = replaceSeparator(expected);
-        List<String> fsDependentPath = new ArrayList<>(path.size() + 1);
-        path.forEach(element -> fsDependentPath.add(replaceSeparator(element)));
-
-        String normalized = normalizer.normalize(fsDependentPath);
-        assertEquals(String.format("input: '%s', expected: '%s', actual: '%s'", buildPath(fsDependentPath), expected, normalized),
+        final String normalized = normalizer.normalize(path);
+        assertEquals(
+                String.format("input: '%s', expected: '%s', actual: '%s'", buildPath(path), expected, normalized),
                 expected, normalized);
     }
 
-    private static String buildPath(List<String> elements) {
+    private String buildPath(List<String> elements) {
         StringBuilder buf = new StringBuilder();
         elements.forEach(element -> {
             buf.append(element);
-            buf.append(File.separator);
+            buf.append(fileSystem.getSeparator());
         });
-        buf.delete(buf.length() - File.separator.length(), buf.length());
+        buf.delete(buf.length() - fileSystem.getSeparator().length(), buf.length());
         return buf.toString();
-    }
-
-    private static String replaceSeparator(String path) {
-        return path.replace("/", File.separator);
     }
 }

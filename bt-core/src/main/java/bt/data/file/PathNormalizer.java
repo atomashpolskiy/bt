@@ -16,11 +16,16 @@
 
 package bt.data.file;
 
-import java.io.File;
+import java.nio.file.FileSystem;
 import java.util.List;
 import java.util.StringTokenizer;
 
 class PathNormalizer {
+    private final String separator;
+
+    public PathNormalizer(FileSystem fileSystem) {
+        separator =  fileSystem.getSeparator();
+    }
 
     public String normalize(List<String> path) {
         if (path.isEmpty()) {
@@ -31,9 +36,9 @@ class PathNormalizer {
             StringBuilder buf = new StringBuilder();
             path.forEach(element -> {
                 buf.append(element);
-                buf.append(File.separator);
+                buf.append(separator);
             });
-            buf.delete(buf.length() - File.separator.length(), buf.length());
+            buf.delete(buf.length() - separator.length(), buf.length());
             return normalize(buf.toString());
         }
     }
@@ -44,16 +49,16 @@ class PathNormalizer {
             return "_";
         }
 
-        StringTokenizer tokenizer = new StringTokenizer(normalized, File.separator, true);
+        StringTokenizer tokenizer = new StringTokenizer(normalized, separator, true);
         StringBuilder buf = new StringBuilder(normalized.length());
         boolean first = true;
         while (tokenizer.hasMoreTokens()) {
             String element = tokenizer.nextToken();
-            if (File.separator.equals(element)) {
+            if (separator.equals(element)) {
                 if (first) {
                     buf.append("_");
                 }
-                buf.append(File.separator);
+                buf.append(separator);
                 // this will handle inner slash sequences, like ...a//b...
                 first = true;
             } else {
@@ -95,12 +100,12 @@ class PathNormalizer {
         }
 
         int k = 0;
-        while (path.endsWith(File.separator)) {
-            path = path.substring(0, path.length() - File.separator.length());
+        while (path.endsWith(separator)) {
+            path = path.substring(0, path.length() - separator.length());
             k++;
         }
         if (k > 0) {
-            char[] separatorChars = File.separator.toCharArray();
+            char[] separatorChars = separator.toCharArray();
             char[] value = new char[path.length() + (separatorChars.length + 1) * k];
             System.arraycopy(path.toCharArray(), 0, value, 0, path.length());
             for (int offset = path.length(); offset < value.length; offset += separatorChars.length + 1) {
