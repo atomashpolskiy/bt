@@ -4,7 +4,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 ## 1.6
 
-#### Date:
+#### Date: 01/27/2018
 
 #### Official BEPs:
 
