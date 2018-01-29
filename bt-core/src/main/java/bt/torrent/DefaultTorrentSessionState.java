@@ -20,7 +20,11 @@ import bt.net.Peer;
 import bt.torrent.messaging.ConnectionState;
 import bt.torrent.messaging.TorrentWorker;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.stream.Collectors.summingLong;
@@ -86,7 +90,7 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
     }
 
     private synchronized Map<Peer, TransferAmounts> getCurrentAmounts() {
-        final Map<Peer, TransferAmounts> connectedPeers = getAmountsForConnectedPeers();
+        Map<Peer, TransferAmounts> connectedPeers = getAmountsForConnectedPeers();
 
         Set<Peer> disconnectedPeers = new HashSet<>();
         recentAmountsForConnectedPeers.forEach((peer, amounts) -> {
