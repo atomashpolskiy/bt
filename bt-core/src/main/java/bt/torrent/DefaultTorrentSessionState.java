@@ -20,33 +20,27 @@ import bt.net.Peer;
 import bt.torrent.messaging.ConnectionState;
 import bt.torrent.messaging.TorrentWorker;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.summingLong;
 
 public class DefaultTorrentSessionState implements TorrentSessionState {
-
-    private static final int DOWNLOADED_POSITION = 0;
-    private static final int UPLOADED_POSITION = 1;
 
     /**
      * Recently calculated amounts of downloaded and uploaded data
      */
-    private Map<Peer, Long[]> recentAmountsForConnectedPeers;
+    private final Map<Peer, TransferAmounts> recentAmountsForConnectedPeers;
 
     /**
      * Historical data (amount of data downloaded from disconnected peers)
      */
-    private volatile AtomicLong downloadedFromDisconnected;
+    private final AtomicLong downloadedFromDisconnected;
 
     /**
      * Historical data (amount of data uploaded to disconnected peers)
      */
-    private volatile AtomicLong uploadedToDisconnected;
+    private final AtomicLong uploadedToDisconnected;
 
     private final TorrentDescriptor descriptor;
     private final TorrentWorker worker;
@@ -79,44 +73,46 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
 
     @Override
     public synchronized long getDownloaded() {
-        long downloaded = getCurrentAmounts().values().stream()
-                .collect(Collectors.summingLong(amounts -> amounts[DOWNLOADED_POSITION]));
+        long downloaded = getCurrentAmounts().values().stream().collect(summingLong(TransferAmounts::getDownloaded));
         downloaded += downloadedFromDisconnected.get();
         return downloaded;
     }
 
     @Override
     public synchronized long getUploaded() {
-        long uploaded = getCurrentAmounts().values().stream()
-                .collect(Collectors.summingLong(amounts -> amounts[UPLOADED_POSITION]));
+        long uploaded = getCurrentAmounts().values().stream().collect(summingLong(TransferAmounts::getUploaded));
         uploaded += uploadedToDisconnected.get();
         return uploaded;
     }
 
-    private synchronized Map<Peer, Long[]> getCurrentAmounts() {
-        Map<Peer, Long[]> connectedPeers = getAmountsForConnectedPeers();
-        connectedPeers.forEach((peer, amounts) -> recentAmountsForConnectedPeers.put(peer, amounts));
+    private synchronized Map<Peer, TransferAmounts> getCurrentAmounts() {
+        final Map<Peer, TransferAmounts> connectedPeers = getAmountsForConnectedPeers();
 
         Set<Peer> disconnectedPeers = new HashSet<>();
         recentAmountsForConnectedPeers.forEach((peer, amounts) -> {
             if (!connectedPeers.containsKey(peer)) {
-                downloadedFromDisconnected.addAndGet(amounts[DOWNLOADED_POSITION]);
-                uploadedToDisconnected.addAndGet(amounts[UPLOADED_POSITION]);
+                downloadedFromDisconnected.addAndGet(amounts.getDownloaded());
+                uploadedToDisconnected.addAndGet(amounts.getUploaded());
                 disconnectedPeers.add(peer);
             }
         });
-        disconnectedPeers.forEach(recentAmountsForConnectedPeers::remove);
+        recentAmountsForConnectedPeers.keySet().removeAll(disconnectedPeers);
+
+        recentAmountsForConnectedPeers.putAll(connectedPeers);
 
         return recentAmountsForConnectedPeers;
     }
 
-    private Map<Peer, Long[]> getAmountsForConnectedPeers() {
+    private Map<Peer, TransferAmounts> getAmountsForConnectedPeers() {
         return worker.getPeers().stream()
                 .collect(
                         HashMap::new,
                         (acc, peer) -> {
                             ConnectionState connectionState = worker.getConnectionState(peer);
-                            acc.put(peer, new Long[] {connectionState.getDownloaded(), connectionState.getUploaded()});
+                            acc.put(
+                                    peer,
+                                    new TransferAmounts(connectionState.getDownloaded(), connectionState.getUploaded())
+                            );
                         },
                         HashMap::putAll);
     }
@@ -124,5 +120,23 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
     @Override
     public Set<Peer> getConnectedPeers() {
         return Collections.unmodifiableSet(worker.getPeers());
+    }
+
+    private static class TransferAmounts {
+        private final long downloaded;
+        private final long uploaded;
+
+        public TransferAmounts(long downloaded, long uploaded) {
+            this.downloaded = downloaded;
+            this.uploaded = uploaded;
+        }
+
+        public long getDownloaded() {
+            return downloaded;
+        }
+
+        public long getUploaded() {
+            return uploaded;
+        }
     }
 }
