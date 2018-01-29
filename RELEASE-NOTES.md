@@ -9,6 +9,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 #### Bug Fixes/Improvements:
 
 * Avoid creation of unnessary empty dirs when reading from a FileSystemStorageUnit that maps to an absent file
+* BEncoder: sort dictionary keys as raw byte sequences, not alphanumerical strings #50
 
 ## 1.6
 

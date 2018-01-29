@@ -26,11 +26,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
+import java.util.function.BinaryOperator;
+import java.util.stream.Collectors;
 
 /**
  * BEncoding encoder.
@@ -110,17 +111,22 @@ public class BEEncoder {
      * @since 1.0
      */
     public void encode(BEMap map, OutputStream out) throws IOException {
-
         Objects.requireNonNull(map);
 
-        Map<String, BEObject<?>> values = map.getValue();
         write(out, BEParser.MAP_PREFIX);
 
-        List<String> keys = new ArrayList<>(values.keySet());
-        Collections.sort(keys);
-        for (String key : keys) {
-            encodeString(key.getBytes(defaultCharset), out);
-            values.get(key).writeTo(out);
+        TreeMap<byte[], BEObject<?>> values = map.getValue().entrySet().stream()
+                .collect(Collectors.toMap(
+                        e -> e.getKey().getBytes(defaultCharset),
+                        Map.Entry::getValue,
+                        (BinaryOperator<BEObject<?>>) (u, u2) -> {
+                            throw new IllegalStateException();
+                        },
+                        () -> new TreeMap<>(ByteStringComparator.comparator())));
+
+        for (Map.Entry<byte[], BEObject<?>> e : values.entrySet()) {
+            encodeString(e.getKey(), out);
+            e.getValue().writeTo(out);
         }
 
         write(out, BEParser.EOF);
