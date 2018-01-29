@@ -83,7 +83,7 @@ public class FileSystemStorage implements Storage {
 
     public FileSystemStorage(Path rootDirectory) {
         this.rootDirectory = rootDirectory;
-        this.pathNormalizer = new PathNormalizer();
+        this.pathNormalizer = new PathNormalizer(rootDirectory.getFileSystem());
     }
 
     @Override
