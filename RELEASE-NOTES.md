@@ -2,6 +2,14 @@
 
 For the latest information visit project web site: http://atomashpolskiy.github.io/bt/
 
+## 1.7
+
+#### Date:
+
+#### Bug Fixes/Improvements:
+
+* Avoid creation of unnessary empty dirs when reading from a FileSystemStorageUnit that maps to an absent file
+
 ## 1.6
 
 #### Date: 01/27/2018
