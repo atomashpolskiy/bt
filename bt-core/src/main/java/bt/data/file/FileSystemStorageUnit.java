@@ -16,18 +16,17 @@
 
 package bt.data.file;
 
+import bt.BtException;
+import bt.data.StorageUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import bt.BtException;
-import bt.data.StorageUnit;
 
 class FileSystemStorageUnit implements StorageUnit {
 
@@ -51,19 +50,16 @@ class FileSystemStorageUnit implements StorageUnit {
     private boolean init(boolean create) {
 
         if (closed) {
-            if (!Files.exists(parent)) {
-                try {
-                    Files.createDirectories(parent);
-                } catch(IOException e) {
-                    if(create) {
-                        throw new BtException("Failed to create file storage -- can't create (some of the) directories", e);
-                    }
-                        throw new BtException("Failed to create file storage -- unexpected I/O error", e);
-                    }
-            }
-
             if (!Files.exists(file)) {
                 if (create) {
+                    if (!Files.exists(parent)) {
+                        try {
+                            Files.createDirectories(parent);
+                        } catch (IOException e) {
+                            throw new BtException("Failed to create file storage -- can't create (some of the) directories", e);
+                        }
+                    }
+
                     try {
                         Files.createFile(file);
                     } catch (IOException e) {
