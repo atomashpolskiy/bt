@@ -17,6 +17,7 @@
 package bt.dht;
 
 import bt.BtException;
+import bt.dht.stream.StreamHandlerBuilder;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
@@ -42,14 +43,8 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.Iterator;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 public class MldhtService implements DHTService {
 
@@ -167,17 +162,17 @@ public class MldhtService implements DHTService {
 
     @Override
     public Stream<Peer> getPeers(TorrentId torrentId) {
-        PeerLookupTask lookup;
-        BlockingQueue<Peer> peers;
         try {
             dht.getServerManager().awaitActiveServer().get();
-            lookup = dht.createPeerLookup(torrentId.getBytes());
-            peers = new LinkedBlockingQueue<>();
+            final PeerLookupTask lookup = dht.createPeerLookup(torrentId.getBytes());
+            final StreamHandlerBuilder<Peer> streamHandlerBuilder =
+                    new StreamHandlerBuilder<>(() -> !lookup.isFinished());
             lookup.setResultHandler((k, p) -> {
                 Peer peer = new InetPeer(p.getInetAddress(), p.getPort());
-                peers.add(peer);
+                streamHandlerBuilder.getItemHandler().accept(peer);
             });
             dht.getTaskManager().addTask(lookup);
+            return streamHandlerBuilder.stream();
         } catch (Throwable e) {
             LOGGER.error(String.format("Unexpected error in peer lookup: %s. See DHT log file for diagnostic information.",
                     e.getMessage()), e);
@@ -186,23 +181,6 @@ public class MldhtService implements DHTService {
             DHT_LOGGER.log(btex, LogLevel.Error);
             throw btex;
         }
-
-        int characteristics = Spliterator.NONNULL;
-        return StreamSupport.stream(() -> Spliterators.spliteratorUnknownSize(new Iterator<Peer>() {
-            @Override
-            public boolean hasNext() {
-                return !lookup.isFinished();
-            }
-
-            @Override
-            public Peer next() {
-                try {
-                    return peers.take();
-                } catch (InterruptedException e) {
-                    throw new RuntimeException("Unexpectedly interrupted while waiting for next element", e);
-                }
-            }
-        }, characteristics), characteristics, false);
     }
 
     @Override
