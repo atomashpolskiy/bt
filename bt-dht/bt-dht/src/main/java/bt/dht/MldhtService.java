@@ -43,9 +43,11 @@ import java.net.SocketException;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -103,6 +105,8 @@ public class MldhtService implements DHTService {
 
     private DHTConfiguration toMldhtConfig(DHTConfig config) {
         return new DHTConfiguration() {
+            private final Map<InetAddress, Boolean> couldUseCacheMap = new ConcurrentHashMap<>();
+
             @Override
             public boolean isPersistingID() {
                 return false;
@@ -131,11 +135,16 @@ public class MldhtService implements DHTService {
             @Override
             public Predicate<InetAddress> filterBindAddress() {
                 return address -> {
+                    Boolean couldUse = couldUseCacheMap.get(address);
+                    if (couldUse != null) {
+                        return couldUse;
+                    }
                     boolean bothAnyLocal = address.isAnyLocalAddress() && localAddress.isAnyLocalAddress();
-                    boolean couldUse = bothAnyLocal || localAddress.equals(address);
+                    couldUse = bothAnyLocal || localAddress.equals(address);
                     if (LOGGER.isDebugEnabled()) {
                         LOGGER.debug("Filtering addresses to bind DHT server to.. Checking " + address + ".. Could use: " + couldUse);
                     }
+                    couldUseCacheMap.put(address, couldUse);
                     return couldUse;
                 };
             }
