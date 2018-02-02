@@ -177,10 +177,11 @@ public class Assignments {
             LOGGER.trace("Updating assignments. Piece selector has more pieces: {}, number of ready peers: {}, number of assigned peers: {}",
                     suggested.hasNext(), ready.size(), assignments.size());
         }
-        while (suggested.hasNext() && ready.size() > 0) {
+        final Set<Peer> readyPeers = new HashSet<>(ready);
+        while (suggested.hasNext() && readyPeers.size() > 0) {
             Integer piece = suggested.next();
 
-            Iterator<Peer> iter = new HashSet<>(ready).iterator();
+            final Iterator<Peer> iter = readyPeers.iterator();
             while (iter.hasNext()) {
                 Peer peer = iter.next();
                 Optional<Bitfield> peerBitfield = pieceStatistics.getPeerBitfield(peer);
@@ -201,6 +202,9 @@ public class Assignments {
                     }
                     if (!queue.contains(piece)) {
                         queue.add(piece);
+                        if (queue.size() > MAX_ASSIGNED_PIECES_PER_PEER) {
+                            iter.remove();
+                        }
                         if (LOGGER.isTraceEnabled()) {
                             LOGGER.trace("Adding piece #{} to peer's queue: {}. Number of pieces in peer's queue: {}",
                                     piece, peer, queue.size());
