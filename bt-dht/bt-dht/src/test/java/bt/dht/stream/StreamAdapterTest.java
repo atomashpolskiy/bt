@@ -88,9 +88,9 @@ public class StreamAdapterTest {
         }
 
         void awaitCompletion() {
-            if (!completed.get()) {
+            while (!completed.get()) {
                 synchronized (completed) {
-                    while (!completed.get()) {
+                    if (!completed.get()) {
                         try {
                             completed.wait();
                         } catch (InterruptedException e) {

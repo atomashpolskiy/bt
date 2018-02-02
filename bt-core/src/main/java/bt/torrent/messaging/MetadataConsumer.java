@@ -190,7 +190,7 @@ public class MetadataConsumer {
      * @return Torrent, blocking the calling thread if it hasn't been fetched yet
      */
     public Torrent waitForTorrent() {
-        if (torrent.get() == null) {
+        while (torrent.get() == null) {
             synchronized (torrent) {
                 if (torrent.get() == null) {
                     try {
