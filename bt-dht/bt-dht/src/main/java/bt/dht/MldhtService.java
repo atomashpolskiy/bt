@@ -17,7 +17,7 @@
 package bt.dht;
 
 import bt.BtException;
-import bt.dht.stream.StreamHandlerBuilder;
+import bt.dht.stream.StreamAdapter;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
@@ -34,6 +34,8 @@ import lbms.plugins.mldht.kad.DHT.DHTtype;
 import lbms.plugins.mldht.kad.DHT.LogLevel;
 import lbms.plugins.mldht.kad.DHTLogger;
 import lbms.plugins.mldht.kad.tasks.PeerLookupTask;
+import lbms.plugins.mldht.kad.tasks.Task;
+import lbms.plugins.mldht.kad.tasks.TaskListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -165,14 +167,14 @@ public class MldhtService implements DHTService {
         try {
             dht.getServerManager().awaitActiveServer().get();
             final PeerLookupTask lookup = dht.createPeerLookup(torrentId.getBytes());
-            final StreamHandlerBuilder<Peer> streamHandlerBuilder =
-                    new StreamHandlerBuilder<>(() -> !lookup.isFinished());
+            final StreamAdapter<Peer> streamAdapter = new StreamAdapter<>();
             lookup.setResultHandler((k, p) -> {
                 Peer peer = new InetPeer(p.getInetAddress(), p.getPort());
-                streamHandlerBuilder.getItemHandler().accept(peer);
+                streamAdapter.addItem(peer);
             });
+            lookup.addListener(t -> streamAdapter.finishStream());
             dht.getTaskManager().addTask(lookup);
-            return streamHandlerBuilder.stream();
+            return streamAdapter.stream();
         } catch (Throwable e) {
             LOGGER.error(String.format("Unexpected error in peer lookup: %s. See DHT log file for diagnostic information.",
                     e.getMessage()), e);
