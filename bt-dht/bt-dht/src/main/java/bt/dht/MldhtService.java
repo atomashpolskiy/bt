@@ -34,8 +34,6 @@ import lbms.plugins.mldht.kad.DHT.DHTtype;
 import lbms.plugins.mldht.kad.DHT.LogLevel;
 import lbms.plugins.mldht.kad.DHTLogger;
 import lbms.plugins.mldht.kad.tasks.PeerLookupTask;
-import lbms.plugins.mldht.kad.tasks.Task;
-import lbms.plugins.mldht.kad.tasks.TaskListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +43,8 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -100,7 +100,7 @@ public class MldhtService implements DHTService {
 
     private DHTConfiguration toMldhtConfig(DHTConfig config) {
         return new DHTConfiguration() {
-            private final Map<InetAddress, Boolean> couldUseCacheMap = new ConcurrentHashMap<>();
+            private final ConcurrentMap<InetAddress, Boolean> couldUseCacheMap = new ConcurrentHashMap<>();
 
             @Override
             public boolean isPersistingID() {
