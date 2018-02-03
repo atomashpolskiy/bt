@@ -188,7 +188,7 @@ CLI GUI indeed does not work on Windows XP. Run in headless mode by using `-H` f
 
 ### Can't connect to peers on Windows 7/8/10
 
-There seem to be some issues with dual-stack networking in Windows JDK (e.g. see [this question on SO](https://superuser.com/questions/453298/how-to-force-java-to-use-ipv4-instead-ipv6)), with Java trying to use IPv6 address, when it's not really available in the system. The simplest solution is to force Java to use IPv4 by setting `-Djava.net.preferIPv4Stack=true`.
+There seem to be some issues with dual-stack networking in Windows JDK (e.g. see [this question on SO](https://superuser.com/questions/453298/how-to-force-java-to-use-ipv4-instead-ipv6)), with Java trying to use IPv6 address, when it's not really available in the system. The simplest solution is to force Java to use IPv4 by setting `java.net.preferIPv4Stack` property to `true`.
 
 ## Support and feedback
 
