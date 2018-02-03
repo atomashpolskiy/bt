@@ -182,9 +182,13 @@ Many popular BitTorrent clients use UPnP and NAT-PMP to automatically configure 
 
 This is perfectly fine. Some of the tests verify that the exceptions are thrown in certain cases, hence the exception messages.
 
-### Can't run the CLI on Windows (java.io.IOException: Cannot run program "/bin/stty")
+### Can't run the CLI on Windows XP (java.io.IOException: Cannot run program "/bin/stty")
 
-CLI GUI indeed does not work on Windows. Run in headless mode by using `-H` flag.
+CLI GUI indeed does not work on Windows XP. Run in headless mode by using `-H` flag.
+
+### Can't connect to peers on Windows 7/8/10
+
+There seem to be some issues with dual-stack networking in Windows JDK (e.g. see [this question on SO](https://superuser.com/questions/453298/how-to-force-java-to-use-ipv4-instead-ipv6)), with Java trying to use IPv6 address, when it's not really available in the system. The simplest solution is to force Java to use IPv4 by setting `-Djava.net.preferIPv4Stack=true`.
 
 ## Support and feedback
 
