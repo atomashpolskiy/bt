@@ -186,7 +186,7 @@ public class RarestFirstSelector extends BaseStreamSelector {
             shuffle(list, position, limit);
 
             // do not stop until a certain number of elements were seen
-            while (++i < SELECTION_MIN_SIZE && ++limit < list.size())
+            while (++i <= SELECTION_MIN_SIZE && ++limit < list.size())
                 ;
 
             return limit;
