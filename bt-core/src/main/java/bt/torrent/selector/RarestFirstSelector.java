@@ -18,8 +18,10 @@ package bt.torrent.selector;
 
 import bt.torrent.PieceStatistics;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
 import java.util.PrimitiveIterator;
 import java.util.PriorityQueue;
@@ -44,7 +46,7 @@ import java.util.Random;
 public class RarestFirstSelector extends BaseStreamSelector {
 
     private static final Comparator<Long> comparator = new PackedIntComparator();
-    private static final int RANDOMIZED_SELECTION_SIZE = 10;
+    private static final int RANDOMIZED_SELECTION_MIN_SIZE = 10;
 
     /**
      * Regular rarest-first selector.
@@ -77,42 +79,136 @@ public class RarestFirstSelector extends BaseStreamSelector {
 
     @Override
     protected PrimitiveIterator.OfInt createIterator(PieceStatistics pieceStatistics) {
-        LinkedList<Integer> queue = orderedQueue(pieceStatistics);
-        return new PrimitiveIterator.OfInt() {
-            @Override
-            public int nextInt() {
-                if (random.isPresent()) {
-                    int i = Math.min(RANDOMIZED_SELECTION_SIZE, queue.size());
-                    return queue.remove(random.get().nextInt(i));
-                } else {
-                    return queue.poll();
-                }
-            }
-
-            @Override
-            public boolean hasNext() {
-                return !queue.isEmpty();
-            }
-        };
+        List<Long> queue = orderedQueue(pieceStatistics);
+        return random.isPresent() ?
+                new RandomizedIteratorOfInt(queue, random.get()) : new SequentialIteratorOfInt(queue);
     }
 
     // TODO: this is very inefficient when only a few pieces are needed,
     // and this for sure can be moved to PieceStatistics (that will be responsible for maintaining an up-to-date list)
-    private LinkedList<Integer> orderedQueue(PieceStatistics pieceStatistics) {
+    // UPDATE: giving this another thought, amortized costs of maintaining an up-to-date list (from the '# of operations' POV)
+    // are in fact likely to far exceed the costs of periodically rebuilding the statistics from scratch,
+    // esp. when there are many connects and disconnects, and statistics are slightly adjusted for each added or removed bitfield.
+    private List<Long> orderedQueue(PieceStatistics pieceStatistics) {
         PriorityQueue<Long> rarestFirst = new PriorityQueue<>(comparator);
         int piecesTotal = pieceStatistics.getPiecesTotal();
         for (int pieceIndex = 0; pieceIndex < piecesTotal; pieceIndex++) {
             int count = pieceStatistics.getCount(pieceIndex);
             if (count > 0) {
-                long packed = (((long)pieceIndex) << 32) + count;
-                rarestFirst.add(packed);
+                long zipped = zip(pieceIndex, count);
+                rarestFirst.add(zipped);
             }
         }
-        LinkedList<Integer> result = new LinkedList<>();
-        Long l;
-        while ((l = rarestFirst.poll()) != null) {
-            result.add((int)(l >> 32));
+
+        return new ArrayList<>(Arrays.asList(rarestFirst.toArray(new Long[rarestFirst.size()])));
+    }
+
+    private static long zip(int pieceIndex, int count) {
+        return (((long)pieceIndex) << 32) + count;
+    }
+
+    private static int getPieceIndex(long zipped) {
+        return (int)(zipped >> 32);
+    }
+
+    private static int getCount(long zipped) {
+        return (int) zipped;
+    }
+
+    private static class SequentialIteratorOfInt implements PrimitiveIterator.OfInt {
+        private final List<Long> list;
+        private int position;
+
+        SequentialIteratorOfInt(List<Long> list) {
+            this.list = list;
         }
-        return result;
+
+        @Override
+        public int nextInt() {
+            return getPieceIndex(list.get(position++));
+        }
+
+        @Override
+        public boolean hasNext() {
+            return position < list.size();
+        }
+    }
+
+    private static class RandomizedIteratorOfInt implements PrimitiveIterator.OfInt {
+        private final List<Long> list;
+        private final Random random;
+        private int position;
+        private int limit;
+
+        RandomizedIteratorOfInt(List<Long> list, Random random) {
+            this.list = list;
+            this.random = random;
+            this.limit = calculateLimit(list, 0);
+            shuffle(list, 0, limit);
+        }
+
+        /**
+         * Starting with a given position, iterates over elements of the list,
+         * while each subsequent element's "count" is equal to the initial element's "count".
+         *
+         * @return index of the first element in the list with "count" different from the initial element's "count"
+         * @see #getCount(long)
+         */
+        private int calculateLimit(List<Long> list, int position) {
+            if (position >= list.size()) {
+                return position;
+            }
+
+            int limit = position + 1;
+            int count = getCount(list.get(position));
+            int nextCount;
+
+            while (limit < list.size() && (nextCount = getCount(list.get(limit++))) == count) {
+                count = nextCount;
+            }
+            return limit;
+        }
+
+        /**
+         * Shuffle a subrange of the given list, between 'begin' and 'end' (exclusively)
+         *
+         * @param begin index of the first element of the subrange
+         * @param end index of the first element after the last element of the subrange
+         */
+        private void shuffle(List<Long> list, int begin, int end) {
+            int length = end - begin;
+            if (length < 2) {
+                // subrange has no elements or a single element
+                return;
+            }
+
+            do {
+                swap(list, begin, begin + random.nextInt(length));
+                length--;
+            } while (++begin < end);
+        }
+
+        private void swap(List<Long> list, int i, int j) {
+            if (i != j) {
+                Long temp = list.get(i);
+                list.set(i, list.get(j));
+                list.set(j, temp);
+            }
+        }
+
+        @Override
+        public int nextInt() {
+            int result = getPieceIndex(list.get(position++));
+            if (position == limit && position < list.size()) {
+                limit = calculateLimit(list, position);
+                shuffle(list, position, limit);
+            }
+            return result;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return position < list.size();
+        }
     }
 }

@@ -10,6 +10,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 * Avoid creation of unnessary empty dirs when reading from a FileSystemStorageUnit that maps to an absent file
 * BEncoder: sort dictionary keys as raw byte sequences, not alphanumerical strings #50
+* Randomized rarest-first selector behaves like a sequential selector when peers are seeds #53
 
 ## 1.6
 
