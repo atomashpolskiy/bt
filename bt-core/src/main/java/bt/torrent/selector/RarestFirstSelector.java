@@ -19,7 +19,6 @@ package bt.torrent.selector;
 import bt.torrent.PieceStatistics;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -99,7 +98,12 @@ public class RarestFirstSelector extends BaseStreamSelector {
             }
         }
 
-        return new ArrayList<>(Arrays.asList(rarestFirst.toArray(new Long[rarestFirst.size()])));
+        List<Long> result = new ArrayList<>(rarestFirst.size());
+        Long l;
+        while ((l = rarestFirst.poll()) != null) {
+            result.add(l);
+        }
+        return result;
     }
 
     private static long zip(int pieceIndex, int count) {
@@ -144,8 +148,7 @@ public class RarestFirstSelector extends BaseStreamSelector {
         RandomizedIteratorOfInt(List<Long> list, Random random) {
             this.list = list;
             this.random = random;
-            this.limit = calculateLimit(list, 0);
-            shuffle(list, 0, limit);
+            this.limit = calculateLimitAndShuffle(list, 0);
         }
 
         /**
@@ -154,10 +157,15 @@ public class RarestFirstSelector extends BaseStreamSelector {
          * - each subsequent element's "count" is equal to the initial element's "count",
          * - less than {@link #SELECTION_MIN_SIZE} elements were seen
          *
+         * Shuffles the subrange of the list, starting with the initial element at {@code position},
+         * where all elements have the same "count"
+         *
          * @return index of the first element in the list with "count" different from the initial element's "count"
+         *          or index of the element that is {@link #SELECTION_MIN_SIZE} positions ahead in the list
+         *          than the initial element, whichever is greater
          * @see #getCount(long)
          */
-        private int calculateLimit(List<Long> list, int position) {
+        private int calculateLimitAndShuffle(List<Long> list, int position) {
             if (position >= list.size()) {
                 return position;
             }
@@ -167,15 +175,19 @@ public class RarestFirstSelector extends BaseStreamSelector {
             int nextCount;
 
             int i = 0;
-            while (limit < list.size()) {
-                nextCount = getCount(list.get(limit));
-                // do not stop until a certain number of elements were seen
-                if (i >= SELECTION_MIN_SIZE && nextCount != count) {
-                    break;
-                }
+            while (limit < list.size() && (nextCount = getCount(list.get(limit++))) == count) {
                 count = nextCount;
-                limit++;
             }
+            // shuffle elements with the same "count" only,
+            // because otherwise less available pieces may end up
+            // being swapped with more available pieces
+            // (i.e. pushed to the bottom of the queue)
+            shuffle(list, position, limit);
+
+            // do not stop until a certain number of elements were seen
+            while (++i < SELECTION_MIN_SIZE && ++limit < list.size())
+                ;
+
             return limit;
         }
 
@@ -210,8 +222,7 @@ public class RarestFirstSelector extends BaseStreamSelector {
         public int nextInt() {
             int result = getPieceIndex(list.get(position++));
             if (position == limit && position < list.size()) {
-                limit = calculateLimit(list, position);
-                shuffle(list, position, limit);
+                limit = calculateLimitAndShuffle(list, position);
             }
             return result;
         }
