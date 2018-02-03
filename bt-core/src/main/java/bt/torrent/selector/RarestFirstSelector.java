@@ -46,7 +46,6 @@ import java.util.Random;
 public class RarestFirstSelector extends BaseStreamSelector {
 
     private static final Comparator<Long> comparator = new PackedIntComparator();
-    private static final int RANDOMIZED_SELECTION_MIN_SIZE = 10;
 
     /**
      * Regular rarest-first selector.
@@ -135,6 +134,8 @@ public class RarestFirstSelector extends BaseStreamSelector {
     }
 
     private static class RandomizedIteratorOfInt implements PrimitiveIterator.OfInt {
+        private static final int SELECTION_MIN_SIZE = 10;
+
         private final List<Long> list;
         private final Random random;
         private int position;
@@ -149,7 +150,9 @@ public class RarestFirstSelector extends BaseStreamSelector {
 
         /**
          * Starting with a given position, iterates over elements of the list,
-         * while each subsequent element's "count" is equal to the initial element's "count".
+         * while one of the following holds true:
+         * - each subsequent element's "count" is equal to the initial element's "count",
+         * - less than {@link #SELECTION_MIN_SIZE} elements were seen
          *
          * @return index of the first element in the list with "count" different from the initial element's "count"
          * @see #getCount(long)
@@ -163,8 +166,15 @@ public class RarestFirstSelector extends BaseStreamSelector {
             int count = getCount(list.get(position));
             int nextCount;
 
-            while (limit < list.size() && (nextCount = getCount(list.get(limit++))) == count) {
+            int i = 0;
+            while (limit < list.size()) {
+                nextCount = getCount(list.get(limit));
+                // do not stop until a certain number of elements were seen
+                if (i >= SELECTION_MIN_SIZE && nextCount != count) {
+                    break;
+                }
                 count = nextCount;
+                limit++;
             }
             return limit;
         }
