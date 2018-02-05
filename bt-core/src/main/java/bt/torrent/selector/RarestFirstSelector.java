@@ -138,7 +138,8 @@ public class RarestFirstSelector extends BaseStreamSelector {
     }
 
     private static class RandomizedIteratorOfInt implements PrimitiveIterator.OfInt {
-        private static final int SELECTION_MIN_SIZE = 10;
+        // Bug's parameter. Value increased for more strong effect.
+        private static final int SELECTION_MIN_SIZE = 40;
 
         private final List<Long> list;
         private final Random random;
@@ -184,6 +185,7 @@ public class RarestFirstSelector extends BaseStreamSelector {
             // being swapped with more available pieces
             // (i.e. pushed to the bottom of the queue)
             shuffle(list, position, limit);
+            //Collections.reverse(list.subList(position, limit));   //debug-time code
 
             // do not stop until a certain number of elements were seen
             while (++i <= SELECTION_MIN_SIZE && ++limit < list.size())
