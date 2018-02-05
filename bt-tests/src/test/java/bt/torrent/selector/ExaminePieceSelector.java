@@ -22,7 +22,6 @@ import java.util.stream.Stream;
 
 public class ExaminePieceSelector {
     public static final int PIECE_COUNT = 100;
-    //public static final int BULK_SIZE = RarestFirstSelector.RandomizedIteratorOfInt.SELECTION_MIN_SIZE / 2;
     public static final int BULK_SIZE = 20;
     public static final char[] CHARS = new char[]{' ', '.', 'o', '#'};
 

@@ -138,9 +138,6 @@ public class RarestFirstSelector extends BaseStreamSelector {
     }
 
     private static class RandomizedIteratorOfInt implements PrimitiveIterator.OfInt {
-        // Bug's parameter. Value increased for more strong effect.
-        private static final int SELECTION_MIN_SIZE = 40;
-
         private final List<Long> list;
         private final Random random;
         private int position;
@@ -153,17 +150,14 @@ public class RarestFirstSelector extends BaseStreamSelector {
         }
 
         /**
-         * Starting with a given position, iterates over elements of the list,
-         * while one of the following holds true:
-         * - each subsequent element's "count" is equal to the initial element's "count",
-         * - less than {@link #SELECTION_MIN_SIZE} elements were seen
+         * Starting with a given position, iterates over elements of the list, while each subsequent element's
+         * <code>count</code> is equal to the initial element's <code>count</code>.
          *
          * Shuffles the subrange of the list, starting with the initial element at {@code position},
-         * where all elements have the same "count"
+         * where all elements have the same <code>count</code>.
          *
-         * @return index of the first element in the list with "count" different from the initial element's "count"
-         *          or index of the element that is {@link #SELECTION_MIN_SIZE} positions ahead in the list
-         *          than the initial element, whichever is greater
+         * @return index of the first element in the list with <code>count</code> different from the initial element's
+         *          <code>count</code>.
          * @see #getCount(long)
          */
         private int calculateLimitAndShuffle(List<Long> list, int position) {
@@ -174,10 +168,8 @@ public class RarestFirstSelector extends BaseStreamSelector {
             int limit = position + 1;
             int count = getCount(list.get(position));
 
-            int i = 0;
             while (limit < list.size() && getCount(list.get(limit)) == count) {
                 limit++;
-                i++;
             }
             // shuffle elements with the same "count" only,
             // because otherwise less available pieces may end up
@@ -185,10 +177,6 @@ public class RarestFirstSelector extends BaseStreamSelector {
             // (i.e. pushed to the bottom of the queue)
             shuffle(list, position, limit);
             //Collections.reverse(list.subList(position, limit));   //debug-time code
-
-            // do not stop until a certain number of elements were seen
-            while (++i <= SELECTION_MIN_SIZE && ++limit < list.size())
-                ;
 
             return limit;
         }
