@@ -173,11 +173,10 @@ public class RarestFirstSelector extends BaseStreamSelector {
 
             int limit = position + 1;
             int count = getCount(list.get(position));
-            int nextCount;
 
             int i = 0;
-            while (limit < list.size() && (nextCount = getCount(list.get(limit++))) == count) {
-                count = nextCount;
+            while (limit < list.size() && getCount(list.get(limit)) == count) {
+                limit++;
                 i++;
             }
             // shuffle elements with the same "count" only,
