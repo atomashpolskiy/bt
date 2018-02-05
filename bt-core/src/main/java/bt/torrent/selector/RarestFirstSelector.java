@@ -138,6 +138,9 @@ public class RarestFirstSelector extends BaseStreamSelector {
     }
 
     private static class RandomizedIteratorOfInt implements PrimitiveIterator.OfInt {
+        //todo oe: is it really useful logic?
+        private static final int SELECTION_MIN_SIZE = 1;
+
         private final List<Long> list;
         private final Random random;
         private int position;
@@ -150,14 +153,14 @@ public class RarestFirstSelector extends BaseStreamSelector {
         }
 
         /**
-         * Starting with a given position, iterates over elements of the list, while each subsequent element's
-         * <code>count</code> is equal to the initial element's <code>count</code>.
+         * Starting with a given position, iterates over elements of the list,
+         * while one of the following holds true:
+         * - each subsequent element's "count" is equal to the initial element's "count",
+         * - less than {@link #SELECTION_MIN_SIZE} elements were seen
          *
-         * Shuffles the subrange of the list, starting with the initial element at {@code position},
-         * where all elements have the same <code>count</code>.
-         *
-         * @return index of the first element in the list with <code>count</code> different from the initial element's
-         *          <code>count</code>.
+         * @return index of the first element in the list with "count" different from the initial element's "count"
+         *          or index of the element that is {@link #SELECTION_MIN_SIZE} positions ahead in the list
+         *          than the initial element, whichever is greater
          * @see #getCount(long)
          */
         private int calculateLimit(List<Long> list, int position) {
@@ -171,10 +174,13 @@ public class RarestFirstSelector extends BaseStreamSelector {
             while (limit < list.size() && getCount(list.get(limit)) == count) {
                 limit++;
             }
-            // shuffle elements with the same "count" only,
-            // because otherwise less available pieces may end up
-            // being swapped with more available pieces
-            // (i.e. pushed to the bottom of the queue)
+
+            if (limit - position < SELECTION_MIN_SIZE) {
+                limit = position + SELECTION_MIN_SIZE;
+                if (limit > list.size()) {
+                    limit = list.size();
+                }
+            }
             return limit;
         }
 
