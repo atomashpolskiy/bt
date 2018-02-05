@@ -146,7 +146,7 @@ public class RarestFirstSelector extends BaseStreamSelector {
         RandomizedIteratorOfInt(List<Long> list, Random random) {
             this.list = list;
             this.random = random;
-            this.limit = calculateLimitAndShuffle(list, 0);
+            this.limit = calculateLimit(list, 0);
         }
 
         /**
@@ -160,7 +160,7 @@ public class RarestFirstSelector extends BaseStreamSelector {
          *          <code>count</code>.
          * @see #getCount(long)
          */
-        private int calculateLimitAndShuffle(List<Long> list, int position) {
+        private int calculateLimit(List<Long> list, int position) {
             if (position >= list.size()) {
                 return position;
             }
@@ -175,44 +175,21 @@ public class RarestFirstSelector extends BaseStreamSelector {
             // because otherwise less available pieces may end up
             // being swapped with more available pieces
             // (i.e. pushed to the bottom of the queue)
-            shuffle(list, position, limit);
-            //Collections.reverse(list.subList(position, limit));   //debug-time code
-
             return limit;
-        }
-
-        /**
-         * Shuffle a subrange of the given list, between 'begin' and 'end' (exclusively)
-         *
-         * @param begin index of the first element of the subrange
-         * @param end index of the first element after the last element of the subrange
-         */
-        private void shuffle(List<Long> list, int begin, int end) {
-            int length = end - begin;
-            if (length < 2) {
-                // subrange has no elements or a single element
-                return;
-            }
-
-            do {
-                swap(list, begin, begin + random.nextInt(length));
-                length--;
-            } while (++begin < end);
-        }
-
-        private void swap(List<Long> list, int i, int j) {
-            if (i != j) {
-                Long temp = list.get(i);
-                list.set(i, list.get(j));
-                list.set(j, temp);
-            }
         }
 
         @Override
         public int nextInt() {
+            final int bound = limit - position;
+            if (bound >= 2) {
+                final int randomPosition = position + random.nextInt(bound);
+                if (position != randomPosition) {
+                    list.set(randomPosition, list.set(position, list.get(randomPosition)));
+                }
+            }
             int result = getPieceIndex(list.get(position++));
             if (position == limit && position < list.size()) {
-                limit = calculateLimitAndShuffle(list, position);
+                limit = calculateLimit(list, position);
             }
             return result;
         }
