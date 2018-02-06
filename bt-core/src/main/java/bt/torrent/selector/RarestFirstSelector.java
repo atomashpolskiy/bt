@@ -138,9 +138,6 @@ public class RarestFirstSelector extends BaseStreamSelector {
     }
 
     private static class RandomizedIteratorOfInt implements PrimitiveIterator.OfInt {
-        //todo oe: is it really useful logic?
-        private static final int SELECTION_MIN_SIZE = 1;
-
         private final List<Long> list;
         private final Random random;
         private int position;
@@ -149,55 +146,31 @@ public class RarestFirstSelector extends BaseStreamSelector {
         RandomizedIteratorOfInt(List<Long> list, Random random) {
             this.list = list;
             this.random = random;
-            this.limit = calculateLimit(list, 0);
-        }
-
-        /**
-         * Starting with a given position, iterates over elements of the list,
-         * while one of the following holds true:
-         * - each subsequent element's "count" is equal to the initial element's "count",
-         * - less than {@link #SELECTION_MIN_SIZE} elements were seen
-         *
-         * @return index of the first element in the list with "count" different from the initial element's "count"
-         *          or index of the element that is {@link #SELECTION_MIN_SIZE} positions ahead in the list
-         *          than the initial element, whichever is greater
-         * @see #getCount(long)
-         */
-        private int calculateLimit(List<Long> list, int position) {
-            if (position >= list.size()) {
-                return position;
-            }
-
-            int limit = position + 1;
-            int count = getCount(list.get(position));
-
-            while (limit < list.size() && getCount(list.get(limit)) == count) {
-                limit++;
-            }
-
-            if (limit - position < SELECTION_MIN_SIZE) {
-                limit = position + SELECTION_MIN_SIZE;
-                if (limit > list.size()) {
-                    limit = list.size();
-                }
-            }
-            return limit;
+            this.position = 0;
+            this.limit = 0;
         }
 
         @Override
         public int nextInt() {
+            if (position >= list.size()) {
+                throw new IllegalStateException();
+            }
+            if (limit == position) {
+                final int count = getCount(list.get(position));
+                int limit = position + 1;
+                while (limit < list.size() && getCount(list.get(limit)) == count) {
+                    limit++;
+                }
+                this.limit = limit;
+            }
             final int bound = limit - position;
             if (bound >= 2) {
                 final int randomPosition = position + random.nextInt(bound);
                 if (position != randomPosition) {
-                    list.set(randomPosition, list.set(position, list.get(randomPosition)));
+                    list.set(position, list.set(randomPosition, list.get(position)));
                 }
             }
-            int result = getPieceIndex(list.get(position++));
-            if (position == limit && position < list.size()) {
-                limit = calculateLimit(list, position);
-            }
-            return result;
+            return getPieceIndex(list.get(position++));
         }
 
         @Override
