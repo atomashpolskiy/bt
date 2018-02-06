@@ -21,6 +21,7 @@ import bt.torrent.PieceStatistics;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.PrimitiveIterator;
 import java.util.PriorityQueue;
@@ -153,7 +154,7 @@ public class RarestFirstSelector extends BaseStreamSelector {
         @Override
         public int nextInt() {
             if (position >= list.size()) {
-                throw new IllegalStateException();
+                throw new NoSuchElementException();
             }
             if (limit == position) {
                 final int count = getCount(list.get(position));
