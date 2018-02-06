@@ -157,8 +157,8 @@ public class RarestFirstSelector extends BaseStreamSelector {
          * - each subsequent element's "count" is equal to the initial element's "count",
          * - less than {@link #SELECTION_MIN_SIZE} elements were seen
          *
-         * Shuffles the subrange of the list, starting with the initial element at {@code position},
-         * where all elements have the same "count"
+         * Shuffles the subrange of the list, starting with the initial element at {@code position}.
+         * Each group where all elements have the same "count" is shuffled separately.
          *
          * @return index of the first element in the list with "count" different from the initial element's "count"
          *          or index of the element that is {@link #SELECTION_MIN_SIZE} positions ahead in the list
@@ -167,27 +167,30 @@ public class RarestFirstSelector extends BaseStreamSelector {
          */
         private int calculateLimitAndShuffle(List<Long> list, int position) {
             if (position >= list.size()) {
-                return position;
+                return list.size();
             }
 
             int limit = position + 1;
             int count = getCount(list.get(position));
-            int nextCount;
+            int nextCount = count;
 
-            int i = 0;
-            while (limit < list.size() && (nextCount = getCount(list.get(limit++))) == count) {
-                count = nextCount;
-                i++;
-            }
-            // shuffle elements with the same "count" only,
-            // because otherwise less available pieces may end up
-            // being swapped with more available pieces
-            // (i.e. pushed to the bottom of the queue)
-            shuffle(list, position, limit);
+            do {
+                while (limit < list.size() && (nextCount = getCount(list.get(limit))) == count) {
+                    limit++;
+                }
+                // shuffle elements with the same "count" only,
+                // because otherwise less available pieces may end up
+                // being swapped with more available pieces
+                // (i.e. pushed to the bottom of the queue)
+                shuffle(list, position, Math.min(limit, list.size()));
 
-            // do not stop until a certain number of elements were seen
-            while (++i <= SELECTION_MIN_SIZE && ++limit < list.size())
-                ;
+                if (limit >= list.size()) {
+                    break;
+                } else {
+                    position = limit;
+                    count = nextCount;
+                }
+            } while (limit - position < SELECTION_MIN_SIZE);
 
             return limit;
         }
@@ -199,16 +202,9 @@ public class RarestFirstSelector extends BaseStreamSelector {
          * @param end index of the first element after the last element of the subrange
          */
         private void shuffle(List<Long> list, int begin, int end) {
-            int length = end - begin;
-            if (length < 2) {
-                // subrange has no elements or a single element
-                return;
+            while (--end > begin) {
+                swap(list, end, begin + random.nextInt(end - begin));
             }
-
-            do {
-                swap(list, begin, begin + random.nextInt(length));
-                length--;
-            } while (++begin < end);
         }
 
         private void swap(List<Long> list, int i, int j) {
@@ -222,7 +218,7 @@ public class RarestFirstSelector extends BaseStreamSelector {
         @Override
         public int nextInt() {
             int result = getPieceIndex(list.get(position++));
-            if (position == limit && position < list.size()) {
+            if (position == limit) {
                 limit = calculateLimitAndShuffle(list, position);
             }
             return result;
