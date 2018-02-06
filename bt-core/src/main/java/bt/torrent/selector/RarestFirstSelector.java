@@ -21,6 +21,7 @@ import bt.torrent.PieceStatistics;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.PrimitiveIterator;
 import java.util.PriorityQueue;
@@ -138,8 +139,6 @@ public class RarestFirstSelector extends BaseStreamSelector {
     }
 
     private static class RandomizedIteratorOfInt implements PrimitiveIterator.OfInt {
-        private static final int SELECTION_MIN_SIZE = 10;
-
         private final List<Long> list;
         private final Random random;
         private int position;
@@ -148,80 +147,31 @@ public class RarestFirstSelector extends BaseStreamSelector {
         RandomizedIteratorOfInt(List<Long> list, Random random) {
             this.list = list;
             this.random = random;
-            this.limit = calculateLimitAndShuffle(list, 0);
-        }
-
-        /**
-         * Starting with a given position, iterates over elements of the list,
-         * while one of the following holds true:
-         * - each subsequent element's "count" is equal to the initial element's "count",
-         * - less than {@link #SELECTION_MIN_SIZE} elements were seen
-         *
-         * Shuffles the subrange of the list, starting with the initial element at {@code position}.
-         * Each group where all elements have the same "count" is shuffled separately.
-         *
-         * @return index of the first element in the list with "count" different from the initial element's "count"
-         *          or index of the element that is {@link #SELECTION_MIN_SIZE} positions ahead in the list
-         *          than the initial element, whichever is greater
-         * @see #getCount(long)
-         */
-        private int calculateLimitAndShuffle(List<Long> list, int position) {
-            if (position >= list.size()) {
-                return list.size();
-            }
-
-            int limit = position + 1;
-            int count = getCount(list.get(position));
-            int nextCount = count;
-
-            do {
-                while (limit < list.size() && (nextCount = getCount(list.get(limit))) == count) {
-                    limit++;
-                }
-                // shuffle elements with the same "count" only,
-                // because otherwise less available pieces may end up
-                // being swapped with more available pieces
-                // (i.e. pushed to the bottom of the queue)
-                shuffle(list, position, Math.min(limit, list.size()));
-
-                if (limit >= list.size()) {
-                    break;
-                } else {
-                    position = limit;
-                    count = nextCount;
-                }
-            } while (limit - position < SELECTION_MIN_SIZE);
-
-            return limit;
-        }
-
-        /**
-         * Shuffle a subrange of the given list, between 'begin' and 'end' (exclusively)
-         *
-         * @param begin index of the first element of the subrange
-         * @param end index of the first element after the last element of the subrange
-         */
-        private void shuffle(List<Long> list, int begin, int end) {
-            while (--end > begin) {
-                swap(list, end, begin + random.nextInt(end - begin));
-            }
-        }
-
-        private void swap(List<Long> list, int i, int j) {
-            if (i != j) {
-                Long temp = list.get(i);
-                list.set(i, list.get(j));
-                list.set(j, temp);
-            }
+            this.position = 0;
+            this.limit = 0;
         }
 
         @Override
         public int nextInt() {
-            int result = getPieceIndex(list.get(position++));
-            if (position == limit) {
-                limit = calculateLimitAndShuffle(list, position);
+            if (position >= list.size()) {
+                throw new NoSuchElementException();
             }
-            return result;
+            if (limit == position) {
+                final int count = getCount(list.get(position));
+                int limit = position + 1;
+                while (limit < list.size() && getCount(list.get(limit)) == count) {
+                    limit++;
+                }
+                this.limit = limit;
+            }
+            final int bound = limit - position;
+            if (bound >= 2) {
+                final int randomPosition = position + random.nextInt(bound);
+                if (position != randomPosition) {
+                    list.set(position, list.set(randomPosition, list.get(position)));
+                }
+            }
+            return getPieceIndex(list.get(position++));
         }
 
         @Override
