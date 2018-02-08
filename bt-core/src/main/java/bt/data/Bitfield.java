@@ -52,6 +52,12 @@ public class Bitfield {
     private final byte[] value;
 
     /**
+     * BitSet, where n-th bit
+     * indicates the availability of n-th piece.
+     */
+    private final BitSet bitSet;
+
+    /**
      * Total number of pieces in torrent.
      */
     private final int piecesTotal;
@@ -79,6 +85,7 @@ public class Bitfield {
         this.chunks = Optional.of(chunks);
         this.piecesTotal = chunks.size();
         this.value = new byte[getBitmaskLength(piecesTotal)];
+        this.bitSet = new BitSet(piecesTotal);
         this.piecesComplete = 0;
         this.lock = new ReentrantLock();
     }
@@ -112,10 +119,34 @@ public class Bitfield {
         }
 
         this.value = value;
+        //this.value = Arrays.copyOf(value, value.length);
+        this.bitSet = BitSet.valueOf(reverseBitOrder(value));
         this.chunks = Optional.empty();
         this.piecesTotal = piecesTotal;
         this.piecesComplete = getPiecesComplete(value);
+        //this.piecesComplete = bitSet.cardinality();
         this.lock = new ReentrantLock();
+    }
+
+    private static byte[] reverseBitOrder(byte[] value) {
+        final byte[] result = Arrays.copyOf(value, value.length);
+        for (int i = 0; i < result.length; ++i) {
+            result[i] = reverseBitOrder(result[i]);
+        }
+        return result;
+    }
+
+    private static byte reverseBitOrder(byte b) {
+        byte converted = b;
+        converted |= (b & 0b1000_0000) >> 7;
+        converted |= (b & 0b0100_0000) >> 5;
+        converted |= (b & 0b0010_0000) >> 3;
+        converted |= (b & 0b0001_0000) >> 1;
+        converted |= (b & 0b0000_1000) << 1;
+        converted |= (b & 0b0000_0100) << 3;
+        converted |= (b & 0b0000_0010) << 5;
+        converted |= (b & 0b0000_0001) << 7;
+        return (byte) (converted & 0xFF);
     }
 
     private static int getBitmaskLength(int piecesTotal) {
@@ -140,6 +171,17 @@ public class Bitfield {
             lock.unlock();
         }
     }
+
+    /**
+     * @return BitSet that describes status of all pieces.
+     *         If bit i is set to 1, then piece with index i
+     *         is in {@link PieceStatus#COMPLETE_VERIFIED} status.
+     * @since 1.7
+     */
+    public BitSet getBitSet() {
+        return (BitSet) bitSet.clone();
+    }
+
 
     /**
      * @return Total number of pieces in torrent.
@@ -181,6 +223,7 @@ public class Bitfield {
         lock.lock();
         try {
             verified = Protocols.getBit(value, pieceIndex) == 1;
+            //verified = bitSet.get(pieceIndex);
         } finally {
             lock.unlock();
         }
@@ -238,7 +281,10 @@ public class Bitfield {
         lock.lock();
         try {
             Protocols.setBit(value, pieceIndex);
+            bitSet.set(pieceIndex);
             piecesComplete = getPiecesComplete(value);
+            //piecesComplete = bitSet.cardinality();
+            //assert piecesComplete == bitSet.cardinality();
         } finally {
             lock.unlock();
         }

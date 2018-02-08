@@ -47,6 +47,8 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
      */
     private final AtomicLong uploadedToDisconnected;
 
+    private final BitSet pieces;
+
     private final TorrentDescriptor descriptor;
     private final TorrentWorker worker;
 
@@ -54,6 +56,7 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
         this.recentAmountsForConnectedPeers = new HashMap<>();
         this.downloadedFromDisconnected = new AtomicLong();
         this.uploadedToDisconnected = new AtomicLong();
+        this.pieces = new BitSet();
         this.descriptor = descriptor;
         this.worker = worker;
     }
@@ -78,28 +81,12 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
 
     @Override
     public BitSet getPieces() {
+        pieces.clear();
         if (descriptor.getDataDescriptor() != null) {
-            final byte[] bitmask = descriptor.getDataDescriptor().getBitfield().getBitmask();
-            for (int i = 0; i < bitmask.length; ++i) {
-                bitmask[i] = reverseBitOrder(bitmask[i]);
-            }
-            return BitSet.valueOf(bitmask);
-        } else {
-            return new BitSet();
+            final BitSet bitSet = descriptor.getDataDescriptor().getBitfield().getBitSet();
+            pieces.or(bitSet);
         }
-    }
-
-    private byte reverseBitOrder(byte b) {
-        byte converted = b;
-        converted |= (b & 0b1000_0000) >> 7;
-        converted |= (b & 0b0100_0000) >> 5;
-        converted |= (b & 0b0010_0000) >> 3;
-        converted |= (b & 0b0001_0000) >> 1;
-        converted |= (b & 0b0000_1000) << 1;
-        converted |= (b & 0b0000_0100) << 3;
-        converted |= (b & 0b0000_0010) << 5;
-        converted |= (b & 0b0000_0001) << 7;
-        return (byte) (converted & 0xFF);
+        return pieces;
     }
 
     @Override
