@@ -120,33 +120,12 @@ public class Bitfield {
 
         this.value = value;
         //this.value = Arrays.copyOf(value, value.length);
-        this.bitSet = BitSet.valueOf(reverseBitOrder(value));
+        this.bitSet = BitSet.valueOf(Protocols.reverseBitOrder(value));
         this.chunks = Optional.empty();
         this.piecesTotal = piecesTotal;
         this.piecesComplete = getPiecesComplete(value);
         //this.piecesComplete = bitSet.cardinality();
         this.lock = new ReentrantLock();
-    }
-
-    private static byte[] reverseBitOrder(byte[] value) {
-        final byte[] result = Arrays.copyOf(value, value.length);
-        for (int i = 0; i < result.length; ++i) {
-            result[i] = reverseBitOrder(result[i]);
-        }
-        return result;
-    }
-
-    private static byte reverseBitOrder(byte b) {
-        byte converted = b;
-        converted |= (b & 0b1000_0000) >> 7;
-        converted |= (b & 0b0100_0000) >> 5;
-        converted |= (b & 0b0010_0000) >> 3;
-        converted |= (b & 0b0001_0000) >> 1;
-        converted |= (b & 0b0000_1000) << 1;
-        converted |= (b & 0b0000_0100) << 3;
-        converted |= (b & 0b0000_0010) << 5;
-        converted |= (b & 0b0000_0001) << 7;
-        return (byte) (converted & 0xFF);
     }
 
     private static int getBitmaskLength(int piecesTotal) {
