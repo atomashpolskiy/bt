@@ -20,6 +20,7 @@ import bt.net.Peer;
 import bt.torrent.messaging.ConnectionState;
 import bt.torrent.messaging.TorrentWorker;
 
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -73,6 +74,32 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
         } else {
             return 1;
         }
+    }
+
+    @Override
+    public BitSet getPieces() {
+        if (descriptor.getDataDescriptor() != null) {
+            final byte[] bitmask = descriptor.getDataDescriptor().getBitfield().getBitmask();
+            for (int i = 0; i < bitmask.length; ++i) {
+                bitmask[i] = reverseBitOrder(bitmask[i]);
+            }
+            return BitSet.valueOf(bitmask);
+        } else {
+            return new BitSet();
+        }
+    }
+
+    private byte reverseBitOrder(byte b) {
+        byte converted = b;
+        converted |= (b & 0b1000_0000) >> 7;
+        converted |= (b & 0b0100_0000) >> 5;
+        converted |= (b & 0b0010_0000) >> 3;
+        converted |= (b & 0b0001_0000) >> 1;
+        converted |= (b & 0b0000_1000) << 1;
+        converted |= (b & 0b0000_0100) << 3;
+        converted |= (b & 0b0000_0010) << 5;
+        converted |= (b & 0b0000_0001) << 7;
+        return (byte) (converted & 0xFF);
     }
 
     @Override

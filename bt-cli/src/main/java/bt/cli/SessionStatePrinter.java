@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -197,9 +198,11 @@ public class SessionStatePrinter {
             double completePercents = getCompletePercentage(sessionState.getPiecesTotal(), sessionState.getPiecesRemaining());
             graphics.putString(0, 4, getProgressBar(completePercents));
 
+            graphics.putString(0, 5, getPiecesBar(sessionState.getPieces(), sessionState.getPiecesTotal()));
+
             boolean complete = (sessionState.getPiecesRemaining() == 0);
             if (complete) {
-                graphics.putString(0, 5, "Download is complete. Press Ctrl-C to stop seeding and exit.");
+                graphics.putString(0, 6, "Download is complete. Press Ctrl-C to stop seeding and exit.");
             }
 
             // might use RefreshType.DELTA, but it does not tolerate resizing of the window
@@ -265,6 +268,46 @@ public class SessionStatePrinter {
         char[] chars = new char[(int) (completeInt * shrinkFactor)];
         Arrays.fill(chars, '#');
         return String.format(s, String.valueOf(chars), completeInt);
+    }
+
+    private static final char[] CHARS = {' ', 'o', 'O', '#'};
+
+    private String getPiecesBar(BitSet pieces, int length) {
+        final int width = graphics.getSize().getColumns() - 25;
+        if (width < 0) {
+            return String.format("Pieces: %d / %d", pieces.cardinality(), length);
+        }
+        final char[] chars = new char[width];
+        for (int i = 0; i < width; ++i) {
+            final int head = i * length / width;
+            final int tail = (i + 1) * length / width;
+            final boolean includeTail = head == tail || (i + 1) * length % width > 0;
+            int emptyCount = 0;
+            int fullCount = 0;
+            for (int bit = head; bit < tail; ++bit) {
+                if (pieces.get(bit)) {
+                    fullCount++;
+                } else {
+                    emptyCount++;
+                }
+            }
+            if (includeTail) {
+                if (pieces.get(tail)) {
+                    fullCount++;
+                } else {
+                    emptyCount++;
+                }
+            }
+            final int totalCount = emptyCount + fullCount;
+            assert totalCount > 0;
+            int c = fullCount * (CHARS.length - 1) / totalCount;
+            if (c == 0 && fullCount > 0) {
+                assert CHARS.length >= 2;
+                c = 1;
+            }
+            chars[i] = CHARS[c];
+        }
+        return String.format("Pieces:   [%s] %d", String.valueOf(chars), pieces.cardinality());
     }
 
     private double getCompletePercentage(int total, int remaining) {

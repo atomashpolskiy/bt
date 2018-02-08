@@ -18,6 +18,7 @@ package bt.torrent;
 
 import bt.net.Peer;
 
+import java.util.BitSet;
 import java.util.Set;
 
 /**
@@ -38,6 +39,19 @@ public interface TorrentSessionState {
      * @since 1.0
      */
     int getPiecesRemaining();
+
+    /**
+     * @return BitSet of pieces, that status is {@link bt.data.Bitfield.PieceStatus#COMPLETE_VERIFIED}
+     * @see bt.data.Bitfield.PieceStatus
+     * @since 1.7
+     */
+    default BitSet getPieces() {
+        final int piecesTotal = getPiecesTotal();
+        final int piecesRemaining = getPiecesRemaining();
+        final BitSet result = new BitSet(piecesTotal);
+        result.flip(0, piecesTotal - piecesRemaining);
+        return result;
+    }
 
     /**
      * @return Amount of data downloaded via this session (in bytes)
