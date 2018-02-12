@@ -128,6 +128,8 @@ public class DefaultChunkVerifier implements ChunkVerifier {
                 // optimization to speedup the initial verification of torrent's data
                 int[] emptyUnits = new int[]{0};
                 chunks[i].getData().visitUnits((u, off, lim) -> {
+                    // limit of 0 means an empty file,
+                    // and we don't want to account for those
                     if (u.size() == 0 && lim != 0) {
                         emptyUnits[0]++;
                     }
