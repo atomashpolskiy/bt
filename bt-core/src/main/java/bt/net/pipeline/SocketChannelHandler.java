@@ -62,11 +62,11 @@ public class SocketChannelHandler implements ChannelHandler {
 
     @Override
     public boolean send(Message message) {
-        boolean encoded = context.pipeline().encode(message);
-        if (encoded) {
-            flush();
+        boolean success = context.pipeline().encode(message);
+        if (success) {
+            success = flush();
         }
-        return encoded;
+        return success;
     }
 
     @Override
@@ -142,13 +142,18 @@ public class SocketChannelHandler implements ChannelHandler {
     }
 
     @Override
-    public void flush() {
+    public boolean flush() {
         synchronized (outboundBufferLock) {
             ByteBuffer buffer = outboundBuffer.lockAndGet();
+            if (buffer == null) {
+                // buffer has been released
+                return false;
+            }
             try {
                 while (buffer.hasRemaining() && channel.write(buffer) > 0)
                     ;
                 outboundBuffer.unlock();
+                return true;
             } catch (IOException e) {
                 outboundBuffer.unlock(); // can't use finally block due to possibility of double-unlock
                 shutdown();

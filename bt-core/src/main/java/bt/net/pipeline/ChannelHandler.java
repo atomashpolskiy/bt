@@ -67,9 +67,10 @@ public interface ChannelHandler {
     /**
      * Request to write pending outgoing data to the underlying channel.
      *
+     * @return true, if the message has been flushed
      * @since 1.6
      */
-    void flush();
+    boolean flush();
 
     /**
      * Request to close.
