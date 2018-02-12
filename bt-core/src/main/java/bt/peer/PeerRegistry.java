@@ -36,6 +36,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -187,10 +188,14 @@ public class PeerRegistry implements IPeerRegistry {
         try {
             if (peerSource.update()) {
                 Collection<Peer> discoveredPeers = peerSource.getPeers();
+                final Set<Peer> addedPeers = new HashSet<>();
                 Iterator<Peer> iter = discoveredPeers.iterator();
                 while (iter.hasNext()) {
                     Peer peer = iter.next();
-                    addPeer(torrentId, peer);
+                    if (!addedPeers.contains(peer)) {
+                        addPeer(torrentId, peer);
+                        addedPeers.add(peer);
+                    }
                     iter.remove();
                 }
             }
