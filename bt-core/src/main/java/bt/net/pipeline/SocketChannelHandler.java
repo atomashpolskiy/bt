@@ -133,6 +133,7 @@ public class SocketChannelHandler implements ChannelHandler {
                     context.fireDataReceived();
                 }
                 if (readLast == -1) {
+                    // sometimes occurs when local and remote peer both are seeds
                     throw new EOFException();
                 }
             } finally {

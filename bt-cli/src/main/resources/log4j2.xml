@@ -2,10 +2,10 @@
 <configuration status="warn" shutdownHook="disable">
     <appenders>
         <File name="bt-core" append="false" fileName="bt.log">
-            <PatternLayout pattern="[%d{dd/MMM/yyyy:HH:mm:ss,SSS}] %-5p %c{1}: %m%n%ex"/>
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p %22X{remoteAddress} | [%t] %c{1}:%L - %m%n%ex"/>
         </File>
         <File name="bt-dht" append="false" fileName="bt-dht.log">
-            <PatternLayout pattern="[%d{dd/MMM/yyyy:HH:mm:ss,SSS}] %-5p %c{1}: %m%n%ex"/>
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p [%t] %c{1}:%L - %m%n%ex"/>
         </File>
         <Async name="A1" bufferSize="1000">
             <appender-ref ref="bt-core"/>

@@ -17,6 +17,7 @@
 package bt.peer;
 
 import bt.event.EventSink;
+import bt.logging.MDCWrapper;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
@@ -204,8 +205,10 @@ public class PeerRegistry implements IPeerRegistry {
         if (isLocal(peer)) {
             return;
         }
-        cache.store(peer);
-        eventSink.firePeerDiscovered(torrentId, peer);
+        new MDCWrapper().putRemoteAddress(peer).run(() -> {
+            cache.store(peer);
+            eventSink.firePeerDiscovered(torrentId, peer);
+        });
     }
 
     @Override
