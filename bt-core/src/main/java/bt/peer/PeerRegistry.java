@@ -188,7 +188,7 @@ public class PeerRegistry implements IPeerRegistry {
         try {
             if (peerSource.update()) {
                 Collection<Peer> discoveredPeers = peerSource.getPeers();
-                final Set<Peer> addedPeers = new HashSet<>();
+                Set<Peer> addedPeers = new HashSet<>();
                 Iterator<Peer> iter = discoveredPeers.iterator();
                 while (iter.hasNext()) {
                     Peer peer = iter.next();
