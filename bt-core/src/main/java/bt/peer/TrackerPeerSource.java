@@ -37,17 +37,20 @@ class TrackerPeerSource extends ScheduledPeerSource {
     private Duration trackerQueryInterval;
 
     private volatile long lastRefreshed;
+    private volatile Duration trackerPreferredInterval;
 
     TrackerPeerSource(ExecutorService executor, Tracker tracker, TorrentId torrentId, Duration trackerQueryInterval) {
         super(executor);
         this.tracker = tracker;
         this.torrentId = torrentId;
         this.trackerQueryInterval = trackerQueryInterval;
+        this.trackerPreferredInterval = trackerQueryInterval;
     }
 
     @Override
     protected void collectPeers(Consumer<Peer> peerConsumer) {
-        if (System.currentTimeMillis() - lastRefreshed >= trackerQueryInterval.toMillis()) {
+        final long interval = System.currentTimeMillis() - lastRefreshed;
+        if (interval >= trackerQueryInterval.toMillis() && interval >= trackerPreferredInterval.toMillis()) {
             TrackerResponse response;
             try {
                 // TODO: report stats
@@ -56,6 +59,7 @@ class TrackerPeerSource extends ScheduledPeerSource {
                 lastRefreshed = System.currentTimeMillis();
             }
             if (response.isSuccess()) {
+                trackerPreferredInterval = Duration.ofSeconds(response.getInterval());
                 response.getPeers().forEach(peerConsumer::accept);
             } else {
                 if (response.getError().isPresent()) {

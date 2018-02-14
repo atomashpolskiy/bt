@@ -22,6 +22,7 @@ import bt.peer.ScheduledPeerSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -37,24 +38,32 @@ public class DHTPeerSource extends ScheduledPeerSource {
 
     private final TorrentId torrentId;
     private final DHTService dhtService;
+    private final Duration queryInterval;
+
+    private volatile long lastRefreshed;
 
     DHTPeerSource(TorrentId torrentId, DHTService dhtService, ExecutorService executor) {
         super(executor);
         this.torrentId = torrentId;
         this.dhtService = dhtService;
+        this.queryInterval = Duration.ofMinutes(5);
     }
 
     @Override
     protected void collectPeers(Consumer<Peer> peerConsumer) {
-        Stream<Peer> peerStream = dhtService.getPeers(torrentId).limit(MAX_PEERS_PER_COLLECTION);
-        peerStream.forEach(peer -> {
-            peerConsumer.accept(peer);
+        final long interval = System.currentTimeMillis() - lastRefreshed;
+        if (interval >= queryInterval.toMillis()) {
+            Stream<Peer> peerStream = dhtService.getPeers(torrentId)/*.limit(MAX_PEERS_PER_COLLECTION)*/;
+            peerStream.forEach(peer -> {
+                peerConsumer.accept(peer);
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace(String.format("Collected new peer (torrent ID: %s, peer: %s)", torrentId, peer));
+                }
+            });
+            lastRefreshed = System.currentTimeMillis();
             if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace(String.format("Collected new peer (torrent ID: %s, peer: %s)", torrentId, peer));
+                LOGGER.info("Peer collection finished for torrent ID: " + torrentId);
             }
-        });
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.info("Peer collection finished for torrent ID: " + torrentId);
         }
     }
 }
