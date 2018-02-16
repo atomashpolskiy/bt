@@ -413,7 +413,7 @@ public class TorrentWorker {
     private synchronized void onPeerDiscovered(Peer peer) {
         // TODO: Store discovered peers to use them later,
         // when some of the currently connected peers disconnects
-        if (mightAddPeer(peer)) {
+        if (mightAddPeer(peer) && !isCompleted()) {
             connectionSource.getConnectionAsync(peer, torrentId);
         }
     }
@@ -426,6 +426,11 @@ public class TorrentWorker {
 
     private boolean mightAddPeer(Peer peer) {
         return getPeers().size() < MAX_TOTAL_CONNECTIONS && !getPeers().contains(peer);
+    }
+
+    private boolean isCompleted() {
+        final Bitfield bitfield = getBitfield();
+        return bitfield != null && bitfield.getPiecesRemaining() == 0;
     }
 
     private synchronized void onPeerDisconnected(Peer peer) {
