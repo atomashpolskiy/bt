@@ -16,6 +16,7 @@
 
 package bt.net;
 
+import bt.logging.MDCWrapper;
 import bt.module.PeerConnectionSelector;
 import bt.net.pipeline.ChannelHandlerContext;
 import bt.service.IRuntimeLifecycleBinder;
@@ -24,10 +25,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.Socket;
+import java.net.SocketAddress;
 import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -120,19 +125,23 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
 
                 Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
                 while (selectedKeys.hasNext()) {
-                    try {
-                        // do not remove the key if it hasn't been processed,
-                        // we'll try again in the next loop iteration
-                        if (processKey(selectedKeys.next())) {
+                    final SelectionKey selectionKey = selectedKeys.next();
+                    final SocketAddress remoteSocketAddress = getSocketAddress(selectionKey);
+                    new MDCWrapper().putRemoteAddress(remoteSocketAddress).run(() -> {
+                        try {
+                            // do not remove the key if it hasn't been processed,
+                            // we'll try again in the next loop iteration
+                            if (processKey(selectionKey)) {
+                                selectedKeys.remove();
+                            }
+                        } catch (ClosedSelectorException e) {
+                            // selector has been closed, there's no point to continue processing
+                            throw e;
+                        } catch (Exception e) {
+                            LOGGER.error("Failed to process key", e);
                             selectedKeys.remove();
                         }
-                    } catch (ClosedSelectorException e) {
-                        // selector has been closed, there's no point to continue processing
-                        throw e;
-                    } catch (Exception e) {
-                        LOGGER.error("Failed to process key", e);
-                        selectedKeys.remove();
-                    }
+                    });
                 }
             } catch (ClosedSelectorException e) {
                 LOGGER.info("Selector has been closed, will stop receiving messages...");
@@ -141,6 +150,16 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
                 throw new RuntimeException("Unexpected I/O exception when selecting peer connections", e);
             }
         }
+    }
+
+    private SocketAddress getSocketAddress(SelectionKey selectionKey) {
+        return Optional
+                .of(selectionKey.channel())
+                .map(channel -> SocketChannel.class.isAssignableFrom(channel.getClass()) //br
+                        ? SocketChannel.class.cast(channel) : null)
+                .map(SocketChannel::socket)
+                .map(Socket::getRemoteSocketAddress)
+                .orElse(null);
     }
 
     /**

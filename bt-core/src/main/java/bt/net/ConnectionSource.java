@@ -17,6 +17,7 @@
 package bt.net;
 
 import bt.CountingThreadFactory;
+import bt.logging.MDCWrapper;
 import bt.metainfo.TorrentId;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
@@ -124,7 +125,7 @@ public class ConnectionSource implements IConnectionSource {
                 return connection;
             }
 
-            connection = CompletableFuture.supplyAsync(() -> {
+            connection = CompletableFuture.supplyAsync(() -> new MDCWrapper().putRemoteAddress(peer).supply(() -> {
                 try {
                     ConnectionResult connectionResult =
                             connectionFactory.createOutgoingConnection(peer, torrentId);
@@ -143,7 +144,7 @@ public class ConnectionSource implements IConnectionSource {
                         pendingConnections.remove(peer);
                     }
                 }
-            }, connectionExecutor).whenComplete((acquiredConnection, throwable) -> {
+            }), connectionExecutor).whenComplete((acquiredConnection, throwable) -> {
                 if (acquiredConnection == null || throwable != null) {
                     if (LOGGER.isDebugEnabled()) {
                         LOGGER.debug("Peer is unreachable: {}. Will prevent further attempts to establish connection.", peer);

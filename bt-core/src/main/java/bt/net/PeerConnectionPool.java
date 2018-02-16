@@ -18,6 +18,7 @@ package bt.net;
 
 import bt.CountingThreadFactory;
 import bt.event.EventSink;
+import bt.logging.MDCWrapper;
 import bt.metainfo.TorrentId;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
@@ -151,15 +152,17 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 connections.visitConnections(connection -> {
                     Peer peer = connection.getRemotePeer();
                     if (connection.isClosed()) {
-                        purgeConnectionWithPeer(peer);
-
+                        new MDCWrapper().putRemoteAddress(peer).run(() -> {
+                            purgeConnectionWithPeer(peer);
+                        });
                     } else if (System.currentTimeMillis() - connection.getLastActive()
                             >= peerConnectionInactivityThreshold.toMillis()) {
-
-                        if (LOGGER.isDebugEnabled()) {
-                            LOGGER.debug("Removing inactive peer connection: {}", peer);
-                        }
-                        purgeConnectionWithPeer(peer);
+                        new MDCWrapper().putRemoteAddress(peer).run(() -> {
+                            if (LOGGER.isDebugEnabled()) {
+                                LOGGER.debug("Removing inactive peer connection: {}", peer);
+                            }
+                            purgeConnectionWithPeer(peer);
+                        });
                     }
                     // can send keep-alives here based on lastActiveTime
                 });

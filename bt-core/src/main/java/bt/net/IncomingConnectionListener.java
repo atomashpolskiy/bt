@@ -17,6 +17,7 @@
 package bt.net;
 
 import bt.CountingThreadFactory;
+import bt.logging.MDCWrapper;
 import bt.runtime.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +54,8 @@ public class IncomingConnectionListener {
     public void startup() {
         connectionAcceptors.forEach(acceptor ->
                 executor.submit(() -> {
-                    ConnectionRoutine connectionRoutine;
-
                     while (!shutdown) {
+                        final ConnectionRoutine connectionRoutine;
                         try {
                             connectionRoutine = acceptor.accept();
                         } catch (Exception e) {
@@ -63,34 +63,42 @@ public class IncomingConnectionListener {
                             return;
                         }
 
-                        if (mightAddConnection()) {
-                            establishConnection(connectionRoutine);
-                        } else {
-                            if (LOGGER.isDebugEnabled()) {
-                                LOGGER.debug("Rejecting incoming connection from {} due to exceeding of connections limit",
-                                        connectionRoutine.getRemoteAddress());
-                            }
-                            connectionRoutine.cancel();
-                        }
+                        new MDCWrapper()
+                                .putRemoteAddress(connectionRoutine.getRemoteAddress())
+                                .run(() -> {
+                                    if (mightAddConnection()) {
+                                        establishConnection(connectionRoutine);
+                                    } else {
+                                        if (LOGGER.isDebugEnabled()) {
+                                            LOGGER.debug(
+                                                    "Rejecting incoming connection from {} due to exceeding of connections limit",
+                                                    connectionRoutine.getRemoteAddress()
+                                            );
+                                        }
+                                        connectionRoutine.cancel();
+                                    }
+                                });
                     }}));
     }
 
     private void establishConnection(ConnectionRoutine connectionRoutine) {
-        connectionExecutor.submit(() -> {
-            boolean added = false;
-            if (!shutdown) {
-                ConnectionResult connectionResult = connectionRoutine.establish();
-                if (connectionResult.isSuccess()) {
-                    if (!shutdown && mightAddConnection()) {
-                        connectionPool.addConnectionIfAbsent(connectionResult.getConnection());
-                        added = true;
+        connectionExecutor.submit(() -> new MDCWrapper()
+                .putRemoteAddress(connectionRoutine.getRemoteAddress())
+                .run(() -> {
+                    boolean added = false;
+                    if (!shutdown) {
+                        ConnectionResult connectionResult = connectionRoutine.establish();
+                        if (connectionResult.isSuccess()) {
+                            if (!shutdown && mightAddConnection()) {
+                                connectionPool.addConnectionIfAbsent(connectionResult.getConnection());
+                                added = true;
+                            }
+                        }
                     }
-                }
-            }
-            if (!added) {
-                connectionRoutine.cancel();
-            }
-        });
+                    if (!added) {
+                        connectionRoutine.cancel();
+                    }
+                }));
     }
 
     private boolean mightAddConnection() {

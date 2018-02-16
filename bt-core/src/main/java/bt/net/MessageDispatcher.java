@@ -16,6 +16,7 @@
 
 package bt.net;
 
+import bt.logging.MDCWrapper;
 import bt.protocol.Message;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
@@ -23,6 +24,7 @@ import bt.torrent.TorrentRegistry;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.util.Collection;
 import java.util.Map;
@@ -93,68 +95,80 @@ public class MessageDispatcher implements IMessageDispatcher {
         public void run() {
             while (!shutdown) {
                 if (!consumers.isEmpty()) {
-                    outer:
-                    for (Map.Entry<Peer, Collection<Consumer<Message>>> entry : consumers.entrySet()) {
-                        Peer peer = entry.getKey();
-                        Collection<Consumer<Message>> consumers = entry.getValue();
+                    try {
+                        outer:
+                        for (Map.Entry<Peer, Collection<Consumer<Message>>> entry : consumers.entrySet()) {
+                            Peer peer = entry.getKey();
+                            Collection<Consumer<Message>> consumers = entry.getValue();
 
-                        PeerConnection connection = pool.getConnection(peer);
-                        if (connection != null && !connection.isClosed()) {
-                            if (torrentRegistry.isSupportedAndActive(connection.getTorrentId())) {
-                                Message message;
-                                for (;;) {
-                                    try {
-                                        message = connection.readMessageNow();
-                                    } catch (Exception e) {
-                                        LOGGER.error("Error when reading message from peer connection: " + peer, e);
-                                        continue outer;
-                                    }
+                            MDC.put(MDCWrapper.REMOTE_ADDRESS, String.valueOf(peer));
 
-                                    if (message != null) {
-                                        loopControl.incrementProcessed();
-                                        for (Consumer<Message> consumer : consumers) {
-                                            try {
-                                                consumer.accept(message);
-                                            } catch (Exception e) {
-                                                LOGGER.warn("Error in message consumer", e);
-                                            }
+                            PeerConnection connection = pool.getConnection(peer);
+                            if (connection != null && !connection.isClosed()) {
+                                if (torrentRegistry.isSupportedAndActive(connection.getTorrentId())) {
+                                    Message message;
+                                    for (; ; ) {
+                                        try {
+                                            message = connection.readMessageNow();
+                                        } catch (Exception e) {
+                                            LOGGER.error("Error when reading message from peer connection: " + peer, e);
+                                            continue outer;
                                         }
-                                    } else {
-                                        continue outer;
+
+                                        if (message != null) {
+                                            loopControl.incrementProcessed();
+                                            for (Consumer<Message> consumer : consumers) {
+                                                try {
+                                                    consumer.accept(message);
+                                                } catch (Exception e) {
+                                                    LOGGER.warn("Error in message consumer", e);
+                                                }
+                                            }
+                                        } else {
+                                            continue outer;
+                                        }
                                     }
                                 }
                             }
                         }
+                    } finally {
+                        MDC.remove(MDCWrapper.REMOTE_ADDRESS);
                     }
                 }
 
                 if (!suppliers.isEmpty()) {
-                    for (Map.Entry<Peer, Collection<Supplier<Message>>> entry : suppliers.entrySet()) {
-                        Peer peer = entry.getKey();
-                        Collection<Supplier<Message>> suppliers = entry.getValue();
+                    try {
+                        for (Map.Entry<Peer, Collection<Supplier<Message>>> entry : suppliers.entrySet()) {
+                            Peer peer = entry.getKey();
+                            Collection<Supplier<Message>> suppliers = entry.getValue();
 
-                        PeerConnection connection = pool.getConnection(peer);
-                        if (connection != null && !connection.isClosed()) {
-                            if (torrentRegistry.isSupportedAndActive(connection.getTorrentId())) {
-                                for (Supplier<Message> messageSupplier : suppliers) {
-                                    Message message = null;
-                                    try {
-                                        message = messageSupplier.get();
-                                    } catch (Exception e) {
-                                        LOGGER.warn("Error in message supplier", e);
-                                    }
+                            MDC.put(MDCWrapper.REMOTE_ADDRESS, String.valueOf(peer));
 
-                                    if (message != null) {
-                                        loopControl.incrementProcessed();
+                            PeerConnection connection = pool.getConnection(peer);
+                            if (connection != null && !connection.isClosed()) {
+                                if (torrentRegistry.isSupportedAndActive(connection.getTorrentId())) {
+                                    for (Supplier<Message> messageSupplier : suppliers) {
+                                        Message message = null;
                                         try {
-                                            connection.postMessage(message);
+                                            message = messageSupplier.get();
                                         } catch (Exception e) {
-                                            LOGGER.error("Error when writing message", e);
+                                            LOGGER.warn("Error in message supplier", e);
+                                        }
+
+                                        if (message != null) {
+                                            loopControl.incrementProcessed();
+                                            try {
+                                                connection.postMessage(message);
+                                            } catch (Exception e) {
+                                                LOGGER.error("Error when writing message", e);
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                    } finally {
+                        MDC.remove(MDCWrapper.REMOTE_ADDRESS);
                     }
                 }
 
