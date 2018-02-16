@@ -157,8 +157,11 @@ class UdpTracker implements Tracker {
 
     @Override
     public String toString() {
+        final String trackerUrl = this.trackerUrl.toString().replace("http://", "udp://");
+        final String query = this.trackerUrl.getQuery();
+        final String maskedTrackerUrl = query == null ? trackerUrl : trackerUrl.replace(query, "{hidden}");
         return "UdpTracker{" +
-                "trackerUrl=" + trackerUrl +
+                "trackerUrl=" + maskedTrackerUrl +
                 '}';
     }
 }

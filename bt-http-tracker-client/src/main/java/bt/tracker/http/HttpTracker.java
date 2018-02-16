@@ -144,8 +144,10 @@ public class HttpTracker implements Tracker {
         HttpGet request = new HttpGet(requestUri);
         try {
             if (LOGGER.isDebugEnabled()) {
+                final String query = baseUri.getQuery();
+                final String maskedRequestUri = query == null ? requestUri : requestUri.replace(query, "{hidden}");
                 LOGGER.debug("Executing tracker HTTP request of type " + eventType.name() +
-                        "; request URL: " + requestUri.replace(baseUri.getQuery(), "{hidden}"));
+                        "; request URL: " + maskedRequestUri);
             }
             return httpClient.execute(request, httpResponseHandler);
         } catch (IOException e) {
