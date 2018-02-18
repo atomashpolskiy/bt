@@ -74,11 +74,13 @@ public class TorrentId {
 
     @Override
     public boolean equals(Object obj) {
-
+        if (obj == this) {
+            return true;
+        }
         if (obj == null || !TorrentId.class.isAssignableFrom(obj.getClass())) {
             return false;
         }
-        return (obj == this) || Arrays.equals(torrentId, ((TorrentId) obj).getBytes());
+        return Arrays.equals(torrentId, ((TorrentId) obj).getBytes());
     }
 
     @Override

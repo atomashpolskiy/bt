@@ -13,6 +13,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * Randomized rarest-first selector behaves like a sequential selector when peers are seeds #53
 * Empty files should not prevent successful verification of torrent's data
 * NPE in DefaultChannelPipeline when there are unprocessed leftovers from MSE handshake #57
+* Incorrect behavior when the same peer participates in more than one torrent #67
 
 ## 1.6
 

@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -77,8 +78,13 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     }
 
     @Override
-    public PeerConnection getConnection(Peer peer) {
-        return connections.get(peer).orElse(null);
+    public PeerConnection getConnection(Peer peer, TorrentId torrentId) {
+        return connections.get(peer, torrentId).orElse(null);
+    }
+
+    @Override
+    public PeerConnection getConnection(ConnectionKey key) {
+        return connections.get(key).orElse(null);
     }
 
     @Override
@@ -94,9 +100,11 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     @Override
     public PeerConnection addConnectionIfAbsent(PeerConnection newConnection) {
         Peer peer = newConnection.getRemotePeer();
+        TorrentId torrentId = newConnection.getTorrentId();
+
         if (!addConnection(newConnection)) {
             // check if it was already added simultaneously by another connection worker
-            PeerConnection existingConnection = connections.get(peer)
+            PeerConnection existingConnection = connections.get(peer, torrentId)
                     .orElseThrow(() -> new RuntimeException("Failed to add new connection for peer: " + peer));
             if (existingConnection == null) {
                 throw new RuntimeException("Failed to add new connection for peer: " + newConnection.getRemotePeer());
@@ -119,7 +127,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 }
                 newConnection.closeQuietly();
             } else {
-                existingConnection = connections.putIfAbsent(newConnection.getRemotePeer(), newConnection);
+                existingConnection = connections.putIfAbsent(newConnection);
                 added = (existingConnection == null);
             }
         } finally {
@@ -149,17 +157,16 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             cleanerLock.lock();
             try {
                 connections.visitConnections(connection -> {
-                    Peer peer = connection.getRemotePeer();
                     if (connection.isClosed()) {
-                        purgeConnectionWithPeer(peer);
+                        purgeConnection(connection);
 
                     } else if (System.currentTimeMillis() - connection.getLastActive()
                             >= peerConnectionInactivityThreshold.toMillis()) {
 
                         if (LOGGER.isDebugEnabled()) {
-                            LOGGER.debug("Removing inactive peer connection: {}", peer);
+                            LOGGER.debug("Removing inactive peer connection: {}", connection.getRemotePeer());
                         }
-                        purgeConnectionWithPeer(peer);
+                        purgeConnection(connection);
                     }
                     // can send keep-alives here based on lastActiveTime
                 });
@@ -170,14 +177,10 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         }
     }
 
-    private void purgeConnectionWithPeer(Peer peer) {
-        PeerConnection purged = connections.remove(peer);
-        if (purged != null) {
-            if (!purged.isClosed()) {
-                purged.closeQuietly();
-            }
-            eventSink.firePeerDisconnected(purged.getTorrentId(), peer);
-        }
+    private void purgeConnection(PeerConnection connection) {
+        connections.remove(connection);
+        connection.closeQuietly();
+        eventSink.firePeerDisconnected(connection.getTorrentId(), connection.getRemotePeer());
     }
 
     private void shutdown() {
@@ -196,55 +199,71 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             cleaner.shutdownNow();
         }
     }
+}
 
-    private static class Connections {
-        private ConcurrentMap<Peer, PeerConnection> connections;
-        private ConcurrentMap<TorrentId, Collection<PeerConnection>> connectionsByTorrent;
+class Connections {
+    private ConcurrentMap<ConnectionKey, PeerConnection> connections;
+    private ConcurrentMap<TorrentId, Collection<PeerConnection>> connectionsByTorrent;
 
-        Connections() {
-            this.connections = new ConcurrentHashMap<>();
-            this.connectionsByTorrent = new ConcurrentHashMap<>();
-        }
+    Connections() {
+        this.connections = new ConcurrentHashMap<>();
+        this.connectionsByTorrent = new ConcurrentHashMap<>();
+    }
 
-        int count() {
-            return connections.size();
-        }
+    int count() {
+        return connections.size();
+    }
 
-        synchronized PeerConnection remove(Peer peer) {
-            PeerConnection removed = connections.remove(peer);
-            if (removed != null) {
-                connectionsByTorrent.values().forEach(connections -> {
-                    connections.remove(removed);
-                    if (connections.isEmpty()) {
-                        connectionsByTorrent.remove(removed.getTorrentId());
-                    }
-                });
+    synchronized boolean remove(PeerConnection connection) {
+        Objects.requireNonNull(connection);
+
+        Peer peer = connection.getRemotePeer();
+        TorrentId torrentId = connection.getTorrentId();
+        ConnectionKey key = new ConnectionKey(peer, torrentId);
+
+        PeerConnection removed = connections.remove(key);
+        boolean success = (removed == connection);
+        if (success) {
+            Collection<PeerConnection> torrentConnections = connectionsByTorrent.get(torrentId);
+            torrentConnections.remove(removed);
+            if (torrentConnections.isEmpty()) {
+                connectionsByTorrent.remove(torrentId);
             }
-            return removed;
         }
+        return success;
+    }
 
-        synchronized PeerConnection putIfAbsent(Peer peer, PeerConnection connection) {
-            PeerConnection existing = connections.putIfAbsent(peer, connection);
-            TorrentId torrentId = connection.getTorrentId();
-            if (existing == null && torrentId != null) {
-                connectionsByTorrent.computeIfAbsent(torrentId, id -> ConcurrentHashMap.newKeySet()).add(connection);
-            }
-            return existing;
+    synchronized PeerConnection putIfAbsent(PeerConnection connection) {
+        Objects.requireNonNull(connection);
+
+        Peer peer = connection.getRemotePeer();
+        TorrentId torrentId = connection.getTorrentId();
+        ConnectionKey key = new ConnectionKey(peer, torrentId);
+
+        PeerConnection existing = connections.putIfAbsent(key, connection);
+        if (existing == null) {
+            connectionsByTorrent.computeIfAbsent(torrentId, id -> ConcurrentHashMap.newKeySet())
+                    .add(connection);
         }
+        return existing;
+    }
 
-        Optional<PeerConnection> get(Peer peer) {
-            return Optional.ofNullable(connections.get(peer));
-        }
+    Optional<PeerConnection> get(Peer peer, TorrentId torrentId) {
+        return get(new ConnectionKey(peer, torrentId));
+    }
 
-        void visitConnections(Consumer<PeerConnection> visitor) {
-            connections.values().forEach(visitor::accept);
-        }
+    Optional<PeerConnection> get(ConnectionKey key) {
+        return Optional.ofNullable(connections.get(key));
+    }
 
-        void visitConnections(TorrentId torrentId, Consumer<PeerConnection> visitor) {
-            Collection<PeerConnection> connections = connectionsByTorrent.get(torrentId);
-            if (connections != null) {
-                connections.forEach(visitor::accept);
-            }
+    void visitConnections(Consumer<PeerConnection> visitor) {
+        connections.values().forEach(visitor::accept);
+    }
+
+    void visitConnections(TorrentId torrentId, Consumer<PeerConnection> visitor) {
+        Collection<PeerConnection> connections = connectionsByTorrent.get(torrentId);
+        if (connections != null) {
+            connections.forEach(visitor::accept);
         }
     }
 }

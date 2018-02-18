@@ -140,8 +140,8 @@ public class TorrentWorker {
         PieceAnnouncingPeerWorker worker = createPeerWorker(peer);
         PieceAnnouncingPeerWorker existing = peerMap.putIfAbsent(peer, worker);
         if (existing == null) {
-            dispatcher.addMessageConsumer(peer, message -> consume(peer, message));
-            dispatcher.addMessageSupplier(peer, () -> produce(peer));
+            dispatcher.addMessageConsumer(torrentId, peer, message -> consume(peer, message));
+            dispatcher.addMessageSupplier(torrentId, peer, () -> produce(peer));
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Added connection for peer: " + peer);
             }

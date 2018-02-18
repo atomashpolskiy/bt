@@ -28,10 +28,16 @@ import java.util.function.Consumer;
 public interface IPeerConnectionPool {
 
     /**
-     * @return Connection for a given peer, if exists; null otherwise
-     * @since 1.0
+     * @return Connection for given peer and torrent, if exists; null otherwise
+     * @since 1.7
      */
-    PeerConnection getConnection(Peer peer);
+    PeerConnection getConnection(Peer peer, TorrentId torrentId);
+
+    /**
+     * @return Connection for given connection key, if exists; null otherwise
+     * @since 1.7
+     */
+    PeerConnection getConnection(ConnectionKey key);
 
     /**
      * Visit connections for a given torrent ID.
