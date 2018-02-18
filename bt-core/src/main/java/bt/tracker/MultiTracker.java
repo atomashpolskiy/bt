@@ -126,7 +126,8 @@ class MultiTracker implements Tracker {
                         responses.add(response);
 
                         if (response.isSuccess()) {
-                            if (trackerTier.size() > 1) {
+                            if (trackerTier.size() > 1
+                                    && i != 0) {
                                 trackerTier.remove(i);
                                 trackerTier.add(0, currentTracker);
                             }
