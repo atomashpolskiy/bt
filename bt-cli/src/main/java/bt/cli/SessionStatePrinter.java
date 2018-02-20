@@ -59,6 +59,12 @@ public class SessionStatePrinter {
                 t = new Thread(() -> {
                     while (!isShutdown()) {
                         try {
+                            // don't intercept input when paused
+                            if (super.supressOutput) {
+                                Thread.sleep(1000);
+                                continue;
+                            }
+
                             KeyStroke keyStroke = readKeyInput();
                             if (keyStroke.isCtrlDown() && keyStroke.getKeyType() == KeyType.Character
                                     && keyStroke.getCharacter().equals('c')) {
@@ -95,6 +101,7 @@ public class SessionStatePrinter {
     private Screen screen;
     private TextGraphics graphics;
 
+    private volatile boolean supressOutput;
     private volatile boolean shutdown;
 
     private Optional<Torrent> torrent;
@@ -111,7 +118,7 @@ public class SessionStatePrinter {
             screen = new TerminalScreen(terminal);
             graphics = screen.newTextGraphics();
             screen.startScreen();
-            screen.clear();
+            clearScreen();
 
             started = System.currentTimeMillis();
 
@@ -130,14 +137,13 @@ public class SessionStatePrinter {
         return shutdown;
     }
 
-    public void shutdown() {
-
+    public synchronized void shutdown() {
         if (shutdown) {
             return;
         }
 
         try {
-            screen.clear();
+            clearScreen();
             screen.stopScreen();
         } catch (Throwable e) {
             // ignore
@@ -170,13 +176,14 @@ public class SessionStatePrinter {
     /**
      * call me once per second
      */
-    public void print(TorrentSessionState sessionState) {
-
-        if (shutdown) {
+    public synchronized void print(TorrentSessionState sessionState) {
+        if (supressOutput || shutdown) {
             return;
         }
 
         try {
+            printTorrentInfo();
+
             long downloaded = sessionState.getDownloaded();
             long uploaded = sessionState.getUploaded();
 
@@ -269,6 +276,31 @@ public class SessionStatePrinter {
 
     private double getCompletePercentage(int total, int remaining) {
         return ((total - remaining) / ((double) total) * 100);
+    }
+
+    private void clearScreen() {
+        try {
+            this.screen.clear();
+            this.screen.refresh();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public synchronized void pause() {
+        if (supressOutput) {
+            return;
+        }
+        this.supressOutput = true;
+        clearScreen();
+    }
+
+    public synchronized void resume() {
+        if (!supressOutput) {
+            return;
+        }
+        this.supressOutput = false;
+        clearScreen();
     }
 
     private static class Rate {
