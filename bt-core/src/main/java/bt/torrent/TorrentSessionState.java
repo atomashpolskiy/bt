@@ -34,10 +34,34 @@ public interface TorrentSessionState {
     int getPiecesTotal();
 
     /**
-     * @return Number of pieces, that the local client does not have yet
+     * @return Number of pieces that the local client already has
+     * @since 1.7
+     */
+    int getPiecesComplete();
+
+    /**
+     * @return Number of pieces that the local client does not have yet
+     * @since 1.7
+     */
+    int getPiecesIncomplete();
+
+    /**
+     * @return Number of pieces, that the local client will download
      * @since 1.0
      */
     int getPiecesRemaining();
+
+    /**
+     * @return Number of pieces that will be skipped
+     * @since 1.7
+     */
+    int getPiecesSkipped();
+
+    /**
+     * @return Number of pieces that will NOT be skipped
+     * @since 1.7
+     */
+    int getPiecesNotSkipped();
 
     /**
      * @return Amount of data downloaded via this session (in bytes)

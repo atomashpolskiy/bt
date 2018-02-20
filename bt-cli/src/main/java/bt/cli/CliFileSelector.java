@@ -26,16 +26,23 @@ import java.util.Optional;
 
 public class CliFileSelector extends TorrentFileSelector {
     private static final String PROMPT_MESSAGE_FORMAT = "Download '%s'? (hit <Enter> to confirm or <Esc> to skip)";
-    private static final String ILLEGAL_KEYPRESS_WARNING = "*** Invalid key pressed. Please, use only <Enter> or <Esc>. Two keypresses might be required ***";
+    private static final String ILLEGAL_KEYPRESS_WARNING = "*** Invalid key pressed. Please, use only <Enter> or <Esc> ***";
 
     private final Optional<SessionStatePrinter> printer;
+    private volatile boolean shutdown;
 
     public CliFileSelector() {
         this.printer = Optional.empty();
+        registerShutdownHook();
     }
 
     public CliFileSelector(SessionStatePrinter printer) {
         this.printer = Optional.of(printer);
+        registerShutdownHook();
+    }
+
+    private void registerShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
     }
 
     @Override
@@ -50,7 +57,7 @@ public class CliFileSelector extends TorrentFileSelector {
 
     @Override
     protected SelectionResult select(TorrentFile file) {
-        for (;;) {
+        while (!shutdown) {
             System.out.println(getPromptMessage(file));
 
             try {
@@ -72,9 +79,15 @@ public class CliFileSelector extends TorrentFileSelector {
                 throw new RuntimeException(e);
             }
         }
+
+        throw new IllegalStateException("Shutdown");
     }
 
     private static String getPromptMessage(TorrentFile file) {
         return String.format(PROMPT_MESSAGE_FORMAT, String.join("/", file.getPathElements()));
+    }
+
+    private void shutdown() {
+        this.shutdown = true;
     }
 }
