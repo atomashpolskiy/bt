@@ -4,6 +4,18 @@
 
 * `bt.net.IPeerConnectionPool.getConnection` now requires two parameters to uniquely identify the connection: `Peer` and `TorrentId`
 * `bt.net.IMessageDispatcher.addMessageConsumer` and `bt.net.IMessageDispatcher.addMessageSupplier` now require an additional parameter: `TorrentId`
+* `bt.data.Bitfield.getBitmask` has been renamed to `bt.data.Bitfield.toByteArray`. To get the same value, as was returned by the previous version of this method, use the following invocation:
+
+```java
+byte[] bitmask = bitfield.toByteArray(bt.protocol.BitOrder.LITTLE_ENDIAN);
+```
+
+* `bt.protocol.Protocols.setBit` and `bt.protocol.Protocols.getBit` now require an additional parameter indicating the order of bits in a byte. To get the same values, as was returned by the previous versions of these methods, use the following invocations:
+
+```java
+Protocols.setBit(bytes, bt.protocol.BitOrder.LITTLE_ENDIAN, i);
+int bit = Protocols.getBit(bytes, bt.protocol.BitOrder.LITTLE_ENDIAN, i);
+```
 
 ## 1.5
 

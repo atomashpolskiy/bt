@@ -23,6 +23,7 @@ import bt.net.Peer;
 import bt.processor.ProcessingStage;
 import bt.processor.listener.ProcessingEvent;
 import bt.processor.torrent.InitializeTorrentProcessingStage;
+import bt.protocol.BitOrder;
 import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.TorrentRegistry;
@@ -63,7 +64,7 @@ public class InitializeMagnetTorrentProcessingStage extends InitializeTorrentPro
             }
             try {
                 peersUpdated.add(peer);
-                statistics.addBitfield(peer, new Bitfield(bitfieldBytes, statistics.getPiecesTotal()));
+                statistics.addBitfield(peer, new Bitfield(bitfieldBytes, BitOrder.LITTLE_ENDIAN, statistics.getPiecesTotal()));
             } catch (Exception e) {
                 LOGGER.warn("Error happened when processing peer's bitfield", e);
             }

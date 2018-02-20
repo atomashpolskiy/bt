@@ -17,9 +17,9 @@
 package bt.data;
 
 import bt.BtException;
+import bt.protocol.BitOrder;
 import bt.protocol.Protocols;
 
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Optional;
@@ -45,21 +45,15 @@ public class Bitfield {
     }
 
     /**
-     * Standard bittorrent bitfield, where n-th bit
-     * (counting from high position to low)
-     * indicates the availability of n-th piece.
+     * Bitmask indicating availability of pieces.
+     * If the n-th bit is set, then the n-th piece is complete and verified.
      */
-    private final byte[] value;
+    private final BitSet value;
 
     /**
      * Total number of pieces in torrent.
      */
     private final int piecesTotal;
-
-    /**
-     * Number of pieces that have status {@link PieceStatus#COMPLETE_VERIFIED}.
-     */
-    private volatile int piecesComplete;
 
     /**
      * List of torrent's chunk descriptors.
@@ -76,10 +70,9 @@ public class Bitfield {
      * @since 1.0
      */
     public Bitfield(List<ChunkDescriptor> chunks) {
-        this.chunks = Optional.of(chunks);
         this.piecesTotal = chunks.size();
-        this.value = new byte[getBitmaskLength(piecesTotal)];
-        this.piecesComplete = 0;
+        this.value = new BitSet(chunks.size());
+        this.chunks = Optional.of(chunks);
         this.lock = new ReentrantLock();
     }
 
@@ -91,7 +84,27 @@ public class Bitfield {
      * @since 1.0
      */
     public Bitfield(int piecesTotal) {
-        this(new byte[getBitmaskLength(piecesTotal)], piecesTotal);
+        this.piecesTotal = piecesTotal;
+        this.value = new BitSet(piecesTotal);
+        this.chunks = Optional.empty();
+        this.lock = new ReentrantLock();
+    }
+
+    /**
+     * Creates bitfield based on a bitmask.
+     * Used for creating peers' bitfields.
+     *
+     * Bitmask must be in the format described in BEP-3 (little-endian order of bits).
+     *
+     * @param value Bitmask that describes status of all pieces.
+     *              If position i is set to 1, then piece with index i is complete and verified.
+     * @param piecesTotal Total number of pieces in torrent.
+     * @since 1.0
+     * @deprecated since 1.7 in favor of {@link #Bitfield(byte[], BitOrder, int)}
+     */
+    @Deprecated
+    public Bitfield(byte[] value, int piecesTotal) {
+        this(value, BitOrder.LITTLE_ENDIAN, piecesTotal);
     }
 
     /**
@@ -101,43 +114,82 @@ public class Bitfield {
      * @param value Bitmask that describes status of all pieces.
      *              If position i is set to 1, then piece with index i is complete and verified.
      * @param piecesTotal Total number of pieces in torrent.
-     * @since 1.0
+     * @since 1.7
      */
-    public Bitfield(byte[] value, int piecesTotal) {
+    public Bitfield(byte[] value, BitOrder bitOrder, int piecesTotal) {
+        this.piecesTotal = piecesTotal;
+        this.value = createBitmask(value, bitOrder, piecesTotal);
+        this.chunks = Optional.empty();
+        this.lock = new ReentrantLock();
+    }
 
+    private static BitSet createBitmask(byte[] bytes, BitOrder bitOrder, int piecesTotal) {
         int expectedBitmaskLength = getBitmaskLength(piecesTotal);
-        if (value.length != expectedBitmaskLength) {
+        if (bytes.length != expectedBitmaskLength) {
             throw new IllegalArgumentException("Invalid bitfield: total (" + piecesTotal +
-                    "), bitmask length (" + value.length + "). Expected bitmask length: " + expectedBitmaskLength);
+                    "), bitmask length (" + bytes.length + "). Expected bitmask length: " + expectedBitmaskLength);
         }
 
-        this.value = value;
-        this.chunks = Optional.empty();
-        this.piecesTotal = piecesTotal;
-        this.piecesComplete = getPiecesComplete(value);
-        this.lock = new ReentrantLock();
+        if (bitOrder == BitOrder.LITTLE_ENDIAN) {
+            bytes = Protocols.reverseBits(bytes);
+        }
+
+        BitSet bitmask = new BitSet(piecesTotal);
+        for (int i = 0; i < piecesTotal; i++) {
+            if (Protocols.isSet(bytes, BitOrder.BIG_ENDIAN, i)) {
+                bitmask.set(i);
+            }
+        }
+        return bitmask;
     }
 
     private static int getBitmaskLength(int piecesTotal) {
         return (int) Math.ceil(piecesTotal / 8d);
     }
 
-    private static int getPiecesComplete(byte[] value) {
-        return BitSet.valueOf(value).cardinality();
+    /**
+     * @return Bitmask that describes status of all pieces.
+     *         If the n-th bit is set, then the n-th piece
+     *         is in {@link PieceStatus#COMPLETE_VERIFIED} status.
+     * @since 1.7
+     */
+    public BitSet getBitmask() {
+        lock.lock();
+        try {
+            return Protocols.copyOf(value);
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
+     * @param bitOrder Order of bits to use to create the byte array
      * @return Bitmask that describes status of all pieces.
-     *         If position i is set to 1, then piece with index i
+     *         If the n-th bit is set, then the n-th piece
      *         is in {@link PieceStatus#COMPLETE_VERIFIED} status.
-     * @since 1.0
+     * @since 1.7
      */
-    public byte[] getBitmask() {
+    public byte[] toByteArray(BitOrder bitOrder) {
+        byte[] bytes;
+        boolean truncated = false;
+
         lock.lock();
         try {
-            return Arrays.copyOf(value, value.length);
+            bytes = value.toByteArray();
+            truncated = (value.length() < piecesTotal);
         } finally {
             lock.unlock();
+        }
+
+        if (bitOrder == BitOrder.LITTLE_ENDIAN) {
+            bytes = Protocols.reverseBits(bytes);
+        }
+        if (truncated) {
+            byte[] arr = new byte[getBitmaskLength(piecesTotal)];
+            System.arraycopy(bytes, 0, arr, 0, bytes.length);
+            return arr;
+        } else {
+            return bytes;
         }
     }
 
@@ -154,7 +206,7 @@ public class Bitfield {
      * @since 1.0
      */
     public int getPiecesComplete() {
-        return piecesComplete;
+        return value.cardinality();
     }
 
     /**
@@ -163,7 +215,7 @@ public class Bitfield {
      * @since 1.0
      */
     public int getPiecesRemaining() {
-        return piecesTotal - piecesComplete;
+        return getPiecesTotal() - getPiecesComplete();
     }
 
     /**
@@ -180,7 +232,7 @@ public class Bitfield {
         boolean verified;
         lock.lock();
         try {
-            verified = Protocols.getBit(value, pieceIndex) == 1;
+            verified = value.get(pieceIndex);
         } finally {
             lock.unlock();
         }
@@ -237,8 +289,7 @@ public class Bitfield {
 
         lock.lock();
         try {
-            Protocols.setBit(value, pieceIndex);
-            piecesComplete = getPiecesComplete(value);
+            value.set(pieceIndex);
         } finally {
             lock.unlock();
         }
@@ -255,7 +306,7 @@ public class Bitfield {
     }
 
     private void validatePieceIndex(Integer pieceIndex) {
-        if (pieceIndex < 0 || pieceIndex >= piecesTotal) {
+        if (pieceIndex < 0 || pieceIndex >= getPiecesTotal()) {
             throw new BtException("Illegal piece index: " + pieceIndex);
         }
     }

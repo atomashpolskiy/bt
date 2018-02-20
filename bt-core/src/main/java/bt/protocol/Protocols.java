@@ -20,6 +20,8 @@ import bt.BtException;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.BitSet;
 
 /**
  * Provides utility functions for binary protocol implementations.
@@ -200,18 +202,18 @@ public class Protocols {
      * Sets i-th bit in a bitmask.
      *
      * @param bytes Bitmask.
+     * @param bitOrder Order of bits in a byte
      * @param i Bit index (0-based)
-     * @since 1.0
+     * @since 1.7
      */
-    public static void setBit(byte[] bytes, int i) {
-
+    public static void setBit(byte[] bytes, BitOrder bitOrder, int i) {
         int byteIndex = (int) (i / 8d);
         if (byteIndex >= bytes.length) {
             throw new BtException("bit index is too large: " + i);
         }
 
         int bitIndex = i % 8;
-        int shift = (7 - bitIndex);
+        int shift = (bitOrder == BitOrder.BIG_ENDIAN) ? bitIndex : (7 - bitIndex);
         int bitMask = 0b1 << shift;
         byte currentByte = bytes[byteIndex];
         bytes[byteIndex] = (byte) (currentByte | bitMask);
@@ -221,21 +223,34 @@ public class Protocols {
      * Gets i-th bit in a bitmask.
      *
      * @param bytes Bitmask.
+     * @param bitOrder Order of bits in a byte
      * @param i Bit index (0-based)
      * @return 1 if bit is set, 0 otherwise
-     * @since 1.0
+     * @since 1.7
      */
-    public static int getBit(byte[] bytes, int i) {
-
+    public static int getBit(byte[] bytes, BitOrder bitOrder, int i) {
         int byteIndex = (int) (i / 8d);
         if (byteIndex >= bytes.length) {
             throw new BtException("bit index is too large: " + i);
         }
 
         int bitIndex = i % 8;
-        int shift = (7 - bitIndex);
+        int shift = (bitOrder == BitOrder.BIG_ENDIAN) ? bitIndex : (7 - bitIndex);
         int bitMask = 0b1 << shift ;
         return (bytes[byteIndex] & bitMask) >> shift;
+    }
+
+    /**
+     * Check if i-th bit in the bitmask is set.
+     *
+     * @param bytes Bitmask.
+     * @param bitOrder Order of bits in a byte
+     * @param i Bit index (0-based)
+     * @return true if i-th bit in the bitmask is set, false otherwise
+     * @since 1.7
+     */
+    public static boolean isSet(byte[] bytes, BitOrder bitOrder, int i) {
+        return getBit(bytes, bitOrder, i) == 1;
     }
 
     /**
@@ -296,5 +311,46 @@ public class Protocols {
             return c - 'a' + 10;
         }
         throw new IllegalArgumentException("Illegal hexadecimal character: " + c);
+    }
+
+    /**
+     * Returns a copy of the provided byte array with each byte reversed.
+     *
+     * @return A copy of the provided byte array with each byte reversed.
+     * @since 1.7
+     */
+    public static byte[] reverseBits(byte[] bytes) {
+        byte[] arr = Arrays.copyOf(bytes, bytes.length);
+        for (int i = 0; i < arr.length; i++) {
+            arr[i] = reverseBits(arr[i]);
+        }
+        return arr;
+    }
+
+    /**
+     * Returns a reversed byte.
+     *
+     * @return A reversed byte.
+     * @since 1.7
+     */
+    public static byte reverseBits(byte b) {
+        int i = b;
+        // swap halves
+        i = (i & 0b11110000) >> 4 | (i & 0b00001111) << 4;
+        // swap adjacent pairs
+        i = (i & 0b11001100) >> 2 | (i & 0b00110011) << 2;
+        // swap adjacent bits
+        i = (i & 0b10101010) >> 1 | (i & 0b01010101) << 1;
+        return (byte) i;
+    }
+
+    /**
+     * Get a copy of the provided bitset.
+     *
+     * @return A copy of the provided bitset.
+     * @since 1.7
+     */
+    public static BitSet copyOf(BitSet bitSet) {
+        return (BitSet) bitSet.clone();
     }
 }

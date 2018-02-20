@@ -16,9 +16,9 @@
 
 package bt.torrent.messaging;
 
+import bt.data.Bitfield;
 import bt.net.Peer;
 import bt.runtime.Config;
-import bt.data.Bitfield;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.selector.PieceSelector;
 import org.slf4j.Logger;
@@ -240,8 +240,8 @@ public class Assignments {
         if (!peerBitfieldOptional.isPresent()) {
             return false;
         }
-        BitSet peerBitfield = BitSet.valueOf(peerBitfieldOptional.get().getBitmask());
-        BitSet localBitfield = BitSet.valueOf(bitfield.getBitmask());
+        BitSet peerBitfield = peerBitfieldOptional.get().getBitmask();
+        BitSet localBitfield = bitfield.getBitmask();
         peerBitfield.andNot(localBitfield);
         return peerBitfield.cardinality() > 0;
     }

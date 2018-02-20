@@ -18,6 +18,7 @@ package bt.torrent.messaging;
 
 import bt.event.EventSink;
 import bt.net.Peer;
+import bt.protocol.BitOrder;
 import bt.protocol.Bitfield;
 import bt.protocol.Have;
 import bt.torrent.BitfieldBasedStatistics;
@@ -47,7 +48,7 @@ public class BitfieldConsumer {
     @Consumes
     public void consume(Bitfield bitfieldMessage, MessageContext context) {
         Peer peer = context.getPeer();
-        bt.data.Bitfield peerBitfield = new bt.data.Bitfield(bitfieldMessage.getBitfield(), bitfield.getPiecesTotal());
+        bt.data.Bitfield peerBitfield = new bt.data.Bitfield(bitfieldMessage.getBitfield(), BitOrder.LITTLE_ENDIAN, bitfield.getPiecesTotal());
         pieceStatistics.addBitfield(peer, peerBitfield);
         eventSink.firePeerBitfieldUpdated(context.getTorrentId().get(), peer, peerBitfield);
     }

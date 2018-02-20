@@ -58,7 +58,7 @@ public final class Handshake implements Message {
      * @since 1.0
      */
     public boolean isReservedBitSet(int bitIndex) {
-        return Protocols.getBit(reserved, bitIndex) == 1;
+        return Protocols.getBit(reserved, BitOrder.LITTLE_ENDIAN, bitIndex) == 1;
     }
 
     /**
@@ -72,7 +72,7 @@ public final class Handshake implements Message {
             throw new BtException("Illegal bit index: " + bitIndex +
                     ". Expected index in range [0.." + UPPER_RESERVED_BOUND + "]");
         }
-        Protocols.setBit(reserved, bitIndex);
+        Protocols.setBit(reserved, BitOrder.LITTLE_ENDIAN, bitIndex);
         // check range
     }
 
