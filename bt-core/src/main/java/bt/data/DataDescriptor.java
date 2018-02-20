@@ -16,6 +16,8 @@
 
 package bt.data;
 
+import bt.metainfo.TorrentFile;
+
 import java.io.Closeable;
 import java.util.List;
 
@@ -40,4 +42,6 @@ public interface DataDescriptor extends Closeable {
      * @since 1.0
      */
     Bitfield getBitfield();
+
+    List<TorrentFile> getFilesForPiece(int pieceIndex);
 }

@@ -28,6 +28,7 @@ import bt.processor.magnet.FetchMetadataStage;
 import bt.processor.magnet.InitializeMagnetTorrentProcessingStage;
 import bt.processor.magnet.MagnetContext;
 import bt.processor.magnet.ProcessMagnetTorrentStage;
+import bt.processor.torrent.ChooseFilesStage;
 import bt.processor.torrent.CreateSessionStage;
 import bt.processor.torrent.FetchTorrentStage;
 import bt.processor.torrent.InitializeTorrentProcessingStage;
@@ -103,9 +104,11 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
     protected ChainProcessor<TorrentContext> createTorrentProcessor() {
 
-        ProcessingStage<TorrentContext> stage4 = new SeedStage<>(null, torrentRegistry);
+        ProcessingStage<TorrentContext> stage5 = new SeedStage<>(null, torrentRegistry);
 
-        ProcessingStage<TorrentContext> stage3 = new ProcessTorrentStage<>(stage4, torrentRegistry, trackerService);
+        ProcessingStage<TorrentContext> stage4 = new ProcessTorrentStage<>(stage5, torrentRegistry, trackerService);
+
+        ProcessingStage<TorrentContext> stage3 = new ChooseFilesStage<>(stage4, torrentRegistry, config);
 
         ProcessingStage<TorrentContext> stage2 = new InitializeTorrentProcessingStage<>(stage3, torrentRegistry,
                 dataWorkerFactory, eventSink, config);
@@ -120,9 +123,11 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
     protected ChainProcessor<MagnetContext> createMagnetProcessor() {
 
-        ProcessingStage<MagnetContext> stage4 = new SeedStage<>(null, torrentRegistry);
+        ProcessingStage<MagnetContext> stage5 = new SeedStage<>(null, torrentRegistry);
 
-        ProcessingStage<MagnetContext> stage3 = new ProcessMagnetTorrentStage(stage4, torrentRegistry, trackerService);
+        ProcessingStage<MagnetContext> stage4 = new ProcessMagnetTorrentStage(stage5, torrentRegistry, trackerService);
+
+        ProcessingStage<MagnetContext> stage3 = new ChooseFilesStage<>(stage4, torrentRegistry, config);
 
         ProcessingStage<MagnetContext> stage2 = new InitializeMagnetTorrentProcessingStage(stage3, torrentRegistry,
                 dataWorkerFactory, eventSink, config);

@@ -24,6 +24,7 @@ import bt.processor.ProcessingContext;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.TorrentSessionState;
 import bt.torrent.TrackerAnnouncer;
+import bt.torrent.fileselector.TorrentFileSelector;
 import bt.torrent.messaging.Assignments;
 import bt.torrent.messaging.MessageRouter;
 import bt.torrent.selector.PieceSelector;
@@ -39,6 +40,7 @@ import java.util.function.Supplier;
 public class TorrentContext implements ProcessingContext {
 
     private final PieceSelector pieceSelector;
+    private final Optional<TorrentFileSelector> fileSelector;
     private final Storage storage;
     private final Supplier<Torrent> torrentSupplier;
 
@@ -53,15 +55,27 @@ public class TorrentContext implements ProcessingContext {
     private volatile TrackerAnnouncer announcer;
 
     public TorrentContext(PieceSelector pieceSelector,
+                          TorrentFileSelector fileSelector,
                           Storage storage,
                           Supplier<Torrent> torrentSupplier) {
         this.pieceSelector = pieceSelector;
+        this.fileSelector = Optional.ofNullable(fileSelector);
         this.storage = storage;
         this.torrentSupplier = torrentSupplier;
     }
 
+    public TorrentContext(PieceSelector pieceSelector,
+                          Storage storage,
+                          Supplier<Torrent> torrentSupplier) {
+        this(pieceSelector, null, storage, torrentSupplier);
+    }
+
     public PieceSelector getPieceSelector() {
         return pieceSelector;
+    }
+
+    public Optional<TorrentFileSelector> getFileSelector() {
+        return fileSelector;
     }
 
     public Storage getStorage() {
