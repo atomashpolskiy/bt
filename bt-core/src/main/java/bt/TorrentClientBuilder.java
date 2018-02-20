@@ -29,6 +29,7 @@ import bt.processor.magnet.MagnetContext;
 import bt.processor.torrent.TorrentContext;
 import bt.runtime.BtRuntime;
 import bt.torrent.PieceSelectionStrategy;
+import bt.torrent.fileselector.TorrentFileSelector;
 import bt.torrent.selector.PieceSelector;
 import bt.torrent.selector.RarestFirstSelector;
 import bt.torrent.selector.SelectorAdapter;
@@ -50,6 +51,7 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
     private Supplier<Torrent> torrentSupplier;
     private MagnetUri magnetUri;
 
+    private TorrentFileSelector fileSelector;
     private PieceSelector pieceSelector;
 
     private List<Consumer<Torrent>> torrentConsumers;
@@ -196,6 +198,12 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
         return (B) this;
     }
 
+    /**
+     * Provide a callback to invoke when torrent's metadata has been fetched.
+     *
+     * @param torrentConsumer Callback to invoke when torrent's metadata has been fetched
+     * @since 1.5
+     */
     @SuppressWarnings("unchecked")
     public B afterTorrentFetched(Consumer<Torrent> torrentConsumer) {
         if (torrentConsumers == null) {
@@ -205,17 +213,24 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
         return (B) this;
     }
 
+    @SuppressWarnings("unchecked")
+    public B fileSelector(TorrentFileSelector fileSelector) {
+        Objects.requireNonNull(fileSelector, "Missing file selector");
+        this.fileSelector = fileSelector;
+        return (B) this;
+    }
+
     @Override
     protected ProcessingContext buildProcessingContext(BtRuntime runtime) {
         Objects.requireNonNull(storage, "Missing data storage");
 
         ProcessingContext context;
         if (torrentUrl != null) {
-            context = new TorrentContext(pieceSelector, storage, () -> fetchTorrentFromUrl(runtime, torrentUrl));
+            context = new TorrentContext(pieceSelector, fileSelector, storage, () -> fetchTorrentFromUrl(runtime, torrentUrl));
         } else if (torrentSupplier != null) {
-            context = new TorrentContext(pieceSelector, storage, torrentSupplier);
+            context = new TorrentContext(pieceSelector, fileSelector, storage, torrentSupplier);
         } else if (this.magnetUri != null) {
-            context = new MagnetContext(magnetUri, pieceSelector, storage);
+            context = new MagnetContext(magnetUri, pieceSelector, fileSelector, storage);
         } else {
             throw new IllegalStateException("Missing torrent supplier, torrent URL or magnet URI");
         }

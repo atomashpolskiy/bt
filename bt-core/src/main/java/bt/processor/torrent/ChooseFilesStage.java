@@ -27,6 +27,7 @@ import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
+import bt.torrent.fileselector.SelectionResult;
 import bt.torrent.fileselector.TorrentFileSelector;
 import bt.torrent.messaging.Assignments;
 import bt.torrent.selector.IncompletePiecesValidator;
@@ -34,6 +35,7 @@ import bt.torrent.selector.PieceSelector;
 import bt.torrent.selector.ValidatingSelector;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
@@ -55,10 +57,16 @@ public class ChooseFilesStage<C extends TorrentContext> extends TerminateOnError
         Torrent torrent = context.getTorrent().get();
         TorrentDescriptor descriptor = torrentRegistry.getDescriptor(torrent.getTorrentId()).get();
 
-        Set<TorrentFile> selectedFiles;
+        Set<TorrentFile> selectedFiles = new HashSet<>();
         if (context.getFileSelector().isPresent()) {
             TorrentFileSelector selector = context.getFileSelector().get();
-            selectedFiles = selector.selectFiles(torrent.getFiles());
+            List<TorrentFile> files = torrent.getFiles();
+            List<SelectionResult> selectionResults = selector.selectFiles(files);
+            for (int i = 0; i < files.size(); i++) {
+                if (!selectionResults.get(i).shouldSkip()) {
+                    selectedFiles.add(files.get(i));
+                }
+            }
         } else {
             selectedFiles = new HashSet<>(torrent.getFiles());
         }
@@ -69,7 +77,16 @@ public class ChooseFilesStage<C extends TorrentContext> extends TerminateOnError
         BitfieldBasedStatistics pieceStatistics = context.getPieceStatistics();
         Assignments assignments = new Assignments(bitfield, selector, pieceStatistics, config);
 
+        updateSkippedPieces(bitfield, validPieces);
         context.setAssignments(assignments);
+    }
+
+    private void updateSkippedPieces(Bitfield bitfield, Set<Integer> validPieces) {
+        IntStream.range(0, bitfield.getPiecesTotal()).forEach(pieceIndex -> {
+            if (!validPieces.contains(pieceIndex)) {
+                bitfield.skip(pieceIndex);
+            }
+        });
     }
 
     private Set<Integer> getValidPieces(DataDescriptor dataDescriptor, Set<TorrentFile> selectedFiles) {

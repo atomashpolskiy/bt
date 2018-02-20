@@ -17,6 +17,8 @@ Protocols.setBit(bytes, bt.protocol.BitOrder.LITTLE_ENDIAN, i);
 int bit = Protocols.getBit(bytes, bt.protocol.BitOrder.LITTLE_ENDIAN, i);
 ```
 
+* Semantics of `bt.data.Bitfield.getPiecesRemaining` has been changed. Previously it returned the number of incomplete and unverified pieces (i.e. `getPiecesTotal() - getPiecesComplete()`). Now it returns the number of incomplete and unverified pieces that should NOT be skipped (i.e. the corresponding files are expected to be downloaded).
+
 ## 1.5
 
 * `bt.BaseClientBuilder#runtime(BtRuntime)` is now protected instead of public. Use a factory method `bt.Bt#client(BtRuntime)` to attach the newly created client to a shared runtime.

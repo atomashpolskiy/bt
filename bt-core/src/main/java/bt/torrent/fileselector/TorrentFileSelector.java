@@ -18,21 +18,14 @@ package bt.torrent.fileselector;
 
 import bt.metainfo.TorrentFile;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 // note the limitation that empty files will always be created (even if they weren't selected)
 public abstract class TorrentFileSelector {
 
-    public Set<TorrentFile> selectFiles(List<TorrentFile> files) {
-        Set<TorrentFile> selected = new HashSet<>();
-        for (TorrentFile file : files) {
-            if (!select(file).shouldSkip()) {
-                selected.add(file);
-            }
-        }
-        return selected;
+    public List<SelectionResult> selectFiles(List<TorrentFile> files) {
+        return files.stream().map(this::select).collect(Collectors.toList());
     }
 
     protected abstract SelectionResult select(TorrentFile file);

@@ -51,6 +51,12 @@ public class Bitfield {
     private final BitSet value;
 
     /**
+     * Bitmask indicating pieces that should be skipped.
+     * If the n-th bit is set, then the n-th piece should be skipped.
+     */
+    private volatile BitSet skipped;
+
+    /**
      * Total number of pieces in torrent.
      */
     private final int piecesTotal;
@@ -215,7 +221,18 @@ public class Bitfield {
      * @since 1.0
      */
     public int getPiecesRemaining() {
-        return getPiecesTotal() - getPiecesComplete();
+        if (skipped == null) {
+            return getPiecesTotal() - getPiecesComplete();
+        } else {
+            lock.lock();
+            try {
+                BitSet bitmask = getBitmask();
+                bitmask.or(skipped);
+                return getPiecesTotal() - bitmask.cardinality();
+            } finally {
+                lock.unlock();
+            }
+        }
     }
 
     /**
@@ -307,7 +324,35 @@ public class Bitfield {
 
     private void validatePieceIndex(Integer pieceIndex) {
         if (pieceIndex < 0 || pieceIndex >= getPiecesTotal()) {
-            throw new BtException("Illegal piece index: " + pieceIndex);
+            throw new BtException("Illegal piece index: " + pieceIndex +
+                    ", expected 0.." + (getPiecesTotal() - 1));
+        }
+    }
+
+    public void skip(int pieceIndex) {
+        validatePieceIndex(pieceIndex);
+
+        lock.lock();
+        try {
+            if (skipped == null) {
+                skipped = new BitSet(getPiecesTotal());
+            }
+            skipped.set(pieceIndex);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void unskip(int pieceIndex) {
+        validatePieceIndex(pieceIndex);
+
+        if (skipped != null) {
+            lock.lock();
+            try {
+                skipped.clear(pieceIndex);
+            } finally {
+                lock.unlock();
+            }
         }
     }
 }
