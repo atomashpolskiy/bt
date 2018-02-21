@@ -158,6 +158,10 @@ To allow you test the changes that you've made to the core, **Bt** ships with a 
 
 **Bt** has out-of-the-box support for multiple simultaneous torrent sessions with minimal system overhead. 1% CPU and 32M of RAM should be enough for everyone!
 
+### Partial downloads
+
+**Bt** has an API for selecting only a subset of torrent files to download. See the `bt.TorrentClientBuilder.fileSelector(TorrentFileSelector)` client builder method. File selection works for both `.torrent` file-based and magnet link downloads.
+
 ### Java 8 CompletableFuture
 
 Client API leverages the asynchronous `java.util.concurrent.CompletableFuture` to provide the most natural way for co-ordinating multiple torrent sessions. E.g. use `CompletableFuture.allOf(client1.startAsync(...), client2.startAsync(...), ...).join()`. Or create a more sophisticated processing pipeline.

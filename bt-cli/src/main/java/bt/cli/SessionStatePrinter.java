@@ -59,8 +59,16 @@ public class SessionStatePrinter {
                 t = new Thread(() -> {
                     while (!isShutdown()) {
                         try {
-                            KeyStroke keyStroke = readKeyInput();
-                            if (keyStroke.isCtrlDown() && keyStroke.getKeyType() == KeyType.Character
+                            // don't intercept input when paused
+                            if (super.supressOutput) {
+                                Thread.sleep(1000);
+                                continue;
+                            }
+
+                            KeyStroke keyStroke = pollKeyInput();
+                            if (keyStroke == null) {
+                                Thread.sleep(100);
+                            } else if (keyStroke.isCtrlDown() && keyStroke.getKeyType() == KeyType.Character
                                     && keyStroke.getCharacter().equals('c')) {
                                 shutdown();
                                 System.exit(0);
@@ -95,6 +103,7 @@ public class SessionStatePrinter {
     private Screen screen;
     private TextGraphics graphics;
 
+    private volatile boolean supressOutput;
     private volatile boolean shutdown;
 
     private Optional<Torrent> torrent;
@@ -111,7 +120,7 @@ public class SessionStatePrinter {
             screen = new TerminalScreen(terminal);
             graphics = screen.newTextGraphics();
             screen.startScreen();
-            screen.clear();
+            clearScreen();
 
             started = System.currentTimeMillis();
 
@@ -130,14 +139,13 @@ public class SessionStatePrinter {
         return shutdown;
     }
 
-    public void shutdown() {
-
+    public synchronized void shutdown() {
         if (shutdown) {
             return;
         }
 
         try {
-            screen.clear();
+            clearScreen();
             screen.stopScreen();
         } catch (Throwable e) {
             // ignore
@@ -151,6 +159,13 @@ public class SessionStatePrinter {
      */
     public KeyStroke readKeyInput() throws IOException {
         return screen.readInput();
+    }
+
+    /**
+     * non-blocking
+     */
+    public KeyStroke pollKeyInput() throws IOException {
+        return screen.pollInput();
     }
 
     private void printTorrentInfo() {
@@ -170,13 +185,14 @@ public class SessionStatePrinter {
     /**
      * call me once per second
      */
-    public void print(TorrentSessionState sessionState) {
-
-        if (shutdown) {
+    public synchronized void print(TorrentSessionState sessionState) {
+        if (supressOutput || shutdown) {
             return;
         }
 
         try {
+            printTorrentInfo();
+
             long downloaded = sessionState.getDownloaded();
             long uploaded = sessionState.getUploaded();
 
@@ -184,7 +200,7 @@ public class SessionStatePrinter {
 
             String elapsedTime = getElapsedTime();
             String remainingTime = getRemainingTime(downloaded - this.downloaded,
-                    sessionState.getPiecesRemaining(), sessionState.getPiecesTotal());
+                    sessionState.getPiecesRemaining(), sessionState.getPiecesNotSkipped());
             graphics.putString(0, 2, String.format(DURATION_INFO, elapsedTime, remainingTime));
 
             Rate downRate = new Rate(downloaded - this.downloaded);
@@ -194,8 +210,10 @@ public class SessionStatePrinter {
                 upRate.getQuantity(), upRate.getMeasureUnit());
             graphics.putString(0, 3, sessionInfo);
 
-            double completePercents = getCompletePercentage(sessionState.getPiecesTotal(), sessionState.getPiecesRemaining());
-            graphics.putString(0, 4, getProgressBar(completePercents));
+            int completed = sessionState.getPiecesComplete();
+            double completePercents = getCompletePercentage(sessionState.getPiecesTotal(), completed);
+            double requiredPercents = getTargetPercentage(sessionState.getPiecesTotal(), completed, sessionState.getPiecesRemaining());
+            graphics.putString(0, 4, getProgressBar(completePercents, requiredPercents));
 
             boolean complete = (sessionState.getPiecesRemaining() == 0);
             if (complete) {
@@ -252,23 +270,58 @@ public class SessionStatePrinter {
         return seconds < 0 ? "-" + positive : positive;
     }
 
-    private String getProgressBar(double completePercents) throws IOException {
+    private String getProgressBar(double completePercents, double requiredPercents) throws IOException {
         int completeInt = (int) completePercents;
+        int requiredInt = (int) requiredPercents;
 
         int width = graphics.getSize().getColumns() - 25;
         if (width < 0) {
-            return "Progress: " + completeInt + "%";
+            return "Progress: " + completeInt + "% (req.: " + requiredInt + "%)";
         }
 
         String s = "Progress: [%-" + width + "s] %d%%";
+        char[] bar = new char[width];
         double shrinkFactor = width / 100d;
-        char[] chars = new char[(int) (completeInt * shrinkFactor)];
-        Arrays.fill(chars, '#');
-        return String.format(s, String.valueOf(chars), completeInt);
+        int bound = (int) (completeInt * shrinkFactor);
+        Arrays.fill(bar, 0, bound, '#');
+        Arrays.fill(bar, bound, bar.length, ' ');
+        if (completeInt != requiredInt) {
+            bar[(int) (requiredInt * shrinkFactor) - 1] = '|';
+        }
+        return String.format(s, String.valueOf(bar), completeInt);
     }
 
-    private double getCompletePercentage(int total, int remaining) {
-        return ((total - remaining) / ((double) total) * 100);
+    private double getCompletePercentage(int total, int completed) {
+        return completed / ((double) total) * 100;
+    }
+
+    private double getTargetPercentage(int total, int completed, int remaining) {
+        return (completed + remaining) / ((double) total) * 100;
+    }
+
+    private void clearScreen() {
+        try {
+            this.screen.clear();
+            this.screen.refresh();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public synchronized void pause() {
+        if (supressOutput) {
+            return;
+        }
+        this.supressOutput = true;
+        clearScreen();
+    }
+
+    public synchronized void resume() {
+        if (!supressOutput) {
+            return;
+        }
+        this.supressOutput = false;
+        clearScreen();
     }
 
     private static class Rate {

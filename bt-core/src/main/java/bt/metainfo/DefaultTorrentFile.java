@@ -48,4 +48,25 @@ class DefaultTorrentFile implements TorrentFile {
         }
         this.pathElements = pathElements;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+
+        DefaultTorrentFile that = (DefaultTorrentFile) obj;
+        return size == that.size && pathElements.equals(that.pathElements);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (size ^ (size >>> 32));
+        result = 31 * result + pathElements.hashCode();
+        return result;
+    }
 }

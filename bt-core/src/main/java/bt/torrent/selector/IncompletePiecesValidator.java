@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2018 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package bt.torrent.messaging;
+package bt.torrent.selector;
 
 import bt.data.Bitfield;
 

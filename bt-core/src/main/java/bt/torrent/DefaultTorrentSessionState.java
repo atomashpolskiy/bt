@@ -67,9 +67,45 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
     }
 
     @Override
+    public int getPiecesComplete() {
+        if (descriptor.getDataDescriptor() != null) {
+            return descriptor.getDataDescriptor().getBitfield().getPiecesComplete();
+        } else {
+            return 0;
+        }
+    }
+
+    @Override
+    public int getPiecesIncomplete() {
+        if (descriptor.getDataDescriptor() != null) {
+            return descriptor.getDataDescriptor().getBitfield().getPiecesIncomplete();
+        } else {
+            return 1;
+        }
+    }
+
+    @Override
     public int getPiecesRemaining() {
         if (descriptor.getDataDescriptor() != null) {
             return descriptor.getDataDescriptor().getBitfield().getPiecesRemaining();
+        } else {
+            return 1;
+        }
+    }
+
+    @Override
+    public int getPiecesSkipped() {
+        if (descriptor.getDataDescriptor() != null) {
+            return descriptor.getDataDescriptor().getBitfield().getPiecesSkipped();
+        } else {
+            return 0;
+        }
+    }
+
+    @Override
+    public int getPiecesNotSkipped() {
+        if (descriptor.getDataDescriptor() != null) {
+            return descriptor.getDataDescriptor().getBitfield().getPiecesNotSkipped();
         } else {
             return 1;
         }

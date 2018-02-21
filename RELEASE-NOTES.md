@@ -6,6 +6,10 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 #### Date:
 
+#### Changes/New Features:
+
+* Support for file selection (aka partial downloads)
+
 #### Bug Fixes/Improvements:
 
 * Avoid creation of unnessary empty dirs when reading from a FileSystemStorageUnit that maps to an absent file
