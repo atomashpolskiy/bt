@@ -34,6 +34,7 @@ bt.torrent
 bt.torrent.annotation
 bt.torrent.compiler
 bt.torrent.data
+bt.torrent.fileselector
 bt.torrent.messaging
 bt.torrent.selector
 bt.tracker
