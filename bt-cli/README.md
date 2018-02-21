@@ -15,7 +15,8 @@ Option (* = required)  Description
 ---------------------  -----------                                     
 -?, -h, --help                                                         
 -H, --headless         Disable UI                                      
--S, --sequential       Download sequentially                           
+-S, --sequential       Download sequentially   
+-a, --all              Download all files (file selection will be disabled)
 * -d, --dir <File>     Target download location                        
 -e, --encrypted        Enforce encryption for all connections          
 -f, --file <File>      Torrent metainfo file                           
@@ -48,6 +49,8 @@ Add `-p <port>` to listen for incoming connections on the specified port.
 Add `-e` flag to encrypt all peer connections.
 
 Add `-S` flag to download the data in sequential order (e.g. for streaming content).
+
+Add `-a` flag to download all files (i.e. to disable interactive file selection).
 
 Add `-s` flag to continue seeding after torrent has been downloaded.
 

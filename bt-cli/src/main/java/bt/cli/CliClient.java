@@ -138,10 +138,14 @@ public class CliClient  {
 
         SessionStatePrinter printer = options.shouldDisableUi() ?
                 null : SessionStatePrinter.createKeyInputAwarePrinter(keyBindings);
-        if (printer == null) {
-            clientBuilder.fileSelector(new CliFileSelector());
-        } else {
-            clientBuilder.fileSelector(new CliFileSelector(printer));
+        if (!options.shouldDownloadAllFiles()) {
+            if (printer == null) {
+                clientBuilder.fileSelector(new CliFileSelector());
+            } else {
+                clientBuilder.fileSelector(new CliFileSelector(printer));
+            }
+        }
+        if (printer != null) {
             clientBuilder.afterTorrentFetched(printer::setTorrent);
         }
 

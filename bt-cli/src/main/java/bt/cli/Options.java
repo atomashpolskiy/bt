@@ -43,6 +43,7 @@ public class Options {
     private static final OptionSpec<Void> traceOptionSpec;
     private static final OptionSpec<String> ifaceOptionSpec;
     private static final OptionSpec<Integer> torrentPortOptionSpec;
+    private static final OptionSpec<Void> shouldDownloadAllFiles;
 
     private static final OptionParser parser;
 
@@ -79,6 +80,8 @@ public class Options {
 
         torrentPortOptionSpec = parser.acceptsAll(Arrays.asList("p", "port"), "Listen on specific port for incoming connections")
                 .withRequiredArg().ofType(Integer.class);
+
+        shouldDownloadAllFiles = parser.acceptsAll(Arrays.asList("a", "all"), "Download all files (file selection will be disabled)");
     }
 
     /**
@@ -98,7 +101,8 @@ public class Options {
                 opts.has(verboseOptionSpec),
                 opts.has(traceOptionSpec),
                 opts.valueOf(ifaceOptionSpec),
-                opts.valueOf(torrentPortOptionSpec));
+                opts.valueOf(torrentPortOptionSpec),
+                opts.has(shouldDownloadAllFiles));
     }
 
     public static void printHelp(OutputStream out) {
@@ -120,6 +124,7 @@ public class Options {
     private boolean traceLogging;
     private String iface;
     private Integer port;
+    private boolean downloadAllFiles;
 
     public Options(File metainfoFile,
                    String magnetUri,
@@ -131,7 +136,8 @@ public class Options {
                    boolean verboseLogging,
                    boolean traceLogging,
                    String iface,
-                   Integer port) {
+                   Integer port,
+                   boolean downloadAllFiles) {
         this.metainfoFile = metainfoFile;
         this.magnetUri = magnetUri;
         this.targetDirectory = targetDirectory;
@@ -143,6 +149,7 @@ public class Options {
         this.traceLogging = traceLogging;
         this.iface = iface;
         this.port = port;
+        this.downloadAllFiles = downloadAllFiles;
     }
 
     public File getMetainfoFile() {
@@ -183,5 +190,9 @@ public class Options {
 
     public Integer getPort() {
         return port;
+    }
+
+    public boolean shouldDownloadAllFiles() {
+        return downloadAllFiles;
     }
 }
