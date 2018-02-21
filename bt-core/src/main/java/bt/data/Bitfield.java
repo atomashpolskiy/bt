@@ -264,9 +264,7 @@ public class Bitfield {
 
         lock.lock();
         try {
-            BitSet bitmask = Protocols.copyOf(skipped);
-            bitmask.andNot(this.bitmask);
-            return bitmask.cardinality();
+            return skipped.cardinality();
         } finally {
             lock.unlock();
         }
