@@ -55,6 +55,7 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
     private PieceSelector pieceSelector;
 
     private List<Consumer<Torrent>> torrentConsumers;
+    private List<Runnable> fileSelectionListeners;
 
     private boolean stopWhenDownloaded;
 
@@ -226,6 +227,22 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
         return (B) this;
     }
 
+    /**
+     * Provide a callback to invoke when the files have been chosen
+     *
+     * @param runnable Callback to invoke when the files have been chosen
+     * @since 1.7
+     */
+    @SuppressWarnings("unchecked")
+    public B afterFilesChosen(Runnable runnable) {
+        Objects.requireNonNull(runnable, "Missing callback");
+        if (fileSelectionListeners == null) {
+            fileSelectionListeners = new ArrayList<>();
+        }
+        fileSelectionListeners.add(runnable);
+        return (B) this;
+    }
+
     @Override
     protected ProcessingContext buildProcessingContext(BtRuntime runtime) {
         Objects.requireNonNull(storage, "Missing data storage");
@@ -246,7 +263,7 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
 
     @Override
     protected <C extends ProcessingContext> void collectStageListeners(ListenerSource<C> listenerSource) {
-        if (torrentConsumers != null) {
+        if (torrentConsumers != null && torrentConsumers.size() > 0) {
             BiFunction<C, ProcessingStage<C>, ProcessingStage<C>> listener = (context, next) -> {
                 context.getTorrent().ifPresent(torrent -> {
                     for (Consumer<Torrent> torrentConsumer : torrentConsumers) {
@@ -256,6 +273,14 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
                 return next;
             };
             listenerSource.addListener(ProcessingEvent.TORRENT_FETCHED, listener);
+        }
+
+        if (fileSelectionListeners != null && fileSelectionListeners.size() > 0) {
+            BiFunction<C, ProcessingStage<C>, ProcessingStage<C>> listener = (context, next) -> {
+                fileSelectionListeners.forEach(Runnable::run);
+                return next;
+            };
+            listenerSource.addListener(ProcessingEvent.FILES_CHOSEN, listener);
         }
 
         if (stopWhenDownloaded) {

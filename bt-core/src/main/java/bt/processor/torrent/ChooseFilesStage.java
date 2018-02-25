@@ -117,6 +117,6 @@ public class ChooseFilesStage<C extends TorrentContext> extends TerminateOnError
 
     @Override
     public ProcessingEvent after() {
-        return null;
+        return ProcessingEvent.FILES_CHOSEN;
     }
 }
