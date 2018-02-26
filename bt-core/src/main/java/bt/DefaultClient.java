@@ -115,8 +115,8 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
         if (futureOptional.isPresent()) {
             CompletableFuture<?> f = futureOptional.get();
             futureOptional = Optional.empty();
-            f.complete(null);
             detachFromRuntime();
+            f.complete(null);
         }
     }
 
