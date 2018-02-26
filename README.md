@@ -1,5 +1,9 @@
 <h1 align="center">
     <a href="http://atomashpolskiy.github.io/bt/">Bt</a>
+    <a href="https://twitter.com/intent/tweet?text=Bt%3A%20A%20Java%208%20BitTorrent%20library%20with%20DHT%2C%20magnet%20links%2C%20encryption%20and%20more&url=https://github.com/atomashpolskiy/bt&via=atomashpolskiy&hashtags=java,bittorrent,dht,library">
+        <img src="https://img.shields.io/twitter/url/http/shields.io.svg?style=social&logo=twitter"
+            alt="Tweet">
+    </a>
 </h1>
 
 <p align="center"><strong>
@@ -37,10 +41,6 @@ A full-featured BitTorrent implementation in Java 8
     <a href="https://codecov.io/gh/atomashpolskiy/bt">
         <img src="https://img.shields.io/codecov/c/github/atomashpolskiy/bt/master.svg"
              alt="Coverage">
-    </a>
-    <a href="https://www.codetriage.com/atomashpolskiy/bt">
-        <img src="https://www.codetriage.com/atomashpolskiy/bt/badges/users.svg"
-             alt="Help Contribute to Open Source">
     </a>
 </p>
 
