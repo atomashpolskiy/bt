@@ -23,6 +23,10 @@
             <name>Jeremy L. Morris</name>
             <email>morrislaw93@gmail.com</email>
         </developer>
+        <developer>
+            <id>ckovorodkin</id>
+            <name>Oleg Ermolaev</name>
+        </developer>
     </developers>
 
     <licenses>
