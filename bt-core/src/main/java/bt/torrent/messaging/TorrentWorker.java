@@ -74,6 +74,8 @@ public class TorrentWorker {
     private Supplier<Assignments> assignmentsSupplier;
     private Supplier<BitfieldBasedStatistics> statisticsSupplier;
 
+    private final long dispatcherId;
+
     public TorrentWorker(TorrentId torrentId,
                          IMessageDispatcher dispatcher,
                          IConnectionSource connectionSource,
@@ -99,6 +101,8 @@ public class TorrentWorker {
         this.bitfieldSupplier = bitfieldSupplier;
         this.assignmentsSupplier = assignmentsSupplier;
         this.statisticsSupplier = statisticsSupplier;
+
+        this.dispatcherId = dispatcher.nextId();
 
         eventSource.onPeerDiscovered(e -> {
             if (torrentId.equals(e.getTorrentId())) {
@@ -140,8 +144,8 @@ public class TorrentWorker {
         PieceAnnouncingPeerWorker worker = createPeerWorker(peer);
         PieceAnnouncingPeerWorker existing = peerMap.putIfAbsent(peer, worker);
         if (existing == null) {
-            dispatcher.addMessageConsumer(torrentId, peer, message -> consume(peer, message));
-            dispatcher.addMessageSupplier(torrentId, peer, () -> produce(peer));
+            dispatcher.addMessageConsumer(torrentId, peer, dispatcherId, message -> consume(peer, message));
+            dispatcher.addMessageSupplier(torrentId, peer, dispatcherId, () -> produce(peer));
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Added connection for peer: " + peer);
             }
@@ -253,6 +257,8 @@ public class TorrentWorker {
     private void processDisconnectedPeers(Assignments assignments, BitfieldBasedStatistics statistics) {
         Peer disconnectedPeer;
         while ((disconnectedPeer = disconnectedPeers.poll()) != null) {
+            dispatcher.removeMessageConsumer(torrentId, disconnectedPeer, dispatcherId);
+            dispatcher.removeMessageSupplier(torrentId, disconnectedPeer, dispatcherId);
             if (assignments != null) {
                 Assignment assignment = assignments.get(disconnectedPeer);
                 if (assignment != null) {
