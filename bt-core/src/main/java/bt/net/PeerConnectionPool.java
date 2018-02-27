@@ -147,6 +147,18 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         return added;
     }
 
+    /*
+    @Override
+    public void disconnect(Peer peer, TorrentId torrentId) {
+        cleanerLock.lock();
+        try {
+            connections.get(peer, torrentId).ifPresent(this::purgeConnection);
+        } finally {
+            cleanerLock.unlock();
+        }
+    }
+    */
+
     private class Cleaner implements Runnable {
         @Override
         public void run() {
@@ -178,9 +190,12 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     }
 
     private void purgeConnection(PeerConnection connection) {
-        connections.remove(connection);
-        connection.closeQuietly();
-        eventSink.firePeerDisconnected(connection.getTorrentId(), connection.getRemotePeer());
+        try {
+            connections.remove(connection);
+            connection.closeQuietly();
+        } finally {
+            eventSink.firePeerDisconnected(connection.getTorrentId(), connection.getRemotePeer());
+        }
     }
 
     private void shutdown() {
@@ -214,7 +229,7 @@ class Connections {
         return connections.size();
     }
 
-    synchronized boolean remove(PeerConnection connection) {
+    synchronized void remove(PeerConnection connection) {
         Objects.requireNonNull(connection);
 
         Peer peer = connection.getRemotePeer();
@@ -222,15 +237,13 @@ class Connections {
         ConnectionKey key = new ConnectionKey(peer, torrentId);
 
         PeerConnection removed = connections.remove(key);
-        boolean success = (removed == connection);
-        if (success) {
+        if (removed != null) {
             Collection<PeerConnection> torrentConnections = connectionsByTorrent.get(torrentId);
             torrentConnections.remove(removed);
             if (torrentConnections.isEmpty()) {
                 connectionsByTorrent.remove(torrentId);
             }
         }
-        return success;
     }
 
     synchronized PeerConnection putIfAbsent(PeerConnection connection) {
