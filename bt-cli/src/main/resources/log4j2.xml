@@ -7,11 +7,17 @@
         <File name="bt-dht" append="false" fileName="bt-dht.log">
             <PatternLayout pattern="[%d{dd/MMM/yyyy:HH:mm:ss,SSS}] %-5p %c{1}: %m%n%ex"/>
         </File>
+        <File name="bt-upnp" append="false" fileName="bt-upnp.log">
+            <PatternLayout pattern="[%d{dd/MMM/yyyy:HH:mm:ss,SSS}] %-5p %c{1}: %m%n%ex"/>
+        </File>
         <Async name="A1" bufferSize="1000">
             <appender-ref ref="bt-core"/>
         </Async>
         <Async name="A2" bufferSize="1000">
             <appender-ref ref="bt-dht"/>
+        </Async>
+        <Async name="A3" bufferSize="1000">
+            <appender-ref ref="bt-upnp"/>
         </Async>
     </appenders>
 
@@ -28,6 +34,9 @@
         </logger>
         <logger name="bt.dht" level="debug" additivity="false">
             <appender-ref ref="bt-dht"/>
+        </logger>
+        <logger name="bt.portmapping.upnp" level="debug" additivity="false">
+            <appender-ref ref="bt-upnp"/>
         </logger>
 
         <root level="warn">

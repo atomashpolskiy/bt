@@ -46,6 +46,7 @@
         <module>bt-cli</module>
         <module>examples</module>
         <module>jacoco-report</module>
+        <module>bt-upnp</module>
     </modules>
 
     <properties>

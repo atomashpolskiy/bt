@@ -105,6 +105,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.github.atomashpolskiy</groupId>
+            <artifactId>bt-upnp</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>net.sf.jopt-simple</groupId>
             <artifactId>jopt-simple</artifactId>
             <version>${jopts-version}</version>

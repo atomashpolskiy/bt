@@ -27,42 +27,20 @@ import bt.event.EventSink;
 import bt.event.EventSource;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.MetadataService;
-import bt.net.DataReceiver;
-import bt.net.DataReceivingLoop;
+import bt.net.*;
 import bt.net.buffer.BufferManager;
-import bt.net.ConnectionSource;
 import bt.net.buffer.IBufferManager;
-import bt.net.IConnectionHandlerFactory;
-import bt.net.IConnectionSource;
-import bt.net.IMessageDispatcher;
-import bt.net.IPeerConnectionFactory;
-import bt.net.IPeerConnectionPool;
-import bt.net.MessageDispatcher;
-import bt.net.PeerConnectionFactory;
-import bt.net.PeerConnectionPool;
-import bt.net.SharedSelector;
-import bt.net.SocketChannelConnectionAcceptor;
 import bt.net.pipeline.ChannelPipelineFactory;
 import bt.net.pipeline.IChannelPipelineFactory;
-import bt.peer.IPeerCache;
-import bt.peer.IPeerRegistry;
-import bt.peer.PeerCache;
-import bt.peer.PeerRegistry;
-import bt.peer.PeerSourceFactory;
+import bt.net.portmapping.impl.PortMappingInitializer;
+import bt.peer.*;
 import bt.processor.ProcessorFactory;
 import bt.processor.TorrentProcessorFactory;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 import bt.runtime.Config;
-import bt.service.ApplicationService;
-import bt.service.ClasspathApplicationService;
-import bt.service.ExecutorServiceProvider;
-import bt.service.IRuntimeLifecycleBinder;
+import bt.service.*;
 import bt.service.IRuntimeLifecycleBinder.LifecycleEvent;
-import bt.service.IdentityService;
-import bt.service.LifecycleBinding;
-import bt.service.RuntimeLifecycleBinder;
-import bt.service.VersionAwareIdentityService;
 import bt.torrent.AdhocTorrentRegistry;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.data.DataWorkerFactory;
@@ -182,6 +160,8 @@ public class ServiceModule implements Module {
 
         binder.bind(ExecutorService.class).annotatedWith(ClientExecutor.class)
                 .toProvider(ExecutorServiceProvider.class).in(Singleton.class);
+
+        binder.bind(PortMappingInitializer.class).asEagerSingleton();
     }
 
     @Provides

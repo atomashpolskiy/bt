@@ -23,6 +23,7 @@ import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
 import bt.net.InetPeerAddress;
 import bt.net.Peer;
+import bt.net.portmapping.PortMapper;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.LifecycleBinding;
@@ -43,10 +44,13 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+
+import static bt.net.portmapping.PortMapProtocol.UDP;
 
 public class MldhtService implements DHTService {
 
@@ -77,22 +81,24 @@ public class MldhtService implements DHTService {
         };
     }
 
-    private DHTConfiguration config;
-    private DHT dht;
+    private final DHTConfiguration config;
+    private final DHT dht;
 
-    private InetAddress localAddress;
-    private boolean useRouterBootstrap;
-    private Collection<InetPeerAddress> publicBootstrapNodes;
-    private Collection<InetPeerAddress> bootstrapNodes;
+    private final InetAddress localAddress;
+    private final boolean useRouterBootstrap;
+    private final Collection<InetPeerAddress> publicBootstrapNodes;
+    private final Collection<InetPeerAddress> bootstrapNodes;
+    private final Set<PortMapper> portMappers;
 
     @Inject
-    public MldhtService(IRuntimeLifecycleBinder lifecycleBinder, Config config, DHTConfig dhtConfig) {
-        this.dht = new DHT(dhtConfig.shouldUseIPv6()? DHTtype.IPV6_DHT : DHTtype.IPV4_DHT);
+    public MldhtService(IRuntimeLifecycleBinder lifecycleBinder, Config config, DHTConfig dhtConfig, Set<PortMapper> portMappers) {
+        this.dht = new DHT(dhtConfig.shouldUseIPv6() ? DHTtype.IPV6_DHT : DHTtype.IPV4_DHT);
         this.config = toMldhtConfig(dhtConfig);
         this.localAddress = config.getAcceptorAddress();
         this.useRouterBootstrap = dhtConfig.shouldUseRouterBootstrap();
         this.publicBootstrapNodes = dhtConfig.getPublicBootstrapNodes();
         this.bootstrapNodes = dhtConfig.getBootstrapNodes();
+        this.portMappers = portMappers;
 
         lifecycleBinder.onStartup(LifecycleBinding.bind(this::start).description("Initialize DHT facilities").async().build());
         lifecycleBinder.onShutdown("Shutdown DHT facilities", this::shutdown);
@@ -154,10 +160,23 @@ public class MldhtService implements DHTService {
                     publicBootstrapNodes.forEach(this::addNode);
                 }
                 bootstrapNodes.forEach(this::addNode);
+
+                mapPorts();
+
             } catch (SocketException e) {
                 throw new BtException("Failed to start DHT", e);
             }
         }
+    }
+
+    private void mapPorts() {
+        final int listeningPort = config.getListeningPort();
+
+        dht.getServerManager().getAllServers().forEach(s ->
+                portMappers.forEach(m -> {
+                    final InetAddress bindAddress = s.getBindAddress();
+                    m.mapPort(listeningPort, bindAddress.toString(), UDP, "bt DHT");
+                }));
     }
 
     private void shutdown() {

@@ -17,6 +17,7 @@
 package bt.module;
 
 import bt.net.PeerConnectionAcceptor;
+import bt.net.portmapping.PortMapper;
 import bt.peer.PeerSourceFactory;
 import bt.tracker.TrackerFactory;
 import com.google.inject.Binder;
@@ -38,6 +39,7 @@ public class ServiceModuleExtender {
     private MapBinder<String, TrackerFactory> trackerFactories;
     private Multibinder<Object> messagingAgents;
     private Multibinder<PeerConnectionAcceptor> connectionAcceptors;
+    private Multibinder<PortMapper> portMappers;
 
     ServiceModuleExtender(Binder binder) {
         this.binder = binder;
@@ -164,6 +166,33 @@ public class ServiceModuleExtender {
 
         contributeConnectionAcceptors().addBinding().toInstance(connectionAcceptor);
         return this;
+    }
+
+    /**
+     * Contribute a port mapper instance.
+     */
+    public ServiceModuleExtender addPortMapper(PortMapper portMapper){
+        Objects.requireNonNull(portMapper);
+
+        contributePortMapper().addBinding().toInstance(portMapper);
+        return this;
+    }
+
+    /**
+     * Contribute a port mapper type.
+     */
+    public ServiceModuleExtender addPortMapper(Class<? extends PortMapper> portMapperType){
+        Objects.requireNonNull(portMapperType);
+
+        contributePortMapper().addBinding().to(portMapperType);
+        return this;
+    }
+
+    private Multibinder<PortMapper> contributePortMapper() {
+        if (portMappers == null){
+            portMappers = Multibinder.newSetBinder(binder, PortMapper.class);
+        }
+        return portMappers;
     }
 
     private Multibinder<PeerSourceFactory> contributePeerSourceFactories() {

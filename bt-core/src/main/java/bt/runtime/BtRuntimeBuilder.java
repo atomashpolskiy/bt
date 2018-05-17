@@ -20,6 +20,7 @@ import bt.BtException;
 import bt.module.BtModuleProvider;
 import bt.module.ProtocolModule;
 import bt.module.ServiceModule;
+import bt.net.portmapping.impl.PortMappingModule;
 import bt.peer.lan.LocalServiceDiscoveryModule;
 import bt.peerexchange.PeerExchangeModule;
 import com.google.inject.Guice;
@@ -29,15 +30,10 @@ import com.google.inject.util.Modules;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.ServiceLoader;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Runtime builder.
@@ -176,7 +172,6 @@ public class BtRuntimeBuilder {
         return runtime;
     }
 
-    @SuppressWarnings("unchecked")
     private Injector createInjector() {
         Map<Class<? extends Module>, Module> standardModules = mapByClass(collectModules(standardProviders()));
 
@@ -242,8 +237,8 @@ public class BtRuntimeBuilder {
             Map<Class<? extends Module>, Module> autoLoadedModules,
             Map<Class<? extends Module>, Module> customModules) {
 
-        Module combinedModule = Arrays.asList(standardModules, standardExtensions, autoLoadedModules, customModules)
-                .stream().sequential()
+        Module combinedModule = Stream.of(standardModules, standardExtensions, autoLoadedModules, customModules)
+                .sequential()
                 .filter(map -> !map.isEmpty())
                 .map(map -> Modules.combine(map.values()))
                 .reduce(null, (m1, m2) -> (m1 == null) ? m2 : Modules.override(m1).with(m2));
@@ -251,15 +246,13 @@ public class BtRuntimeBuilder {
         return Guice.createInjector(combinedModule);
     }
 
-    @SuppressWarnings("unchecked")
     private Collection<Module> collectModules(Collection<BtModuleProvider>... providers) {
-        return Arrays.asList(providers).stream()
+        return Arrays.stream(providers)
                 .flatMap(Collection::stream)
                 .map(BtModuleProvider::module)
                 .collect(Collectors.toList());
     }
 
-    @SuppressWarnings("unchecked")
     private <T> Map<Class<? extends T>, T> mapByClass(Collection<T> collection) {
         return collection.stream().collect(HashMap::new, (m, o) -> {
             Class<T> moduleType = (Class<T>) o.getClass();
@@ -271,7 +264,8 @@ public class BtRuntimeBuilder {
     }
 
     private Collection<BtModuleProvider> standardProviders() {
-        Collection<BtModuleProvider> standardProviders = new ArrayList<>();
+        Collection<BtModuleProvider> standardProviders = new ArrayList<>(3);
+        standardProviders.add(PortMappingModule::new);
         standardProviders.add(() -> new ServiceModule(config));
         standardProviders.add(ProtocolModule::new);
         return standardProviders;
@@ -295,11 +289,10 @@ public class BtRuntimeBuilder {
     }
 
     private Collection<BtModuleProvider> autoLoadedProviders() {
-        Collection<BtModuleProvider> autoLoadedProviders = new ArrayList<>();
-        ServiceLoader.load(BtModuleProvider.class).forEach(p -> {
-            autoLoadedProviders.add(nullCheckingProvider(p));
-        });
-        return autoLoadedProviders;
+        return StreamSupport
+                .stream(ServiceLoader.load(BtModuleProvider.class).spliterator(), false)
+                .map(BtRuntimeBuilder::nullCheckingProvider)
+                .collect(Collectors.toList());
     }
 
     private static BtModuleProvider nullCheckingProvider(BtModuleProvider provider) {

@@ -270,7 +270,7 @@ public class BtRuntime {
     private String createErrorMessage(LifecycleEvent event, LifecycleBinding binding) {
         Optional<String> descriptionOptional = binding.getDescription();
         String errorMessage = "Failed to execute " + event.name().toLowerCase() + " hook: ";
-        errorMessage += ": " + (descriptionOptional.isPresent()? descriptionOptional.get() : binding.getRunnable().toString());
+        errorMessage += ": " + (descriptionOptional.orElseGet(() -> binding.getRunnable().toString()));
         return errorMessage;
     }
 
@@ -303,7 +303,7 @@ public class BtRuntime {
             Runnable r = binding.getRunnable();
 
             Optional<String> descriptionOptional = binding.getDescription();
-            String description = descriptionOptional.isPresent() ? descriptionOptional.get() : r.toString();
+            String description = descriptionOptional.orElseGet(r::toString);
             LOGGER.debug("Running " + event.name().toLowerCase() + " hook: " + description);
 
             r.run();
