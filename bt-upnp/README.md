@@ -1,0 +1,3 @@
+# UPnP port forwarding
+
+This module provides support for [automatic port forwarding](https://en.wikipedia.org/wiki/Internet_Gateway_Device_Protocol). It does so by leveraging [Cling](https://github.com/4thline/cling), a UPnP/DLNA library for Java and Android. **Cling** is dual-licensed under LGPL/CDDL, so make sure to read through their [licensing FAQ](https://github.com/4thline/cling#can-i-use-cling-in-my-commercial-application-or-device).

@@ -2,6 +2,14 @@
 
 For the latest information visit project web site: http://atomashpolskiy.github.io/bt/
 
+## 1.8
+
+#### Date:
+
+### New Features:
+
+* UPnP port mapping [#80](https://github.com/atomashpolskiy/bt/issues/80)
+
 ## 1.7
 
 #### Date: 02/26/2018

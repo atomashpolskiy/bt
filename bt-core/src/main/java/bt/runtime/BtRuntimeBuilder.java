@@ -246,7 +246,8 @@ public class BtRuntimeBuilder {
         return Guice.createInjector(combinedModule);
     }
 
-    private Collection<Module> collectModules(Collection<BtModuleProvider>... providers) {
+    @SafeVarargs
+    private final Collection<Module> collectModules(Collection<BtModuleProvider>... providers) {
         return Arrays.stream(providers)
                 .flatMap(Collection::stream)
                 .map(BtModuleProvider::module)
@@ -255,6 +256,7 @@ public class BtRuntimeBuilder {
 
     private <T> Map<Class<? extends T>, T> mapByClass(Collection<T> collection) {
         return collection.stream().collect(HashMap::new, (m, o) -> {
+            @SuppressWarnings("unchecked")
             Class<T> moduleType = (Class<T>) o.getClass();
             if (m.containsKey(moduleType)) {
                 throw new IllegalStateException("Duplicate module: " + moduleType.getName());
@@ -264,7 +266,7 @@ public class BtRuntimeBuilder {
     }
 
     private Collection<BtModuleProvider> standardProviders() {
-        Collection<BtModuleProvider> standardProviders = new ArrayList<>(3);
+        Collection<BtModuleProvider> standardProviders = new ArrayList<>(4);
         standardProviders.add(PortMappingModule::new);
         standardProviders.add(() -> new ServiceModule(config));
         standardProviders.add(ProtocolModule::new);

@@ -10,6 +10,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>bt-upnp</artifactId>
+    <name>Bt UPnP</name>
+    <description>Provides support for UPnP port mapping</description>
 
     <repositories>
         <repository>

@@ -5,6 +5,4 @@ target
 .idea
 *.iml
 dependency-reduced-pom.xml
-bt.log
-bt-dht.log
-bt-upnp.log
+**/*.log

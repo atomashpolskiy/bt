@@ -170,6 +170,8 @@ public class ServiceModuleExtender {
 
     /**
      * Contribute a port mapper instance.
+     *
+     * @since 1.8
      */
     public ServiceModuleExtender addPortMapper(PortMapper portMapper){
         Objects.requireNonNull(portMapper);
@@ -180,6 +182,8 @@ public class ServiceModuleExtender {
 
     /**
      * Contribute a port mapper type.
+     *
+     * @since 1.8
      */
     public ServiceModuleExtender addPortMapper(Class<? extends PortMapper> portMapperType){
         Objects.requireNonNull(portMapperType);

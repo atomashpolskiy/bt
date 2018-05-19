@@ -12,20 +12,28 @@
     <url>https://github.com/atomashpolskiy/bt</url>
     <inceptionYear>2016</inceptionYear>
 
+    <!-- List of contributors in chronological order -->
     <developers>
         <developer>
             <id>atomashpolskiy</id>
             <name>Andrei Tomashpolskiy</name>
             <email>nordmann89@gmail.com</email>
+            <url>https://github.com/atomashpolskiy</url>
         </developer>
         <developer>
             <id>MorrisLaw</id>
             <name>Jeremy L. Morris</name>
             <email>morrislaw93@gmail.com</email>
+            <url>https://github.com/MorrisLaw</url>
         </developer>
         <developer>
             <id>ckovorodkin</id>
             <name>Oleg Ermolaev</name>
+            <url>https://github.com/ckovorodkin</url>
+        </developer>
+        <developer>
+            <id>OlegAndreych</id>
+            <url>https://github.com/OlegAndreych</url>
         </developer>
     </developers>
 
@@ -42,11 +50,11 @@
         <module>bt-core</module>
         <module>bt-http-tracker-client</module>
         <module>bt-dht</module>
+        <module>bt-upnp</module>
         <module>bt-tests</module>
         <module>bt-cli</module>
         <module>examples</module>
         <module>jacoco-report</module>
-        <module>bt-upnp</module>
     </modules>
 
     <properties>

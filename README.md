@@ -9,7 +9,7 @@
 <p align="center"><strong>
 <sup>
 A full-featured BitTorrent implementation in Java 8
-<br/><a href="http://bittorrent.org/beps/bep_0011.html">peer exchange</a> | <a href="http://bittorrent.org/beps/bep_0009.html">magnet links</a> | <a href="http://bittorrent.org/beps/bep_0005.html">DHT</a> | <a href="http://wiki.vuze.com/w/Message_Stream_Encryption">encryption</a> | <a href="http://bittorrent.org/beps/bep_0014.html">LSD</a> | <a href="http://bittorrent.org/beps/bep_0027.html">private trackers</a> | <a href="http://bittorrent.org/beps/bep_0010.html">extended protocol</a> | <a href="#partial-downloads">partial downloads</a>
+<br/><a href="http://bittorrent.org/beps/bep_0011.html">peer exchange</a> | <a href="http://bittorrent.org/beps/bep_0009.html">magnet links</a> | <a href="http://bittorrent.org/beps/bep_0005.html">DHT</a> | <a href="http://wiki.vuze.com/w/Message_Stream_Encryption">encryption</a> | <a href="http://bittorrent.org/beps/bep_0014.html">LSD</a> | <a href="http://bittorrent.org/beps/bep_0027.html">private trackers</a> | <a href="http://bittorrent.org/beps/bep_0010.html">extended protocol</a> | <a href="#partial-downloads">partial downloads</a> | <a href="https://en.wikipedia.org/wiki/Internet_Gateway_Device_Protocol">port forwarding</a>
 </sup>
 </strong></p>
 
@@ -60,14 +60,15 @@ A full-featured BitTorrent implementation in Java 8
 ## Media
 
 * **[HABRAHABR.RU: Пишем свой BitTorrent клиент на базе библиотеки Bt](https://habrahabr.ru/post/350076/)** - Introductory article and demonstration of basic capabilities (in Russian)
+* **[SMARTSPATE.COM: How To Write Your Own BitTorrent Client By Using Bt Library](https://www.smartspate.com/how-to-write-your-own-bittorrent-client-by-using-bt-library/)** - English translation of the above article
 
 ## Prerequisites
 
-<sup>Currently, all peer connections are established via [encryption negotation protocol](http://wiki.vuze.com/w/Message_Stream_Encryption) (also called MSE handshake). Therefore, in order to be able to connect to peers you must install [Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy](http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html). The reason for this requirement is that the [MSE RC4 cipher](http://wiki.vuze.com/w/Message_Stream_Encryption) uses 160 bit keys, while default Java installation allows at most 128 bit keys.</sup>
+<sup>Currently, all peer connections are established via [encryption negotation protocol](http://wiki.vuze.com/w/Message_Stream_Encryption) (also called MSE handshake). If you're using Oracle JDK ([pre 8u152](http://www.oracle.com/technetwork/java/javase/8u152-relnotes-3850503.html)), in order to be able to connect to peers you must install [Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy](http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html). The reason for this requirement is that the [MSE RC4 cipher](http://wiki.vuze.com/w/Message_Stream_Encryption) uses 160 bit keys, while default Java installation allows at most 128 bit keys.</sup>
 
 ## Usage
 
-Most recent version available in Maven Central is **1.6**.
+Most recent version available in Maven Central is **1.7**.
 
 Declare the following dependencies in your project’s **pom.xml**:
 
@@ -77,9 +78,6 @@ Declare the following dependencies in your project’s **pom.xml**:
     <artifactId>bt-core</artifactId>
     <version>${bt-version}</version>
 </dependency>
-<!-- for the sake of keeping the core with minimum number of 3-rd party
-     dependencies HTTP tracker support is shipped as a separate module;
-     you may omit this dependency if only UDP trackers are going to be used -->
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-http-tracker-client</artifactId>
@@ -88,6 +86,11 @@ Declare the following dependencies in your project’s **pom.xml**:
 <dependency>
     <groupId>com.github.atomashpolskiy</groupId>
     <artifactId>bt-dht</artifactId>
+    <version>${bt-version}</version>
+</dependency>
+<dependency>
+    <groupId>com.github.atomashpolskiy</groupId>
+    <artifactId>bt-upnp</artifactId>
     <version>${bt-version}</version>
 </dependency>
 ```
@@ -181,9 +184,9 @@ If you're using an Oracle JDK, make sure that you have installed [Java Cryptogra
 
 ### Other BitTorrent clients can't connect to a Bt client / No incoming connections when seeding
 
-If you're behind a firewall and/or a NAT (e.g. a router), make sure they are configured to allow incoming TCP and UDP connections on the ports used by Bt. Default Bt ports are 6891 and 49001 for BitTorrent and DHT respectively. NAT must additionally be configured to forward all incoming traffic on these ports to the host, that Bt is running on.
+a) If you're behind a firewall and/or a NAT (e.g. a router), make sure they are configured to allow incoming TCP and UDP connections on the ports used by Bt. Default Bt ports are 6891 and 49001 for BitTorrent and DHT respectively. NAT must additionally be configured to forward all incoming traffic on these ports to the host, that Bt is running on.
 
-Many popular BitTorrent clients use UPnP and NAT-PMP to automatically configure port forwarding on NATs. Bt does not support this yet, but I'll be happy to receive a PR with a new module or provide a link to your repository in this README. Some Java UPnP implementations can be found by googling [java upnp](https://www.google.ru/search?q=java+upnp).
+b) Many popular BitTorrent clients use UPnP and NAT-PMP to automatically configure port forwarding on NATs. Since 1.8 Bt does this as well, so make sure to include [bt-upnp](https://github.com/atomashpolskiy/bt/tree/master/bt-upnp) module in the list of dependencies.
 
 ### There are exceptions in the build log (but the build completes successfully)
 
