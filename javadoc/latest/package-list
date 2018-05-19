@@ -17,9 +17,12 @@ bt.net.buffer
 bt.net.crypto
 bt.net.extended
 bt.net.pipeline
+bt.net.portmapping
+bt.net.portmapping.impl
 bt.peer
 bt.peer.lan
 bt.peerexchange
+bt.portmapping.upnp
 bt.processor
 bt.processor.listener
 bt.processor.magnet
