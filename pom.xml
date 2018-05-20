@@ -66,7 +66,7 @@
         <logging-level>INFO</logging-level>
 
         <!-- dependencies versions -->
-        <slf4j-version>1.7.21</slf4j-version>
+        <slf4j-version>1.7.25</slf4j-version>
         <guice-version>4.1.0</guice-version>
         <junit-version>4.12</junit-version>
         <mockito-version>1.10.19</mockito-version>
