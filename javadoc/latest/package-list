@@ -43,4 +43,5 @@ bt.torrent.selector
 bt.tracker
 bt.tracker.http
 bt.tracker.udp
+datasharing
 peertracker
