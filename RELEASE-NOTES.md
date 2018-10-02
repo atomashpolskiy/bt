@@ -9,6 +9,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 ### New Features:
 
 * UPnP port mapping [#80](https://github.com/atomashpolskiy/bt/issues/80)
+* Generate OSGi manifests
 
 ## 1.7
 
