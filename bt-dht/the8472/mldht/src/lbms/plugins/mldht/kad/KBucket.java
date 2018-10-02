@@ -258,7 +258,7 @@ public class KBucket {
 	boolean needsReplacementPing() {
 		long now = System.currentTimeMillis();
 		
-		return now - lastRefresh > REPLACEMENT_PING_MIN_INTERVAL && (entriesStream().anyMatch(KBucketEntry::needsReplacement) || entries.size() == 0) && replacementsStream().anyMatch(KBucketEntry::neverContacted);
+		return now - lastRefresh > REPLACEMENT_PING_MIN_INTERVAL && (entriesStream().anyMatch(KBucketEntry::needsReplacement) || entries.size() < DHTConstants.MAX_ENTRIES_PER_BUCKET) && replacementsStream().anyMatch(KBucketEntry::neverContacted);
 	}
 
 

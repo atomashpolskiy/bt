@@ -422,7 +422,7 @@ public class KBucketEntry {
 			ip[0] |= r << 5;
 			
 			c.reset();
-			c.update(ip, 0, ip.length);
+			c.update(ip, 0, Math.min(ip.length, 8));
 			int crc = (int) c.getValue();
 			
 			return ((nodeID.getInt(0) ^ crc) & 0xff_ff_f8_00) == 0;

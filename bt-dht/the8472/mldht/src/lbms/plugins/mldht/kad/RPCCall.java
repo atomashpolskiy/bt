@@ -181,6 +181,14 @@ public class RPCCall {
 	void sendFailed() {
 		stateTransition(EnumSet.of(RPCState.UNSENT), RPCState.TIMEOUT);
 	}
+	
+	void cancel() {
+		ScheduledFuture<?> timer = timeoutTimer;
+		if(timer != null)
+			timer.cancel(false);
+		// it would be better if we didn't have to treat this as a timeout and could just signal call termination with an internal reason
+		stateTransition(EnumSet.complementOf(EnumSet.of(RPCState.ERROR, RPCState.RESPONDED, RPCState.TIMEOUT)), RPCState.TIMEOUT);
+	}
 
 
 	private void stateTransition(EnumSet<RPCState> expected, RPCState newState) {

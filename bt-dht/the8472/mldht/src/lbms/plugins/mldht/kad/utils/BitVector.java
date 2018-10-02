@@ -47,22 +47,15 @@ public final class BitVector {
 	 * reads an arbitrary (even non-aligned) range of bits (up to 32) and interprets them as int (bigendian)
 	 */
 	public int rangeToInt(int bitOffset, int numOfBits) {
-		int result = 0;
-		int baseShift = numOfBits - 8 + bitOffset % 8;
-		int byteIdx = bitOffset/8;
-		while(baseShift >= 0)
-		{
-			result |= vector[byteIdx] << baseShift;
-			byteIdx++;
-			baseShift -= 8;
-		}
+		ByteBuffer vec = ByteBuffer.wrap(this.vector);
+		int offset = Math.min(this.vector.length - 9, bitOffset / 8);
+		int tailOffset = (bitOffset / 8) - offset;
+		long l = vec.getLong(offset);
 		
-		if(baseShift < 0)
-			result |= vector[byteIdx] >>> Math.abs(baseShift);
+		l <<= bitOffset % 8 + tailOffset * 8;
+		l >>>= 64 - numOfBits;
 		
-		result &= 0xFFFFFFFF >>> 32 - numOfBits;
-		
-		return result;
+		return (int) l;
 	}
 	
 	public int size() {

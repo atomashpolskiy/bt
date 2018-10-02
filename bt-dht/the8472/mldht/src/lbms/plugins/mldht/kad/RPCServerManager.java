@@ -10,6 +10,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -24,6 +25,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lbms.plugins.mldht.kad.utils.AddressUtils;
 import lbms.plugins.mldht.kad.utils.ThreadLocalUtils;
 
@@ -38,7 +40,7 @@ public class RPCServerManager {
 	
 	DHT dht;
 	private ConcurrentHashMap<InetAddress,RPCServer> interfacesInUse = new ConcurrentHashMap<>();
-	private List<InetAddress> validBindAddresses = Collections.emptyList();
+	private volatile List<InetAddress> validBindAddresses = Collections.emptyList();
 	private volatile RPCServer[] activeServers = new RPCServer[0];
 	private SpamThrottle outgoingThrottle = new SpamThrottle();
 	
@@ -71,6 +73,8 @@ public class RPCServerManager {
 		try {
 			Class<? extends InetAddress> type = dht.getType().PREFERRED_ADDRESS_TYPE;
 			
+			List<InetAddress> oldBindAddresses = validBindAddresses;
+			
 			List<InetAddress> newBindAddrs = Collections.list(NetworkInterface.getNetworkInterfaces()).stream()
 					.flatMap(iface -> iface.getInterfaceAddresses().stream())
 					.map(ifa -> ifa.getAddress())
@@ -82,6 +86,10 @@ public class RPCServerManager {
 			
 			newBindAddrs.removeIf(normalizedAddressPredicate().negate());
 			
+			if(!oldBindAddresses.equals(newBindAddrs)) {
+				DHT.logInfo("updating set of valid bind addresses\n old: " + oldBindAddresses + "\n new: " + newBindAddrs);
+			}
+			
 			validBindAddresses = newBindAddrs;
 			
 		} catch (SocketException e) {
@@ -92,8 +100,11 @@ public class RPCServerManager {
 	
 	public void doBindChecks() {
 		updateBindAddrs();
+		Collection<InetAddress> valid = validBindAddresses;
 		getAllServers().forEach(srv -> {
-			if(!validBindAddresses.contains(srv.getBindAddress())) {
+			InetAddress addr = srv.getBindAddress();
+			if(!valid.contains(addr)) {
+				DHT.logInfo("bind address no longer valid, removing from active set: " + addr);
 				srv.stop();
 			}
 		});
@@ -109,7 +120,6 @@ public class RPCServerManager {
 			return pred.test(addr);
 		};
 	}
-	
 	
 	
 	private void startNewServers() {
@@ -142,6 +152,7 @@ public class RPCServerManager {
 		if(current != null && current.getBindAddress().isAnyLocalAddress() && current.getConsensusExternalAddress() != null && AddressUtils.isValidBindAddress(current.getConsensusExternalAddress().getAddress()))
 		{
 			InetAddress rebindAddress = current.getConsensusExternalAddress().getAddress();
+			DHT.logInfo("rebinding any local to" + rebindAddress);
 			current.stop();
 			newServer(rebindAddress);
 			return;
@@ -149,6 +160,7 @@ public class RPCServerManager {
 		
 		// default bind changed and server is not reachable anymore. this may happen when an interface is nominally still available but not routable anymore. e.g. ipv6 temporary addresses
 		if(current != null && defaultBind != null && !current.getBindAddress().equals(defaultBind) && !current.isReachable() && current.age().getSeconds() > TimeUnit.MINUTES.toSeconds(2)) {
+			DHT.logInfo("stopping currently unreachable " + current.getBindAddress() + "to bind to new default route" + defaultBind);
 			current.stop();
 			newServer(defaultBind);
 			return;
@@ -160,6 +172,7 @@ public class RPCServerManager {
 		
 		// this is our default strategy.
 		if(defaultBind != null) {
+			DHT.logInfo("selecting default route bind" + defaultBind);
 			newServer(defaultBind);
 			return;
 		}
@@ -175,6 +188,7 @@ public class RPCServerManager {
 					.orElse(null));
 			if(addr != null) {
 				newServer(addr);
+				DHT.logInfo("Last resort address selection" + addr);
 			}
 			return;
 		}
@@ -185,11 +199,12 @@ public class RPCServerManager {
 			.filter(addressFilter)
 			.findFirst()
 			.ifPresent(addr -> {
+				DHT.logInfo("last resort address selection " + addr);
 				newServer(addr);
 		});
 	}
 	
-	private void newServer(InetAddress addr) {
+	void newServer(InetAddress addr) {
 		RPCServer srv = new RPCServer(this,addr,dht.config.getListeningPort(), dht.serverStats);
 		if(interfacesInUse.putIfAbsent(addr, srv) == null)  {
 			srv.setOutgoingThrottle(outgoingThrottle);
@@ -209,7 +224,6 @@ public class RPCServerManager {
 	
 	void serverRemoved(RPCServer srv) {
 		interfacesInUse.remove(srv.getBindAddress(),srv);
-		refresh(System.currentTimeMillis());
 		dht.getTaskManager().removeServer(srv);
 	}
 	

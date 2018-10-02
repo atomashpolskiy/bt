@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 
 import lbms.plugins.mldht.kad.PeerAddressDBItem;
 import the8472.utils.Arrays;
+import the8472.utils.io.NetMask;
 
 public class AddressUtils {
 	
@@ -52,16 +53,39 @@ public class AddressUtils {
 		return raw[0] == 0x20 && raw[1] == 0x01 && raw[2] == 0x00 && raw[3] == 0x00;
 	}
 	
+	private final static byte[] LOCAL_BROADCAST = new byte[] {(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff};
+	
+	
+	static {
+		try {
+			// ::ffff:0:0/96
+			V4_MAPPED = new NetMask(Inet6Address.getByAddress(null, new byte[] {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,(byte) 0xff,(byte) 0xff,0x00,0x00,0x00,0x00,}, null), 96);
+		} catch(Exception e) {
+			throw new Error("should not happen");
+		}
+		
+	}
+	
+	private final static NetMask V4_MAPPED;
+	private final static NetMask V4_COMPAT = NetMask.fromString("0000::/96");
+	
 	public static boolean isGlobalUnicast(InetAddress addr)
 	{
+		// local identification block
 		if(addr instanceof Inet4Address && addr.getAddress()[0] == 0)
+			return false;
+		// this would be rejected by a socket with broadcast disabled anyway, but filter it to reduce exceptions
+		if(addr instanceof Inet4Address && java.util.Arrays.equals(addr.getAddress(), LOCAL_BROADCAST))
+			return false;
+		if(addr instanceof Inet6Address && (addr.getAddress()[0] & 0xfe) == 0xfc) // fc00::/7
+			return false;
+		if(addr instanceof Inet6Address && (V4_MAPPED.contains(addr) || V4_COMPAT.contains(addr)))
 			return false;
 		return !(addr.isAnyLocalAddress() || addr.isLinkLocalAddress() || addr.isLoopbackAddress() || addr.isMulticastAddress() || addr.isSiteLocalAddress());
 	}
 	
 	public static byte[] packAddress(InetSocketAddress addr) {
 		byte[] result = null;
-		int port = addr.getPort();
 		
 		if(addr.getAddress() instanceof Inet4Address) {
 			result = new byte[6];
@@ -96,11 +120,20 @@ public class AddressUtils {
 		int i = 0;
 		while(buf.hasRemaining()) {
 			buf.get(ip);
-			addrs[i] = new InetSocketAddress(unchecked(() -> InetAddress.getByAddress(ip)), Short.toUnsignedInt(buf.getShort()));
+			addrs[i] = new InetSocketAddress(unchecked(() -> AddressUtils.fromBytesVerbatim(ip)), Short.toUnsignedInt(buf.getShort()));
 			i++;
 		}
 		
 		return java.util.Arrays.asList(addrs);
+	}
+	
+	public static InetAddress fromBytesVerbatim(byte[] raw) throws UnknownHostException {
+		// bypass ipv4 mapped address conversion
+		if(raw.length == 16) {
+			return Inet6Address.getByAddress(null, raw, null);
+		}
+		
+		return InetAddress.getByAddress(raw);
 	}
 	
 	public static InetSocketAddress unpackAddress(byte[] raw) {

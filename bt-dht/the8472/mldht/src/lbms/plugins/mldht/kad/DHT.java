@@ -58,6 +58,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -75,6 +76,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Damokles
@@ -168,7 +170,7 @@ public class DHT implements DHTBase {
 	private DHTStatus						status;
 	private PopulationEstimator				estimator;
 	private AnnounceNodeCache				cache;
-	private NIOConnectionManager			connectionManager;
+	NIOConnectionManager					connectionManager;
 	
 	RPCStats								serverStats;
 
@@ -836,11 +838,8 @@ public class DHT implements DHTBase {
 			return;
 		}
 
-		//scheduler.shutdown();
 		logInfo("Initated DHT shutdown");
-		for (Task t : tman.getActiveTasks()) {
-			t.kill();
-		}
+		Stream.concat(Arrays.stream(tman.getActiveTasks()), Arrays.stream(tman.getQueuedTasks())).forEach(Task::kill);
 		
 		for(ScheduledFuture<?> future : scheduledActions) {
 			future.cancel(false);

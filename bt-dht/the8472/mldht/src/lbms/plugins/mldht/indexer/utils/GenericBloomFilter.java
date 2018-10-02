@@ -7,10 +7,14 @@ package lbms.plugins.mldht.indexer.utils;
 
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
+import java.util.concurrent.ThreadLocalRandom;
+
 import lbms.plugins.mldht.kad.utils.BitVector;
 import lbms.plugins.mldht.kad.utils.ThreadLocalUtils;
 
 import static java.lang.Math.*;
+
+import the8472.utils.MathUtils;
 
 
 public class GenericBloomFilter implements Cloneable {
@@ -25,9 +29,19 @@ public class GenericBloomFilter implements Cloneable {
 	private final int hashBits;
 	
 	BitVector filter;
-
-
 	
+	byte[] secret;
+
+
+	static GenericBloomFilter withProbability(int n, float p) {
+		if(p <= 0.0 || p >= 1.0) {
+			throw new IllegalArgumentException("p must be in (0.0,1.0 range");
+		}
+		int m = (int) (-n*Math.log(p) / Math.pow(Math.log(2),2));
+		// next power of 2
+		m = Math.max(1, Integer.highestOneBit(m - 1) << 1);
+		return new GenericBloomFilter(m, n);
+	}
 	
 	public GenericBloomFilter(int m, int n) {
 		if(Long.bitCount(m) != 1)
@@ -37,26 +51,44 @@ public class GenericBloomFilter implements Cloneable {
 		k = (int) Math.max(1, Math.round(m * 1.0 / n * Math.log(2)));
 		hashBits = (int) (Math.log(m)/Math.log(2));
 		filter = new BitVector(m);
+		secret = new byte[4];
+		ThreadLocalRandom.current().nextBytes(secret);
 	}
 	
 	
-	public void insert(ByteBuffer data) {
+	public boolean insert(ByteBuffer data) {
+		BitVector hash = keysForData(data);
+		boolean changed = false;
+		for(int i=0;i<k;i++) {
+			int idx = hash.rangeToInt(i*hashBits, hashBits);
+			changed |= !filter.get(idx);
+			filter.set(idx);
+		}
+		return changed;
+	}
+	
+	BitVector keysForData(ByteBuffer buf) {
 		MessageDigest sha1 = ThreadLocalUtils.getThreadLocalSHA1();
 		sha1.reset();
-		sha1.update(data);
-		BitVector hash = new BitVector(160, sha1.digest());
-		sha1.reset();
-		for(int i=0;i<k;i++)
-			filter.set(hash.rangeToInt(i*hashBits, hashBits));
+		int needed = hashBits * k;
+		needed = (int) MathUtils.roundToNearestMultiple(MathUtils.ceilDiv(needed, 8), 20);
+		byte[] buffer = new byte[needed];
+		ByteBuffer hashes = ByteBuffer.wrap(buffer);
+		// poor man's SHA1-CTR
+		for(int i=0;i<needed/20;i++) {
+			sha1.update(buf.slice());
+			sha1.update(secret);
+			sha1.update((byte) i);
+			byte[] out = sha1.digest();
+			hashes.put(out);
+			sha1.reset();
+		}
+		return new BitVector(hashBits * k, buffer);
 	}
 	
 	public boolean probablyContains(ByteBuffer data)
 	{
-		MessageDigest sha1 = ThreadLocalUtils.getThreadLocalSHA1();
-		sha1.reset();
-		sha1.update(data);
-		BitVector hash = new BitVector(160, sha1.digest());
-		sha1.reset();
+		BitVector hash = keysForData(data);
 		for(int i=0;i<k;i++)
 		{
 			if(!filter.get(hash.rangeToInt(i*hashBits, hashBits)))
@@ -91,6 +123,12 @@ public class GenericBloomFilter implements Cloneable {
 		double c = filter.bitcount();
 		double size = log1p(-c/m) / (k * logB());
 		return size;
+	}
+	
+	public float estimatedFalsePositiveRate() {
+		//return (float) Math.pow(Math.E,(-((double)m / (double) n) * Math.pow(Math.log(2),2)));
+		return (float) Math.pow(1.0 - Math.pow(Math.E, -k * (double) n / m), k);
+		
 	}
 	
 	// the base for size estimates, occurs in various calculations

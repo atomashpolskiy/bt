@@ -30,14 +30,13 @@ public class AnonAllocator {
 			Files.delete(p);
 			result = mapped.get() == 0;
 		} catch (IOException e) {
-			e.printStackTrace();
 			if(p != null) {
 				Path toDelete = p;
 				Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 					try {
 						Files.deleteIfExists(toDelete);
 					} catch (IOException e1) {
-						e1.printStackTrace();
+						System.err.println("could not delete tempfile "  + toDelete + ", most likely cause: garbage collector did not free the memory mapping keeping it open ; " + e1.getMessage());
 					}
 				}));
 

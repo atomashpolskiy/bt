@@ -17,7 +17,7 @@ public class Help extends CommandProcessor {
 		println("PUT -f <input-path> [-keyfile <path>] [-salt <salt>]");
 		println("PUT <input> [-keyfile <path>] [-salt <salt>]         - perform a BEP44 put, specifying a salt or keyfile implies a mutable put, immutable otherwise. data will be read from file or as single argument");
 		println("GETTORRENT [infohash...]                             - peer lookup for <infohash(es)>, then attempt metadata exchange, then write .torrent file(s) to the current working directory");
-		println("GETPEERS [infohash...] [-fast] [-nocache]            - peer lookup for <infohash(es)>, print ip address/port tuples");
+		println("GETPEERS [infohash...] [-fast] [-nocache] [-scrape]  - peer lookup for <infohash(es)>, print ip address/port tuples");
 		println("BURST [count]                                        - run a batch of find_node lookups to random target IDs. intended test the attainable throughput for active lookups, subject to internal throttling");
 		println("SAMPLE                                        			");
 		exit(0);

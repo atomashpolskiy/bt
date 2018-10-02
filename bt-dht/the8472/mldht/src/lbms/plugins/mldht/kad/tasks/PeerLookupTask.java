@@ -167,8 +167,7 @@ public class PeerLookupTask extends IteratingTask {
 		if(returnedItems.size() > 0 && firstResultTime == 0)
 			firstResultTime = System.currentTimeMillis();
 
-		// if someone has peers he might have filters, collect for scrape
-		if (!items.isEmpty() && scrapeHandler != null)
+		if ((!items.isEmpty() || gpr.hasScrapeResults()) && scrapeHandler != null)
 			synchronized (scrapeHandler) {
 				scrapeHandler.addGetPeersRespone(gpr);
 			}
@@ -181,8 +180,7 @@ public class PeerLookupTask extends IteratingTask {
 
 		// if we scrape we don't care about tokens.
 		// otherwise we're only done if we have found the closest nodes that also returned tokens
-		if (noAnnounce || gpr.getToken() != null)
-		{
+		if (noAnnounce || gpr.getToken() != null) {
 			closest.insert(match);
 		}
 	}

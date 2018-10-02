@@ -13,10 +13,12 @@ import lbms.plugins.mldht.kad.RPCCall;
 import lbms.plugins.mldht.kad.RPCServer;
 import lbms.plugins.mldht.kad.messages.AnnounceRequest;
 import lbms.plugins.mldht.kad.messages.MessageBase;
+import lbms.plugins.mldht.kad.messages.MessageBase.Method;
 
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Damokles
@@ -26,6 +28,7 @@ public class AnnounceTask extends TargetedTask {
 
 	private int								port;
 	private boolean							isSeed;
+	private AtomicInteger					accepted = new AtomicInteger();
 	
 	NavigableMap<KBucketEntry, byte[]> todo;
 	
@@ -42,7 +45,18 @@ public class AnnounceTask extends TargetedTask {
 	}
 
 	@Override
-	void callFinished (RPCCall c, MessageBase rsp) {}
+	void callFinished (RPCCall c, MessageBase rsp) {
+		if(rsp.getType() != MessageBase.Type.RSP_MSG || rsp.getMethod() != Method.ANNOUNCE_PEER)
+			return;
+		if(!c.matchesExpectedID()) {
+			return;
+		}
+		// strict port check
+		if(!c.getRequest().getDestination().equals(rsp.getOrigin()))
+			return;
+		accepted.incrementAndGet();
+	}
+	
 	@Override
 	void callTimeout (RPCCall c) {}
 	
@@ -90,7 +104,7 @@ public class AnnounceTask extends TargetedTask {
 	
 	@Override
 	protected boolean isDone() {
-		if(getRecvResponses() >= DHTConstants.MAX_ENTRIES_PER_BUCKET)
+		if(accepted.get() >= DHTConstants.MAX_ENTRIES_PER_BUCKET)
 			return true;
 		if(todo.isEmpty() && getNumOutstandingRequests() == 0)
 			return true;

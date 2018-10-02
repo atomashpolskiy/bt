@@ -17,10 +17,11 @@ public class ScrapeResponseHandler {
 	private int								scrapeSeeds;
 	private int								scrapePeers;
 	private int								direct;
+	private int								responses;
+	private int								supported;
 	
 	
-	public void addGetPeersRespone(GetPeersResponse gpr)
-	{
+	public void addGetPeersRespone(GetPeersResponse gpr) {
 		scrapeResponses.add(gpr);
 	}
 	
@@ -36,10 +37,21 @@ public class ScrapeResponseHandler {
 		return direct;
 	}
 	
+	public int numResponses() {
+		return responses;
+	}
+	
+	public int numResponsesSupportingScrape() {
+		return supported;
+	}
+	
 	public void process() {
 		List<BloomFilterBEP33> seedFilters = new ArrayList<>();
 		List<BloomFilterBEP33> peerFilters = new ArrayList<>();
 		Set<InetAddress> directPeers = new HashSet<>();
+		responses = scrapeResponses.size();
+		supported = (int) scrapeResponses.stream().filter((rsp) -> rsp.getScrapePeers() != null || rsp.getScrapeSeeds() != null).count();
+		
 		
 		// process seeds first, we need them for some checks later (not yet implemented)
 		for(int i=0;i<scrapeResponses.size();i++)

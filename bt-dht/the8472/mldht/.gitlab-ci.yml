@@ -1,0 +1,16 @@
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+
+cache:
+  paths:
+    - .m2/repository
+
+test:10:
+  image: maven:3-jdk-10
+  script:
+  - mvn install -B
+
+test:11:
+  image: maven:3-jdk-11
+  script:
+  - mvn install -B

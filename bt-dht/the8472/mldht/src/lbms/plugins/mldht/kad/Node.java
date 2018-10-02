@@ -290,6 +290,12 @@ public class Node {
 		Optional<Key> expectedId = associatedCall.map(RPCCall::getExpectedID);
 		Optional<Pair<KBucket, KBucketEntry>> entryByIp = bucketForIP(ip);
 		
+		// RPCServer only verifies IP equality for responses.
+		// we only want remote nodes with stable ports in our routing table, so appley a stricter check here
+		if(associatedCall.isPresent() && !associatedCall.filter(c -> c.getRequest().getDestination().equals(c.getResponse().getOrigin())).isPresent()) {
+			return;
+		}
+		
 		if(entryByIp.isPresent()) {
 			KBucket oldBucket = entryByIp.get().a;
 			KBucketEntry oldEntry = entryByIp.get().b;
@@ -654,7 +660,7 @@ public class Node {
 		
 		// don't spam the checks if we're not receiving anything.
 		// we don't want to cause too many stray packets somewhere in a network
-		if(survival && now - timeOfLastPingCheck > DHTConstants.BOOTSTRAP_MIN_INTERVAL)
+		if(survival && now - timeOfLastPingCheck < DHTConstants.BOOTSTRAP_MIN_INTERVAL)
 			return;
 		timeOfLastPingCheck = now;
 		
@@ -664,6 +670,7 @@ public class Node {
 		
 		for (RoutingTableEntry e : routingTableCOW.entries) {
 			KBucket b = e.bucket;
+			boolean isHome = e.homeBucket;
 
 			List<KBucketEntry> entries = b.getEntries();
 			
@@ -696,7 +703,7 @@ public class Node {
 			}
 			
 			boolean refreshNeeded = b.needsToBeRefreshed();
-			boolean replacementNeeded = b.needsReplacementPing();
+			boolean replacementNeeded = b.needsReplacementPing() || (isHome && b.findPingableReplacement().isPresent());
 			if(refreshNeeded || replacementNeeded)
 				tryPingMaintenance(b, "Refreshing Bucket #" + e.prefix, null, (task) -> {
 					task.probeUnverifiedReplacement(replacementNeeded);
@@ -744,6 +751,7 @@ public class Node {
 	}
 	
 	
+	// TODO implement merges for non-home buckets that got split in the past
 	void mergeBuckets() {
 			
 		int i = 0;
@@ -882,6 +890,12 @@ public class Node {
 		if(!Files.isDirectory(saveTo.getParent()))
 			return;
 		
+		Key currentRootID = getRootID();
+		
+		// called in an uninitialized state, no point in overwriting the table
+		if(currentRootID == null)
+			return;
+		
 		ByteBuffer tableBuffer = AnonAllocator.allocate(50*1024*1024);
 		
 		
@@ -900,7 +914,7 @@ public class Node {
 		tableMap.put("log2estimate", doubleBuf);
 		
 		tableMap.put("timestamp", System.currentTimeMillis());
-		tableMap.put("oldKey", getRootID().getHash());
+		tableMap.put("oldKey", currentRootID.getHash());
 		
 		new BEncoder().encodeInto(tableMap, tableBuffer);
 		

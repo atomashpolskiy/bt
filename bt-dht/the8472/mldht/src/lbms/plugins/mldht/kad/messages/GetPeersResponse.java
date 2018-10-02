@@ -80,7 +80,7 @@ public class GetPeersResponse extends AbstractLookupResponse {
 	
 	public BloomFilterBEP33 getScrapeSeeds() {
 		if(scrapeSeeds != null)
-			return new BloomFilterBEP33(buf2ary(scrapeSeeds));
+			return new BloomFilterBEP33(buf2ary(scrapeSeeds.duplicate()));
 		return null;
 	}
 
@@ -91,11 +91,15 @@ public class GetPeersResponse extends AbstractLookupResponse {
 	public void setScrapeSeeds(BloomFilterBEP33 scrapeSeeds) {
 		this.scrapeSeeds = scrapeSeeds != null ? scrapeSeeds.toBuffer() : null;
 	}
+	
+	public boolean hasScrapeResults() {
+		return this.scrapePeers != null || this.scrapeSeeds != null;
+	}
 
 
 	public BloomFilterBEP33 getScrapePeers() {
 		if(scrapePeers != null)
-			return new BloomFilterBEP33(buf2ary(scrapePeers));
+			return new BloomFilterBEP33(buf2ary(scrapePeers.duplicate()));
 		return null;
 	}
 

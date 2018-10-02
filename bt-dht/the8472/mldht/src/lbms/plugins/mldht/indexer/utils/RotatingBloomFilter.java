@@ -12,8 +12,15 @@ public class RotatingBloomFilter {
 	GenericBloomFilter current;
 	GenericBloomFilter previous;
 	int insertCount;
+	int rotations;
 	int targetSize;
 	boolean autorotate;
+	
+	public RotatingBloomFilter(int targetSize, float falsePositiveRate) {
+		this.targetSize = targetSize;
+		current = GenericBloomFilter.withProbability(targetSize, falsePositiveRate);
+		previous = GenericBloomFilter.withProbability(targetSize, falsePositiveRate);
+	}
 	
 	public RotatingBloomFilter(int targetSize, int bitCount) {
 		this.targetSize = targetSize;
@@ -28,8 +35,9 @@ public class RotatingBloomFilter {
 	
 	public void insert(ByteBuffer data)
 	{
-		current.insert(data);
-		insertCount++;
+		if(current.insert(data)) {
+			insertCount++;
+		}
 		if(autorotate && insertCount >= targetSize)
 			rotate();
 	}
@@ -46,7 +54,7 @@ public class RotatingBloomFilter {
 		current.clear();
 		previous = toSwap;
 		insertCount = 0;
-		
+		rotations++;
 	}
 	
 	

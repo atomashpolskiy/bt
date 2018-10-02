@@ -1,6 +1,11 @@
 # mldht
 
-[![Build Status](https://travis-ci.org/the8472/mldht.svg?branch=master)](https://travis-ci.org/the8472/mldht)
+[![Build Status (travis)](https://travis-ci.org/the8472/mldht.svg?branch=master)](https://travis-ci.org/the8472/mldht)
+[![Build Status (gitlab)](https://gitlab.com/the8472/mldht/badges/master/pipeline.svg)](https://gitlab.com/the8472/mldht/commits/master)
+[![Jitpack maven repo](https://jitpack.io/v/the8472/mldht.svg)](https://jitpack.io/#the8472/mldht)
+[![bintray maven repo](https://img.shields.io/badge/maven-bintray-green.svg?style=flat-square)](https://bintray.com/the8472/maven/mldht)
+
+
 
 A java library and standalone node implementing the Kademlia-based bittorrent mainline DHT, with long-running server-class nodes in mind.
 
@@ -34,7 +39,7 @@ Additional:
 
 ## Dependencies
 
-- java 8
+- java ≥ 8
 - maven 3.1 (building)
 
 installed via maven:
@@ -52,6 +57,7 @@ installed via maven:
 ## embedding as library
 
 See [docs/use-as-library.md](docs/use-as-library.md) for further information.
+Maven repos are linked in the badges.
 
 ## run in standalone mode
 

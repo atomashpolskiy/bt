@@ -5,6 +5,7 @@
  ******************************************************************************/
 package lbms.plugins.mldht.kad;
 
+// TODO: split out termination reason from the case that the call terminated
 public enum RPCState {
 	UNSENT,
 	SENT,

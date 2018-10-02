@@ -5,18 +5,32 @@
  ******************************************************************************/
 package lbms.plugins.mldht;
 
+import lbms.plugins.mldht.kad.DHT;
+
 import java.net.InetAddress;
 import java.nio.file.Path;
 import java.util.function.Predicate;
 
 public interface DHTConfiguration {
 	
+	/**
+	 * if true and combined with an existing storage directory the base ID from which individual RPCServer IDs are derived will be returned
+	 */
 	public boolean isPersistingID();
 
+	/**
+	 * If a Path that points to an existing, writable directory is returned then the routing table
+	 * will be persisted to that directory periodically and during shutdown
+	 */
 	public Path getStoragePath();
 
 	public int getListeningPort();
 	
+	/**
+	 * if true then no attempt to bootstrap through well-known nodes is made.
+	 * you either must have a persisted routing table which can be loaded or
+	 * manually seed the routing table by calling {@link DHT#addDHTNode(String, int)}
+	 */
 	public boolean noRouterBootstrap();
 
 	/**
@@ -29,7 +43,7 @@ public interface DHTConfiguration {
 	 * A DHT node will automatically select socket bind addresses based on internal policies from available addresses,
 	 * the predicate can be used to limit this selection to a subset.
 	 * 
-	 * A predicate that allows any the <em>any local address</em> of a particular address family is considered to allow all addresses of that family
+	 * A predicate that allows the <em>any local address</em> of a particular address family is considered to allow all addresses <em>of that family</em>
 	 * 
 	 * The default implementation does not apply any restrictions.
 	 * 

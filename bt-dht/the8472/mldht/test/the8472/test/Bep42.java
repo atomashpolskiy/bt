@@ -8,6 +8,7 @@ package the8472.test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import lbms.plugins.mldht.kad.DHT.DHTtype;
 import lbms.plugins.mldht.kad.KBucketEntry;
 import lbms.plugins.mldht.kad.Key;
 import lbms.plugins.mldht.kad.NodeFactory;
@@ -38,8 +39,10 @@ public class Bep42 {
 		assertTrue(new KBucketEntry(new InetSocketAddress(InetAddress.getByName("65.23.51.170"), 1), new Key("a5d43220bc8f112a3d426c84764f8c2a1150e616")).hasSecureID());
 		assertTrue(new KBucketEntry(new InetSocketAddress(InetAddress.getByName("84.124.73.14"), 1), new Key("1b0321dd1bb1fe518101ceef99462b947a01ff41")).hasSecureID());
 		assertTrue(new KBucketEntry(new InetSocketAddress(InetAddress.getByName("43.213.53.83"), 1), new Key("e56f6cbf5b7c4be0237986d5243b87aa6d51305a")).hasSecureID());
+		// lifted from LT source
+		assertTrue(new KBucketEntry(new InetSocketAddress(InetAddress.getByName("2001:b829:2123:be84:e16c:d6ae:5290:49f1"), 1), new Key("0a8ad123be84e16cd6ae529049f1f1bbe9ebb304")).hasSecureID());
 		
-		assertFalse(new KBucketEntry(new InetSocketAddress(NodeFactory.generateIp((byte) 1), 1), Key.createRandomKey()).hasSecureID());
+		assertFalse(new KBucketEntry(new InetSocketAddress(NodeFactory.generateIp(DHTtype.IPV6_DHT, (byte) 1), 1), Key.createRandomKey()).hasSecureID());
 		
 	}
 

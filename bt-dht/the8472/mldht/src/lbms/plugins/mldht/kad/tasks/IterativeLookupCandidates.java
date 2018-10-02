@@ -54,7 +54,9 @@ import java.util.stream.Stream;
  * 
  * -> we can recover from all the above-listed issues because the terminal set of nodes should have some partial agreement about their neighbors
  * 
- * 
+ * TODO:
+ *  - global mutual exclusion for in-flight targets. bad peers polluting everyone's routing table are the #1 slowdown for bulk lookups now
+ *  - min-heaps (active + penalty box)? assign score once. recalculate as needed
  * 
  */
 public class IterativeLookupCandidates {

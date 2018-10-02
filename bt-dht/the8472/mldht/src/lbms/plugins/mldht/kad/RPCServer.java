@@ -48,6 +48,7 @@ import java.util.Collection;
 import java.util.Formatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -59,6 +60,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author The_8472, Damokles
@@ -180,7 +182,7 @@ public class RPCServer {
 			throw new IllegalStateException("already initialized");
 		startTime = Instant.now();
 		state = State.RUNNING;
-		DHT.logInfo("Starting RPC Server");
+		DHT.logInfo("Starting RPC Server " + addr + " " + derivedId.toString(false));
 		sel.start();
 		
 	}
@@ -203,7 +205,11 @@ public class RPCServer {
 		}
 		dh_table.getNode().removeId(derivedId);
 		manager.serverRemoved(this);
+		Stream.of(calls.values().stream(), call_queue.stream(), pipeline.stream().map(es -> es.associatedCall).filter(Objects::nonNull)).flatMap(s -> s).forEach(r -> {
+			r.cancel();
+		});
 		pipeline.clear();
+		DHT.logInfo("Stopped RPC Server " + addr + " " + derivedId.toString(false));
 	}
 	
 	
@@ -458,8 +464,8 @@ public class RPCServer {
 		
 		// message matches transaction ID and origin == destination
 		if(c != null) {
-										
-			if(c.getRequest().getDestination().equals(msg.getOrigin())) {
+			// we only check the IP address here. the routing table applies more strict checks to also verify a stable port
+			if(c.getRequest().getDestination().getAddress().equals(msg.getOrigin().getAddress())) {
 				// remove call first in case of exception
 				if(calls.remove(new ByteWrapper(msg.getMTID()),c)) {
 					msg.setAssociatedCall(c);
@@ -704,6 +710,8 @@ public class RPCServer {
 			
 			ByteBuffer readBuffer = RPCServer.readBuffer.get();
 			
+			DHTtype type = dh_table.getType();
+			
 			while(true)
 			{
 				readBuffer.clear();
@@ -714,8 +722,9 @@ public class RPCServer {
 				// * no conceivable DHT message is smaller than 10 bytes
 				// * all DHT messages start with a 'd' for dictionary
 				// * port 0 is reserved
+				// * address family may mismatch due to autoconversion from v4-mapped v6 addresses to Inet4Address
 				// -> immediately discard junk on the read loop, don't even allocate a buffer for it
-				if(readBuffer.position() < 10 || readBuffer.get(0) != 'd' || soa.getPort() == 0)
+				if(readBuffer.position() < 10 || readBuffer.get(0) != 'd' || soa.getPort() == 0 || !type.canUseSocketAddress(soa))
 					continue;
 				if(throttle.addAndTest(soa.getAddress()))
 					continue;

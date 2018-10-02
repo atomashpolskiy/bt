@@ -182,20 +182,22 @@ public class Server implements Component {
 				}
 				
 				void write() throws IOException {
-					ByteBuffer toWrite;
-					while((toWrite = writes.pollFirst()) != null) {
-						try {
-							chan.write(toWrite);
-						} catch (IOException e) {
-							chan.close();
-							return;
+					try {
+						while (!writes.isEmpty()) {
+							if (!writes.peekFirst().hasRemaining()) {
+								writes.removeFirst();
+								continue;
+							}
+							long written = chan.write(writes.stream().toArray(ByteBuffer[]::new));
+							if (written == 0)
+								break;
+
 						}
-						if(toWrite.remaining() > 0) {
-							writes.addFirst(toWrite);
-							break;
-						}
+					} catch (IOException e) {
+						chan.close();
+						return;
 					}
-					
+
 					if(writes.isEmpty())
 						conMan.interestOpsChanged(this);
 				}

@@ -2,17 +2,22 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>mldht.core</groupId>
 	<artifactId>libmldht</artifactId>
-	<version>0.1.0</version>
+	<version>0.1.1-SNAPSHOT</version>
 	<name>mldht - Bittorrent Mainline DHT library</name>
 	<packaging>jar</packaging>
 	<scm>
 		<connection>scm:git:https://github.com/the8472/mldht.git</connection>
 		<url>https://github.com/the8472/mldht</url>
-	  <tag>HEAD</tag>
-  </scm>
+	</scm>
+	<distributionManagement>
+		<repository>
+			<id>bintray-the8472-maven</id>
+			<name>the8472-maven</name>
+			<url>https://api.bintray.com/maven/the8472/maven/mldht/;publish=1</url>
+		</repository>
+	</distributionManagement>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<sonar.skip>true</sonar.skip>
 	</properties>
 	<build>
 		<sourceDirectory>src</sourceDirectory>
@@ -112,38 +117,6 @@
 					</execution>
 				</executions>
 			</plugin>
-			<plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <skipTests>true</skipTests>
-				</configuration>
-			</plugin>
-			<plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-failsafe-plugin</artifactId>
-                <configuration>
-                    <skipTests>true</skipTests>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.sonarsource.scanner.maven</groupId>
-				<artifactId>sonar-maven-plugin</artifactId>
-			</plugin>
-			<plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
-			<plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>nexus-staging-maven-plugin</artifactId>
-                <configuration>
-                    <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
-                </configuration>
-            </plugin>
 		</plugins>
 	</build>
 	<dependencies>

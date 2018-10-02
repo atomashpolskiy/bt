@@ -26,6 +26,7 @@ import the8472.utils.concurrent.LoggingScheduledThreadPoolExecutor;
 import the8472.utils.concurrent.SerializedTaskExecutor;
 import the8472.utils.io.FileIO;
 
+import lbms.plugins.mldht.indexer.utils.RotatingBloomFilter;
 import lbms.plugins.mldht.kad.DHT;
 import lbms.plugins.mldht.kad.KBucketEntry;
 import lbms.plugins.mldht.kad.Key;
@@ -98,6 +99,7 @@ public class TorrentDumper implements Component {
 	
 	TorrentFetcher fetcher;
 	UselessPeerFilter pf;
+	RotatingBloomFilter downloadedFilter;
 	
 	static class FetchStats {
 		final Key k;
@@ -213,6 +215,8 @@ public class TorrentDumper implements Component {
 	public void start(Collection<DHT> dhts, ConfigReader config) {
 		this.dhts = dhts;
 		fromMessages = new ConcurrentSkipListMap<>();
+		downloadedFilter = new RotatingBloomFilter(512*1024, 0.001f);
+		downloadedFilter.setAutoRotate(true);
 		// purge + dump + prefetch + short-running tasks -> 4
 		scheduler = new LoggingScheduledThreadPoolExecutor(4, new LoggingScheduledThreadPoolExecutor.NamedDaemonThreadFactory("torrent dumper"), this::log);
 		
@@ -315,6 +319,9 @@ public class TorrentDumper implements Component {
 	void process(Key targetId, Key sourceNodeId, InetSocketAddress src, String name) {
 		if(quota.get() < 1)
 			return;
+		if(downloadedFilter.contains(targetId.asBuffer())) {
+			return;
+		}
 		
 		FetchStats f = new FetchStats(targetId, init -> {
 			init.recentSources = new ArrayList<>();
@@ -345,7 +352,10 @@ public class TorrentDumper implements Component {
 			Entry<Key, FetchStats> e = it.next();
 			
 			FetchStats toStore = e.getValue();
-			if(Files.exists(toStore.name(torrentDir, ".torrent"))) {
+			if(torrentExists(toStore)) {
+				synchronized (downloadedFilter) {
+					downloadedFilter.insert(e.getKey().asBuffer());
+				}
 				it.remove();
 				continue;
 			}
@@ -431,6 +441,10 @@ public class TorrentDumper implements Component {
 		});
 		
 		quota.set(QUOTA);
+	}
+	
+	boolean torrentExists(FetchStats st) {
+		return Files.exists(st.name(torrentDir, ".torrent"));
 	}
 	
 	void purgeStats() {
@@ -650,6 +664,14 @@ public class TorrentDumper implements Component {
 				if(!fromMessages.remove(e.getKey(), e.getValue()))
 					continue;
 				
+				if(torrentExists(e.getValue())) {
+					synchronized (downloadedFilter) {
+						downloadedFilter.insert(e.getKey().asBuffer());
+					}
+					continue;
+				}
+					
+				
 				dedup.add(e.getKey());
 				synchronized (toFetchNext) {
 					toFetchNext.add(e.getValue());
@@ -716,7 +738,8 @@ public class TorrentDumper implements Component {
 		
 		FetchTask t = fetcher.fetch(k, (fetch) -> {
 			fetch.configureLookup(lookup -> {
-				// XXX: lookup.setFastTerminate(true); // fast mode seems to be too aggressive, disable until we can investigate. relaxed taskmanager limits still lead to decent performance anyway
+				// fast termination seems to bail out too early sometimes. keep an eye on it
+				lookup.setFastTerminate(true);
 				lookup.filterKnownUnreachableNodes(true);
 				lookup.setLowPriority(true);
 			});
@@ -765,6 +788,9 @@ public class TorrentDumper implements Component {
 				ByteBuffer torrent = TorrentUtils.wrapBareInfoDictionary(infoDict);
 				while(torrent.hasRemaining())
 					chan.write(torrent);
+			}
+			synchronized (downloadedFilter) {
+				downloadedFilter.insert(stats.k.asBuffer());
 			}
 		} catch (Exception e) {
 			log(e);

@@ -15,6 +15,7 @@ import lbms.plugins.mldht.kad.DHT;
 import lbms.plugins.mldht.kad.DHTLogger;
 import lbms.plugins.mldht.kad.DHT.DHTtype;
 import lbms.plugins.mldht.kad.DHT.LogLevel;
+import lbms.plugins.mldht.kad.messages.PingRequest;
 import lbms.plugins.mldht.kad.utils.AddressUtils;
 import lbms.plugins.mldht.kad.DHTStatus;
 
@@ -135,31 +136,39 @@ public class DHTLifeCycleTest {
 		
 		RPCServer srv = dhtInstance.getServerManager().getRandomServer();
 		
-		scheduler.submit(() -> {
-			try {
-				assertEquals(RPCServer.State.RUNNING, srv.getState());
-				// fake a packet to trigger liveness update
-				DatagramChannel chan = DatagramChannel.open();
-				chan.connect(new InetSocketAddress(srv.getBindAddress(), srv.getPort()));
-				ByteBuffer packet = ByteBuffer.allocate(50);
-				packet.put(0, (byte) 'd');
-				assertEquals(50, chan.write(packet));
-				
-				srv.sel.readEvent();
-				
-				CompletableFuture<RPCServer> cf = dhtInstance.getServerManager().awaitActiveServer().toCompletableFuture();
-				
-				dhtInstance.getServerManager().refresh(System.currentTimeMillis());
-				
-				assertEquals(srv, cf.get(500, TimeUnit.MILLISECONDS));
-				
-			} catch(Exception e) {
-				exceptionCanary.completeExceptionally(e);
+		CompletableFuture<Void> gotPing = new CompletableFuture<>();
+		
+		dhtInstance.addIncomingMessageListener((instance, msg) -> {
+			if(msg instanceof PingRequest) {
+				gotPing.complete(null);
 			}
-		}).get();
+		});
+
+		scheduler.submit(() -> {
+			assertEquals(RPCServer.State.RUNNING, srv.getState());
+		}).get(800, TimeUnit.MILLISECONDS);
+		
+		
+		DatagramChannel chan = DatagramChannel.open();
+		chan.connect(new InetSocketAddress(srv.getBindAddress(), srv.getPort()));
+		// fake a packet to trigger liveness update
+		ByteBuffer packet = ByteBuffer.allocate(100);
+		PingRequest r = new PingRequest();
+		r.setMTID(new byte[4]);
+		r.setID(Key.createRandomKey());
+		r.encode(packet);
+		int packetSize = packet.limit();
+		assertTrue("sanity check: packet serialization", packetSize > 0);
+		assertEquals("sanity check: sent test packet", packetSize, chan.write(packet));
+		gotPing.get(500, TimeUnit.MILLISECONDS);
+		assertEquals(1, srv.getNumReceived());
+		
+		CompletableFuture<RPCServer> cf = dhtInstance.getServerManager().awaitActiveServer().toCompletableFuture();
+		dhtInstance.getServerManager().refresh(System.currentTimeMillis());
+		assertEquals(srv, cf.get(500, TimeUnit.MILLISECONDS));
+
 		
 		CompletableFuture<Boolean> wasEmpty = new CompletableFuture<>();
-		
 		// single-threaded executor -> we can let startup tasks complete and then stop the DHT from the pool itself
 		// thus there should be no pending tasks on the executor
 		scheduler.submit(() -> {
@@ -174,7 +183,8 @@ public class DHTLifeCycleTest {
 		
 		assertEquals(DHTStatus.Stopped, dhtInstance.getStatus());
 		
-		assertEquals("no messages should have been sent on a bootstrapless startup", 0, dhtInstance.getStats().getNumSentPackets());
+		assertEquals("expected to receive only 1 message (the crafted ping)", 1, srv.getNumReceived());
+		assertEquals("expected to only send 1 message (reply to that ping)", 1, srv.getNumSent());
 		
 		scheduler.shutdown();
 		
@@ -186,8 +196,6 @@ public class DHTLifeCycleTest {
 		exceptionCanary.get();
 		
 		assertFalse("should not create storage path, that's the caller's duty", Files.isDirectory(storagePath));
-		
-		
 	}
 	
 	@Test

@@ -158,6 +158,10 @@ public class Key implements Radixable<Key> {
 		return hash.clone();
 	}
 	
+	public ByteBuffer asBuffer()  {
+		return ByteBuffer.wrap(hash).asReadOnlyBuffer();
+	}
+	
 	public void toBuffer(ByteBuffer dst) {
 		dst.put(hash);
 	}
