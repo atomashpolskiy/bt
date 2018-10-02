@@ -17,8 +17,6 @@
         <main.class>bt.cli.CliClient</main.class>
         <jopts-version>5.0.2</jopts-version>
         <lanterna-version>3.0.0-beta3</lanterna-version>
-        <slf4j-version>1.7.21</slf4j-version>
-        <log4j-version>2.4.1</log4j-version>
     </properties>
 
     <build>
