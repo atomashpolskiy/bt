@@ -85,36 +85,48 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void processInboundData(ByteBuffer buffer) {
         int undecodedDataLimit = buffer.position();
-        if (undecodedDataOffset < undecodedDataLimit) {
-            buffer.flip();
-            decoders.forEach(mutator -> {
+        if (undecodedDataOffset <= undecodedDataLimit) {
+            if (undecodedDataOffset < undecodedDataLimit) {
+                buffer.flip();
+                decoders.forEach(mutator -> {
+                    buffer.position(undecodedDataOffset);
+                    mutator.mutate(buffer);
+                });
+                undecodedDataOffset = undecodedDataLimit;
+                buffer.clear();
                 buffer.position(undecodedDataOffset);
-                mutator.mutate(buffer);
-            });
-            undecodedDataOffset = undecodedDataLimit;
-
-            buffer.position(decodedDataOffset);
-            buffer.limit(undecodedDataOffset);
-            Message message;
-            for (;;) {
-                message = deserializer.deserialize(buffer);
-                if (message == null) {
-                    break;
-                } else {
-                    inboundQueue.add(message);
-                    decodedDataOffset = buffer.position();
-                }
             }
 
-            buffer.clear();
-            buffer.position(undecodedDataLimit);
-            if (!buffer.hasRemaining()) {
+            if (decodedDataOffset < undecodedDataOffset) {
                 buffer.position(decodedDataOffset);
-                buffer.compact();
-                undecodedDataOffset -= decodedDataOffset;
+                buffer.limit(undecodedDataOffset);
+                Message message;
+                for (; ; ) {
+                    message = deserializer.deserialize(buffer);
+                    if (message == null) {
+                        break;
+                    } else {
+                        inboundQueue.add(message);
+                        decodedDataOffset = buffer.position();
+                    }
+                }
+
+                buffer.clear();
                 buffer.position(undecodedDataOffset);
-                decodedDataOffset = 0;
+                if (!buffer.hasRemaining()) {
+                    buffer.position(decodedDataOffset);
+                    buffer.compact();
+                    undecodedDataOffset -= decodedDataOffset;
+                    buffer.position(undecodedDataOffset);
+                    decodedDataOffset = 0;
+                }
+            } else if (decodedDataOffset == undecodedDataOffset) {
+                buffer.clear();
+            } if (decodedDataOffset > undecodedDataOffset) {
+                throw new IllegalStateException("decodedDataOffset > undecodedDataOffset: " + decodedDataOffset + " > " + undecodedDataOffset);
             }
+        } else if (undecodedDataOffset > undecodedDataLimit) {
+            throw new IllegalStateException("undecodedDataOffset > undecodedDataLimit: " + undecodedDataOffset + " > " + undecodedDataLimit);
         }
     }
 
@@ -136,14 +148,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private boolean writeMessageToBuffer(Message message, ByteBuffer buffer) {
-        buffer.clear();
+        int encodedDataLimit = buffer.position();
         boolean written = serializer.serialize(message, buffer);
         if (written) {
+            int unencodedDataLimit = buffer.position();
+            buffer.flip();
             encoders.forEach(mutator -> {
-                buffer.flip();
+                buffer.position(encodedDataLimit);
                 mutator.mutate(buffer);
             });
-            buffer.flip();
+            buffer.clear();
+            buffer.position(unencodedDataLimit);
         }
         return written;
     }

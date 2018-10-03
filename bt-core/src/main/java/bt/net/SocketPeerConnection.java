@@ -128,9 +128,7 @@ public class SocketPeerConnection implements PeerConnection {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Sending message to peer: " + remotePeer + " -- " + message);
         }
-        if (!handler.send(message)) {
-            throw new RuntimeException("Failed to send message");
-        }
+        handler.send(message);
     }
 
     private void updateLastActive() {

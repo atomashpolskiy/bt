@@ -11,6 +11,10 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * UPnP port mapping [#80](https://github.com/atomashpolskiy/bt/issues/80)
 * Generate OSGi manifests
 
+### Bug Fixes/Improvements:
+
+* Outbound data silently discarded at high outgoing rates #94
+
 ## 1.7
 
 #### Date: 02/26/2018

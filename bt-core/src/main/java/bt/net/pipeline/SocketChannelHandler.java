@@ -65,6 +65,9 @@ public class SocketChannelHandler implements ChannelHandler {
         boolean encoded = context.pipeline().encode(message);
         if (encoded) {
             flush();
+        } else {
+            LOGGER.warn("Failed to send message: {};" +
+                    " this can happen if the outbound rate is too high and socket's buffer is overloaded", message);
         }
         return encoded;
     }
@@ -78,9 +81,9 @@ public class SocketChannelHandler implements ChannelHandler {
     public void read() {
         try {
             processInboundData();
-        } catch (IOException e) {
+        } catch (Exception e) {
             shutdown();
-            throw new RuntimeException("Unexpected I/O error", e);
+            throw new RuntimeException("Unexpected error", e);
         }
     }
 
@@ -145,9 +148,11 @@ public class SocketChannelHandler implements ChannelHandler {
     public void flush() {
         synchronized (outboundBufferLock) {
             ByteBuffer buffer = outboundBuffer.lockAndGet();
+            buffer.flip();
             try {
                 while (buffer.hasRemaining() && channel.write(buffer) > 0)
                     ;
+                buffer.compact();
                 outboundBuffer.unlock();
             } catch (IOException e) {
                 outboundBuffer.unlock(); // can't use finally block due to possibility of double-unlock
