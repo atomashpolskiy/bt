@@ -46,7 +46,6 @@ public class Leecher {
             }
         };
 
-        // enable bootstrapping from public routers
         Module dhtModule = new DHTModule(new DHTConfig() {
             @Override
             public Collection<InetPeerAddress> getBootstrapNodes() {
