@@ -83,19 +83,16 @@ public class DefaultMessageRouter implements MessageRouter {
             if (Message.class.equals(consumedType)) {
                 genericConsumers.add((MessageConsumer<Message>) consumer);
             } else {
-                Collection<MessageConsumer<?>> consumers = typedMessageConsumers.get(consumedType);
-                if (consumers == null) {
-                    consumers = new ArrayList<>();
-                    typedMessageConsumers.put(consumedType, consumers);
-                }
-                consumers.add(consumer);
+                typedMessageConsumers.computeIfAbsent(consumedType, k -> new ArrayList<>()).add(consumer);
             }
         });
 
         synchronized (changesLock) {
             this.changes.add(() -> {
                 this.genericConsumers.addAll(genericConsumers);
-                this.typedConsumers.putAll(typedMessageConsumers);
+                typedMessageConsumers.keySet().forEach(key -> this.typedConsumers
+                        .computeIfAbsent(key, k -> new ArrayList<>()).addAll(typedMessageConsumers.get(key))
+                );
             });
         }
     }
