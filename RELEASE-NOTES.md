@@ -15,6 +15,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 * Outbound data silently discarded at high outgoing rates #94
 * Not possible to register consumers for a particular message type from more than one module #100
+* Support Base32-encoded info hashes in magnet links
 
 ## 1.7
 

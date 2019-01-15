@@ -301,13 +301,14 @@ public class Protocols {
     }
 
     /**
-     * Get binary data from its' base32-encoded representation (regardless of case).
+     * Get 20-bytes long info hash from its' base32-encoded representation (regardless of case).
      *
-     * @param s base32-encoded representation of binary data
+     * @param s base32-encoded representation of info hash
      * @return Binary data
-     * @since 1.3
+     * @throws IllegalArgumentException if {@code s.length()} is not 32 characters long
+     * @since 1.8
      */
-    public static byte[] fromBase32(String s) {
+    public static byte[] infoHashFromBase32(String s) {
         if (s.isEmpty() || s.length() != 32) {
             throw new IllegalArgumentException("Invalid string: " + s);
         }

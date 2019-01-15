@@ -47,4 +47,11 @@ public class ProtocolsTest {
         String s = "000fF0Ff";
         assertArrayEquals(bytes, Protocols.fromHex(s));
     }
+
+    @Test
+    public void test_infoHashFromBase32() {
+        String infoHashHex = "C12FE1C06BBA254A9DC9F519B335AA7C1367A88A";
+        String infoHashBase32 = "YEX6DQDLXISUVHOJ6UM3GNNKPQJWPKEK";
+        assertArrayEquals(Protocols.fromHex(infoHashHex), Protocols.infoHashFromBase32(infoHashBase32));
+    }
 }
