@@ -179,7 +179,7 @@ public class MagnetUriParser {
         if (len == 40) {
             bytes = Protocols.fromHex(infoHash);
         } else if (len == 32) {
-            throw new IllegalArgumentException("Base32 info hash not supported");
+            bytes = Protocols.fromBase32(infoHash);
         } else {
             throw new IllegalArgumentException("Invalid info hash length: " + len);
         }
