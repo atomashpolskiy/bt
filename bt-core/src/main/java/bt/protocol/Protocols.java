@@ -300,6 +300,29 @@ public class Protocols {
         return bytes;
     }
 
+    /**
+     * Get binary data from its' base32-encoded representation (regardless of case).
+     *
+     * @param s base32-encoded representation of binary data
+     * @return Binary data
+     * @since 1.3
+     */
+    public static byte[] fromBase32(String s) {
+        if (s.isEmpty() || s.length() != 32) {
+            throw new IllegalArgumentException("Invalid string: " + s);
+        }
+        String base32CodeBase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        StringBuilder hexCache = new StringBuilder();
+        for (int i = 0; i < s.length(); i += 4) {
+            int hexValue = base32CodeBase.indexOf(s.charAt(i)) << 15 |
+                    base32CodeBase.indexOf(s.charAt(i+1)) << 10 |
+                    base32CodeBase.indexOf(s.charAt(i+2)) << 5 |
+                    base32CodeBase.indexOf(s.charAt(i+3));
+            hexCache.append(String.format("%05X", hexValue));
+        }
+        return fromHex(hexCache.toString());
+    }
+
     private static int hexDigit(char c) {
         if (c >= '0' && c <= '9') {
             return c - '0';
