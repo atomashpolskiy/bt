@@ -1,4 +1,4 @@
-package bt.net;
+package bt.metainfo;
 
 import java.util.HashMap;
 import java.util.ArrayList;
