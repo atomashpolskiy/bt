@@ -42,7 +42,7 @@ To create a new CompletableFuture a lambda is provided in the code. The branches
 technically be counted separately, however lizard does not do so.
 
 
-MetadataService#buildTorrent
+### (2,3) MetadataService#buildTorrent
 
 Many branches here are because of null checks. They are also lonely if-branches without an else-part.
 The code creates a torrent from the metadata from some parser (the parser holds the content of some torrent file).
@@ -102,6 +102,7 @@ Tom: 0 hours (was ill)
 2. discussions within parts of the group;
 
 3. reading documentation;
+Johan: 1 hour
 
 4. configuration;
 
@@ -111,8 +112,10 @@ Johan: 4 hours
 6. writing documentation;
 
 7. writing code;
+Johan: 1 hour
 
 8. running code?
+Johan: Lol many hours
 
 ## Overall experience
 
