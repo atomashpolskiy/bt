@@ -29,7 +29,9 @@ is not easily possible: ten complex functions)?
 
 
 ### (2,3) ConnectionSource#getConnectionAsync:
+
 TODO: Do a manual count of the CCN.
+Purpose, CCN:
 
 The CCN is partially inflated because of branches which are solely there for logging.
 The code is fairly long, clocking in at 75 lines for one method and the method is not documented. There are
@@ -41,35 +43,66 @@ This new connection is established and run asynchronously through the Completabl
 To create a new CompletableFuture a lambda is provided in the code. The branches in the lambda should
 technically be counted separately, however lizard does not do so.
 
+Code coverage:
+
+According to JaCoCo:
+0%
+According to manual instrumentation:
+0%
 
 ### (2,3) MetadataService#buildTorrent
+Purpose, CCN:
 
 Many branches here are because of null checks. They are also lonely if-branches without an else-part.
 The code creates a torrent from the metadata from some parser (the parser holds the content of some torrent file).
 There is no real documentation to establish the entirety of possible outcomes and warnings of rawtypes and unchecked exceptions are suppressed.
+
+Code coverage:
+
+According to JaCoCo:
+0%
+According to manual instrumentation:
 
 
 ## Coverage
 
 ### Tools
 
-Document your experience in using a "new"/different coverage tool.
+The project uses JaCoCo for coverage and already had it integrated with its build environment.
+How to use the tool in this project was completely undocumented so at first I had to look around for
+instructions on how to use the tool through Google. I did this for about 2 hours without any real gains being made.
+Finally I found a Travis script in the scripts folder called "travis-run-tests.sh" which ran the tests with code coverage on.
+So yes, the experience in using this tool was terrible because of a lack of in-project documentation.
+The JaCoCo project's documentation however was fine.
 
-How well was the tool documented? Was it possible/easy/difficult to
-integrate it with your build environment?
+
+//Document your experience in using a "new"/different coverage tool.
+
+//How well was the tool documented? Was it possible/easy/difficult to integrate it with your build environment?
 
 ### DYI
 
-Show a patch that show the instrumented code in main (or the unit
-test setup), and the ten methods where branch coverage is measured.
+ConnectionSource#getConnectionAsync:
+See: https://gist.github.com/jsjolen/0e98536c5817fc0502eeb954b003a7fc
+MetadataService#buildTorrent:
+See: https://gist.github.com/jsjolen/fb3bc47617056cac7d605e7da5f53842
 
-The patch is probably too long to be copied here, so please add
-the git command that is used to obtain the patch instead:
+You can generate the patch file for these two methods with: git format-patch -1 899854761449388bf0829fbc272e17c8276e854e
 
-git diff ...
 
-What kinds of constructs does your tool support, and how accurate is
-its output?
+//Show a patch that show the instrumented code in main (or the unit
+//test setup), and the ten methods where branch coverage is measured.
+
+//The patch is probably too long to be copied here, so please add
+//the git command that is used to obtain the patch instead
+
+>What kinds of constructs does your tool support, and how accurate is its output?
+
+Our manual tool consists of one single method which writes some numerical id to a file with some name.
+The numerical id represents the branch taken. Assume a strong adversary, could such an adversary avoid having our method called or its output recorded in the program when a branch occurs?
+As far as we can discern the answer is no. Since our method is statically called there's no way to override the method using reflection for example. Therefore the tool is 100% accurate.
+However it's still a tool of limited usage because of the large amount of manual work needed to discern which branches were taken and which weren't.
+
 
 ### Evaluation
 
@@ -84,6 +117,12 @@ git diff ...
 ## Refactoring
 
 Plan for refactoring complex code:
+
+ConnectionSource#getConnectionAsync:
+
+
+
+MetadataService#buildTorrent
 
 Carried out refactoring (optional)
 
@@ -100,6 +139,7 @@ Jagan: 2 hours
 Tom: 0 hours (was ill)
 
 2. discussions within parts of the group;
+Johan: 10 minutes or so
 
 3. reading documentation;
 Johan: 1 hour
@@ -109,13 +149,14 @@ Johan: 1 hour
 5. analyzing code/output;
 Johan: 4 hours
 
-6. writing documentation;
+6. writing documentation (writing report?));
+Johan: 3 hours
 
 7. writing code;
 Johan: 1 hour
 
 8. running code?
-Johan: Lol many hours
+Johan: Many hours?
 
 ## Overall experience
 
