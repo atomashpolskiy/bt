@@ -17,7 +17,9 @@
 package bt.portmapping.upnp;
 
 import bt.module.ServiceModule;
+import bt.portmapping.upnp.jetty.JettyAsyncUpnpServiceConfiguration;
 import com.google.inject.AbstractModule;
+import org.fourthline.cling.UpnpServiceConfiguration;
 
 /**
  * @since 1.8
@@ -28,6 +30,7 @@ public class UpnpPortMapperModule extends AbstractModule {
     protected void configure() {
         ServiceModule.extend(binder()).addPortMapper(UpnpPortMapper.class);
 
+        bind(UpnpServiceConfiguration.class).to(JettyAsyncUpnpServiceConfiguration.class);
         bind(UpnpPortMappingServicesRegistrar.class);
     }
 }

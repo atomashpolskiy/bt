@@ -18,6 +18,8 @@ package bt.portmapping.upnp;
 
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.LifecycleBinding;
+import org.fourthline.cling.UpnpService;
+import org.fourthline.cling.UpnpServiceConfiguration;
 import org.fourthline.cling.UpnpServiceImpl;
 import org.fourthline.cling.support.igd.PortMappingListener;
 import org.fourthline.cling.support.model.PortMapping;
@@ -36,10 +38,12 @@ import static bt.service.IRuntimeLifecycleBinder.LifecycleEvent.SHUTDOWN;
 public class UpnpPortMappingServicesRegistrar {
 
     private final IRuntimeLifecycleBinder lifecycleBinder;
+    private final UpnpServiceConfiguration upnpServiceConfiguration;
 
     @Inject
-    public UpnpPortMappingServicesRegistrar(IRuntimeLifecycleBinder lifecycleBinder) {
+    public UpnpPortMappingServicesRegistrar(IRuntimeLifecycleBinder lifecycleBinder, UpnpServiceConfiguration upnpServiceConfiguration) {
         this.lifecycleBinder = lifecycleBinder;
+        this.upnpServiceConfiguration = upnpServiceConfiguration;
     }
 
     /**
@@ -48,16 +52,17 @@ public class UpnpPortMappingServicesRegistrar {
      * @param portMapping desired port mapping;
      */
     public void registerPortMapping(PortMapping portMapping) {
-        final UpnpServiceImpl service = new UpnpServiceImpl(new PortMappingListener(portMapping));
+        final UpnpService service = new UpnpServiceImpl(upnpServiceConfiguration, new PortMappingListener(portMapping));
         service.getControlPoint().search();
         bindShutdownHook(service);
     }
 
-    private void bindShutdownHook(UpnpServiceImpl service) {
+    private void bindShutdownHook(UpnpService service) {
         lifecycleBinder.addBinding(SHUTDOWN,
                 LifecycleBinding.bind(service::shutdown)
                         .description("Disables port mapping on application shutdown.")
                         .async()
                         .build());
     }
+
 }
