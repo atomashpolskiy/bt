@@ -25,6 +25,7 @@
 
     <properties>
         <cling.version>2.1.1</cling.version>
+        <jetty.version>8.2.0.v20160908</jetty.version>
     </properties>
 
     <dependencies>
@@ -33,7 +34,6 @@
             <artifactId>bt-core</artifactId>
             <version>${project.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.fourthline.cling</groupId>
             <artifactId>cling-core</artifactId>
@@ -43,6 +43,33 @@
             <groupId>org.fourthline.cling</groupId>
             <artifactId>cling-support</artifactId>
             <version>${cling.version}</version>
+        </dependency>
+        <!-- Jetty StreamClientImpl [http://4thline.org/projects/cling/core/manual/cling-core-manual.xhtml] #6.6 -->
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-client</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-http</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-util</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-io</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <!-- Jetty AsyncServletStreamServerImpl [http://4thline.org/projects/cling/core/manual/cling-core-manual.xhtml] #6.6 -->
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <version>${jetty.version}</version>
         </dependency>
     </dependencies>
 </project>
