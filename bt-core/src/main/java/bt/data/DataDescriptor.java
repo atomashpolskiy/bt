@@ -50,4 +50,13 @@ public interface DataDescriptor extends Closeable {
      * @since 1.7
      */
     List<TorrentFile> getFilesForPiece(int pieceIndex);
+
+    /**
+     * Get the data reader interface, which provides convenient ways
+     * to work with torrent's data (e.g. read it in a stream-like fashion).
+     *
+     * @return Data reader
+     * @since 1.8
+     */
+    DataReader getReader();
 }

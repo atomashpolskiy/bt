@@ -54,7 +54,7 @@ public class Bitfield {
      * Bitmask indicating pieces that should be skipped.
      * If the n-th bit is set, then the n-th piece should be skipped.
      */
-    private volatile BitSet skipped;
+    private volatile /*nullable*/ BitSet skipped;
 
     /**
      * Total number of pieces in torrent.
@@ -163,6 +163,26 @@ public class Bitfield {
         lock.lock();
         try {
             return Protocols.copyOf(bitmask);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     *
+     * @return Bitmask of skipped pieces.
+     *         If the n-th bit is set, then the n-th piece
+     *         should be skipped.
+     * @since 1.8
+     */
+    public BitSet getSkippedBitmask() {
+        if (skipped == null) {
+            return new BitSet(getPiecesTotal());
+        }
+
+        lock.lock();
+        try {
+            return Protocols.copyOf(skipped);
         } finally {
             lock.unlock();
         }

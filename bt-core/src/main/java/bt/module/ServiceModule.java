@@ -16,10 +16,7 @@
 
 package bt.module;
 
-import bt.data.ChunkVerifier;
-import bt.data.DataDescriptorFactory;
-import bt.data.DefaultChunkVerifier;
-import bt.data.IDataDescriptorFactory;
+import bt.data.*;
 import bt.data.digest.Digester;
 import bt.data.digest.JavaSecurityDigester;
 import bt.event.EventBus;
@@ -179,8 +176,9 @@ public class ServiceModule implements Module {
 
     @Provides
     @Singleton
-    public IDataDescriptorFactory provideDataDescriptorFactory(Config config, ChunkVerifier verifier) {
-        return new DataDescriptorFactory(verifier, config.getTransferBlockSize());
+    public IDataDescriptorFactory provideDataDescriptorFactory(Config config, EventSource eventSource, ChunkVerifier verifier) {
+        DataReaderFactory dataReaderFactory = new DataReaderFactory(eventSource);
+        return new DataDescriptorFactory(dataReaderFactory, verifier, config.getTransferBlockSize());
     }
 
     @Provides

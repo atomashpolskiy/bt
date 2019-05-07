@@ -66,4 +66,11 @@ public interface EventSource {
      * @since 1.5
      */
     EventSource onTorrentStopped(Consumer<TorrentStoppedEvent> listener);
+
+    /**
+     * Fired, when downloading and verification of one of torrent's pieces has been finished.
+     *
+     * @since 1.8
+     */
+    EventSource onPieceVerified(Consumer<PieceVerifiedEvent> listener);
 }

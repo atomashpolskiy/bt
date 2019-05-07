@@ -19,6 +19,7 @@ package bt.data;
 import bt.TestUtil;
 import bt.data.digest.Digester;
 import bt.data.digest.SHA1Digester;
+import bt.event.EventBus;
 import bt.metainfo.Torrent;
 import bt.protocol.BitOrder;
 import bt.service.CryptoUtil;
@@ -54,7 +55,8 @@ public class ChunkDescriptor_FileStorageUnitTest {
         int numOfHashingThreads = 4;
         this.verifier = new DefaultChunkVerifier(digester, numOfHashingThreads);
         int transferBlockSize = 4;
-        this.dataDescriptorFactory = new DataDescriptorFactory(verifier, transferBlockSize);
+        this.dataDescriptorFactory = new DataDescriptorFactory(new DataReaderFactory(new EventBus()),
+                verifier, transferBlockSize);
     }
 
     /**************************************************************************************/

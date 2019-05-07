@@ -102,6 +102,15 @@ public class EventBus implements EventSink, EventSource {
         }
     }
 
+    @Override
+    public void firePieceVerified(TorrentId torrentId, int pieceIndex) {
+        long timestamp = System.currentTimeMillis();
+        if (hasListeners(PieceVerifiedEvent.class)) {
+            long id = nextId();
+            fireEvent(new PieceVerifiedEvent(id, timestamp, torrentId, pieceIndex));
+        }
+    }
+
     private boolean hasListeners(Class<? extends BaseEvent> eventType) {
         Collection<Consumer<? extends BaseEvent>> listeners = this.listeners.get(eventType);
         return listeners != null && !listeners.isEmpty();
@@ -164,6 +173,12 @@ public class EventBus implements EventSink, EventSource {
     @Override
     public EventSource onTorrentStopped(Consumer<TorrentStoppedEvent> listener) {
         addListener(TorrentStoppedEvent.class, listener);
+        return this;
+    }
+
+    @Override
+    public EventSource onPieceVerified(Consumer<PieceVerifiedEvent> listener) {
+        addListener(PieceVerifiedEvent.class, listener);
         return this;
     }
 

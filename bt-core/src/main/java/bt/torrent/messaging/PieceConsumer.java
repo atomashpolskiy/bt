@@ -16,6 +16,7 @@
 
 package bt.torrent.messaging;
 
+import bt.event.EventSink;
 import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
@@ -42,13 +43,15 @@ public class PieceConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceConsumer.class);
 
-    private Bitfield bitfield;
-    private DataWorker dataWorker;
-    private ConcurrentLinkedQueue<BlockWrite> completedBlocks;
+    private final Bitfield bitfield;
+    private final DataWorker dataWorker;
+    private final EventSink eventSink;
+    private final ConcurrentLinkedQueue<BlockWrite> completedBlocks;
 
-    public PieceConsumer(Bitfield bitfield, DataWorker dataWorker) {
+    public PieceConsumer(Bitfield bitfield, DataWorker dataWorker, EventSink eventSink) {
         this.bitfield = bitfield;
         this.dataWorker = dataWorker;
+        this.eventSink = eventSink;
         this.completedBlocks = new ConcurrentLinkedQueue<>();
     }
 
@@ -92,6 +95,7 @@ public class PieceConsumer {
                             throw new RuntimeException("Failed to verify block", error1);
                         }
                         completedBlocks.add(block);
+                        eventSink.firePieceVerified(context.getTorrentId().get(), piece.getPieceIndex());
                     });
                 }
             }

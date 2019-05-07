@@ -32,6 +32,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ *<p><b>Note that this class is not a part of the public API and is a subject to change.</b></p>
+ */
 class DefaultDataDescriptor implements DataDescriptor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDataDescriptor.class);
@@ -44,18 +47,22 @@ class DefaultDataDescriptor implements DataDescriptor {
 
     private Map<Integer, List<TorrentFile>> filesForPieces;
     private Set<StorageUnit> storageUnits;
+    private DataReader reader;
 
     private ChunkVerifier verifier;
 
     public DefaultDataDescriptor(Storage storage,
                                  Torrent torrent,
                                  ChunkVerifier verifier,
+                                 DataReaderFactory dataReaderFactory,
                                  int transferBlockSize) {
         this.storage = storage;
         this.torrent = torrent;
         this.verifier = verifier;
 
         init(transferBlockSize);
+
+        this.reader = dataReaderFactory.createReader(torrent, this);
     }
 
     private void init(long transferBlockSize) {
@@ -159,6 +166,11 @@ class DefaultDataDescriptor implements DataDescriptor {
                     ", expected 0.." + bitfield.getPiecesTotal());
         }
         return filesForPieces.get(pieceIndex);
+    }
+
+    @Override
+    public DataReader getReader() {
+        return reader;
     }
 
     @Override

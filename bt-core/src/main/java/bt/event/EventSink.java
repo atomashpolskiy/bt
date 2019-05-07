@@ -68,4 +68,12 @@ public interface EventSink {
      * @since 1.5
      */
     void fireTorrentStopped(TorrentId torrentId);
+
+    /**
+     * Generate event, that the downloading and verification
+     * of one of torrent's pieces has been finished.
+     *
+     * @since 1.8
+     */
+    void firePieceVerified(TorrentId torrentId, int pieceIndex);
 }
