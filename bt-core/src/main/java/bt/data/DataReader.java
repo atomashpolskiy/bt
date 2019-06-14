@@ -42,7 +42,7 @@ public interface DataReader {
      * ByteBuffer buffer = ByteBuffer.allocate(8192);
      * ReadableByteChannel ch = reader.createChannel();
      *
-     * while (ch.read(buffer) >= 0) {
+     * while (ch.read(buffer) &gt;= 0) {
      *     buffer.flip();
      *     data.put(buffer);
      *     buffer.clear();
