@@ -23,6 +23,7 @@ bt.peer
 bt.peer.lan
 bt.peerexchange
 bt.portmapping.upnp
+bt.portmapping.upnp.jetty
 bt.processor
 bt.processor.listener
 bt.processor.magnet
