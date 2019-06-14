@@ -2,13 +2,13 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>mldht.core</groupId>
 	<artifactId>libmldht</artifactId>
-	<version>1.8</version>
+	<version>0.1.1</version>
 	<name>mldht - Bittorrent Mainline DHT library</name>
 	<packaging>jar</packaging>
 	<scm>
 		<connection>scm:git:https://github.com/the8472/mldht.git</connection>
 		<url>https://github.com/the8472/mldht</url>
-	  <tag>bt-parent-1.8</tag>
+	  <tag>HEAD</tag>
   </scm>
 	<distributionManagement>
 		<repository>
