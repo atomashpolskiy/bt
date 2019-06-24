@@ -68,7 +68,7 @@ A full-featured BitTorrent implementation in Java 8
 
 ## Usage
 
-Most recent version available in Maven Central is **1.7**.
+Most recent version available in Maven Central is **1.8**.
 
 Declare the following dependencies in your project’s **pom.xml**:
 
