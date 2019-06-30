@@ -116,7 +116,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         ProcessingStage<TorrentContext> stage1 = new CreateSessionStage<>(stage2, torrentRegistry, eventSource,
                 connectionSource, messageDispatcher, messagingAgents, config);
 
-        ProcessingStage<TorrentContext> stage0 = new FetchTorrentStage(stage1);
+        ProcessingStage<TorrentContext> stage0 = new FetchTorrentStage(stage1, eventSink);
 
         return new ChainProcessor<>(stage0, executor, new TorrentContextFinalizer<>(torrentRegistry, eventSink));
     }
@@ -133,7 +133,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
                 dataWorkerFactory, eventSink, config);
 
         ProcessingStage<MagnetContext> stage1 = new FetchMetadataStage(stage2, metadataService, torrentRegistry,
-                trackerService, peerRegistry, config);
+                peerRegistry, eventSink, config);
 
         ProcessingStage<MagnetContext> stage0 = new CreateSessionStage<>(stage1, torrentRegistry, eventSource,
                 connectionSource, messageDispatcher, messagingAgents, config);

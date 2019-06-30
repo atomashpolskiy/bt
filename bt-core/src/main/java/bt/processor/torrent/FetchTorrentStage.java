@@ -16,6 +16,7 @@
 
 package bt.processor.torrent;
 
+import bt.event.EventSink;
 import bt.metainfo.Torrent;
 import bt.processor.ProcessingStage;
 import bt.processor.TerminateOnErrorProcessingStage;
@@ -23,8 +24,11 @@ import bt.processor.listener.ProcessingEvent;
 
 public class FetchTorrentStage extends TerminateOnErrorProcessingStage<TorrentContext> {
 
-    public FetchTorrentStage(ProcessingStage<TorrentContext> next) {
+    private EventSink eventSink;
+
+    public FetchTorrentStage(ProcessingStage<TorrentContext> next, EventSink eventSink) {
         super(next);
+        this.eventSink = eventSink;
     }
 
     @Override
@@ -32,6 +36,7 @@ public class FetchTorrentStage extends TerminateOnErrorProcessingStage<TorrentCo
         Torrent torrent = context.getTorrentSupplier().get();
         context.setTorrentId(torrent.getTorrentId());
         context.setTorrent(torrent);
+        eventSink.fireMetadataAvailable(torrent.getTorrentId(), torrent);
     }
 
     @Override

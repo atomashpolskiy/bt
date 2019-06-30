@@ -16,6 +16,7 @@
 
 package bt.processor.magnet;
 
+import bt.event.EventSink;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
@@ -32,7 +33,6 @@ import bt.torrent.TorrentRegistry;
 import bt.torrent.messaging.BitfieldCollectingConsumer;
 import bt.torrent.messaging.MetadataConsumer;
 import bt.tracker.AnnounceKey;
-import bt.tracker.ITrackerService;
 
 import java.time.Instant;
 import java.util.List;
@@ -42,21 +42,21 @@ public class FetchMetadataStage extends TerminateOnErrorProcessingStage<MagnetCo
 
     private IMetadataService metadataService;
     private TorrentRegistry torrentRegistry;
-    private ITrackerService trackerService;
     private IPeerRegistry peerRegistry;
+    private EventSink eventSink;
     private Config config;
 
     public FetchMetadataStage(ProcessingStage<MagnetContext> next,
                               IMetadataService metadataService,
                               TorrentRegistry torrentRegistry,
-                              ITrackerService trackerService,
                               IPeerRegistry peerRegistry,
+                              EventSink eventSink,
                               Config config) {
         super(next);
         this.metadataService = metadataService;
         this.torrentRegistry = torrentRegistry;
-        this.trackerService = trackerService;
         this.peerRegistry = peerRegistry;
+        this.eventSink = eventSink;
         this.config = config;
     }
 
@@ -89,6 +89,7 @@ public class FetchMetadataStage extends TerminateOnErrorProcessingStage<MagnetCo
         torrent = amendTorrent(torrent, context.getMagnetUri().getDisplayName());
 
         context.setTorrent(torrent);
+        eventSink.fireMetadataAvailable(torrentId, torrent);
 
         context.setBitfieldConsumer(bitfieldConsumer);
     }

@@ -9,6 +9,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 ### Bug Fixes/Improvements:
 
 * onTorrentStarted called twice [#117](https://github.com/atomashpolskiy/bt/issues/117)
+* Add new onMetadataAvailable event (fired after torrent's metadata has been fetched)
 
 ## 1.8
 

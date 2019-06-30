@@ -17,6 +17,7 @@
 package bt.event;
 
 import bt.data.Bitfield;
+import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
 
@@ -61,6 +62,13 @@ public interface EventSink {
      * @since 1.5
      */
     void fireTorrentStarted(TorrentId torrentId);
+
+    /**
+     * Generate event, that torrent's metadata has been fetched.
+     *
+     * @since 1.9
+     */
+    void fireMetadataAvailable(TorrentId torrentId, Torrent torrent);
 
     /**
      * Generate event, that processing of some torrent has finished.

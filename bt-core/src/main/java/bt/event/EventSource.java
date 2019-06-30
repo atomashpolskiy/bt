@@ -61,6 +61,13 @@ public interface EventSource {
     EventSource onTorrentStarted(Consumer<TorrentStartedEvent> listener);
 
     /**
+     * Fired, when torrent's metadata has been fetched.
+     *
+     * @since 1.9
+     */
+    EventSource onMetadataAvailable(Consumer<MetadataAvailableEvent> listener);
+
+    /**
      * Fired, when processing of some torrent has finished.
      *
      * @since 1.5

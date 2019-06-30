@@ -17,6 +17,7 @@
 package bt.event;
 
 import bt.data.Bitfield;
+import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import org.slf4j.Logger;
@@ -94,6 +95,15 @@ public class EventBus implements EventSink, EventSource {
     }
 
     @Override
+    public void fireMetadataAvailable(TorrentId torrentId, Torrent torrent) {
+        long timestamp = System.currentTimeMillis();
+        if (hasListeners(MetadataAvailableEvent.class)) {
+            long id = nextId();
+            fireEvent(new MetadataAvailableEvent(id, timestamp, torrentId, torrent));
+        }
+    }
+
+    @Override
     public void fireTorrentStopped(TorrentId torrentId) {
         long timestamp = System.currentTimeMillis();
         if (hasListeners(TorrentStoppedEvent.class)) {
@@ -167,6 +177,12 @@ public class EventBus implements EventSink, EventSource {
     @Override
     public EventSource onTorrentStarted(Consumer<TorrentStartedEvent> listener) {
         addListener(TorrentStartedEvent.class, listener);
+        return this;
+    }
+
+    @Override
+    public EventSource onMetadataAvailable(Consumer<MetadataAvailableEvent> listener) {
+        addListener(MetadataAvailableEvent.class, listener);
         return this;
     }
 
