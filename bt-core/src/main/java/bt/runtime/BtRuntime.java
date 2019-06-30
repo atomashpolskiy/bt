@@ -198,6 +198,9 @@ public class BtRuntime {
         return Collections.unmodifiableCollection(knownClients);
     }
 
+    /**
+     * @since 1.5
+     */
     public EventSource getEventSource() {
         return service(EventSource.class);
     }
