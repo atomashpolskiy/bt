@@ -2,6 +2,14 @@
 
 For the latest information visit project web site: http://atomashpolskiy.github.io/bt/
 
+## 1.9
+
+#### Date:
+
+### Bug Fixes/Improvements:
+
+* onTorrentStarted called twice [#117](https://github.com/atomashpolskiy/bt/issues/117)
+
 ## 1.8
 
 #### Date: 06/14/2019

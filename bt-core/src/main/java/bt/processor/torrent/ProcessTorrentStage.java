@@ -16,6 +16,7 @@
 
 package bt.processor.torrent;
 
+import bt.event.EventSink;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.processor.ProcessingStage;
@@ -36,18 +37,22 @@ public class ProcessTorrentStage<C extends TorrentContext> extends TerminateOnEr
 
     private TorrentRegistry torrentRegistry;
     private ITrackerService trackerService;
+    private EventSink eventSink;
 
     public ProcessTorrentStage(ProcessingStage<C> next,
                                TorrentRegistry torrentRegistry,
-                               ITrackerService trackerService) {
+                               ITrackerService trackerService,
+                               EventSink eventSink) {
         super(next);
         this.torrentRegistry = torrentRegistry;
         this.trackerService = trackerService;
+        this.eventSink = eventSink;
     }
 
     @Override
     protected void doExecute(C context) {
-        TorrentDescriptor descriptor = getDescriptor(context.getTorrentId().get());
+        TorrentId torrentId = context.getTorrentId().get();
+        TorrentDescriptor descriptor = getDescriptor(torrentId);
 
         Torrent torrent = context.getTorrent().get();
         Optional<AnnounceKey> announceKey = torrent.getAnnounceKey();
@@ -58,6 +63,8 @@ public class ProcessTorrentStage<C extends TorrentContext> extends TerminateOnEr
 
         descriptor.start();
         start(context);
+
+        eventSink.fireTorrentStarted(torrentId);
 
         while (descriptor.isActive()) {
             try {

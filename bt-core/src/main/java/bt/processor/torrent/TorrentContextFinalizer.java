@@ -16,6 +16,7 @@
 
 package bt.processor.torrent;
 
+import bt.event.EventSink;
 import bt.processor.ContextFinalizer;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
@@ -24,15 +25,18 @@ import bt.torrent.TrackerAnnouncer;
 public class TorrentContextFinalizer<C extends TorrentContext> implements ContextFinalizer<C> {
 
     private TorrentRegistry torrentRegistry;
+    private EventSink eventSink;
 
-    public TorrentContextFinalizer(TorrentRegistry torrentRegistry) {
+    public TorrentContextFinalizer(TorrentRegistry torrentRegistry, EventSink eventSink) {
         this.torrentRegistry = torrentRegistry;
+        this.eventSink = eventSink;
     }
 
     @Override
     public void finalizeContext(C context) {
         context.getTorrentId().ifPresent(torrentId -> {
             torrentRegistry.getDescriptor(torrentId).ifPresent(TorrentDescriptor::stop);
+            eventSink.fireTorrentStopped(torrentId);
         });
         context.getAnnouncer().ifPresent(TrackerAnnouncer::stop);
     }

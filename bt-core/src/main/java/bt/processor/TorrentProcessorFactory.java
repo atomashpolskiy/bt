@@ -106,7 +106,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
         ProcessingStage<TorrentContext> stage5 = new SeedStage<>(null, torrentRegistry);
 
-        ProcessingStage<TorrentContext> stage4 = new ProcessTorrentStage<>(stage5, torrentRegistry, trackerService);
+        ProcessingStage<TorrentContext> stage4 = new ProcessTorrentStage<>(stage5, torrentRegistry, trackerService, eventSink);
 
         ProcessingStage<TorrentContext> stage3 = new ChooseFilesStage<>(stage4, torrentRegistry, config);
 
@@ -118,14 +118,14 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
         ProcessingStage<TorrentContext> stage0 = new FetchTorrentStage(stage1);
 
-        return new ChainProcessor<>(stage0, executor, new TorrentContextFinalizer<>(torrentRegistry));
+        return new ChainProcessor<>(stage0, executor, new TorrentContextFinalizer<>(torrentRegistry, eventSink));
     }
 
     protected ChainProcessor<MagnetContext> createMagnetProcessor() {
 
         ProcessingStage<MagnetContext> stage5 = new SeedStage<>(null, torrentRegistry);
 
-        ProcessingStage<MagnetContext> stage4 = new ProcessMagnetTorrentStage(stage5, torrentRegistry, trackerService);
+        ProcessingStage<MagnetContext> stage4 = new ProcessMagnetTorrentStage(stage5, torrentRegistry, trackerService, eventSink);
 
         ProcessingStage<MagnetContext> stage3 = new ChooseFilesStage<>(stage4, torrentRegistry, config);
 
@@ -138,7 +138,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         ProcessingStage<MagnetContext> stage0 = new CreateSessionStage<>(stage1, torrentRegistry, eventSource,
                 connectionSource, messageDispatcher, messagingAgents, config);
 
-        return new ChainProcessor<>(stage0, executor, new TorrentContextFinalizer<>(torrentRegistry));
+        return new ChainProcessor<>(stage0, executor, new TorrentContextFinalizer<>(torrentRegistry, eventSink));
     }
 
     @SuppressWarnings("unchecked")

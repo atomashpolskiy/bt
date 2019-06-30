@@ -16,6 +16,7 @@
 
 package bt.processor.magnet;
 
+import bt.event.EventSink;
 import bt.processor.ProcessingStage;
 import bt.processor.torrent.ProcessTorrentStage;
 import bt.torrent.TorrentRegistry;
@@ -25,8 +26,9 @@ public class ProcessMagnetTorrentStage extends ProcessTorrentStage<MagnetContext
 
     public ProcessMagnetTorrentStage(ProcessingStage<MagnetContext> next,
                                      TorrentRegistry torrentRegistry,
-                                     ITrackerService trackerService) {
-        super(next, torrentRegistry, trackerService);
+                                     ITrackerService trackerService,
+                                     EventSink eventSink) {
+        super(next, torrentRegistry, trackerService, eventSink);
     }
 
     @Override
