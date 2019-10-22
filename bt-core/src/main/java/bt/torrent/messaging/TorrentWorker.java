@@ -185,49 +185,23 @@ public class TorrentWorker {
     private void inspectAssignment(Peer peer, PeerWorker peerWorker, Assignments assignments) {
         ConnectionState connectionState = peerWorker.getConnectionState();
         Assignment assignment = assignments.get(peer);
-        boolean shouldAssign;
         if (assignment != null) {
-            switch (assignment.getStatus()) {
-                case ACTIVE: {
-                    shouldAssign = false;
-                    break;
+            if (assignment.getStatus() == Assignment.Status.TIMEOUT) {
+                timeoutedPeers.put(peer, System.currentTimeMillis());
+                assignments.remove(assignment);
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Peer assignment removed due to TIMEOUT: {}", assignment);
                 }
-                case DONE: {
-                    // assign next piece
-                    assignments.remove(assignment);
-                    shouldAssign = true;
-                    break;
-                }
-                case TIMEOUT: {
-                    timeoutedPeers.put(peer, System.currentTimeMillis());
-                    assignments.remove(assignment);
-                    shouldAssign = false;
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Peer assignment removed due to TIMEOUT: {}", assignment);
-                    }
-                    break;
-                }
-                default: {
-                    throw new IllegalStateException("Unexpected status: " + assignment.getStatus().name());
-                }
-            }
-        } else {
-            shouldAssign = true;
-        }
-
-        if (connectionState.isPeerChoking()) {
-            if (assignment != null) {
+            } else if (connectionState.isPeerChoking()) {
                 assignments.remove(assignment);
                 if (LOGGER.isTraceEnabled()) {
                     LOGGER.trace("Peer assignment removed due to CHOKING: {}", assignment);
                 }
             }
-        } else if (shouldAssign) {
+        } else if (!connectionState.isPeerChoking()) {
             if (mightCreateMoreAssignments(assignments)) {
-                Optional<Assignment> newAssignment = assignments.assign(peer);
-                if (newAssignment.isPresent()) {
-                    newAssignment.get().start(connectionState);
-                }
+                assignments.assign(peer)
+                        .ifPresent(newAssignment -> newAssignment.start(connectionState));
             }
         }
     }
@@ -239,7 +213,7 @@ public class TorrentWorker {
     }
 
     private boolean mightUseMoreAssignees(Assignments assignments) {
-        return assignments.workersCount() < MAX_CONCURRENT_ACTIVE_CONNECTIONS;
+        return assignments.count() < MAX_CONCURRENT_ACTIVE_CONNECTIONS;
     }
 
     private boolean mightCreateMoreAssignments(Assignments assignments) {
