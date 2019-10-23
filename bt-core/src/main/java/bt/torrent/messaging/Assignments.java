@@ -74,12 +74,6 @@ public class Assignments {
                 selector, pieceStatistics, this);
         assignments.put(peer, assignment);
         return Optional.of(assignment);
-//        if (endgame) {
-//            // take random piece to minimize number of pieces
-//            // requested from different peers at the same time
-//            Integer pieceIndex = pieces.remove(random.nextInt(pieces.size()));
-//            selectedPiece = Optional.of(pieceIndex);
-//        }
     }
 
     public boolean claim(Integer pieceIndex) {

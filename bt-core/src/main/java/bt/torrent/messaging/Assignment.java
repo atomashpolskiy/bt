@@ -23,10 +23,14 @@ import bt.torrent.selector.PieceSelector;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 class Assignment {
 
-    enum Status { ACTIVE, DONE, TIMEOUT };
+    // TODO: change this to a configurable setting?
+    private static final int MAX_SIMULTANEOUSLY_ASSIGNED_PIECES = 3;
+
+    enum Status { ACTIVE, TIMEOUT };
 
     private Peer peer;
     private PieceSelector selector;
@@ -65,13 +69,22 @@ class Assignment {
     }
 
     private void claimPiecesIfNeeded() {
-        // TODO: change this to a configurable setting?
-        int n = 3;
-        if (pieces.size() < n) {
+        if (pieces.size() < MAX_SIMULTANEOUSLY_ASSIGNED_PIECES) {
             Bitfield peerBitfield = pieceStatistics.getPeerBitfield(peer).get();
-            Iterator<Integer> iter = selector.getNextPieces(pieceStatistics).iterator();
+
+            Iterator<Integer> iter;
+            if (assignments.isEndgame()) {
+                // randomize order of pieces to keep the number of pieces
+                // requested from different peers at the same time to a minimum
+                List<Integer> requiredPieces = selector.getNextPieces(pieceStatistics)
+                        .collect(Collectors.toList());
+                Collections.shuffle(requiredPieces);
+                iter = requiredPieces.iterator();
+            } else {
+                iter = selector.getNextPieces(pieceStatistics).iterator();
+            }
+
             while (iter.hasNext() && pieces.size() < 3) {
-                // TODO: during endgame we need to choose the next piece randomly (see commented code in Assignments)
                 Integer pieceIndex = iter.next();
                 if (peerBitfield.isVerified(pieceIndex) && assignments.claim(pieceIndex)) {
                     pieces.add(pieceIndex);
