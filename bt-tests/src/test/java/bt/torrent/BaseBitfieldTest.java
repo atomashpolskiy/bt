@@ -91,6 +91,11 @@ public abstract class BaseBitfieldTest {
             }
 
             @Override
+            public void clear() {
+                Arrays.fill(bitfield, (byte)0);
+            }
+
+            @Override
             public DataRange getData() {
                 throw new UnsupportedOperationException();
             }

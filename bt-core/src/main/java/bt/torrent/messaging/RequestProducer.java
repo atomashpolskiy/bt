@@ -79,10 +79,11 @@ public class RequestProducer {
             for (Integer assignedPiece : _assignedPieces) {
                 if (bitfield.isComplete(assignedPiece)) {
                     assignment.finish(assignedPiece);
+                    connectionState.getEnqueuedPieces().remove(assignedPiece);
                     if (LOGGER.isTraceEnabled()) {
                         LOGGER.trace("Finished downloading piece #{}", assignedPiece);
                     }
-                } else {
+                } else if (connectionState.getEnqueuedPieces().add(assignedPiece)) {
                     addRequestsToQueue(connectionState, assignedPiece);
                 }
             }
@@ -109,34 +110,32 @@ public class RequestProducer {
     }
 
     private void addRequestsToQueue(ConnectionState connectionState, Integer pieceIndex) {
-        if (connectionState.getEnqueuedPieces().add(pieceIndex)) {
-            List<Request> requests = buildRequests(pieceIndex).stream()
-                    .filter(request -> {
-                        Object key = Mapper.mapper().buildKey(
-                                request.getPieceIndex(), request.getOffset(), request.getLength());
-                        if (connectionState.getPendingRequests().contains(key)) {
-                            return false;
-                        }
+        List<Request> requests = buildRequests(pieceIndex).stream()
+                .filter(request -> {
+                    Object key = Mapper.mapper().buildKey(
+                            request.getPieceIndex(), request.getOffset(), request.getLength());
+                    if (connectionState.getPendingRequests().contains(key)) {
+                        return false;
+                    }
 
-                        CompletableFuture<BlockWrite> future = connectionState.getPendingWrites().get(key);
-                        if (future == null) {
-                            return true;
-                        } else if (!future.isDone()) {
-                            return false;
-                        }
+                    CompletableFuture<BlockWrite> future = connectionState.getPendingWrites().get(key);
+                    if (future == null) {
+                        return true;
+                    } else if (!future.isDone()) {
+                        return false;
+                    }
 
-                        boolean failed = future.isDone() && future.getNow(null).getError().isPresent();
-                        if (failed) {
-                            connectionState.getPendingWrites().remove(key);
-                        }
-                        return failed;
+                    boolean failed = future.isDone() && future.getNow(null).getError().isPresent();
+                    if (failed) {
+                        connectionState.getPendingWrites().remove(key);
+                    }
+                    return failed;
 
-                    }).collect(Collectors.toList());
+                }).collect(Collectors.toList());
 
-            Collections.shuffle(requests);
+        Collections.shuffle(requests);
 
-            connectionState.getRequestQueue().addAll(requests);
-        }
+        connectionState.getRequestQueue().addAll(requests);
     }
 
     private List<Request> buildRequests(int pieceIndex) {

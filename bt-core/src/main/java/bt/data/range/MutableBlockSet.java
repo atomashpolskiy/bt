@@ -99,6 +99,11 @@ class MutableBlockSet implements BlockSet {
         return bitmask.isEmpty();
     }
 
+    @Override
+    public void clear() {
+        bitmask.clear();
+    }
+
     /*
     // TODO rewrite description
      * This method implements a simple strategy to track which blocks have been written:

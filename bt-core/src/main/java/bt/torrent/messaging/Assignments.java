@@ -77,7 +77,7 @@ public class Assignments {
     }
 
     public boolean claim(Integer pieceIndex) {
-        boolean claimed = isEndgame() || (!bitfield.isComplete(pieceIndex) && !assignedPieces.contains(pieceIndex));
+        boolean claimed = !bitfield.isComplete(pieceIndex) && (isEndgame() ||  !assignedPieces.contains(pieceIndex));
         if (claimed) {
             assignedPieces.add(pieceIndex);
         }

@@ -114,6 +114,9 @@ class DefaultDataWorker implements DataWorker {
                             boolean verified = verifier.verify(chunk);
                             if (verified) {
                                 data.getBitfield().markVerified(pieceIndex);
+                            } else {
+                                // reset data
+                                chunk.clear();
                             }
                             return verified;
                         }, executor);
