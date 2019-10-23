@@ -37,8 +37,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final List<BufferMutator> decoders;
     private final List<BufferMutator> encoders;
 
-    private final Queue<Message> inboundQueue;
-
     // inbound buffer parameters
     private int decodedDataOffset;
     private int undecodedDataOffset;
@@ -61,7 +59,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         this.decoders = decoders;
         this.encoders = encoders;
-        this.inboundQueue = new LinkedBlockingQueue<>();
+
 
         // process existing data immediately (e.g. there might be leftovers from MSE handshake)
         fireDataReceived();
@@ -107,7 +105,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         break;
                     } else {
                         inboundQueue.add(message);
-                        decodedDataOffset = buffer.position();
+                        if (/*message has buffered data*/) {
+                            //
+                        } else {
+                            decodedDataOffset = buffer.position();
+                        }
                     }
                 }
 
@@ -203,8 +205,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void fireChannelReady() {
-            handler.read();
+        public boolean readFromChannel() {
+            return handler.read();
         }
 
         @Override

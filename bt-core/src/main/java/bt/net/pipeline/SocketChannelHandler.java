@@ -78,9 +78,9 @@ public class SocketChannelHandler implements ChannelHandler {
     }
 
     @Override
-    public void read() {
+    public boolean read() {
         try {
-            processInboundData();
+            return processInboundData();
         } catch (Exception e) {
             shutdown();
             throw new RuntimeException("Unexpected error", e);
@@ -111,7 +111,7 @@ public class SocketChannelHandler implements ChannelHandler {
         context.fireChannelInactive();
     }
 
-    private void processInboundData() throws IOException {
+    private boolean processInboundData() throws IOException {
         synchronized (inboundBufferLock) {
             ByteBuffer buffer = inboundBuffer.lockAndGet();
 
@@ -128,7 +128,7 @@ public class SocketChannelHandler implements ChannelHandler {
                         context.fireDataReceived();
                         processed = true;
                         if (!buffer.hasRemaining()) {
-                            throw new IOException("Can't receive data: insufficient space in the incoming buffer");
+                            return false;
                         }
                     }
                 }
@@ -141,6 +141,8 @@ public class SocketChannelHandler implements ChannelHandler {
             } finally {
                 inboundBuffer.unlock();
             }
+
+            return true;
         }
     }
 

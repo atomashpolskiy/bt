@@ -29,11 +29,12 @@ public interface ChannelHandlerContext {
     ChannelPipeline pipeline();
 
     /**
-     * Signal, that the channel is ready for reading
+     * Request reading from the channel
      *
-     * @since 1.6
+     * @return true, if all data has been read
+     * @since 1.9
      */
-    void fireChannelReady();
+    boolean readFromChannel();
 
     /**
      * @since 1.6

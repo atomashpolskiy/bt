@@ -20,7 +20,6 @@ import bt.event.EventSink;
 import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
-import bt.protocol.Piece;
 import bt.data.Bitfield;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;

@@ -16,6 +16,8 @@
 
 package bt.data.range;
 
+import java.nio.ByteBuffer;
+
 /**
  * Represents a range of binary data.
  *
@@ -61,6 +63,13 @@ public interface Range<T extends Range<T>> {
     byte[] getBytes();
 
     /**
+     * Read all data in this range to the provided buffer.
+     *
+     * @since 1.9
+     */
+    void getBytes(ByteBuffer buffer);
+
+    /**
      * Put data at the beginning of this range.
      *
      * @param block Block of data with length less than or equal to {@link #length()} of this range
@@ -69,4 +78,11 @@ public interface Range<T extends Range<T>> {
      * @since 1.3
      */
     void putBytes(byte[] block);
+
+    /**
+     * Put data from the provided buffer at the beginning of this range.
+     *
+     * @since 1.9
+     */
+    void putBytes(ByteBuffer buffer);
 }

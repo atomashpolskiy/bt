@@ -16,8 +16,6 @@
 
 package bt.test.protocol;
 
-import bt.protocol.Piece;
-
 import java.util.function.BiPredicate;
 
 import static org.junit.Assert.assertArrayEquals;

@@ -19,7 +19,6 @@ package bt.torrent.messaging;
 import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
-import bt.protocol.Piece;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import org.junit.Before;

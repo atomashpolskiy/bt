@@ -40,9 +40,10 @@ public interface ChannelHandler {
     /**
      * Request to read incoming data from the underlying channel.
      *
-     * @since 1.6
+     * @return true, if all data has been read
+     * @since 1.9
      */
-    void read();
+    boolean read();
 
     /**
      * @since 1.6

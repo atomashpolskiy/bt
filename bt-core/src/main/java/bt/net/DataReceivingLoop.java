@@ -158,8 +158,7 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
             }
         }
 
-        handler.fireChannelReady();
-        return true;
+        return handler.readFromChannel();
     }
 
     private ChannelHandlerContext getHandlerContext(SelectionKey key) {

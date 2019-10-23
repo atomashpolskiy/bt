@@ -20,7 +20,6 @@ import bt.BtException;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
-import bt.protocol.Piece;
 import bt.protocol.Request;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;

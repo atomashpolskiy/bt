@@ -19,7 +19,6 @@ package bt.protocol.handler;
 import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.DecodingContext;
-import bt.protocol.Piece;
 
 import java.nio.ByteBuffer;
 import java.util.Objects;

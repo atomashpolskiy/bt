@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2019 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,54 +16,64 @@
 
 package bt.protocol;
 
+import bt.data.range.Range;
+
+import java.nio.ByteBuffer;
+
 /**
- * @since 1.0
+ * @since 1.9
  */
-public final class Piece implements Message {
+public final class OutgoingPiece implements Message {
 
     private int pieceIndex;
     private int offset;
-    private byte[] block;
+    private Range<?> range;
 
     /**
-     * @since 1.0
+     * @since 1.9
      */
-    public Piece(int pieceIndex, int offset, byte[] block) throws InvalidMessageException {
-
-        if (pieceIndex < 0 || offset < 0 || block.length == 0) {
+    public OutgoingPiece(int pieceIndex, int offset, Range<?> range) throws InvalidMessageException {
+        if (pieceIndex < 0 || offset < 0 || range.length() == 0) {
             throw new InvalidMessageException("Invalid arguments: piece index (" +
-                    pieceIndex + "), offset (" + offset + "), block length (" + block.length + ")");
+                    pieceIndex + "), offset (" + offset + "), block length (" + range.length() + ")");
         }
         this.pieceIndex = pieceIndex;
         this.offset = offset;
-        this.block = block;
+        this.range = range;
     }
 
     /**
-     * @since 1.0
+     * @since 1.9
      */
     public int getPieceIndex() {
         return pieceIndex;
     }
 
     /**
-     * @since 1.0
+     * @since 1.9
      */
     public int getOffset() {
         return offset;
     }
 
     /**
-     * @since 1.0
+     * @since 1.9
      */
-    public byte[] getBlock() {
-        return block;
+    public long length() {
+        return range.length();
+    }
+
+    /**
+     * @since 1.9
+     */
+    public void readDataTo(ByteBuffer buffer) {
+        range.getBytes(buffer);
     }
 
     @Override
     public String toString() {
         return "[" + this.getClass().getSimpleName() + "] piece index {" + pieceIndex + "}, offset {" + offset +
-                "}, block {" + block.length + " bytes}";
+                "}, block {" + range.length() + " bytes}";
     }
 
     @Override
