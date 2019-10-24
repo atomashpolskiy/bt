@@ -16,9 +16,9 @@
 
 package bt.protocol.handler;
 
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.Message;
 
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -38,7 +38,7 @@ public abstract class UniqueMessageHandler<T extends Message> extends BaseMessag
     }
 
     @Override
-    public Class<? extends T> readMessageType(ByteBuffer buffer) {
+    public Class<? extends T> readMessageType(ByteBufferView buffer) {
         return type;
     }
 }

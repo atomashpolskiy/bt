@@ -16,6 +16,7 @@
 
 package bt.protocol.handler;
 
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.Choke;
 import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
@@ -31,7 +32,7 @@ public final class ChokeHandler extends UniqueMessageHandler<Choke> {
     }
 
     @Override
-    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+    public int doDecode(DecodingContext context, ByteBufferView buffer) {
         verifyPayloadHasLength(Choke.class, 0, buffer.remaining());
         context.setMessage(Choke.instance());
         return 0;

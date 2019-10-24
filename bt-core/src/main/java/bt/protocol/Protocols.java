@@ -17,6 +17,7 @@
 package bt.protocol;
 
 import bt.BtException;
+import bt.net.buffer.ByteBufferView;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -152,6 +153,22 @@ public class Protocols {
     }
 
     /**
+     * Decode the binary representation of an {@link Integer} from a buffer.
+     *
+     * @param buffer Buffer to read from.
+     *               Decoding will be done starting with the index denoted by {@link Buffer#position()}
+     * @return Decoded value, or null if there are insufficient bytes in buffer
+     *         (i.e. <b>buffer.remaining()</b> &lt; 4)
+     * @since 1.9
+     */
+    public static Integer readInt(ByteBufferView buffer) {
+        if (buffer.remaining() < Integer.BYTES) {
+            return null;
+        }
+        return buffer.getInt();
+    }
+
+    /**
      * Decode the binary representation of a {@link Short} from a byte array.
      *
      * @param bytes Arbitrary byte array.
@@ -179,6 +196,22 @@ public class Protocols {
      * @since 1.0
      */
     public static Short readShort(ByteBuffer buffer) {
+        if (buffer.remaining() < Short.BYTES) {
+            return null;
+        }
+        return buffer.getShort();
+    }
+
+    /**
+     * Decode the binary representation of a {@link Short} from a buffer.
+     *
+     * @param buffer Buffer to read from.
+     *               Decoding will be done starting with the index denoted by {@link Buffer#position()}
+     * @return Decoded value, or null if there are insufficient bytes in buffer
+     *         (i.e. <b>buffer.remaining()</b> &lt; 2)
+     * @since 1.9
+     */
+    public static Short readShort(ByteBufferView buffer) {
         if (buffer.remaining() < Short.BYTES) {
             return null;
         }

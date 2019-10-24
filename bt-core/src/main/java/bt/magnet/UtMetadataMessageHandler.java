@@ -20,6 +20,7 @@ import bt.bencoding.BEParser;
 import bt.bencoding.model.BEInteger;
 import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
 import bt.protocol.handler.MessageHandler;
@@ -71,7 +72,7 @@ public class UtMetadataMessageHandler implements MessageHandler<UtMetadata> {
     }
 
     @Override
-    public int decode(DecodingContext context, ByteBuffer buffer) {
+    public int decode(DecodingContext context, ByteBufferView buffer) {
         byte[] payload = new byte[buffer.remaining()];
         buffer.get(payload);
         try (BEParser parser = new BEParser(payload)) {
@@ -128,7 +129,7 @@ public class UtMetadataMessageHandler implements MessageHandler<UtMetadata> {
     }
 
     @Override
-    public Class<? extends UtMetadata> readMessageType(ByteBuffer buffer) {
+    public Class<? extends UtMetadata> readMessageType(ByteBufferView buffer) {
         return UtMetadata.class;
     }
 }
