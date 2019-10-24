@@ -20,6 +20,7 @@ import bt.protocol.Bitfield;
 import bt.protocol.Have;
 import bt.protocol.KeepAlive;
 import bt.protocol.Message;
+import bt.protocol.Piece;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.messaging.MessageContext;

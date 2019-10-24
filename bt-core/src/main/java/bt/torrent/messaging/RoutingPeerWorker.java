@@ -23,6 +23,7 @@ import bt.protocol.Choke;
 import bt.protocol.Interested;
 import bt.protocol.Message;
 import bt.protocol.NotInterested;
+import bt.protocol.Piece;
 import bt.protocol.Unchoke;
 
 import java.util.Deque;

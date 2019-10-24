@@ -23,6 +23,7 @@ import bt.protocol.DecodingContext;
 import bt.protocol.Handshake;
 import bt.protocol.Have;
 import bt.protocol.Message;
+import bt.protocol.Piece;
 import bt.protocol.Request;
 import bt.protocol.StandardBittorrentProtocol;
 import bt.protocol.handler.MessageHandler;
