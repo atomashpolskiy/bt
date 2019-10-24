@@ -30,7 +30,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class RingByteBuffer {
 
     private final ByteBuffer buffer;
-    private volatile DecodingBufferView decodingBufferView;
+    private volatile DecodingBufferView decodingView;
     private volatile Region regionA;
     private volatile Region regionB;
 
@@ -45,12 +45,12 @@ public class RingByteBuffer {
                           List<BufferMutator> decoders) {
         this.deserializer = deserializer;
         this.decoders = decoders;
-        if (buffer.position() != 0 || buffer.limit() != buffer.capacity()) {
+        if (buffer.position() != 0 || buffer.limit() != buffer.capacity() || buffer.capacity() == 0) {
             throw new IllegalArgumentException("Illegal buffer params (position: "
-                    + buffer.position() + ", limit: " + buffer.limit() + ")");
+                    + buffer.position() + ", limit: " + buffer.limit() + ", capacity: " + buffer.capacity() + ")");
         }
         this.buffer = buffer;
-        this.decodingBufferView = new DecodingBufferView(buffer.duplicate());
+        this.decodingView = new DecodingBufferView(0, 0, 0);
         this.regionA = new Region(0, 1);
         this.regionB = null;
         this.bufferedDataQueue = new ArrayDeque<>();
@@ -58,152 +58,143 @@ public class RingByteBuffer {
     }
 
     public Message read() {
-        // 1. Decode new messages
-        // Decoding buffer is currently pointing at the end of the most recently decoded data.
-        // Thus, from the buffer's position we can deduce,
-        // which region is currently used for decoding data
-        if (decodingBufferView.buffer.position() >= regionA.offset) {
-            // Current region for decoding data is A
-            decodingBufferView.limit(regionA.limit);
-            while (decodingBufferView.hasRemaining()) {
-                if (/*Nothing consumed*/true) {
-                    break;
-                }
-            }
+        return messageQueue.poll();
+    }
+
+    public void processInboundData() {
+        if (regionB == null) {
+            processA();
         } else {
-            // Current region for decoding data is B
-            decodingBufferView.limit(regionB.limit);
-            while (decodingBufferView.hasRemaining()) {
-                if (/*Nothing consumed*/true) {
-                    break;
-                }
-            }
-        }
-
-        // Buffer is currently pointing at the end of the most recently received data.
-        // Thus, from the buffer's position we can deduce,
-        // which region is currently used for receiving data
-        if (buffer.position() >= regionA.offset) {
-            // Current region for receiving data is A
-            regionA.limit = buffer.position();
-            // If region B is not created yet, then we need to compare
-            // the amount of free space to the left and to the right of region A
-            // and create region B, if there's more free space to the left than to the right
-            if (regionB == null) {
-                int freeSpaceBeforeOffset = regionA.offset - 1;
-                int freeSpaceAfterLimit = buffer.capacity() - regionA.limit;
-                if (freeSpaceBeforeOffset > freeSpaceAfterLimit) {
-                    regionB = new Region(0, 1);
-                    // Finally, if any partial undecoded data is left in region A,
-                    // we need to splice regions A and B into one "buffer view",
-                    // so that the decoder could complete its' job, when new data arrives
-                    if (regionA.offset != regionA.limit) {
-                        ByteBuffer regionAView = buffer.duplicate();
-                        regionAView.clear();
-                        regionAView.position(regionA.offset);
-                        regionAView.limit(regionA.limit);
-
-                        ByteBuffer regionBView = buffer.duplicate();
-                        regionBView.clear();
-                        regionBView.position(regionB.offset);
-                        regionBView.limit(regionA.offset);
-
-                        decodingBufferView = new DecodingBufferView(splice(regionAView, regionBView));
-                    }
-                }
-            }
-        } else {
-            // Current region for receiving data is B
-            // Check, if region A is exhausted
-            if (regionA.offset == regionA.limit) {
-                // If so, from now on region B is the main region
-                // (i.e. it's renamed to region A)
-                regionA = regionB;
-                // Get rid of explicit region B
-                regionB = null;
-                // Replace spliced decoding buffer with ordinary buffer,
-                // based exclusively on region A
-                decodingBufferView = new DecodingBufferView(buffer.duplicate());
-                decodingBufferView.buffer.clear();
-                decodingBufferView.buffer.position(regionA.offset);
-            }
-        }
-
-
-        OffsetBufferedData firstUndisposedData;
-        while ((firstUndisposedData = bufferedDataQueue.peek()) != null) {
-            if (!firstUndisposedData.data.isDisposed()) {
-                break;
-            }
-            bufferedDataQueue.remove();
-        }
-
-
-        if (firstUndisposedData == null) {
-
-        } else if (consumedDataOffset >= firstUndisposedData.offset) {
-
-        } else {
-
+            processAB();
         }
     }
 
-    private Message decode(Region region) {
-        DecodingBufferView dbw = this.decodingBufferView;
+    private void processA() {
+        decodeA();
+        consumeA();
 
-        int undecodedDataLimit = dbw.buffer.position();
-        if (dbw.undecodedDataOffset <= undecodedDataLimit) {
-            if (dbw.undecodedDataOffset < undecodedDataLimit) {
-                dbw.buffer.flip();
-                decoders.forEach(mutator -> {
-                    dbw.buffer.position(dbw.undecodedDataOffset);
-                    mutator.mutate(dbw.buffer);
-                });
-                dbw.undecodedDataOffset = undecodedDataLimit;
-                dbw.buffer.clear();
-                dbw.buffer.position(dbw.undecodedDataOffset);
+        // Resize region A
+        regionA.offset = decodingView.decodedOffset;
+        regionA.limit = decodingView.undecodedLimit;
+
+        if (regionA.offset == regionA.limit) {
+            // All data has been consumed, we can reset region A
+            buffer.clear();
+            regionA.offset = 0;
+            regionA.limit = 1;
+        } else {
+            // We need to compare the amount of free space
+            // to the left and to the right of region A
+            // and create region B, if there's more free space
+            // to the left than to the right
+            int freeSpaceBeforeOffset = regionA.offset - 1;
+            int freeSpaceAfterLimit = buffer.capacity() - regionA.limit;
+            if (freeSpaceBeforeOffset > freeSpaceAfterLimit) {
+                regionB = new Region(0, 1);
+                decodingView.undecodedOffset = regionB.offset;
+                decodingView.undecodedLimit = regionB.limit;
             }
-
-            if (dbw.decodedDataOffset < dbw.undecodedDataOffset) {
-                dbw.buffer.position(dbw.decodedDataOffset);
-                dbw.buffer.limit(dbw.undecodedDataOffset);
-                Message message;
-                for (; ; ) {
-                    message = deserializer.deserialize(dbw.buffer);
-                    if (message == null) {
-                        break;
-                    } else {
-                        messageQueue.add(message);
-                        if (/*message has buffered data*/) {
-                            BufferedData data = null;
-                            int offset = dbw.buffer.position() - data.length();
-                            bufferedDataQueue.add(new OffsetBufferedData(data, offset));
-                            if (bufferedDataQueue.size() == 1) {
-                                // can switch
-                            }
-                        } else {
-                            dbw.decodedDataOffset = dbw.buffer.position();
-                        }
-                    }
-                }
-
-                dbw.buffer.clear();
-                dbw.buffer.position(dbw.undecodedDataOffset);
-                if (!dbw.buffer.hasRemaining()) {
-                    dbw.buffer.position(dbw.decodedDataOffset);
-                    dbw.buffer.compact();
-                    dbw.undecodedDataOffset -= dbw.decodedDataOffset;
-                    dbw.buffer.position(dbw.undecodedDataOffset);
-                    dbw.decodedDataOffset = 0;
-                }
-            } else if (dbw.decodedDataOffset == dbw.undecodedDataOffset) {
-                dbw.buffer.clear();
-            } if (dbw.decodedDataOffset > dbw.undecodedDataOffset) {
-                throw new IllegalStateException("decodedDataOffset > undecodedDataOffset: " + dbw.decodedDataOffset + " > " + dbw.undecodedDataOffset);
-            }
-        } else if (dbw.undecodedDataOffset > undecodedDataLimit) {
-            throw new IllegalStateException("undecodedDataOffset > undecodedDataLimit: " + dbw.undecodedDataOffset + " > " + undecodedDataLimit);
         }
+    }
+
+    private void processAB() {
+        decodeAB();
+
+        int bytesLeftInRegionA = regionA.limit - regionA.offset;
+        int consumed = consumeAB();
+        if (consumed >= bytesLeftInRegionA) {
+            // Data in region A has been fully processed,
+            // so now we promote region B to become region A
+            int consumedB = (consumed - bytesLeftInRegionA);
+            regionB.offset += consumedB;
+            regionA = regionB;
+            regionB = null;
+        } else {
+            regionA.offset += consumed;
+        }
+    }
+
+    private void decodeA() {
+        DecodingBufferView dbw = decodingView;
+
+        dbw.undecodedLimit = buffer.position();
+
+        if (dbw.undecodedOffset < dbw.undecodedLimit - 1) {
+            buffer.flip();
+            decoders.forEach(mutator -> {
+                buffer.position(dbw.undecodedOffset);
+                mutator.mutate(buffer);
+            });
+            dbw.undecodedOffset = dbw.undecodedLimit;
+            buffer.position(dbw.undecodedLimit);
+            buffer.limit(buffer.capacity());
+        }
+    }
+
+    private void decodeAB() {
+        DecodingBufferView dbw = decodingView;
+
+        dbw.undecodedLimit = buffer.position();
+
+        if (dbw.undecodedOffset < dbw.undecodedLimit - 1) {
+            buffer.flip();
+            decoders.forEach(mutator -> {
+                buffer.position(dbw.undecodedOffset);
+                mutator.mutate(buffer);
+            });
+            dbw.undecodedOffset = dbw.undecodedLimit;
+            buffer.position(dbw.undecodedLimit);
+            // decodedOffset currently points to the start of region A,
+            // and we set it to be the limit, so that the unconsumed data in region A
+            // would not be overwritten
+            buffer.limit(dbw.decodedOffset);
+        }
+    }
+
+    private void consumeA() {
+        DecodingBufferView dbw = decodingView;
+
+        if (dbw.decodedOffset < dbw.undecodedOffset) {
+            buffer.position(dbw.decodedOffset);
+            buffer.limit(dbw.undecodedOffset);
+            Message message;
+            for (;;) {
+                message = deserializer.deserialize(buffer);
+                if (message == null) {
+                    break;
+                } else {
+                    messageQueue.add(message);
+                    dbw.decodedOffset = buffer.position();
+                }
+            }
+        }
+    }
+
+    private int consumeAB() {
+        DecodingBufferView dbw = decodingView;
+
+        ByteBuffer regionAView = buffer.duplicate();
+        regionAView.clear();
+        regionAView.position(dbw.decodedOffset);
+        regionAView.limit(regionA.limit);
+
+        ByteBuffer regionBView = buffer.duplicate();
+        regionBView.clear();
+        regionBView.limit(regionB.limit);
+
+        ByteBuffer splicedBuffer = splice(regionAView, regionBView);
+
+        Message message;
+        for (;;) {
+            message = deserializer.deserialize(splicedBuffer);
+            if (message == null) {
+                break;
+            } else {
+                messageQueue.add(message);
+            }
+        }
+
+        return splicedBuffer.position();
     }
 
     private static class OffsetBufferedData {
@@ -227,14 +218,14 @@ public class RingByteBuffer {
     }
 
     private static class DecodingBufferView {
-        public final ByteBuffer buffer;
-        public int decodedDataOffset;
-        public int undecodedDataOffset;
+        public int decodedOffset;
+        public int undecodedOffset;
+        public int undecodedLimit;
 
-        private DecodingBufferView(ByteBuffer buffer) {
-            this.buffer = buffer;
-            this.decodedDataOffset = buffer.position();
-            this.undecodedDataOffset = buffer.position();
+        private DecodingBufferView(int decodedOffset, int undecodedOffset, int undecodedLimit) {
+            this.decodedOffset = decodedOffset;
+            this.undecodedOffset = undecodedOffset;
+            this.undecodedLimit = undecodedLimit;
         }
     }
 }
