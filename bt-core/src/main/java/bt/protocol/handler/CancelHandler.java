@@ -16,6 +16,7 @@
 
 package bt.protocol.handler;
 
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.Cancel;
 import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
@@ -34,7 +35,7 @@ public final class CancelHandler extends UniqueMessageHandler<Cancel> {
     }
 
     @Override
-    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+    public int doDecode(DecodingContext context, ByteBufferView buffer) {
         verifyPayloadHasLength(Cancel.class, 12, buffer.remaining());
         return decodeCancel(context, buffer);
     }
@@ -62,7 +63,7 @@ public final class CancelHandler extends UniqueMessageHandler<Cancel> {
         return true;
     }
 
-    private static int decodeCancel(DecodingContext context, ByteBuffer buffer) {
+    private static int decodeCancel(DecodingContext context, ByteBufferView buffer) {
 
         int consumed = 0;
         int length = Integer.BYTES * 3;

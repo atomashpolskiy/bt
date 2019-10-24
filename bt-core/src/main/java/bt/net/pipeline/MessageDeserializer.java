@@ -18,11 +18,11 @@ package bt.net.pipeline;
 
 import bt.BtException;
 import bt.net.Peer;
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.DecodingContext;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 
-import java.nio.ByteBuffer;
 import java.util.Objects;
 
 /**
@@ -38,7 +38,7 @@ class MessageDeserializer {
         this.protocol = protocol;
     }
 
-    public Message deserialize(ByteBuffer buffer) {
+    public Message deserialize(ByteBufferView buffer) {
         int position = buffer.position();
         int limit = buffer.limit();
 

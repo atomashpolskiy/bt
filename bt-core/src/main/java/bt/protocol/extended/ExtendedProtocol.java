@@ -18,6 +18,7 @@ package bt.protocol.extended;
 
 import bt.BtException;
 import bt.module.ExtendedMessageHandlers;
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.EncodingContext;
 import bt.protocol.handler.BaseMessageHandler;
 import bt.protocol.InvalidMessageException;
@@ -97,7 +98,7 @@ public class ExtendedProtocol extends BaseMessageHandler<ExtendedMessage> {
     }
 
     @Override
-    public Class<? extends ExtendedMessage> readMessageType(ByteBuffer buffer) {
+    public Class<? extends ExtendedMessage> readMessageType(ByteBufferView buffer) {
         if (!buffer.hasRemaining()) {
             return null;
         }
@@ -119,7 +120,7 @@ public class ExtendedProtocol extends BaseMessageHandler<ExtendedMessage> {
     }
 
     @Override
-    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+    public int doDecode(DecodingContext context, ByteBufferView buffer) {
 
         int typeId = buffer.get();
         MessageHandler<?> handler;

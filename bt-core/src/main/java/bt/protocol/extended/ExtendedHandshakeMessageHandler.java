@@ -23,6 +23,7 @@ import bt.bencoding.model.BEInteger;
 import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.net.Peer;
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.DecodingContext;
@@ -55,7 +56,7 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
     }
 
     @Override
-    public Class<? extends ExtendedHandshake> readMessageType(ByteBuffer buffer) {
+    public Class<? extends ExtendedHandshake> readMessageType(ByteBufferView buffer) {
         return ExtendedHandshake.class;
     }
 
@@ -112,7 +113,7 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
     }
 
     @Override
-    public int decode(DecodingContext context, ByteBuffer buffer) {
+    public int decode(DecodingContext context, ByteBufferView buffer) {
 
         byte[] payload = new byte[buffer.remaining()];
         buffer.get(payload);

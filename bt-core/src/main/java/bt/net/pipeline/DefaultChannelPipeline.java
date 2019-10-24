@@ -19,6 +19,8 @@ package bt.net.pipeline;
 import bt.net.Peer;
 import bt.net.buffer.BorrowedBuffer;
 import bt.net.buffer.BufferMutator;
+import bt.net.buffer.ByteBufferView;
+import bt.net.buffer.DelegatingByteBufferView;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 
@@ -100,9 +102,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (decodedDataOffset < undecodedDataOffset) {
                 buffer.position(decodedDataOffset);
                 buffer.limit(undecodedDataOffset);
+                ByteBufferView bufferView = new DelegatingByteBufferView(buffer);
                 Message message;
                 for (; ; ) {
-                    message = deserializer.deserialize(buffer);
+                    message = deserializer.deserialize(bufferView);
                     if (message == null) {
                         break;
                     } else {

@@ -16,6 +16,7 @@
 
 package bt.protocol.handler;
 
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.DecodingContext;
@@ -33,7 +34,7 @@ public final class PieceHandler extends UniqueMessageHandler<Piece> {
     }
 
     @Override
-    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+    public int doDecode(DecodingContext context, ByteBufferView buffer) {
         return decodePiece(context, buffer, buffer.remaining());
     }
 
@@ -63,7 +64,7 @@ public final class PieceHandler extends UniqueMessageHandler<Piece> {
         return true;
     }
 
-    private static int decodePiece(DecodingContext context, ByteBuffer buffer, int length) {
+    private static int decodePiece(DecodingContext context, ByteBufferView buffer, int length) {
 
         int consumed = 0;
 

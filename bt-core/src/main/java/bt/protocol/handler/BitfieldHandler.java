@@ -16,6 +16,7 @@
 
 package bt.protocol.handler;
 
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.Bitfield;
 import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
@@ -29,7 +30,7 @@ public final class BitfieldHandler extends UniqueMessageHandler<Bitfield> {
     }
 
     @Override
-    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+    public int doDecode(DecodingContext context, ByteBufferView buffer) {
         return decodeBitfield(context, buffer, buffer.remaining());
     }
 
@@ -43,7 +44,7 @@ public final class BitfieldHandler extends UniqueMessageHandler<Bitfield> {
     }
 
     // bitfield: <len=0001+X><id=5><bitfield>
-    private static int decodeBitfield(DecodingContext context, ByteBuffer buffer, int length) {
+    private static int decodeBitfield(DecodingContext context, ByteBufferView buffer, int length) {
 
         int consumed = 0;
 

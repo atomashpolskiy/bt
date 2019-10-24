@@ -20,6 +20,7 @@ import bt.metainfo.TorrentId;
 import bt.net.BigIntegers;
 import bt.net.ByteChannelReader;
 import bt.net.Peer;
+import bt.net.buffer.DelegatingByteBufferView;
 import bt.protocol.DecodingContext;
 import bt.protocol.Handshake;
 import bt.protocol.Message;
@@ -325,7 +326,7 @@ public class MSEHandshakeProcessor {
         DecodingContext context = new DecodingContext(peer);
         int consumed = 0;
         try {
-             consumed = protocol.decode(context, in);
+             consumed = protocol.decode(context, new DelegatingByteBufferView(in));
         } catch (Exception e) {
             // ignore
         }
