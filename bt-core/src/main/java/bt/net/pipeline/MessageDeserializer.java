@@ -51,6 +51,9 @@ class MessageDeserializer {
             }
             buffer.position(position + consumed);
             message = Objects.requireNonNull(context.getMessage());
+        } else {
+            buffer.limit(limit);
+            buffer.position(position);
         }
         return message;
     }
