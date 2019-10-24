@@ -16,20 +16,18 @@
 
 package bt.net.buffer;
 
-import java.nio.ByteBuffer;
-
 public class BufferedData {
 
-    private final ByteBuffer buffer;
+    private final ByteBufferView buffer;
     private final int length;
     private volatile boolean disposed;
 
-    public BufferedData(ByteBuffer buffer) {
+    public BufferedData(ByteBufferView buffer) {
         this.buffer = buffer;
         this.length = buffer.remaining();
     }
 
-    public ByteBuffer buffer() {
+    public ByteBufferView buffer() {
         return buffer;
     }
 

@@ -16,7 +16,7 @@
 
 package bt.data.range;
 
-import java.nio.ByteBuffer;
+import bt.net.buffer.ByteBufferView;
 
 /**
  * Represents a range of binary data.
@@ -62,12 +62,13 @@ public interface Range<T extends Range<T>> {
      */
     byte[] getBytes();
 
-    /**
-     * Read all data in this range to the provided buffer.
-     *
-     * @since 1.9
-     */
-    void getBytes(ByteBuffer buffer);
+//    /**
+//     * Read all data in this range to the provided buffer.
+//     *
+//     * @since 1.9
+//     */
+    // TODO: Implement for direct transfer of outgoing pieces
+//    void getBytes(ByteBuffer buffer);
 
     /**
      * Put data at the beginning of this range.
@@ -84,5 +85,5 @@ public interface Range<T extends Range<T>> {
      *
      * @since 1.9
      */
-    void putBytes(ByteBuffer buffer);
+    void putBytes(ByteBufferView buffer);
 }

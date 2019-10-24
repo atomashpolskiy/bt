@@ -14,39 +14,31 @@
  * limitations under the License.
  */
 
-package bt.net.buffer;
+package bt.net.pipeline;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
+import bt.net.buffer.BufferedData;
 
-public interface ByteBufferView {
+/**
+ * @since 1.9
+ */
+public interface IBufferedPieceRegistry {
 
-    int position();
+    /**
+     *
+     * @param pieceIndex
+     * @param buffer
+     * @return
+     *
+     * @since 1.9
+     */
+    boolean addBufferedPiece(int pieceIndex, int offset, BufferedData buffer);
 
-    ByteBufferView position(int newPosition);
-
-    int limit();
-
-    ByteBufferView limit(int newLimit);
-
-    int capacity();
-
-    boolean hasRemaining();
-
-    int remaining();
-
-    byte get();
-
-    short getShort();
-
-    int getInt();
-
-    ByteBufferView get(byte[] dst);
-
-    void transferTo(ByteBuffer buffer);
-
-    int transferTo(SeekableByteChannel sbc) throws IOException;
-
-    ByteBufferView duplicate();
+    /**
+     *
+     * @param pieceIndex
+     * @return
+     *
+     * @since 1.9
+     */
+    BufferedData getBufferedPiece(int pieceIndex, int offset);
 }

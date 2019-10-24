@@ -27,7 +27,9 @@ import bt.metainfo.MetadataService;
 import bt.net.*;
 import bt.net.buffer.BufferManager;
 import bt.net.buffer.IBufferManager;
+import bt.net.pipeline.BufferedPieceRegistry;
 import bt.net.pipeline.ChannelPipelineFactory;
+import bt.net.pipeline.IBufferedPieceRegistry;
 import bt.net.pipeline.IChannelPipelineFactory;
 import bt.net.portmapping.impl.PortMappingInitializer;
 import bt.peer.*;
@@ -150,6 +152,7 @@ public class ServiceModule implements Module {
         binder.bind(IPeerCache.class).to(PeerCache.class).in(Singleton.class);
         binder.bind(IBufferManager.class).to(BufferManager.class).in(Singleton.class);
         binder.bind(IChannelPipelineFactory.class).to(ChannelPipelineFactory.class).in(Singleton.class);
+        binder.bind(IBufferedPieceRegistry.class).to(BufferedPieceRegistry.class).in(Singleton.class);
 
         // single instance of event bus provides two different injectable services
         binder.bind(EventSink.class).to(EventBus.class).in(Singleton.class);

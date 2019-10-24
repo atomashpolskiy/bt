@@ -42,7 +42,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             BorrowedBuffer<ByteBuffer> inboundBuffer,
             BorrowedBuffer<ByteBuffer> outboundBuffer,
             List<BufferMutator> decoders,
-            List<BufferMutator> encoders) {
+            List<BufferMutator> encoders,
+            IBufferedPieceRegistry bufferedPieceRegistry) {
 
         ByteBuffer buffer;
         try {
@@ -52,7 +53,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         this.inboundMessageProcessor = new InboundMessageProcessor(buffer,
-                new MessageDeserializer(peer, protocol), decoders);
+                new MessageDeserializer(peer, protocol), decoders, bufferedPieceRegistry);
         this.serializer = new MessageSerializer(peer, protocol);
         this.inboundBuffer = inboundBuffer;
         this.outboundBuffer = outboundBuffer;

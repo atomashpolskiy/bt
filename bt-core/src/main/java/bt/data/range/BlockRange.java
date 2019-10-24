@@ -17,6 +17,7 @@
 package bt.data.range;
 
 import bt.data.BlockSet;
+import bt.net.buffer.ByteBufferView;
 
 /**
  * @since 1.3
@@ -76,6 +77,13 @@ public class BlockRange<T extends Range<T>> implements Range<BlockRange<T>>, Del
     public void putBytes(byte[] block) {
         delegate.putBytes(block);
         blockSet.markAvailable(offset, block.length);
+    }
+
+    @Override
+    public void putBytes(ByteBufferView buffer) {
+        int length = buffer.remaining();
+        delegate.putBytes(buffer);
+        blockSet.markAvailable(offset, length);
     }
 
     @SuppressWarnings("unchecked")

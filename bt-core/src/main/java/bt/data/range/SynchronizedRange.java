@@ -16,6 +16,8 @@
 
 package bt.data.range;
 
+import bt.net.buffer.ByteBufferView;
+
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -118,6 +120,16 @@ class SynchronizedRange<T extends Range<T>> implements Range<T>, DelegatingRange
         lock.writeLock().lock();
         try {
             delegate.putBytes(block);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    @Override
+    public void putBytes(ByteBufferView buffer) {
+        lock.writeLock().lock();
+        try {
+            delegate.putBytes(buffer);
         } finally {
             lock.writeLock().unlock();
         }

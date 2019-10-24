@@ -19,6 +19,7 @@ package bt.net.pipeline;
 import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
 import bt.net.PeerId;
+import bt.net.buffer.BufferedData;
 import bt.protocol.*;
 import bt.protocol.handler.MessageHandler;
 import bt.test.protocol.ProtocolTest;
@@ -27,29 +28,42 @@ import org.junit.Test;
 
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class InboundMessageProcessorTest {
 
     private EncodingContext encodingContext;
     private MessageHandler<Message> protocol;
     private ByteBuffer buffer;
+    private IBufferedPieceRegistry bufferedPieceRegistry;
     private InboundMessageProcessor processor;
 
-    @Before
-    public void setUp() {
-        this.buffer = ByteBuffer.allocate(100);
+    public void setUp(int bufferSize) {
+        this.buffer = ByteBuffer.allocate(bufferSize);
         InetPeer peer = new InetPeer(InetAddress.getLoopbackAddress(), 9999);
         this.encodingContext = new EncodingContext(peer);
         this.protocol = ProtocolTest.forBittorrentProtocol().build().getProtocol();
         MessageDeserializer deserializer = new MessageDeserializer(peer, protocol);
-        this.processor = new InboundMessageProcessor(buffer, deserializer, Collections.emptyList());
+        this.bufferedPieceRegistry = new BufferedPieceRegistry();
+        this.processor = new InboundMessageProcessor(buffer, deserializer, Collections.emptyList(), bufferedPieceRegistry);
     }
 
     @Test
-    public void test() {
+    public void test_WithoutPieces_WithWrapAround() {
+        setUp(100);
+        testWithoutPieces();
+    }
+
+    @Test
+    public void test_WithoutPieces_WithoutWrapAround() {
+        setUp(1000);
+        testWithoutPieces();
+    }
+
+    private void testWithoutPieces() {
         processor.processInboundData();
 
         // Write several messages fully
@@ -110,6 +124,78 @@ public class InboundMessageProcessorTest {
         processor.processInboundData();
         assertTrue(processor.pollMessage() instanceof Bitfield);
         assertTrue(processor.pollMessage() instanceof Have);
+        /////////////////////////////////////////////////////////////
+    }
+
+    @Test
+    public void test_WithPieces_WithWrapAround() {
+        setUp(100);
+
+        // Write several full messages with the last one being a block,
+        // dispose immediately after receiving and checking
+        encodeToBuffer(new Have(1));
+
+        byte[] block1 = new byte[10];
+        Arrays.fill(block1, (byte) 1);
+        encodeToBuffer(new Piece(1, 1, block1));
+
+        processor.processInboundData();
+        Have have1 = (Have) processor.pollMessage();
+        assertNotNull(have1);
+        assertEquals(1, have1.getPieceIndex());
+        Piece piece1 = (Piece) processor.pollMessage();
+        assertNotNull(piece1);
+        assertEquals(1, piece1.getPieceIndex());
+        assertEquals(1, piece1.getOffset());
+        assertEquals(block1.length, piece1.getLength());
+        BufferedData data1 = bufferedPieceRegistry.getBufferedPiece(piece1.getPieceIndex(), piece1.getOffset());
+        assertNotNull(data1);
+        byte[] data1Bytes = new byte[block1.length];
+        data1.buffer().get(data1Bytes);
+        assertArrayEquals(block1, data1Bytes);
+        data1.dispose();
+        /////////////////////////////////////////////////////////////
+
+        // Write piece, then 2 full messages with one processing after 1st one,
+        // delay piece disposal until 2nd message is consumed
+        byte[] bitfield1 = new byte[20];
+        Arrays.fill(bitfield1, (byte) 0xff);
+        encodeToBuffer(new Bitfield(bitfield1));
+
+        byte[] block2 = new byte[10];
+        Arrays.fill(block2, (byte) 2);
+        encodeToBuffer(new Piece(2, 2, block2));
+
+        processor.processInboundData();
+        Bitfield bitfield1Message = (Bitfield) processor.pollMessage();
+        assertNotNull(bitfield1Message);
+        assertArrayEquals(bitfield1, bitfield1Message.getBitfield());
+        Piece piece2 = (Piece) processor.pollMessage();
+        assertNotNull(piece2);
+        assertEquals(2, piece2.getPieceIndex());
+        assertEquals(2, piece2.getOffset());
+        assertEquals(block2.length, piece2.getLength());
+//        BufferedData data2 = bufferedPieceRegistry.getBufferedPiece(piece2.getPieceIndex(), piece2.getOffset());
+//        assertNotNull(data2);
+//        byte[] data2Bytes = new byte[block2.length];
+//        data2.buffer().get(data2Bytes);
+//        assertArrayEquals(block2, data2Bytes);
+        // do not dispose yet
+
+        encodeToBuffer(new Have(2));
+
+        processor.processInboundData();
+        Have have2 = (Have) processor.pollMessage();
+        assertNotNull(have2);
+        assertEquals(2, have2.getPieceIndex());
+
+        // Attempt to overwrite undisposed data
+        byte[] bitfield2 = new byte[80];
+        Arrays.fill(bitfield1, (byte) 0xff);
+        encodeToBuffer(new Bitfield(bitfield2));
+
+        processor.processInboundData();
+
         /////////////////////////////////////////////////////////////
 
     }

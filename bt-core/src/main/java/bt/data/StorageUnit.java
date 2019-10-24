@@ -16,6 +16,8 @@
 
 package bt.data;
 
+import bt.net.buffer.ByteBufferView;
+
 import java.io.Closeable;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -73,6 +75,23 @@ public interface StorageUnit extends Closeable {
      * @since 1.0
      */
     void writeBlock(ByteBuffer buffer, long offset);
+
+    /**
+     * Write a block of data from the provided buffer to this storage, starting with a given offset.
+     * <p>Number of bytes to be written is determined by {@link bt.net.buffer.ByteBufferView#remaining()}.
+     * <p>Hence, storage must throw an exception if
+     * <blockquote>
+     * <code>offset &gt; {@link #capacity()} - buffer.remaining()</code>
+     * </blockquote>
+     *
+     * @param buffer Buffer containing the block of data to write to this storage.
+     *               Value returned by <b>buffer.remaining()</b> determines
+     *               the total number of bytes to write.
+     * @param offset Offset in this storage's data to start writing to (0-based)
+     *
+     * @since 1.9
+     */
+    void writeBlock(ByteBufferView buffer, long offset);
 
     /**
      * Write a block of data to this storage, starting with a given offset.

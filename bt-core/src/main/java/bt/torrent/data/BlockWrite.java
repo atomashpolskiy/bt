@@ -35,53 +35,53 @@ import java.util.concurrent.CompletableFuture;
 public class BlockWrite {
 
     /**
-     * @since 1.0
+     * @since 1.9
      */
     static BlockWrite complete(Peer peer,
                                int pieceIndex,
                                int offset,
-                               byte[] block,
+                               int length,
                                CompletableFuture<Boolean> verificationFuture) {
-        return new BlockWrite(peer, null, false, pieceIndex, offset, block, verificationFuture);
+        return new BlockWrite(peer, null, false, pieceIndex, offset, length, verificationFuture);
     }
 
     /**
-     * @since 1.0
+     * @since 1.9
      */
-    static BlockWrite rejected(Peer peer, int pieceIndex, int offset, byte[] block) {
-        return new BlockWrite(peer, null, true, pieceIndex, offset, block, null);
+    static BlockWrite rejected(Peer peer, int pieceIndex, int offset, int length) {
+        return new BlockWrite(peer, null, true, pieceIndex, offset, length, null);
     }
 
     /**
-     * @since 1.0
+     * @since 1.9
      */
-    static BlockWrite exceptional(Peer peer, Throwable error, int pieceIndex, int offset, byte[] block) {
-        return new BlockWrite(peer, error, false, pieceIndex, offset, block, null);
+    static BlockWrite exceptional(Peer peer, Throwable error, int pieceIndex, int offset, int length) {
+        return new BlockWrite(peer, error, false, pieceIndex, offset, length, null);
     }
 
-    private Peer peer;
-    private int pieceIndex;
-    private int offset;
-    private byte[] block;
+    private final Peer peer;
+    private final int pieceIndex;
+    private final int offset;
+    private final int length;
 
-    private boolean rejected;
-    private Optional<Throwable> error;
+    private final boolean rejected;
+    private final Optional<Throwable> error;
 
-    private Optional<CompletableFuture<Boolean>> verificationFuture;
+    private final Optional<CompletableFuture<Boolean>> verificationFuture;
 
     private BlockWrite(Peer peer,
                        Throwable error,
                        boolean rejected,
                        int pieceIndex,
                        int offset,
-                       byte[] block,
+                       int length,
                        CompletableFuture<Boolean> verificationFuture) {
         this.peer = peer;
         this.error = Optional.ofNullable(error);
         this.rejected = rejected;
         this.pieceIndex = pieceIndex;
         this.offset = offset;
-        this.block = block;
+        this.length = length;
         this.verificationFuture = Optional.ofNullable(verificationFuture);
     }
 
@@ -118,11 +118,11 @@ public class BlockWrite {
     }
 
     /**
-     * @return Block of data
-     * @since 1.0
+     * @return Block length
+     * @since 1.9
      */
-    public byte[] getBlock() {
-        return block;
+    public int getLength() {
+        return length;
     }
 
     /**

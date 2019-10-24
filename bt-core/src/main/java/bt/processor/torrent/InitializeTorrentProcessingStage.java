@@ -19,6 +19,7 @@ package bt.processor.torrent;
 import bt.data.Bitfield;
 import bt.event.EventSink;
 import bt.metainfo.Torrent;
+import bt.net.pipeline.IBufferedPieceRegistry;
 import bt.processor.ProcessingStage;
 import bt.processor.TerminateOnErrorProcessingStage;
 import bt.processor.listener.ProcessingEvent;
@@ -39,17 +40,20 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
 
     private TorrentRegistry torrentRegistry;
     private IDataWorkerFactory dataWorkerFactory;
+    private IBufferedPieceRegistry bufferedPieceRegistry;
     private EventSink eventSink;
     private Config config;
 
     public InitializeTorrentProcessingStage(ProcessingStage<C> next,
                                             TorrentRegistry torrentRegistry,
                                             IDataWorkerFactory dataWorkerFactory,
+                                            IBufferedPieceRegistry bufferedPieceRegistry,
                                             EventSink eventSink,
                                             Config config) {
         super(next);
         this.torrentRegistry = torrentRegistry;
         this.dataWorkerFactory = dataWorkerFactory;
+        this.bufferedPieceRegistry = bufferedPieceRegistry;
         this.eventSink = eventSink;
         this.config = config;
     }
@@ -66,7 +70,7 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
 
         context.getRouter().registerMessagingAgent(GenericConsumer.consumer());
         context.getRouter().registerMessagingAgent(new BitfieldConsumer(bitfield, pieceStatistics, eventSink));
-        context.getRouter().registerMessagingAgent(new PieceConsumer(bitfield, dataWorker, eventSink));
+        context.getRouter().registerMessagingAgent(new PieceConsumer(bitfield, dataWorker, bufferedPieceRegistry, eventSink));
         context.getRouter().registerMessagingAgent(new PeerRequestConsumer(dataWorker));
         context.getRouter().registerMessagingAgent(new RequestProducer(descriptor.getDataDescriptor()));
         context.getRouter().registerMessagingAgent(new MetadataProducer(() -> context.getTorrent().orElse(null), config));

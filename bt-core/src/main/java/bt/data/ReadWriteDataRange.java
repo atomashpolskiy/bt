@@ -16,6 +16,8 @@
 
 package bt.data;
 
+import bt.net.buffer.ByteBufferView;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -274,6 +276,24 @@ class ReadWriteDataRange implements DataRange {
         }
 
         ByteBuffer buffer = ByteBuffer.wrap(block).asReadOnlyBuffer();
+        transferFromBuffer(buffer);
+    }
+
+    @Override
+    public void putBytes(ByteBufferView buffer) {
+        if (!buffer.hasRemaining()) {
+            return;
+        } else if (buffer.remaining() > length()) {
+            throw new IllegalArgumentException(String.format(
+                    "Data does not fit in this range (expected max %d bytes, actual: %d)", length(), buffer.remaining()));
+        }
+
+        transferFromBuffer(buffer);
+    }
+
+    private void transferFromBuffer(ByteBuffer buffer) {
+        int blockLength = buffer.remaining();
+
         visitUnits(new DataRangeVisitor() {
 
             int offsetInBlock = 0;
@@ -292,7 +312,33 @@ class ReadWriteDataRange implements DataRange {
                 unit.writeBlock(buffer, off);
                 offsetInBlock = limitInBlock;
 
-                return offsetInBlock < block.length - 1;
+                return offsetInBlock < blockLength - 1;
+            }
+        });
+    }
+
+    private void transferFromBuffer(ByteBufferView buffer) {
+        int blockLength = buffer.remaining();
+
+        visitUnits(new DataRangeVisitor() {
+
+            int offsetInBlock = 0;
+            int limitInBlock;
+
+            @Override
+            public boolean visitUnit(StorageUnit unit, long off, long lim) {
+                long fileSize = lim - off;
+                if (fileSize > Integer.MAX_VALUE) {
+                    throw new IllegalStateException("Unexpected file size -- insufficient data in block");
+                }
+
+                limitInBlock = Math.min(buffer.capacity(), offsetInBlock + (int) fileSize);
+                buffer.limit(limitInBlock);
+                buffer.position(offsetInBlock);
+                unit.writeBlock(buffer, off);
+                offsetInBlock = limitInBlock;
+
+                return offsetInBlock < blockLength - 1;
             }
         });
     }

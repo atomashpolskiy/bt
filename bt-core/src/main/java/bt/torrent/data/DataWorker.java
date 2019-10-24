@@ -17,6 +17,7 @@
 package bt.torrent.data;
 
 import bt.net.Peer;
+import bt.net.buffer.BufferedData;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -45,9 +46,9 @@ public interface DataWorker {
      * @param peer Peer, that the data has been received from
      * @param pieceIndex Index of the piece to write to (0-based)
      * @param offset Offset in piece to start writing to (0-based)
-     * @param block Data
+     * @param buffer Data
      * @return Future; rejected requests are returned immediately (see {@link BlockWrite#isRejected()})
-     * @since 1.0
+     * @since 1.9
      */
-    CompletableFuture<BlockWrite> addBlock(Peer peer, int pieceIndex, int offset, byte[] block);
+    CompletableFuture<BlockWrite> addBlock(Peer peer, int pieceIndex, int offset, BufferedData buffer);
 }

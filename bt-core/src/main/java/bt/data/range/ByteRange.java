@@ -16,6 +16,8 @@
 
 package bt.data.range;
 
+import bt.net.buffer.ByteBufferView;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -126,6 +128,19 @@ public class ByteRange implements Range<ByteRange> {
         }
         int position = buffer.position();
         buffer.put(block);
+        buffer.position(position);
+    }
+
+    @Override
+    public void putBytes(ByteBufferView _buffer) {
+        if (!_buffer.hasRemaining()) {
+            return;
+        } else if (_buffer.remaining() > length()) {
+            throw new IllegalArgumentException(String.format(
+                    "Data does not fit in this range (expected max %d bytes, actual: %d)", length(), _buffer.remaining()));
+        }
+        int position = _buffer.position();
+        _buffer.transferTo(buffer);
         buffer.position(position);
     }
 

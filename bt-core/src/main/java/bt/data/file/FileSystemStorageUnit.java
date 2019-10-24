@@ -18,6 +18,7 @@ package bt.data.file;
 
 import bt.BtException;
 import bt.data.StorageUnit;
+import bt.net.buffer.ByteBufferView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -162,6 +163,32 @@ class FileSystemStorageUnit implements StorageUnit {
             int written = 1;
             while (buffer.hasRemaining() && written > 0) {
               written = sbc.write(buffer);
+            }
+
+        } catch (IOException e) {
+            throw new BtException("Failed to write bytes (offset: " + offset +
+                    ", block length: " + buffer.remaining() + ", file size: " + capacity + ")", e);
+        }
+    }
+
+    @Override
+    public void writeBlock(ByteBufferView buffer, long offset) {
+        if (closed) {
+            init(true);
+        }
+
+        if (offset < 0) {
+            throw new BtException("Negative offset: " + offset);
+        } else if (offset > capacity - buffer.remaining()) {
+            throw new BtException("Received a request to write past the end of file (offset: " + offset +
+                    ", block length: " + buffer.remaining() + ", file size: " + capacity);
+        }
+
+        try {
+            sbc.position(offset);
+            int written = 1;
+            while (buffer.hasRemaining() && written > 0) {
+                written = buffer.transferTo(sbc);
             }
 
         } catch (IOException e) {

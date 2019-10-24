@@ -18,6 +18,7 @@ package bt.data.range;
 
 import bt.data.DataRange;
 import bt.data.DataRangeVisitor;
+import bt.net.buffer.ByteBufferView;
 
 import java.util.function.Function;
 
@@ -69,6 +70,11 @@ class DelegatingDataRange<T extends Range<T>> implements DataRange, DelegatingRa
     @Override
     public void putBytes(byte[] block) {
         delegate.putBytes(block);
+    }
+
+    @Override
+    public void putBytes(ByteBufferView buffer) {
+        delegate.putBytes(buffer);
     }
 
     @SuppressWarnings("unchecked")

@@ -16,7 +16,11 @@
 
 package bt.net.buffer;
 
+import com.google.common.base.MoreObjects;
+
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 
 public class DelegatingByteBufferView implements ByteBufferView {
 
@@ -49,6 +53,11 @@ public class DelegatingByteBufferView implements ByteBufferView {
     }
 
     @Override
+    public int capacity() {
+        return delegate.capacity();
+    }
+
+    @Override
     public boolean hasRemaining() {
         return delegate.hasRemaining();
     }
@@ -77,5 +86,29 @@ public class DelegatingByteBufferView implements ByteBufferView {
     public ByteBufferView get(byte[] dst) {
         delegate.get(dst);
         return this;
+    }
+
+    @Override
+    public void transferTo(ByteBuffer buffer) {
+        delegate.put(buffer);
+    }
+
+    @Override
+    public int transferTo(SeekableByteChannel sbc) throws IOException {
+        return sbc.write(delegate);
+    }
+
+    @Override
+    public ByteBufferView duplicate() {
+        return new DelegatingByteBufferView(delegate.duplicate());
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("pos", delegate.position())
+                .add("lim", delegate.limit())
+                .add("cap", delegate.capacity())
+                .toString();
     }
 }

@@ -72,10 +72,10 @@ public final class PieceHandler extends UniqueMessageHandler<Piece> {
 
             int pieceIndex = Objects.requireNonNull(readInt(buffer));
             int blockOffset = Objects.requireNonNull(readInt(buffer));
-            byte[] block = new byte[length - Integer.BYTES * 2];
-            buffer.get(block);
+            int blockLength = length - Integer.BYTES * 2;
+            buffer.position(buffer.position() + blockLength);
 
-            context.setMessage(new Piece(pieceIndex, blockOffset, block));
+            context.setMessage(new Piece(pieceIndex, blockOffset, blockLength));
             consumed = length;
         }
 

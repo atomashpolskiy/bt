@@ -113,7 +113,7 @@ class RoutingPeerWorker implements PeerWorker {
                 // dispose of message
                 return null;
             } else {
-                connectionState.incrementUploaded(piece.getBlock().length);
+                connectionState.incrementUploaded(piece.getLength());
             }
         }
         if (Interested.class.equals(messageType)) {
@@ -136,7 +136,7 @@ class RoutingPeerWorker implements PeerWorker {
 
         int pieceIndex = piece.getPieceIndex(),
                 offset = piece.getOffset(),
-                length = piece.getBlock().length;
+                length = piece.getLength();
 
         return connectionState.getCancelledPeerRequests().remove(Mapper.mapper().buildKey(pieceIndex, offset, length));
     }

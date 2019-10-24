@@ -17,6 +17,7 @@
 package yourip.mock;
 
 import bt.data.StorageUnit;
+import bt.net.buffer.ByteBufferView;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,6 +36,11 @@ public class MockStorageUnit implements StorageUnit {
 
     @Override
     public void writeBlock(ByteBuffer buffer, long offset) {
+        // do nothing
+    }
+
+    @Override
+    public void writeBlock(ByteBufferView buffer, long offset) {
         // do nothing
     }
 

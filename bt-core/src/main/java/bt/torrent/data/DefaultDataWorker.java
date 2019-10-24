@@ -20,6 +20,7 @@ import bt.data.ChunkDescriptor;
 import bt.data.ChunkVerifier;
 import bt.data.DataDescriptor;
 import bt.net.Peer;
+import bt.net.buffer.BufferedData;
 import bt.service.IRuntimeLifecycleBinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,10 +86,10 @@ class DefaultDataWorker implements DataWorker {
     }
 
     @Override
-    public CompletableFuture<BlockWrite> addBlock(Peer peer, int pieceIndex, int offset, byte[] block) {
+    public CompletableFuture<BlockWrite> addBlock(Peer peer, int pieceIndex, int offset, BufferedData buffer) {
         if (pendingTasksCount.get() >= maxPendingTasks) {
             LOGGER.warn("Can't accept write block request -- queue is full");
-            return CompletableFuture.completedFuture(BlockWrite.rejected(peer, pieceIndex, offset, block));
+            return CompletableFuture.completedFuture(BlockWrite.rejected(peer, pieceIndex, offset, buffer.length()));
         } else {
             pendingTasksCount.incrementAndGet();
             return CompletableFuture.supplyAsync(() -> {
@@ -96,16 +97,16 @@ class DefaultDataWorker implements DataWorker {
                     if (data.getBitfield().isVerified(pieceIndex)) {
                         if (LOGGER.isTraceEnabled()) {
                             LOGGER.trace("Rejecting request to write block because the chunk is already complete and verified: " +
-                                    "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + block.length + "}");
+                                    "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + buffer.length() + "}");
                         }
-                        return BlockWrite.rejected(peer, pieceIndex, offset, block);
+                        return BlockWrite.rejected(peer, pieceIndex, offset, buffer.length());
                     }
 
                     ChunkDescriptor chunk = data.getChunkDescriptors().get(pieceIndex);
-                    chunk.getData().getSubrange(offset).putBytes(block);
+                    chunk.getData().getSubrange(offset).putBytes(buffer.buffer());
                     if (LOGGER.isTraceEnabled()) {
                         LOGGER.trace("Successfully processed block: " +
-                                "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + block.length + "}");
+                                "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + buffer.length() + "}");
                     }
 
                     CompletableFuture<Boolean> verificationFuture = null;
@@ -119,11 +120,12 @@ class DefaultDataWorker implements DataWorker {
                         }, executor);
                     }
 
-                    return BlockWrite.complete(peer, pieceIndex, offset, block, verificationFuture);
+                    return BlockWrite.complete(peer, pieceIndex, offset, buffer.length(), verificationFuture);
                 } catch (Throwable e) {
-                    return BlockWrite.exceptional(peer, e, pieceIndex, offset, block);
+                    return BlockWrite.exceptional(peer, e, pieceIndex, offset, buffer.length());
                 } finally {
                     pendingTasksCount.decrementAndGet();
+                    buffer.dispose();
                 }
             }, executor);
         }

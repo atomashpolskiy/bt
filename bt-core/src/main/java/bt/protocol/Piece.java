@@ -16,6 +16,8 @@
 
 package bt.protocol;
 
+import com.google.common.base.MoreObjects;
+
 /**
  * @since 1.0
  */
@@ -23,6 +25,7 @@ public final class Piece implements Message {
 
     private int pieceIndex;
     private int offset;
+    private int length;
     private byte[] block;
 
     /**
@@ -36,7 +39,20 @@ public final class Piece implements Message {
         }
         this.pieceIndex = pieceIndex;
         this.offset = offset;
+        this.length = block.length;
         this.block = block;
+    }
+
+    // TODO: Temporary (used only for incoming pieces)
+    public Piece(int pieceIndex, int offset, int length) throws InvalidMessageException {
+
+        if (pieceIndex < 0 || offset < 0 || length < 0) {
+            throw new InvalidMessageException("Invalid arguments: piece index (" +
+                    pieceIndex + "), offset (" + offset + "), length (" + length + ")");
+        }
+        this.pieceIndex = pieceIndex;
+        this.offset = offset;
+        this.length = length;
     }
 
     /**
@@ -54,6 +70,13 @@ public final class Piece implements Message {
     }
 
     /**
+     * @since 1.9
+     */
+    public int getLength() {
+        return length;
+    }
+
+    /**
      * @since 1.0
      */
     public byte[] getBlock() {
@@ -62,8 +85,11 @@ public final class Piece implements Message {
 
     @Override
     public String toString() {
-        return "[" + this.getClass().getSimpleName() + "] piece index {" + pieceIndex + "}, offset {" + offset +
-                "}, block {" + block.length + " bytes}";
+        return MoreObjects.toStringHelper(this)
+                .add("pieceIndex", pieceIndex)
+                .add("offset", offset)
+                .add("length", length)
+                .toString();
     }
 
     @Override
