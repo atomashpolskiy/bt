@@ -142,11 +142,15 @@ public class InboundMessageProcessor {
 
         int bytesLeftInRegionA = regionA.limit - regionA.offset;
         int consumed = consumeAB();
-        if (consumed >= bytesLeftInRegionA) {
+        if ((bytesLeftInRegionA == 0) || (undisposedDataOffset < regionA.offset && consumed >= bytesLeftInRegionA)) {
             // Data in region A has been fully processed,
             // so now we promote region B to become region A
             int consumedB = (consumed - bytesLeftInRegionA);
             regionB.offset += consumedB;
+            if (regionB.limit == regionB.offset) {
+                regionB.offset = 0;
+                regionB.limit = buffer.capacity();
+            }
             regionA = regionB;
             regionB = null;
             bufferView.position(regionA.offset);
@@ -154,7 +158,7 @@ public class InboundMessageProcessor {
             decodingView.decodedOffset = regionA.offset;
             decodingView.undecodedOffset = regionA.offset;
             decodingView.undecodedLimit = regionA.offset;
-        } else {
+        } else if (undisposedDataOffset < regionA.offset) {
             regionA.offset += consumed;
         }
     }
@@ -166,14 +170,13 @@ public class InboundMessageProcessor {
                 bufferQueue.remove();
                 if (bufferQueue.isEmpty()) {
                     undisposedDataOffset = -1;
+                }
+                int bytesLeftInRegionA = regionA.limit - regionA.offset;
+                if (buffer.length <= bytesLeftInRegionA) {
+                    regionA.offset += buffer.length;
                 } else {
-                    int bytesLeftInRegionA = regionA.limit - regionA.offset;
-                    if (buffer.length <= bytesLeftInRegionA) {
-                        regionA.offset += buffer.length;
-                    } else {
-                        regionA.offset = regionA.limit;
-                        regionB.offset += (buffer.length - bytesLeftInRegionA);
-                    }
+                    regionA.offset = regionA.limit;
+                    regionB.offset += (buffer.length - bytesLeftInRegionA);
                 }
             } else {
                 undisposedDataOffset = buffer.offset;
@@ -212,10 +215,17 @@ public class InboundMessageProcessor {
             });
             dbw.undecodedOffset = dbw.undecodedLimit;
             buffer.position(dbw.undecodedLimit);
-            // decodedOffset currently points to the start of region A,
-            // and we set it to be the limit, so that the unconsumed data in region A
-            // would not be overwritten
-            buffer.limit(dbw.decodedOffset);
+            if (undisposedDataOffset >= 0) {
+                // There's still undisposed data in region A left,
+                // so we should set the limit appropriately,
+                // or otherwise this data may be overwritten
+                buffer.limit(undisposedDataOffset);
+            } else {
+                // decodedOffset currently points to the start of region A,
+                // and we set it to be the limit, so that the unconsumed data in region A
+                // would not be overwritten
+                buffer.limit(dbw.decodedOffset);
+            }
         }
     }
 
@@ -282,9 +292,13 @@ public class InboundMessageProcessor {
                     Piece piece = (Piece) message;
                     int globalOffset = initialOffset + (splicedBuffer.position() - piece.getLength());
                     if (globalOffset >= regionA.limit) {
-                        globalOffset = splicedBuffer.position() - (regionA.limit - regionA.offset);
+                        globalOffset = splicedBuffer.position() - (regionA.limit - initialOffset);
                     }
                     processPieceMessage(piece, splicedBuffer.duplicate(), globalOffset);
+                }
+                dbw.decodedOffset = initialOffset + splicedBuffer.position();
+                if (dbw.decodedOffset >= regionA.limit) {
+                    dbw.decodedOffset = splicedBuffer.position() - (regionA.limit - initialOffset);
                 }
             }
         }

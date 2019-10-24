@@ -23,7 +23,6 @@ import bt.net.buffer.BufferedData;
 import bt.protocol.*;
 import bt.protocol.handler.MessageHandler;
 import bt.test.protocol.ProtocolTest;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetAddress;
@@ -189,12 +188,34 @@ public class InboundMessageProcessorTest {
         assertNotNull(have2);
         assertEquals(2, have2.getPieceIndex());
 
-        // Attempt to overwrite undisposed data
-        byte[] bitfield2 = new byte[80];
-        Arrays.fill(bitfield1, (byte) 0xff);
+        // Check if it's possible to overwrite undisposed data
+        // (i.e. whether buffer's params are incorrect)
+        assertEquals(61, buffer.remaining());
+
+        byte[] bitfield2 = new byte[56]; // Bitfield is <length><id><...>, i.e. 4+1+X bytes
+        Arrays.fill(bitfield2, (byte) 0xff);
         encodeToBuffer(new Bitfield(bitfield2));
 
         processor.processInboundData();
+
+        Bitfield bitfield2Message = (Bitfield) processor.pollMessage();
+        assertNotNull(bitfield2Message);
+        assertArrayEquals(bitfield2, bitfield2Message.getBitfield());
+        assertNull(processor.pollMessage());
+
+        assertFalse(buffer.hasRemaining());
+
+        // Just about time to dispose of second piece's data
+        BufferedData data2 = bufferedPieceRegistry.getBufferedPiece(piece2.getPieceIndex(), piece2.getOffset());
+        assertNotNull(data2);
+        byte[] data2Bytes = new byte[block2.length];
+        data2.buffer().get(data2Bytes);
+        assertArrayEquals(block2, data2Bytes);
+        data2.dispose();
+
+        processor.processInboundData();
+
+        assertEquals(buffer.capacity(), buffer.remaining());
 
         /////////////////////////////////////////////////////////////
 
