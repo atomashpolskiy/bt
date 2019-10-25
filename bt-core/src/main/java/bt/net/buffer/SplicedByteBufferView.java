@@ -22,18 +22,18 @@ import com.google.common.base.MoreObjects;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.SeekableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 public class SplicedByteBufferView implements ByteBufferView {
 
     private final ByteBuffer left;
     private final ByteBuffer right;
 
-    private int leftOffset;
-    private int leftLimit;
-    private int leftCapacity;
-    private int rightOffset;
-    private int rightLimit;
+    private final int leftOffset;
+    private final int leftLimit;
+    private final int leftCapacity;
+    private final int rightOffset;
+    private final int rightLimit;
 
     private int position;
     private int limit;
@@ -43,7 +43,11 @@ public class SplicedByteBufferView implements ByteBufferView {
     private final byte[] intBytes;
 
     public SplicedByteBufferView(ByteBuffer left, ByteBuffer right) {
-        this(left, right, 0);
+        this(left, right, 0,
+                left.remaining() + right.remaining(),
+                left.remaining() + right.remaining(),
+                left.position(), left.limit(),
+                right.position(), right.limit());
         // mandate that the order is BE, otherwise it will be impossible to read multi-byte numbers,
         // that sit on the boundary of two buffers
         if (left.order() != ByteOrder.BIG_ENDIAN || right.order() != ByteOrder.BIG_ENDIAN) {
@@ -51,16 +55,20 @@ public class SplicedByteBufferView implements ByteBufferView {
         }
     }
 
-    private SplicedByteBufferView(ByteBuffer left, ByteBuffer right, int position) {
+    private SplicedByteBufferView(
+            ByteBuffer left, ByteBuffer right,
+            int position, int limit, int capacity,
+            int leftOffset, int leftLimit, int rightOffset, int rightLimit) {
         this.left = left;
         this.right = right;
         this.position = position;
-        this.leftOffset = left.position();
-        this.leftLimit = left.limit();
+        this.leftOffset = leftOffset;
+        this.leftLimit = leftLimit;
         this.leftCapacity = leftLimit - leftOffset;
-        this.rightOffset = right.position();
-        this.rightLimit = right.limit();
-        this.limit = this.capacity = left.remaining() + right.remaining();
+        this.rightOffset = rightOffset;
+        this.rightLimit = rightLimit;
+        this.limit = limit;
+        this.capacity = capacity;
         this.shortBytes = new byte[Short.BYTES];
         this.intBytes = new byte[Integer.BYTES];
     }
@@ -192,7 +200,7 @@ public class SplicedByteBufferView implements ByteBufferView {
     }
 
     @Override
-    public int transferTo(SeekableByteChannel sbc) throws IOException {
+    public int transferTo(WritableByteChannel sbc) throws IOException {
         if (position < leftLimit) {
             int written = sbc.write(left);
             position += written;
@@ -208,14 +216,9 @@ public class SplicedByteBufferView implements ByteBufferView {
     @Override
     public ByteBufferView duplicate() {
         ByteBuffer leftDup = left.duplicate();
-        leftDup.limit(leftLimit);
-        leftDup.position(leftOffset);
-
         ByteBuffer rightDup = right.duplicate();
-        rightDup.limit(rightLimit);
-        rightDup.position(rightOffset);
-
-        return new SplicedByteBufferView(leftDup, rightDup, position);
+        return new SplicedByteBufferView(leftDup, rightDup,
+                position, limit, capacity, leftOffset, leftLimit, rightOffset, rightLimit);
     }
 
     @Override

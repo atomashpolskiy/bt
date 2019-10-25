@@ -18,7 +18,7 @@ package bt.net.buffer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 public interface ByteBufferView {
 
@@ -46,7 +46,7 @@ public interface ByteBufferView {
 
     void transferTo(ByteBuffer buffer);
 
-    int transferTo(SeekableByteChannel sbc) throws IOException;
+    int transferTo(WritableByteChannel sbc) throws IOException;
 
     ByteBufferView duplicate();
 }

@@ -118,6 +118,10 @@ public class SocketChannelHandler implements ChannelHandler {
             try {
                 if (!buffer.hasRemaining()) {
                     context.fireDataReceived();
+                    if (!buffer.hasRemaining()) {
+                        LOGGER.warn("Will not read from channel:" +
+                                " no space left in buffer {}", buffer);
+                    }
                 }
 
                 int readLast, readTotal = 0;
@@ -132,7 +136,8 @@ public class SocketChannelHandler implements ChannelHandler {
                         context.fireDataReceived();
                         processed = true;
                         if (!buffer.hasRemaining()) {
-                            LOGGER.warn("No space left in buffer: {}", buffer);
+                            LOGGER.warn("Managed to read only {} bytes from channel:" +
+                                    " no space left in buffer {}", readTotal, buffer);
                             return false;
                         }
                     }

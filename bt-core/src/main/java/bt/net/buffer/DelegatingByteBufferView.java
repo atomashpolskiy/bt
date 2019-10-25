@@ -20,7 +20,7 @@ import com.google.common.base.MoreObjects;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 public class DelegatingByteBufferView implements ByteBufferView {
 
@@ -94,7 +94,7 @@ public class DelegatingByteBufferView implements ByteBufferView {
     }
 
     @Override
-    public int transferTo(SeekableByteChannel sbc) throws IOException {
+    public int transferTo(WritableByteChannel sbc) throws IOException {
         return sbc.write(delegate);
     }
 

@@ -266,6 +266,9 @@ public class InboundMessageProcessor {
             } else {
                 regionB.setOffset(undisposedDataOffset);
             }
+            if (decodingView.unconsumedOffset == regionA.limit) {
+                decodingView.unconsumedOffset = regionB.offset;
+            }
             regionA = regionB;
             regionB = null;
             buffer.limit(buffer.capacity());

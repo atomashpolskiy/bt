@@ -306,9 +306,9 @@ class ReadWriteDataRange implements DataRange {
                     throw new IllegalStateException("Unexpected file size -- insufficient data in block");
                 }
 
-                limitInBlock = Math.min(buffer.capacity(), offsetInBlock + (int) fileSize);
-                buffer.limit(limitInBlock);
-                buffer.position(offsetInBlock);
+                limitInBlock = Math.min(blockLength, offsetInBlock + (int) fileSize);
+                buffer.limit(buffer.position() + offsetInBlock + limitInBlock);
+                buffer.position(buffer.position() + offsetInBlock);
                 unit.writeBlock(buffer, off);
                 offsetInBlock = limitInBlock;
 
@@ -332,9 +332,9 @@ class ReadWriteDataRange implements DataRange {
                     throw new IllegalStateException("Unexpected file size -- insufficient data in block");
                 }
 
-                limitInBlock = Math.min(buffer.capacity(), offsetInBlock + (int) fileSize);
-                buffer.limit(limitInBlock);
-                buffer.position(offsetInBlock);
+                limitInBlock = Math.min(blockLength, offsetInBlock + (int) fileSize);
+                buffer.limit(buffer.position() + offsetInBlock + limitInBlock);
+                buffer.position(buffer.position() + offsetInBlock);
                 unit.writeBlock(buffer, off);
                 offsetInBlock = limitInBlock;
 
