@@ -116,6 +116,10 @@ public class SocketChannelHandler implements ChannelHandler {
             ByteBuffer buffer = inboundBuffer.lockAndGet();
 
             try {
+                if (!buffer.hasRemaining()) {
+                    context.fireDataReceived();
+                }
+
                 int readLast, readTotal = 0;
                 boolean processed = false;
                 while ((readLast = channel.read(buffer)) > 0) {
@@ -128,6 +132,7 @@ public class SocketChannelHandler implements ChannelHandler {
                         context.fireDataReceived();
                         processed = true;
                         if (!buffer.hasRemaining()) {
+                            LOGGER.warn("No space left in buffer: {}", buffer);
                             return false;
                         }
                     }

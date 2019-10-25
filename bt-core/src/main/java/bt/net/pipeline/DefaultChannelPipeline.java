@@ -52,7 +52,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             inboundBuffer.unlock();
         }
 
-        this.inboundMessageProcessor = new InboundMessageProcessor(buffer,
+        this.inboundMessageProcessor = new InboundMessageProcessor(peer, buffer,
                 new MessageDeserializer(peer, protocol), decoders, bufferedPieceRegistry);
         this.serializer = new MessageSerializer(peer, protocol);
         this.inboundBuffer = inboundBuffer;

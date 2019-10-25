@@ -16,10 +16,13 @@
 
 package bt.net.pipeline;
 
+import bt.net.Peer;
 import bt.net.buffer.*;
 import bt.protocol.Message;
 import bt.protocol.Piece;
 import com.google.common.base.MoreObjects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
@@ -31,7 +34,9 @@ import java.util.concurrent.LinkedBlockingQueue;
  * Inspired by Bip Buffer (https://www.codeproject.com/Articles/3479/The-Bip-Buffer-The-Circular-Buffer-with-a-Twist)
  */
 public class InboundMessageProcessor {
+    private static final Logger LOGGER = LoggerFactory.getLogger(InboundMessageProcessor.class);
 
+    private final Peer peer;
     private final ByteBuffer buffer;
     private final ByteBufferView bufferView;
     private final DecodingBufferView decodingView;
@@ -46,7 +51,8 @@ public class InboundMessageProcessor {
     private final Queue<Message> messageQueue;
     private final Queue<BufferedDataWithOffset> bufferQueue;
 
-    public InboundMessageProcessor(ByteBuffer buffer,
+    public InboundMessageProcessor(Peer peer,
+                                   ByteBuffer buffer,
                                    MessageDeserializer deserializer,
                                    List<BufferMutator> decoders,
                                    IBufferedPieceRegistry bufferedPieceRegistry) {
@@ -54,6 +60,7 @@ public class InboundMessageProcessor {
             throw new IllegalArgumentException("Illegal buffer params (position: "
                     + buffer.position() + ", limit: " + buffer.limit() + ", capacity: " + buffer.capacity() + ")");
         }
+        this.peer = peer;
         this.buffer = buffer;
         this.deserializer = deserializer;
         this.decoders = decoders;
@@ -72,11 +79,39 @@ public class InboundMessageProcessor {
     }
 
     public void processInboundData() {
-        if (regionB == null) {
-            processA();
-        } else {
-            processAB();
+        try {
+            if (regionB == null) {
+                processA();
+            } else {
+                processAB();
+            }
+        } catch (Exception e) {
+            printDebugInfo(e.getMessage());
+            throw new RuntimeException(e);
         }
+        if (LOGGER.isTraceEnabled()) {
+            printDebugInfo("Finished processing inbound data");
+        }
+    }
+
+    private void printDebugInfo(String message) {
+        String s = "\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
+        s += "\n  Debug message: " + message;
+        s += "\n  Peer: " + peer;
+        s += "\n  Buffer: " + buffer;
+        s += "\n  Region A: " + regionA;
+        s += "\n  Region B: " + regionB;
+        s += "\n  Decoding params: " + decodingView;
+        s += "\n  First undisposed data offset: " + undisposedDataOffset;
+        s += "\n  Message queue size: " + messageQueue.size();
+        if (!bufferQueue.isEmpty()) {
+            s += "\n  Undisposed data queue size: " + bufferQueue.size();
+            for (BufferedDataWithOffset data : bufferQueue) {
+                s += "\n   * " + data;
+            }
+        }
+        s += "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
+        LOGGER.trace(s);
     }
 
     private void processA() {
@@ -88,17 +123,17 @@ public class InboundMessageProcessor {
         decodingView.unconsumedOffset += consumeA();
 
         // Resize region A
-        regionA.offset = (undisposedDataOffset >= 0)
-                ? undisposedDataOffset
-                : decodingView.unconsumedOffset;
-        regionA.limit = decodingView.undecodedLimit;
+        regionA.setOffsetAndLimit(
+                (undisposedDataOffset >= 0)
+                        ? undisposedDataOffset
+                        : decodingView.unconsumedOffset,
+                decodingView.undecodedLimit);
 
         if (regionA.offset == regionA.limit) {
             // All data has been consumed, we can reset region A and decoding view
             buffer.limit(buffer.capacity());
             buffer.position(0);
-            regionA.offset = 0;
-            regionA.limit = 0;
+            regionA.setOffsetAndLimit(0, 0);
             decodingView.unconsumedOffset = 0;
             decodingView.undecodedOffset = 0;
             decodingView.undecodedLimit = 0;
@@ -184,16 +219,18 @@ public class InboundMessageProcessor {
     private void processAB() {
         reclaimDisposedBuffers();
 
-        if (undisposedDataOffset >= regionA.offset) {
-            regionA.offset = undisposedDataOffset;
-        } else if (decodingView.unconsumedOffset >= regionA.offset) {
-            regionA.offset = decodingView.unconsumedOffset;
-        } else {
-            regionA.offset = regionA.limit;
-        }
-
         decodingView.undecodedLimit = buffer.position();
         decode();
+
+        regionB.setLimit(decodingView.undecodedLimit);
+
+        if (undisposedDataOffset >= regionA.offset) {
+            regionA.setOffset(undisposedDataOffset);
+        } else if (decodingView.unconsumedOffset >= regionA.offset) {
+            regionA.setOffset(decodingView.unconsumedOffset);
+        } else {
+            regionA.setOffset(regionA.limit);
+        }
 
         int consumed = consumeAB();
         int consumedA, consumedB;
@@ -201,7 +238,7 @@ public class InboundMessageProcessor {
             consumedA = Math.min(consumed, regionA.limit - decodingView.unconsumedOffset);
             consumedB = consumed - consumedA; // non-negative
             if (undisposedDataOffset < regionA.offset) {
-                regionA.offset += consumedA;
+                regionA.setOffset(regionA.offset + consumedA);
             }
             if (consumedB > 0) {
                 decodingView.unconsumedOffset = regionB.offset + consumedB;
@@ -212,24 +249,22 @@ public class InboundMessageProcessor {
             consumedB = consumed;
             decodingView.unconsumedOffset += consumedB;
         }
-        regionB.limit = decodingView.undecodedLimit;
 
         if (regionA.offset == regionA.limit) {
             // Data in region A has been fully processed,
             // so now we promote region B to become region A
             if (undisposedDataOffset < 0) {
                 // There's no undisposed data, so we can shrink B
-                regionB.offset += consumedB;
+                regionB.setOffset(regionB.offset + consumedB);
                 if (regionB.limit == decodingView.unconsumedOffset || regionB.limit == regionB.offset) {
                     // Or even reset it, if all of it has been consumed
-                    regionB.offset = 0;
-                    regionB.limit = buffer.capacity();
+                    regionB.setOffsetAndLimit(0, 0);
                     decodingView.unconsumedOffset = 0;
                     decodingView.undecodedOffset = 0;
                     decodingView.undecodedLimit = 0;
                 }
             } else {
-                regionB.offset = undisposedDataOffset;
+                regionB.setOffset(undisposedDataOffset);
             }
             regionA = regionB;
             regionB = null;
@@ -245,6 +280,7 @@ public class InboundMessageProcessor {
         DecodingBufferView dbw = decodingView;
 
         ByteBufferView splicedBuffer;
+        int splicedBufferOffset;
         if (dbw.unconsumedOffset >= regionA.offset) {
             ByteBuffer regionAView = buffer.duplicate();
             regionAView.limit(regionA.limit);
@@ -252,15 +288,17 @@ public class InboundMessageProcessor {
 
             ByteBuffer regionBView = buffer.duplicate();
             regionBView.limit(dbw.undecodedOffset);
-            regionBView.position(0);
+            regionBView.position(regionB.offset);
 
             splicedBuffer = new SplicedByteBufferView(regionAView, regionBView);
+            splicedBufferOffset = dbw.unconsumedOffset;
         } else {
             ByteBuffer regionBView = buffer.duplicate();
             regionBView.limit(dbw.undecodedLimit);
             regionBView.position(dbw.unconsumedOffset);
 
             splicedBuffer = new DelegatingByteBufferView(regionBView);
+            splicedBufferOffset = 0;
         }
 
         Message message;
@@ -273,9 +311,9 @@ public class InboundMessageProcessor {
                 messageQueue.add(message);
                 if (message instanceof Piece) {
                     Piece piece = (Piece) message;
-                    int globalOffset = dbw.unconsumedOffset + (splicedBuffer.position() - piece.getLength());
+                    int globalOffset = splicedBufferOffset + (splicedBuffer.position() - piece.getLength());
                     if (globalOffset >= regionA.limit) {
-                        globalOffset -= regionA.limit;
+                        globalOffset = regionB.offset + (globalOffset - regionA.limit);
                     }
                     processPieceMessage(piece, splicedBuffer.duplicate(), globalOffset);
                 }
@@ -298,15 +336,48 @@ public class InboundMessageProcessor {
             if (bufferQueue.isEmpty()) {
                 undisposedDataOffset = globalOffset;
             }
-            bufferQueue.add(new BufferedDataWithOffset(bufferedData, globalOffset, buffer.remaining()));
+            bufferQueue.add(new BufferedDataWithOffset(piece, bufferedData, globalOffset, buffer.remaining()));
         }
     }
 
     private static class Region {
-        public int offset;
-        public int limit;
+        private int offset;
+        private int limit;
 
         public Region(int offset, int limit) {
+            this.offset = offset;
+            this.limit = limit;
+        }
+
+        public int getOffset() {
+            return offset;
+        }
+
+        public void setOffset(int offset) {
+            if (offset > limit) {
+                throw new IllegalArgumentException("offset greater than limit: "
+                        + offset + " > " + limit);
+            }
+            this.offset = offset;
+        }
+
+        public int getLimit() {
+            return limit;
+        }
+
+        public void setLimit(int limit) {
+            if (limit < offset) {
+                throw new IllegalArgumentException("limit smaller than offset: "
+                        + limit + " < " + offset);
+            }
+            this.limit = limit;
+        }
+
+        public void setOffsetAndLimit(int offset, int limit) {
+            if (offset < 0 || limit < 0 || limit < offset) {
+                throw new IllegalArgumentException("illegal offset ("
+                        + offset + ") and limit (" + limit + ")");
+            }
             this.offset = offset;
             this.limit = limit;
         }
@@ -342,11 +413,15 @@ public class InboundMessageProcessor {
     }
 
     private static class BufferedDataWithOffset {
+        private final int pieceIndex;
+        private final int pieceOffset;
         public final BufferedData buffer;
         public final int offset;
         public final int length;
 
-        private BufferedDataWithOffset(BufferedData buffer, int offset, int length) {
+        private BufferedDataWithOffset(Piece piece, BufferedData buffer, int offset, int length) {
+            this.pieceIndex = piece.getPieceIndex();
+            this.pieceOffset = piece.getOffset();
             this.buffer = buffer;
             this.offset = offset;
             this.length = length;
@@ -355,6 +430,8 @@ public class InboundMessageProcessor {
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
+                    .add("pieceIndex", pieceIndex)
+                    .add("pieceOffset", pieceOffset)
                     .add("disposed", buffer.isDisposed())
                     .add("offset", offset)
                     .add("length", length)

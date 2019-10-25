@@ -47,7 +47,7 @@ public class InboundMessageProcessorTest {
         this.protocol = ProtocolTest.forBittorrentProtocol().build().getProtocol();
         MessageDeserializer deserializer = new MessageDeserializer(peer, protocol);
         this.bufferedPieceRegistry = new BufferedPieceRegistry();
-        this.processor = new InboundMessageProcessor(buffer, deserializer, Collections.emptyList(), bufferedPieceRegistry);
+        this.processor = new InboundMessageProcessor(peer, buffer, deserializer, Collections.emptyList(), bufferedPieceRegistry);
     }
 
     @Test
