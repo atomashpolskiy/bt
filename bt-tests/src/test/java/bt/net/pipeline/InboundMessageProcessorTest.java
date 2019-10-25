@@ -190,9 +190,9 @@ public class InboundMessageProcessorTest {
 
         // Check if it's possible to overwrite undisposed data
         // (i.e. whether buffer's params are incorrect)
-        assertEquals(61, buffer.remaining());
+        assertEquals(60, buffer.remaining());
 
-        byte[] bitfield2 = new byte[56]; // Bitfield is <length><id><...>, i.e. 4+1+X bytes
+        byte[] bitfield2 = new byte[55]; // Bitfield is <length><id><...>, i.e. 4+1+X bytes
         Arrays.fill(bitfield2, (byte) 0xff);
         encodeToBuffer(new Bitfield(bitfield2));
 

@@ -80,23 +80,26 @@ public class InboundMessageProcessor {
     }
 
     private void processA() {
-        reclaimDisposedBuffersA();
-        decodeA();
-        consumeA();
+        reclaimDisposedBuffers();
+
+        decodingView.undecodedLimit = buffer.position();
+        decode();
+
+        decodingView.unconsumedOffset += consumeA();
 
         // Resize region A
         regionA.offset = (undisposedDataOffset >= 0)
-                ? Math.min(decodingView.decodedOffset, undisposedDataOffset)
-                : decodingView.decodedOffset;
+                ? undisposedDataOffset
+                : decodingView.unconsumedOffset;
         regionA.limit = decodingView.undecodedLimit;
 
         if (regionA.offset == regionA.limit) {
             // All data has been consumed, we can reset region A and decoding view
-            bufferView.position(0);
-            bufferView.limit(bufferView.capacity());
+            buffer.limit(buffer.capacity());
+            buffer.position(0);
             regionA.offset = 0;
             regionA.limit = 0;
-            decodingView.decodedOffset = 0;
+            decodingView.unconsumedOffset = 0;
             decodingView.undecodedOffset = 0;
             decodingView.undecodedLimit = 0;
         } else {
@@ -112,13 +115,16 @@ public class InboundMessageProcessor {
                 decodingView.undecodedLimit = regionB.limit;
                 // Adjust buffer's position and limit,
                 // so that it would be possible to append new data to it
-                bufferView.position(0);
-                bufferView.limit(regionA.offset);
+                buffer.limit(regionA.offset - 1);
+                buffer.position(0);
+            } else {
+                buffer.limit(buffer.capacity());
+                buffer.position(decodingView.undecodedLimit);
             }
         }
     }
 
-    private void reclaimDisposedBuffersA() {
+    private void reclaimDisposedBuffers() {
         BufferedDataWithOffset buffer;
         while ((buffer = bufferQueue.peek()) != null) {
             if (buffer.buffer.isDisposed()) {
@@ -133,62 +139,8 @@ public class InboundMessageProcessor {
         }
     }
 
-    private void processAB() {
-        reclaimDisposedBuffersAB();
-        decodeAB();
-
-        // Adjust B's limit to account for new data
-        regionB.limit = buffer.position();
-
-        int bytesLeftInRegionA = regionA.limit - regionA.offset;
-        int consumed = consumeAB();
-        if ((bytesLeftInRegionA == 0) || (undisposedDataOffset < regionA.offset && consumed >= bytesLeftInRegionA)) {
-            // Data in region A has been fully processed,
-            // so now we promote region B to become region A
-            int consumedB = (consumed - bytesLeftInRegionA);
-            regionB.offset += consumedB;
-            if (regionB.limit == regionB.offset) {
-                regionB.offset = 0;
-                regionB.limit = buffer.capacity();
-            }
-            regionA = regionB;
-            regionB = null;
-            bufferView.position(regionA.offset);
-            bufferView.limit(bufferView.capacity());
-            decodingView.decodedOffset = regionA.offset;
-            decodingView.undecodedOffset = regionA.offset;
-            decodingView.undecodedLimit = regionA.offset;
-        } else if (undisposedDataOffset < regionA.offset) {
-            regionA.offset += consumed;
-        }
-    }
-
-    private void reclaimDisposedBuffersAB() {
-        BufferedDataWithOffset buffer;
-        while ((buffer = bufferQueue.peek()) != null) {
-            if (buffer.buffer.isDisposed()) {
-                bufferQueue.remove();
-                if (bufferQueue.isEmpty()) {
-                    undisposedDataOffset = -1;
-                }
-                int bytesLeftInRegionA = regionA.limit - regionA.offset;
-                if (buffer.length <= bytesLeftInRegionA) {
-                    regionA.offset += buffer.length;
-                } else {
-                    regionA.offset = regionA.limit;
-                    regionB.offset += (buffer.length - bytesLeftInRegionA);
-                }
-            } else {
-                undisposedDataOffset = buffer.offset;
-                break;
-            }
-        }
-    }
-
-    private void decodeA() {
+    private void decode() {
         DecodingBufferView dbw = decodingView;
-
-        dbw.undecodedLimit = buffer.position();
 
         if (dbw.undecodedOffset < dbw.undecodedLimit) {
             buffer.flip();
@@ -197,51 +149,22 @@ public class InboundMessageProcessor {
                 mutator.mutate(buffer);
             });
             dbw.undecodedOffset = dbw.undecodedLimit;
-            buffer.position(dbw.undecodedLimit);
-            buffer.limit(buffer.capacity());
         }
     }
 
-    private void decodeAB() {
+    private int consumeA() {
         DecodingBufferView dbw = decodingView;
 
-        dbw.undecodedLimit = buffer.position();
-
-        if (dbw.undecodedOffset < dbw.undecodedLimit) {
-            buffer.flip();
-            decoders.forEach(mutator -> {
-                buffer.position(dbw.undecodedOffset);
-                mutator.mutate(buffer);
-            });
-            dbw.undecodedOffset = dbw.undecodedLimit;
-            buffer.position(dbw.undecodedLimit);
-            if (undisposedDataOffset >= 0) {
-                // There's still undisposed data in region A left,
-                // so we should set the limit appropriately,
-                // or otherwise this data may be overwritten
-                buffer.limit(undisposedDataOffset);
-            } else {
-                // decodedOffset currently points to the start of region A,
-                // and we set it to be the limit, so that the unconsumed data in region A
-                // would not be overwritten
-                buffer.limit(dbw.decodedOffset);
-            }
-        }
-    }
-
-    private void consumeA() {
-        DecodingBufferView dbw = decodingView;
-
-        int initialPosition = buffer.position();
-        if (dbw.decodedOffset < dbw.undecodedOffset) {
-            bufferView.position(dbw.decodedOffset);
+        int consumed = 0;
+        if (dbw.unconsumedOffset < dbw.undecodedOffset) {
             bufferView.limit(dbw.undecodedOffset);
+            bufferView.position(dbw.unconsumedOffset);
+
             Message message;
+            int prevPosition = buffer.position();
             for (;;) {
                 message = deserializer.deserialize(bufferView);
                 if (message == null) {
-                    buffer.limit(buffer.capacity());
-                    buffer.position(initialPosition);
                     break;
                 } else {
                     messageQueue.add(message);
@@ -250,38 +173,98 @@ public class InboundMessageProcessor {
                         int globalOffset = buffer.position() - piece.getLength();
                         processPieceMessage(piece, bufferView.duplicate(), globalOffset);
                     }
-                    dbw.decodedOffset = buffer.position();
+                    consumed += (buffer.position() - prevPosition);
+                    prevPosition = buffer.position();
                 }
             }
+        }
+        return consumed;
+    }
+
+    private void processAB() {
+        reclaimDisposedBuffers();
+
+        if (undisposedDataOffset >= regionA.offset) {
+            regionA.offset = undisposedDataOffset;
+        } else if (decodingView.unconsumedOffset >= regionA.offset) {
+            regionA.offset = decodingView.unconsumedOffset;
+        } else {
+            regionA.offset = regionA.limit;
+        }
+
+        decodingView.undecodedLimit = buffer.position();
+        decode();
+
+        int consumed = consumeAB();
+        int consumedA, consumedB;
+        if (decodingView.unconsumedOffset >= regionA.offset) {
+            consumedA = Math.min(consumed, regionA.limit - decodingView.unconsumedOffset);
+            consumedB = consumed - consumedA; // non-negative
+            if (undisposedDataOffset < regionA.offset) {
+                regionA.offset += consumedA;
+            }
+            if (consumedB > 0) {
+                decodingView.unconsumedOffset = regionB.offset + consumedB;
+            } else {
+                decodingView.unconsumedOffset += consumedA;
+            }
+        } else {
+            consumedB = consumed;
+            decodingView.unconsumedOffset += consumedB;
+        }
+        regionB.limit = decodingView.undecodedLimit;
+
+        if (regionA.offset == regionA.limit) {
+            // Data in region A has been fully processed,
+            // so now we promote region B to become region A
+            if (undisposedDataOffset < 0) {
+                // There's no undisposed data, so we can shrink B
+                regionB.offset += consumedB;
+                if (regionB.limit == decodingView.unconsumedOffset || regionB.limit == regionB.offset) {
+                    // Or even reset it, if all of it has been consumed
+                    regionB.offset = 0;
+                    regionB.limit = buffer.capacity();
+                    decodingView.unconsumedOffset = 0;
+                    decodingView.undecodedOffset = 0;
+                    decodingView.undecodedLimit = 0;
+                }
+            } else {
+                regionB.offset = undisposedDataOffset;
+            }
+            regionA = regionB;
+            regionB = null;
+            buffer.limit(buffer.capacity());
+            buffer.position(decodingView.undecodedLimit);
+        } else {
+            buffer.limit(regionA.offset - 1);
+            buffer.position(decodingView.undecodedLimit);
         }
     }
 
     private int consumeAB() {
         DecodingBufferView dbw = decodingView;
 
-        int initialOffset;
         ByteBufferView splicedBuffer;
-        if (regionA.offset == regionA.limit) {
-            ByteBuffer regionBView = buffer.duplicate();
-            regionBView.position(regionB.offset);
-            regionBView.limit(regionB.limit);
-
-            initialOffset = regionB.offset;
-            splicedBuffer = new DelegatingByteBufferView(regionBView);
-        } else {
+        if (dbw.unconsumedOffset >= regionA.offset) {
             ByteBuffer regionAView = buffer.duplicate();
             regionAView.limit(regionA.limit);
-            regionAView.position(dbw.decodedOffset);
+            regionAView.position(dbw.unconsumedOffset);
 
             ByteBuffer regionBView = buffer.duplicate();
-            regionBView.limit(regionB.limit);
+            regionBView.limit(dbw.undecodedOffset);
             regionBView.position(0);
 
-            initialOffset = dbw.decodedOffset;
             splicedBuffer = new SplicedByteBufferView(regionAView, regionBView);
+        } else {
+            ByteBuffer regionBView = buffer.duplicate();
+            regionBView.limit(dbw.undecodedLimit);
+            regionBView.position(dbw.unconsumedOffset);
+
+            splicedBuffer = new DelegatingByteBufferView(regionBView);
         }
 
         Message message;
+        int consumed = 0, prevPosition = splicedBuffer.position();
         for (;;) {
             message = deserializer.deserialize(splicedBuffer);
             if (message == null) {
@@ -290,20 +273,18 @@ public class InboundMessageProcessor {
                 messageQueue.add(message);
                 if (message instanceof Piece) {
                     Piece piece = (Piece) message;
-                    int globalOffset = initialOffset + (splicedBuffer.position() - piece.getLength());
+                    int globalOffset = dbw.unconsumedOffset + (splicedBuffer.position() - piece.getLength());
                     if (globalOffset >= regionA.limit) {
-                        globalOffset = splicedBuffer.position() - (regionA.limit - initialOffset);
+                        globalOffset -= regionA.limit;
                     }
                     processPieceMessage(piece, splicedBuffer.duplicate(), globalOffset);
                 }
-                dbw.decodedOffset = initialOffset + splicedBuffer.position();
-                if (dbw.decodedOffset >= regionA.limit) {
-                    dbw.decodedOffset = splicedBuffer.position() - (regionA.limit - initialOffset);
-                }
+                consumed += (splicedBuffer.position() - prevPosition);
+                prevPosition = splicedBuffer.position();
             }
         }
 
-        return splicedBuffer.position();
+        return consumed;
     }
 
     private void processPieceMessage(Piece piece, ByteBufferView buffer, int globalOffset) {
@@ -340,12 +321,12 @@ public class InboundMessageProcessor {
     }
 
     private static class DecodingBufferView {
-        public int decodedOffset;
+        public int unconsumedOffset;
         public int undecodedOffset;
         public int undecodedLimit;
 
-        private DecodingBufferView(int decodedOffset, int undecodedOffset, int undecodedLimit) {
-            this.decodedOffset = decodedOffset;
+        private DecodingBufferView(int unconsumedOffset, int undecodedOffset, int undecodedLimit) {
+            this.unconsumedOffset = unconsumedOffset;
             this.undecodedOffset = undecodedOffset;
             this.undecodedLimit = undecodedLimit;
         }
@@ -353,7 +334,7 @@ public class InboundMessageProcessor {
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
-                    .add("decodedOffset", decodedOffset)
+                    .add("unconsumedOffset", unconsumedOffset)
                     .add("undecodedOffset", undecodedOffset)
                     .add("undecodedLimit", undecodedLimit)
                     .toString();
@@ -369,6 +350,15 @@ public class InboundMessageProcessor {
             this.buffer = buffer;
             this.offset = offset;
             this.length = length;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .add("disposed", buffer.isDisposed())
+                    .add("offset", offset)
+                    .add("length", length)
+                    .toString();
         }
     }
 }
