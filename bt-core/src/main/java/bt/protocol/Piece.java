@@ -46,9 +46,9 @@ public final class Piece implements Message {
     // TODO: Temporary (used only for incoming pieces)
     public Piece(int pieceIndex, int offset, int length) throws InvalidMessageException {
 
-        if (pieceIndex < 0 || offset < 0 || length < 0) {
+        if (pieceIndex < 0 || offset < 0 || length <= 0) {
             throw new InvalidMessageException("Invalid arguments: piece index (" +
-                    pieceIndex + "), offset (" + offset + "), length (" + length + ")");
+                    pieceIndex + "), offset (" + offset + "), block length (" + length + ")");
         }
         this.pieceIndex = pieceIndex;
         this.offset = offset;

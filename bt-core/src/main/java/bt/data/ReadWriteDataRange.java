@@ -293,6 +293,7 @@ class ReadWriteDataRange implements DataRange {
 
     private void transferFromBuffer(ByteBuffer buffer) {
         int blockLength = buffer.remaining();
+        int offset = buffer.position();
 
         visitUnits(new DataRangeVisitor() {
 
@@ -307,8 +308,8 @@ class ReadWriteDataRange implements DataRange {
                 }
 
                 limitInBlock = Math.min(blockLength, offsetInBlock + (int) fileSize);
-                buffer.limit(buffer.position() + offsetInBlock + limitInBlock);
-                buffer.position(buffer.position() + offsetInBlock);
+                buffer.limit(offset + limitInBlock);
+                buffer.position(offset + offsetInBlock);
                 unit.writeBlock(buffer, off);
                 offsetInBlock = limitInBlock;
 
@@ -319,6 +320,7 @@ class ReadWriteDataRange implements DataRange {
 
     private void transferFromBuffer(ByteBufferView buffer) {
         int blockLength = buffer.remaining();
+        int offset = buffer.position();
 
         visitUnits(new DataRangeVisitor() {
 
@@ -333,8 +335,8 @@ class ReadWriteDataRange implements DataRange {
                 }
 
                 limitInBlock = Math.min(blockLength, offsetInBlock + (int) fileSize);
-                buffer.limit(buffer.position() + offsetInBlock + limitInBlock);
-                buffer.position(buffer.position() + offsetInBlock);
+                buffer.limit(offset + limitInBlock);
+                buffer.position(offset + offsetInBlock);
                 unit.writeBlock(buffer, off);
                 offsetInBlock = limitInBlock;
 

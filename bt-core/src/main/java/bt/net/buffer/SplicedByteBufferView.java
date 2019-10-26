@@ -187,12 +187,12 @@ public class SplicedByteBufferView implements ByteBufferView {
 
     @Override
     public void transferTo(ByteBuffer buffer) {
-        if (buffer.hasRemaining() && position < leftLimit) {
+        if (buffer.hasRemaining() && position < leftCapacity) {
             int count = Math.min(buffer.remaining(), left.remaining());
             buffer.put(left);
             position += count;
         }
-        if (buffer.hasRemaining() && limit > rightOffset) {
+        if (buffer.hasRemaining() && limit > leftCapacity) {
             int count = Math.min(buffer.remaining(), right.remaining());
             buffer.put(right);
             position += count;
@@ -201,11 +201,11 @@ public class SplicedByteBufferView implements ByteBufferView {
 
     @Override
     public int transferTo(WritableByteChannel sbc) throws IOException {
-        if (position < leftLimit) {
+        if (position < leftCapacity) {
             int written = sbc.write(left);
             position += written;
             return written;
-        } else if (limit > rightOffset) {
+        } else if (limit > leftCapacity) {
             int written = sbc.write(right);
             position += written;
             return written;
@@ -224,9 +224,16 @@ public class SplicedByteBufferView implements ByteBufferView {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("pos", position)
-                .add("lim", limit)
-                .add("cap", capacity)
+                .add("left", left)
+                .add("right", right)
+                .add("leftOffset", leftOffset)
+                .add("leftLimit", leftLimit)
+                .add("leftCapacity", leftCapacity)
+                .add("rightOffset", rightOffset)
+                .add("rightLimit", rightLimit)
+                .add("position", position)
+                .add("limit", limit)
+                .add("capacity", capacity)
                 .toString();
     }
 }
