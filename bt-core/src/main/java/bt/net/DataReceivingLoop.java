@@ -112,7 +112,7 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
                     // check that the selection timeout period is expired, before dealing with unprocessed keys;
                     // it could be a call to wake up, that made the select() return,
                     // and we don't want to perform extra work on each spin iteration
-                    if ((t2 - t1 >= timeToBlockMillis * 1000) && !selector.selectedKeys().isEmpty()) {
+                    if ((t2 - t1 >= timeToBlockMillis * 1_000_000) && !selector.selectedKeys().isEmpty()) {
                         // try to deal with unprocessed keys, left from the previous iteration
                         break;
                     }
