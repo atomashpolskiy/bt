@@ -21,7 +21,6 @@ import bt.bencoding.BEType;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
@@ -75,7 +74,7 @@ public class BEMap implements BEObject<Map<String, BEObject<?>>> {
     @Override
     public boolean equals(Object obj) {
 
-        if (obj == null || !(obj instanceof BEMap)) {
+        if (!(obj instanceof BEMap)) {
             return false;
         }
 
