@@ -69,14 +69,16 @@ public class PieceConsumer {
 
         // check that this block was requested in the first place
         if (!checkBlockIsExpected(peer, connectionState, piece)) {
+            disposeOfBlock(piece);
             return;
         }
 
         // discard blocks for pieces that have already been verified
-        if (bitfield.isVerified(piece.getPieceIndex())) {
+        if (bitfield.isComplete(piece.getPieceIndex())) {
+            disposeOfBlock(piece);
             if (LOGGER.isTraceEnabled()) {
                 LOGGER.trace(
-                        "Discarding received block because the chunk is already complete and verified: " +
+                        "Discarding received block because the chunk is already complete and/or verified: " +
                         "piece index {" + piece.getPieceIndex() + "}, " +
                         "offset {" + piece.getOffset() + "}, " +
                         "length {" + piece.getLength() + "}");
@@ -85,7 +87,9 @@ public class PieceConsumer {
         }
 
         CompletableFuture<BlockWrite> future = addBlock(peer, connectionState, piece);
-        if (future != null) {
+        if (future == null) {
+            disposeOfBlock(piece);
+        } else {
             future.whenComplete((block, error) -> {
                 if (error != null) {
                     throw new RuntimeException("Failed to perform request to write block", error);
@@ -109,6 +113,13 @@ public class PieceConsumer {
                     }
                 }
             });
+        }
+    }
+
+    private void disposeOfBlock(Piece piece) {
+        BufferedData buffer = bufferedPieceRegistry.getBufferedPiece(piece.getPieceIndex(), piece.getOffset());
+        if (buffer != null) {
+            buffer.dispose();
         }
     }
 
