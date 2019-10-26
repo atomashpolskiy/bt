@@ -24,8 +24,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 import static bt.peer.lan.AnnounceMessage.calculateMessageSize;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class AnnounceMessageTest {
     private static final TorrentId torrentId = TorrentId.fromBytes(new byte[]{1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6,7,8});
@@ -70,9 +69,10 @@ public class AnnounceMessageTest {
         AnnounceMessage.builder().port(1234).cookie(Cookie.newCookie()).build();
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testMessage_Builder_RequiredFields3_MissingCookie() {
-        AnnounceMessage.builder().port(1234).torrentId(torrentId).build();
+        AnnounceMessage m = AnnounceMessage.builder().port(1234).torrentId(torrentId).build();
+        assertSame(Cookie.unknownCookie(), m.getCookie());
     }
 
     @Test(expected = IllegalStateException.class)
