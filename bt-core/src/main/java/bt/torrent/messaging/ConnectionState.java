@@ -20,14 +20,8 @@ import bt.protocol.Cancel;
 import bt.protocol.Request;
 import bt.torrent.data.BlockWrite;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Contains basic information about a connection's state.
@@ -51,8 +45,8 @@ public class ConnectionState {
     private Set<Object> pendingRequests;
     private Map<Object, CompletableFuture<BlockWrite>> pendingWrites;
 
+    private Set<Integer> enqueuedPieces;
     private Queue<Request> requestQueue;
-    private boolean initializedRequestQueue;
     private Optional<Assignment> assignment;
 
     ConnectionState() {
@@ -63,7 +57,8 @@ public class ConnectionState {
         this.pendingRequests = new HashSet<>();
         this.pendingWrites = new HashMap<>();
 
-        this.requestQueue = new LinkedBlockingQueue<>();
+        this.enqueuedPieces = new HashSet<>();
+        this.requestQueue = new ArrayDeque<>();
 
         this.assignment = Optional.empty();
     }
@@ -246,16 +241,12 @@ public class ConnectionState {
     // Methods below are not a part of the public API //
     /**************************************************/
 
+    Set<Integer> getEnqueuedPieces() {
+        return enqueuedPieces;
+    }
+
     Queue<Request> getRequestQueue() {
         return requestQueue;
-    }
-
-    boolean initializedRequestQueue() {
-        return initializedRequestQueue;
-    }
-
-    void setInitializedRequestQueue(boolean initializedRequestQueue) {
-        this.initializedRequestQueue = initializedRequestQueue;
     }
 
     Optional<Assignment> getCurrentAssignment() {

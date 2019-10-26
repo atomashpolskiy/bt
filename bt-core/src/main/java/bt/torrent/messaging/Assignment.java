@@ -17,15 +17,27 @@
 package bt.torrent.messaging;
 
 import bt.net.Peer;
+import bt.data.Bitfield;
+import bt.torrent.BitfieldBasedStatistics;
+import bt.torrent.selector.PieceSelector;
 
 import java.time.Duration;
+import java.util.*;
+import java.util.stream.Collectors;
 
 class Assignment {
 
-    enum Status { ACTIVE, DONE, TIMEOUT };
+    // TODO: change this to a configurable setting?
+    private static final int MAX_SIMULTANEOUSLY_ASSIGNED_PIECES = 3;
+
+    enum Status { ACTIVE, TIMEOUT };
 
     private Peer peer;
-    private Integer piece;
+    private PieceSelector selector;
+    private BitfieldBasedStatistics pieceStatistics;
+    private Assignments assignments;
+
+    private Queue<Integer> pieces;
     private ConnectionState connectionState;
 
     private final Duration limit;
@@ -34,27 +46,60 @@ class Assignment {
     private long checked;
 
     private boolean aborted;
-    private boolean finished;
 
-    Assignment(Peer peer, Integer piece, Duration limit) {
+    Assignment(Peer peer, Duration limit, PieceSelector selector,
+               BitfieldBasedStatistics pieceStatistics, Assignments assignments) {
         this.peer = peer;
-        this.piece = piece;
+        this.selector = selector;
+        this.pieceStatistics = pieceStatistics;
+        this.assignments = assignments;
+
         this.limit = limit;
+        this.pieces = new ArrayDeque<>();
+
+        claimPiecesIfNeeded();
     }
 
     Peer getPeer() {
         return peer;
     }
 
-    Integer getPiece() {
-        return piece;
+    Queue<Integer> getPieces() {
+        return pieces;
+    }
+
+    private void claimPiecesIfNeeded() {
+        if (pieces.size() < MAX_SIMULTANEOUSLY_ASSIGNED_PIECES) {
+            Bitfield peerBitfield = pieceStatistics.getPeerBitfield(peer).get();
+
+            Iterator<Integer> iter;
+            if (assignments.isEndgame()) {
+                // randomize order of pieces to keep the number of pieces
+                // requested from different peers at the same time to a minimum
+                List<Integer> requiredPieces = selector.getNextPieces(pieceStatistics)
+                        .collect(Collectors.toList());
+                Collections.shuffle(requiredPieces);
+                iter = requiredPieces.iterator();
+            } else {
+                iter = selector.getNextPieces(pieceStatistics).iterator();
+            }
+
+            while (iter.hasNext() && pieces.size() < 3) {
+                Integer pieceIndex = iter.next();
+                if (peerBitfield.isVerified(pieceIndex) && assignments.claim(pieceIndex)) {
+                    pieces.add(pieceIndex);
+                }
+            }
+        }
+    }
+
+    boolean isAssigned(int pieceIndex) {
+        return pieces.contains(pieceIndex);
     }
 
     Status getStatus() {
-        if (finished) {
-            return Status.DONE;
-        } else if (started > 0) {
-            long duration = System.currentTimeMillis() - started;
+        if (started > 0) {
+            long duration = System.currentTimeMillis() - checked;
             if (duration > limit.toMillis()) {
                 return Status.TIMEOUT;
             }
@@ -66,28 +111,29 @@ class Assignment {
         if (this.connectionState != null) {
             throw new IllegalStateException("Assignment is already started");
         }
-        if (aborted || finished) {
-            throw new IllegalStateException("Assignment is already done");
+        if (aborted) {
+            throw new IllegalStateException("Assignment is aborted");
         }
         this.connectionState = connectionState;
         connectionState.setCurrentAssignment(this);
         started = System.currentTimeMillis();
+        checked = started;
     }
 
     void check() {
         checked = System.currentTimeMillis();
     }
 
-    void finish() {
-        finished = !aborted;
-        if (finished && connectionState != null) {
-            connectionState.removeAssignment();
+    void finish(Integer pieceIndex) {
+        if (pieces.remove(pieceIndex)) {
+            assignments.finish(pieceIndex);
+            claimPiecesIfNeeded();
         }
     }
 
     void abort() {
-        aborted = !finished;
-        if (aborted && connectionState != null) {
+        aborted = true;
+        if (connectionState != null) {
             connectionState.removeAssignment();
         }
     }
@@ -95,13 +141,12 @@ class Assignment {
     @Override
     public String toString() {
         return "Assignment{" +
-                "piece=" + piece +
+                "pieces=" + pieces +
                 ", peer=" + peer +
                 ", started=" + started +
                 ", limit=" + limit +
                 ", checked=" + checked +
                 ", aborted=" + aborted +
-                ", finished=" + finished +
                 '}';
     }
 }

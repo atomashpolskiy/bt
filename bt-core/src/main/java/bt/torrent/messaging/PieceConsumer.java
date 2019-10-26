@@ -129,7 +129,7 @@ public class PieceConsumer {
         connectionState.incrementDownloaded(piece.getLength());
         if (connectionState.getCurrentAssignment().isPresent()) {
             Assignment assignment = connectionState.getCurrentAssignment().get();
-            if (pieceIndex == assignment.getPiece()) {
+            if (assignment.isAssigned(pieceIndex)) {
                 assignment.check();
             }
         }
