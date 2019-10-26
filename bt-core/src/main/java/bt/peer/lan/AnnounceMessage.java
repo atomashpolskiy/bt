@@ -222,7 +222,7 @@ class AnnounceMessage {
 
         AnnounceMessage build() {
             if (cookie == null) {
-                throw new IllegalStateException("Can't build message: missing cookie");
+                cookie = Cookie.unknownCookie();
             }
             if (ids == null) {
                 throw new IllegalStateException("Can't build message: no torrents");
