@@ -28,6 +28,7 @@ import org.apache.http.util.EntityUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 class CommonsHttpResponseHandler implements ResponseHandler<TrackerResponse> {
 
@@ -35,7 +36,7 @@ class CommonsHttpResponseHandler implements ResponseHandler<TrackerResponse> {
     private HttpResponseHandler httpResponseHandler;
 
     CommonsHttpResponseHandler(HttpResponseHandler httpResponseHandler) {
-        this.defaultHttpCharset = Charset.forName("ISO-8859-1");
+        this.defaultHttpCharset = StandardCharsets.ISO_8859_1;
         this.httpResponseHandler = httpResponseHandler;
     }
 
