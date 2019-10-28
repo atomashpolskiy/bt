@@ -22,6 +22,7 @@ import bt.protocol.Protocols;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -30,7 +31,7 @@ import java.util.StringTokenizer;
 import static bt.net.InternetProtocolUtils.getLiteralIP;
 
 class AnnounceMessage {
-    private static final Charset ascii = Charset.forName("ASCII");
+    private static final Charset ascii = StandardCharsets.US_ASCII;
     private static final String DELIMITER = "\r\n";
     private static final String HEADER = "BT-SEARCH * HTTP/1.1" + DELIMITER;
     private static final String TERMINATOR = DELIMITER + DELIMITER;

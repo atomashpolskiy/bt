@@ -22,6 +22,7 @@ import bt.bencoding.BEType;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
@@ -30,7 +31,6 @@ import java.util.Arrays;
  * @since 1.0
  */
 public class BEString implements BEObject<byte[]> {
-    private static final Charset defaultCharset = Charset.forName("UTF-8");
 
     private byte[] content;
     private BEEncoder encoder;
@@ -97,7 +97,7 @@ public class BEString implements BEObject<byte[]> {
         if (stringValue == null) {
             synchronized (lock) {
                 if (stringValue == null) {
-                    stringValue = new String(content, defaultCharset);
+                    stringValue = new String(content, StandardCharsets.UTF_8);
                 }
             }
         }

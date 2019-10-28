@@ -22,6 +22,7 @@ import bt.protocol.Protocols;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -111,7 +112,7 @@ class AnnounceRequest extends UdpTrackerMessage {
         if (requestString != null) {
             out.write(0b0000000000000010);
 
-            byte[] bytes = requestString.getBytes("ISO-8859-1");
+            byte[] bytes = requestString.getBytes(StandardCharsets.ISO_8859_1);
             if (bytes.length > 255) {
                 bytes = Arrays.copyOfRange(bytes, 0, 255);
             }

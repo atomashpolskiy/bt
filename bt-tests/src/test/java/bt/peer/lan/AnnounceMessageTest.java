@@ -22,6 +22,7 @@ import org.junit.Test;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import static bt.peer.lan.AnnounceMessage.calculateMessageSize;
 import static org.junit.Assert.*;
@@ -123,7 +124,7 @@ public class AnnounceMessageTest {
         buffer.flip();
         byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
-        String s = new String(bytes, Charset.forName("ASCII"));
+        String s = new String(bytes, StandardCharsets.US_ASCII);
         assertEquals(TEST_MESSAGE, s);
     }
 
@@ -132,7 +133,7 @@ public class AnnounceMessageTest {
     /******************************************/
     @Test
     public void testMessage_Parsing() throws Exception {
-        ByteBuffer buffer = ByteBuffer.wrap(TEST_MESSAGE.getBytes(Charset.forName("ASCII")));
+        ByteBuffer buffer = ByteBuffer.wrap(TEST_MESSAGE.getBytes(StandardCharsets.US_ASCII));
         AnnounceMessage message = AnnounceMessage.readFrom(buffer);
         assertEquals(1234, message.getPort());
         assertEquals(1, message.getTorrentIds().size());

@@ -25,6 +25,7 @@ import org.junit.Test;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
 import static org.junit.Assert.assertEquals;
@@ -35,7 +36,7 @@ import static org.junit.Assert.assertTrue;
 public class HttpResponseHandlerTest {
 
     private HttpResponseHandler responseHandler;
-    private Charset defaultCharset = Charset.forName("ISO-8859-1");
+    private Charset defaultCharset = StandardCharsets.ISO_8859_1;
 
     @Before
     public void setUp() {

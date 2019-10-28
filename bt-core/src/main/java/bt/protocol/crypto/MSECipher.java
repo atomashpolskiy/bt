@@ -22,6 +22,7 @@ import bt.metainfo.TorrentId;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -122,7 +123,7 @@ public class MSECipher {
 
     private Key getEncryptionKey(String s, byte[] S, byte[] SKEY) {
         MessageDigest digest = getDigest("SHA-1");
-        digest.update(s.getBytes(Charset.forName("ASCII")));
+        digest.update(s.getBytes(StandardCharsets.US_ASCII));
         digest.update(S);
         digest.update(SKEY);
         return new SecretKeySpec(digest.digest(), "ARCFOUR");

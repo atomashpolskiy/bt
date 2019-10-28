@@ -29,6 +29,7 @@ import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Random;
@@ -148,11 +149,7 @@ public class SingleClientUdpTracker extends ExternalResource implements Runnable
 
     private byte[] createError(int transactionId, String message) {
         byte[] messageBytes;
-        try {
-             messageBytes = message.getBytes("ASCII");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Unexpected error", e);
-        }
+        messageBytes = message.getBytes(StandardCharsets.US_ASCII);
 
         byte[] data = new byte[4 + 4 + messageBytes.length];
         System.arraycopy(Protocols.getIntBytes(ERROR_CODE), 0, data, 0, 4);

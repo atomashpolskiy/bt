@@ -23,6 +23,7 @@ import org.junit.Test;
 
 import java.net.MalformedURLException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
@@ -115,7 +116,7 @@ public class MetadataServiceTest {
     public void testBuildTorrent_ParseExceptionContents() {
 
         String metainfo = "d8:announce15:http://t.co/ann####";
-        byte[] bytes = metainfo.getBytes(Charset.forName("ASCII"));
+        byte[] bytes = metainfo.getBytes(StandardCharsets.US_ASCII);
 
         BtParseException exception = null;
         try {

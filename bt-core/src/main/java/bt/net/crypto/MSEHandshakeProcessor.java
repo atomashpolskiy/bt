@@ -39,6 +39,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -171,14 +172,14 @@ public class MSEHandshakeProcessor {
         // 3. A->B:
         MessageDigest digest = getDigest("SHA-1");
         // - HASH('req1', S)
-        digest.update("req1".getBytes("ASCII"));
+        digest.update("req1".getBytes(StandardCharsets.US_ASCII));
         digest.update(BigIntegers.encodeUnsigned(S, keyGenerator.getPublicKeySize()));
         out.put(digest.digest());
         // - HASH('req2', SKEY) xor HASH('req3', S)
-        digest.update("req2".getBytes("ASCII"));
+        digest.update("req2".getBytes(StandardCharsets.US_ASCII));
         digest.update(torrentId.getBytes());
         byte[] b1 = digest.digest();
-        digest.update("req3".getBytes("ASCII"));
+        digest.update("req3".getBytes(StandardCharsets.US_ASCII));
         digest.update(BigIntegers.encodeUnsigned(S, keyGenerator.getPublicKeySize()));
         byte[] b2 = digest.digest();
         out.put(xor(b1, b2));
@@ -373,7 +374,7 @@ public class MSEHandshakeProcessor {
         // on the incoming stream of data, looking for a correct S hash
         byte[] bytes = new byte[20];
         // - HASH('req1', S)
-        digest.update("req1".getBytes("ASCII"));
+        digest.update("req1".getBytes(StandardCharsets.US_ASCII));
         digest.update(BigIntegers.encodeUnsigned(S, keyGenerator.getPublicKeySize()));
         byte[] req1hash = digest.digest();
         // syncing will also ensure that the peer knows S (otherwise synchronization will fail due to not finding the pattern)
@@ -385,11 +386,11 @@ public class MSEHandshakeProcessor {
         // - HASH('req2', SKEY) xor HASH('req3', S)
         in.get(bytes); // read SKEY/S hash
         TorrentId requestedTorrent = null;
-        digest.update("req3".getBytes("ASCII"));
+        digest.update("req3".getBytes(StandardCharsets.US_ASCII));
         digest.update(BigIntegers.encodeUnsigned(S, keyGenerator.getPublicKeySize()));
         byte[] b2 = digest.digest();
         for (TorrentId torrentId : torrentRegistry.getTorrentIds()) {
-            digest.update("req2".getBytes("ASCII"));
+            digest.update("req2".getBytes(StandardCharsets.US_ASCII));
             digest.update(torrentId.getBytes());
             byte[] b1 = digest.digest();
             if (Arrays.equals(xor(b1, b2), bytes)) {

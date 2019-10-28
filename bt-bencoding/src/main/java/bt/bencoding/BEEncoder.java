@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,7 +41,7 @@ import java.util.stream.Collectors;
  */
 public class BEEncoder {
 
-    private static final Charset defaultCharset = Charset.forName("UTF-8");
+    private static final Charset defaultCharset = StandardCharsets.UTF_8;
     private static final BEEncoder instance = new BEEncoder();
 
     /**

@@ -28,6 +28,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -134,7 +135,7 @@ class UdpMessageWorker {
 
                     int messageType = Protocols.readInt(data, MESSAGE_TYPE_OFFSET);
                     if (messageType == ERROR_MESSAGE_TYPE) {
-                        String error = new String(Arrays.copyOfRange(data, DATA_OFFSET, response.getLength()), "ASCII");
+                        String error = new String(Arrays.copyOfRange(data, DATA_OFFSET, response.getLength()), StandardCharsets.US_ASCII);
                         if (LOGGER.isTraceEnabled()) {
                             LOGGER.trace("[Session {}] Received error from remote address: {}; " +
                                     "message ID: {}, messageType: {}, error: {}",
