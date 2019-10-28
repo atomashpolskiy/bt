@@ -10,6 +10,8 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 * onTorrentStarted called twice [#117](https://github.com/atomashpolskiy/bt/issues/117)
 * Add new onMetadataAvailable event (fired after torrent's metadata has been fetched)
+* Allow cookie to be missing in the LSD announce message
+* Make sure outgoing messages are never dropped
 
 ## 1.8
 
