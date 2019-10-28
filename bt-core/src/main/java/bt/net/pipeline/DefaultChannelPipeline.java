@@ -86,6 +86,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         ByteBuffer buffer = outboundBuffer.lockAndGet();
         if (buffer == null) {
             // buffer has been released
+            // TODO: So what? Maybe throw an exception then?
             return false;
         }
 

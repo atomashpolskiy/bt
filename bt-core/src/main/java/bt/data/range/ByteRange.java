@@ -119,6 +119,17 @@ public class ByteRange implements Range<ByteRange> {
     }
 
     @Override
+    public boolean getBytesFully(ByteBuffer target) {
+        if (target.remaining() < buffer.remaining()) {
+            return false;
+        }
+        int position = buffer.position();
+        target.put(buffer);
+        buffer.position(position);
+        return true;
+    }
+
+    @Override
     public void putBytes(byte[] block) {
         if (block.length == 0) {
             return;

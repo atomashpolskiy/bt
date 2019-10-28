@@ -18,6 +18,7 @@ package bt.data.range;
 
 import bt.net.buffer.ByteBufferView;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -107,7 +108,17 @@ class SynchronizedRange<T extends Range<T>> implements Range<T>, DelegatingRange
         }
     }
 
-     /**
+    @Override
+    public boolean getBytesFully(ByteBuffer buffer) {
+        lock.readLock().lock();
+        try {
+            return delegate.getBytesFully(buffer);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
      * {@inheritDoc}
      *
      * Blocks current thread if there are concurrent read or write operations in progress.

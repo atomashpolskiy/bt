@@ -63,9 +63,9 @@ public class SocketChannelHandler implements ChannelHandler {
     @Override
     public boolean send(Message message) {
         boolean encoded = context.pipeline().encode(message);
-        if (encoded) {
-            flush();
-        }
+        flush();
+//        if (encoded) {
+//        }
         return encoded;
     }
 

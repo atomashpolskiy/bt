@@ -20,6 +20,7 @@ import bt.data.DataRange;
 import bt.data.DataRangeVisitor;
 import bt.net.buffer.ByteBufferView;
 
+import java.nio.ByteBuffer;
 import java.util.function.Function;
 
 /**
@@ -65,6 +66,11 @@ class DelegatingDataRange<T extends Range<T>> implements DataRange, DelegatingRa
     @Override
     public byte[] getBytes() {
         return delegate.getBytes();
+    }
+
+    @Override
+    public boolean getBytesFully(ByteBuffer buffer) {
+        return delegate.getBytesFully(buffer);
     }
 
     @Override

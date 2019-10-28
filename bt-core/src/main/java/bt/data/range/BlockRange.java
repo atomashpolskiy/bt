@@ -19,6 +19,8 @@ package bt.data.range;
 import bt.data.BlockSet;
 import bt.net.buffer.ByteBufferView;
 
+import java.nio.ByteBuffer;
+
 /**
  * @since 1.3
  */
@@ -71,6 +73,11 @@ public class BlockRange<T extends Range<T>> implements Range<BlockRange<T>>, Del
     @Override
     public byte[] getBytes() {
         return delegate.getBytes();
+    }
+
+    @Override
+    public boolean getBytesFully(ByteBuffer buffer) {
+        return delegate.getBytesFully(buffer);
     }
 
     @Override

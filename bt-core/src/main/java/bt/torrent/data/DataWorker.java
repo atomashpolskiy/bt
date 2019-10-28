@@ -29,16 +29,16 @@ import java.util.concurrent.CompletableFuture;
 public interface DataWorker {
 
     /**
-     * Add a read block request.
+     * Request to read a block.
      *
      * @param peer Requestor
      * @param pieceIndex Index of the requested piece (0-based)
      * @param offset Offset in piece to start reading from (0-based)
      * @param length Amount of bytes to read
-     * @return Future; rejected requests are returned immediately (see {@link BlockRead#isRejected()})
-     * @since 1.0
+     * @return Block read response
+     * @since 1.9
      */
-    CompletableFuture<BlockRead> addBlockRequest(Peer peer, int pieceIndex, int offset, int length);
+    BlockRead getBlock(Peer peer, int pieceIndex, int offset, int length);
 
     /**
      * Add a write block request.

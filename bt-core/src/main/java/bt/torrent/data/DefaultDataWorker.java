@@ -19,6 +19,7 @@ package bt.torrent.data;
 import bt.data.ChunkDescriptor;
 import bt.data.ChunkVerifier;
 import bt.data.DataDescriptor;
+import bt.data.DataRange;
 import bt.net.Peer;
 import bt.net.buffer.BufferedData;
 import bt.service.IRuntimeLifecycleBinder;
@@ -76,23 +77,23 @@ class DefaultDataWorker implements DataWorker {
     }
 
     @Override
-    public CompletableFuture<BlockRead> addBlockRequest(Peer peer, int pieceIndex, int offset, int length) {
-        if (pendingTasksCount.get() >= maxPendingTasks) {
-            LOGGER.warn("Can't accept read block request from peer (" + peer + ") -- queue is full");
-            return CompletableFuture.completedFuture(BlockRead.rejected(peer, pieceIndex, offset));
+    public BlockRead getBlock(Peer peer, int pieceIndex, int offset, int length) {
+        if (!data.getBitfield().isVerified(pieceIndex)) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Rejecting request to read block because the piece is not verified yet:" +
+                        " piece index {"+pieceIndex+"}, offset {"+offset+"}, length {"+length+"}, peer {"+peer+"}");
+            }
+            return BlockRead.rejected(peer, pieceIndex, offset, length);
         } else {
-            pendingTasksCount.incrementAndGet();
-            return CompletableFuture.supplyAsync(() -> {
-                try {
-                    ChunkDescriptor chunk = data.getChunkDescriptors().get(pieceIndex);
-                    byte[] block = chunk.getData().getSubrange(offset, length).getBytes();
-                    return BlockRead.complete(peer, pieceIndex, offset, block);
-                } catch (Throwable e) {
-                    return BlockRead.exceptional(peer, e, pieceIndex, offset);
-                } finally {
-                    pendingTasksCount.decrementAndGet();
-                }
-            }, executor);
+            try {
+                ChunkDescriptor chunk = data.getChunkDescriptors().get(pieceIndex);
+                DataRange block = chunk.getData().getSubrange(offset, length);
+                return BlockRead.ready(peer, pieceIndex, offset, length, block::getBytesFully);
+            } catch (Throwable e) {
+                LOGGER.error("Failed to perform request to read block:" +
+                        " piece index {"+pieceIndex+"}, offset {"+offset+"}, length {"+length+"}, peer {"+peer+"}", e);
+                return BlockRead.exceptional(peer, e, pieceIndex, offset, length);
+            }
         }
     }
 
@@ -106,8 +107,8 @@ class DefaultDataWorker implements DataWorker {
             return CompletableFuture.supplyAsync(() -> {
                 try {
                     if (data.getBitfield().isVerified(pieceIndex)) {
-                        if (LOGGER.isTraceEnabled()) {
-                            LOGGER.trace("Rejecting request to write block because the chunk is already complete and verified: " +
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Rejecting request to write block because the chunk is already complete and verified: " +
                                     "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + buffer.length() + "}");
                         }
                         return BlockWrite.rejected(peer, pieceIndex, offset, buffer.length());

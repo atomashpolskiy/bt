@@ -238,6 +238,21 @@ class ReadWriteDataRange implements DataRange {
 
         byte[] block = new byte[(int) length()];
         ByteBuffer buffer = ByteBuffer.wrap(block);
+        transferToBuffer(buffer);
+        return block;
+    }
+
+    @Override
+    public boolean getBytesFully(ByteBuffer buffer) {
+        if (buffer.remaining() < length) {
+            return false;
+        }
+        transferToBuffer(buffer);
+        return true;
+    }
+
+    private void transferToBuffer(ByteBuffer buffer) {
+        int offset = buffer.position();
 
         visitUnits(new DataRangeVisitor() {
             int offsetInBlock = 0;
@@ -254,16 +269,14 @@ class ReadWriteDataRange implements DataRange {
                     throw new IllegalStateException("Integer overflow while constructing block");
                 }
 
-                buffer.limit(offsetInBlock + (int) len);
-                buffer.position(offsetInBlock);
+                buffer.limit(offset + offsetInBlock + (int) len);
+                buffer.position(offset + offsetInBlock);
                 unit.readBlock(buffer, off);
                 offsetInBlock += len;
 
                 return true;
             }
         });
-
-        return block;
     }
 
     @Override

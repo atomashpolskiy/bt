@@ -27,48 +27,51 @@ import java.util.Optional;
  * this means that the request was not accepted by the data worker.
  * If {@link #getError()} is not empty,
  * this means that an exception happened during the request processing.
- * Subsequently, {@link #getBlock()} will return {@link Optional#empty()} in both cases.
+ * Subsequently, {@link #getReader()} will return {@link Optional#empty()} in both cases.
  *
  * @since 1.0
  */
 public class BlockRead {
 
     /**
-     * @since 1.0
+     * @since 1.9
      */
-    static BlockRead complete(Peer peer, int pieceIndex, int offset, byte[] block) {
-        return new BlockRead(peer, null, false, pieceIndex, offset, block);
+    static BlockRead ready(Peer peer, int pieceIndex, int offset, int length, BlockReader reader) {
+        return new BlockRead(peer, null, false, pieceIndex, offset, length, reader);
     }
 
     /**
      * @since 1.0
      */
-    static BlockRead rejected(Peer peer, int pieceIndex, int offset) {
-        return new BlockRead(peer, null, true, pieceIndex, offset, null);
+    static BlockRead rejected(Peer peer, int pieceIndex, int offset, int length) {
+        return new BlockRead(peer, null, true, pieceIndex, offset, length, null);
     }
 
     /**
      * @since 1.0
      */
-    static BlockRead exceptional(Peer peer, Throwable error, int pieceIndex, int offset) {
-        return new BlockRead(peer, error, false, pieceIndex, offset, null);
+    static BlockRead exceptional(Peer peer, Throwable error, int pieceIndex, int offset, int length) {
+        return new BlockRead(peer, error, false, pieceIndex, offset, length, null);
     }
 
     private Peer peer;
     private int pieceIndex;
     private int offset;
-    private Optional<byte[]> block;
+    private int length;
+    private Optional<BlockReader> reader;
 
     private boolean rejected;
     private Optional<Throwable> error;
 
-    private BlockRead(Peer peer, Throwable error, boolean rejected, int pieceIndex, int offset, byte[] block) {
+    private BlockRead(Peer peer, Throwable error, boolean rejected,
+                      int pieceIndex, int offset, int length, BlockReader reader) {
         this.peer = peer;
         this.error = Optional.ofNullable(error);
         this.rejected = rejected;
         this.pieceIndex = pieceIndex;
         this.offset = offset;
-        this.block = Optional.ofNullable(block);
+        this.length = length;
+        this.reader = Optional.ofNullable(reader);
     }
 
     /**
@@ -104,12 +107,20 @@ public class BlockRead {
     }
 
     /**
-     * @return Block of data or {@link Optional#empty()},
-     *         if {@link #isRejected()} returns true or if {@link #getError()} is not empty
-     * @since 1.0
+     * @return Block length
+     * @since 1.9
      */
-    public Optional<byte[]> getBlock() {
-        return block;
+    public int getLength() {
+        return length;
+    }
+
+    /**
+     * @return Block reader or {@link Optional#empty()},
+     *         if {@link #isRejected()} returns true or if {@link #getError()} is not empty
+     * @since 1.9
+     */
+    public Optional<BlockReader> getReader() {
+        return reader;
     }
 
     /**
