@@ -39,6 +39,7 @@ class DefaultDataWorker implements DataWorker {
     private ChunkVerifier verifier;
 
     private final ExecutorService executor;
+    private final ExecutorService verifierExecutor;
     private final int maxPendingTasks;
     private final AtomicInteger pendingTasksCount;
 
@@ -58,10 +59,20 @@ class DefaultDataWorker implements DataWorker {
                 return new Thread(r, "bt.torrent.data.worker-" + i.incrementAndGet());
             }
         });
+        this.verifierExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+
+            private AtomicInteger i = new AtomicInteger();
+
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, "bt.torrent.data.verifier-" + i.incrementAndGet());
+            }
+        });
         this.maxPendingTasks = maxQueueLength;
         this.pendingTasksCount = new AtomicInteger();
 
         lifecycleBinder.onShutdown("Shutdown data worker for descriptor: " + data, this.executor::shutdownNow);
+        lifecycleBinder.onShutdown("Shutdown data verifier for descriptor: " + data, this.verifierExecutor::shutdownNow);
     }
 
     @Override
@@ -120,7 +131,7 @@ class DefaultDataWorker implements DataWorker {
                                 chunk.clear();
                             }
                             return verified;
-                        }, executor);
+                        }, verifierExecutor);
                     }
 
                     return BlockWrite.complete(peer, pieceIndex, offset, buffer.length(), verificationFuture);
