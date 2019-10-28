@@ -65,9 +65,6 @@ public class SocketChannelHandler implements ChannelHandler {
         boolean encoded = context.pipeline().encode(message);
         if (encoded) {
             flush();
-        } else {
-            LOGGER.warn("Failed to send message: {};" +
-                    " this can happen if the outbound rate is too high and socket's buffer is overloaded", message);
         }
         return encoded;
     }

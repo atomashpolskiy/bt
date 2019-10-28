@@ -79,9 +79,10 @@ public interface PeerConnection extends Closeable {
     /**
      * Send a message to remote peer.
      *
+     * @return true, if the message has been sent
      * @since 1.0
      */
-    void postMessage(Message message) throws IOException;
+    boolean postMessage(Message message) throws IOException;
 
     /**
      * @return Last time a message was received or sent via this connection

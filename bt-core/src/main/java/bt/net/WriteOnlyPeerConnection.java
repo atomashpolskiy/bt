@@ -55,8 +55,8 @@ class WriteOnlyPeerConnection implements PeerConnection {
     }
 
     @Override
-    public void postMessage(Message message) throws IOException {
-        delegate.postMessage(message);
+    public boolean postMessage(Message message) throws IOException {
+        return delegate.postMessage(message);
     }
 
     @Override

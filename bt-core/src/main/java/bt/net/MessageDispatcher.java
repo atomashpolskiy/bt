@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -83,11 +84,15 @@ public class MessageDispatcher implements IMessageDispatcher {
         private final IPeerConnectionPool pool;
         private final LoopControl loopControl;
 
+        // may contain last produced but not sent message for each connection
+        private final Map<ConnectionKey, Message> unsentMessages;
+
         private volatile boolean shutdown;
 
         MessageDispatchingLoop(IPeerConnectionPool pool, LoopControl loopControl) {
             this.pool = pool;
             this.loopControl = loopControl;
+            this.unsentMessages = new HashMap<>();
         }
 
         @Override
@@ -200,25 +205,40 @@ public class MessageDispatcher implements IMessageDispatcher {
                     ConnectionKey connectionKey = peerSuppliers.iterator().next().getConnectionKey();
                     PeerConnection connection = pool.getConnection(connectionKey);
                     if (connection != null && !connection.isClosed()) {
-                        for (ConnectionMessageSupplier messageSupplier : peerSuppliers) {
-                            Message message;
-                            try {
-                                message = messageSupplier.getSupplier().get();
-                            } catch (Exception e) {
-                                LOGGER.warn("Error in message supplier", e);
-                                continue;
+                        boolean sent = false;
+                        Message message = unsentMessages.get(connectionKey);
+                        if (message == null) {
+                            for (ConnectionMessageSupplier messageSupplier : peerSuppliers) {
+                                try {
+                                    message = messageSupplier.getSupplier().get();
+                                } catch (Exception e) {
+                                    LOGGER.error("Error in message supplier", e);
+                                    continue;
+                                }
+                                if (message != null) {
+                                    try {
+                                        sent = connection.postMessage(message);
+                                        if (!sent) {
+                                            unsentMessages.put(connectionKey, message);
+                                        }
+                                    } catch (Exception e) {
+                                        LOGGER.error("Error when writing message", e);
+                                    }
+                                    break;
+                                }
                             }
-
-                            if (message == null) {
-                                continue;
-                            }
-
-                            loopControl.incrementProcessed();
+                        } else {
                             try {
-                                connection.postMessage(message);
+                                sent = connection.postMessage(message);
+                                if (sent) {
+                                    unsentMessages.remove(connectionKey);
+                                }
                             } catch (Exception e) {
                                 LOGGER.error("Error when writing message", e);
                             }
+                        }
+                        if (sent) {
+                            loopControl.incrementProcessed();
                         }
                     }
                 }
