@@ -102,42 +102,42 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
             }
 
             try {
-                if (selector.selectedKeys().isEmpty()) {
-                    // wakeup periodically to check if there are interest updates
-                    long timeToBlockMillis = 100;
-                    while (selector.select(timeToBlockMillis) == 0) {
-                        if (!interestOpsUpdates.isEmpty()) {
-                            processInterestOpsUpdates();
-                        }
-                        if (!selector.selectedKeys().isEmpty()) {
-                            break;
-                        }
+                do {
+                    if (!interestOpsUpdates.isEmpty()) {
+                        processInterestOpsUpdates();
                     }
-                } else {
-                    selector.selectNow();
-                }
+                } while (selector.select(1000) == 0);
 
-                Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
-                while (selectedKeys.hasNext()) {
-                    try {
-                        // do not remove the key if it hasn't been processed,
-                        // we'll try again in the next loop iteration
-                        if (processKey(selectedKeys.next())) {
+                while (!shutdown) {
+                    Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
+                    while (selectedKeys.hasNext()) {
+                        try {
+                            // do not remove the key if it hasn't been processed,
+                            // we'll try again in the next loop iteration
+                            if (processKey(selectedKeys.next())) {
+                                selectedKeys.remove();
+                            }
+                        } catch (ClosedSelectorException e) {
+                            // selector has been closed, there's no point to continue processing
+                            throw e;
+                        } catch (Exception e) {
+                            LOGGER.error("Failed to process key", e);
                             selectedKeys.remove();
                         }
-                    } catch (ClosedSelectorException e) {
-                        // selector has been closed, there's no point to continue processing
-                        throw e;
-                    } catch (Exception e) {
-                        LOGGER.error("Failed to process key", e);
-                        selectedKeys.remove();
                     }
+                    if (selector.selectedKeys().isEmpty()) {
+                        break;
+                    }
+                    Thread.sleep(1);
                 }
             } catch (ClosedSelectorException e) {
                 LOGGER.info("Selector has been closed, will stop receiving messages...");
                 return;
             } catch (IOException e) {
                 throw new RuntimeException("Unexpected I/O exception when selecting peer connections", e);
+            } catch (InterruptedException e) {
+                LOGGER.info("Terminating due to interrupt");
+                return;
             }
         }
     }
@@ -165,7 +165,7 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
     private boolean processKey(final SelectionKey key) {
         ChannelHandlerContext handler = getHandlerContext(key);
         if (!key.isValid() || !key.isReadable()) {
-            return false;
+            return true;
         }
         return handler.readFromChannel();
     }

@@ -64,8 +64,6 @@ public class SocketChannelHandler implements ChannelHandler {
     public boolean send(Message message) {
         boolean encoded = context.pipeline().encode(message);
         flush();
-//        if (encoded) {
-//        }
         return encoded;
     }
 
@@ -111,42 +109,23 @@ public class SocketChannelHandler implements ChannelHandler {
     private boolean processInboundData() throws IOException {
         synchronized (inboundBufferLock) {
             ByteBuffer buffer = inboundBuffer.lockAndGet();
-
             try {
-                if (!buffer.hasRemaining()) {
+                do {
+                    int readLast;
+                    while ((readLast = channel.read(buffer)) > 0)
+                        ;
+                    boolean insufficientSpace = !buffer.hasRemaining();
                     context.fireDataReceived();
-                    if (!buffer.hasRemaining()) {
-                        return false;
+                    if (readLast == -1) {
+                        throw new EOFException();
+                    } else if (!insufficientSpace) {
+                        return true;
                     }
-                }
-
-                int readLast, readTotal = 0;
-                boolean processed = false;
-                while ((readLast = channel.read(buffer)) > 0) {
-                    processed = false;
-                    readTotal += readLast;
-                    if (!buffer.hasRemaining()) {
-                        // TODO: currently this will be executed in the same thread,
-                        // but still would be nice to unlock the buffer prior to firing the event,
-                        // so that in future we would not need to rewrite this part of code
-                        context.fireDataReceived();
-                        processed = true;
-                        if (!buffer.hasRemaining()) {
-                            return false;
-                        }
-                    }
-                }
-                if (readTotal > 0 && !processed) {
-                    context.fireDataReceived();
-                }
-                if (readLast == -1) {
-                    throw new EOFException();
-                }
+                } while (buffer.hasRemaining());
+                return false;
             } finally {
                 inboundBuffer.unlock();
             }
-
-            return true;
         }
     }
 
