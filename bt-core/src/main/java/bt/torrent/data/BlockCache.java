@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2019 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,9 @@
 
 package bt.torrent.data;
 
-import bt.data.DataDescriptor;
+import bt.metainfo.TorrentId;
 
-/**
- * Factory of data workers.
- *
- * @since 1.0
- */
-public interface IDataWorkerFactory {
+public interface BlockCache {
 
-    /**
-     * Create a data worker for a given torrent data descriptor.
-     *
-     * @since 1.0
-     */
-    DataWorker createWorker(DataDescriptor dataDescriptor);
+    BlockReader get(TorrentId torrentId, int pieceIndex, int offset, int length);
 }

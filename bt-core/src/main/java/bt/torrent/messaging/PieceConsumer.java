@@ -17,6 +17,7 @@
 package bt.torrent.messaging;
 
 import bt.event.EventSink;
+import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.net.buffer.BufferedData;
 import bt.net.pipeline.IBufferedPieceRegistry;
@@ -45,16 +46,19 @@ public class PieceConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceConsumer.class);
 
+    private final TorrentId torrentId;
     private final Bitfield bitfield;
     private final DataWorker dataWorker;
     private final IBufferedPieceRegistry bufferedPieceRegistry;
     private final EventSink eventSink;
     private final ConcurrentLinkedQueue<BlockWrite> completedBlocks;
 
-    public PieceConsumer(Bitfield bitfield,
+    public PieceConsumer(TorrentId torrentId,
+                         Bitfield bitfield,
                          DataWorker dataWorker,
                          IBufferedPieceRegistry bufferedPieceRegistry,
                          EventSink eventSink) {
+        this.torrentId = torrentId;
         this.bitfield = bitfield;
         this.dataWorker = dataWorker;
         this.bufferedPieceRegistry = bufferedPieceRegistry;
@@ -153,7 +157,7 @@ public class PieceConsumer {
             }
             return null;
         }
-        CompletableFuture<BlockWrite> future = dataWorker.addBlock(peer, pieceIndex, offset, buffer);
+        CompletableFuture<BlockWrite> future = dataWorker.addBlock(torrentId, peer, pieceIndex, offset, buffer);
         connectionState.getPendingWrites().put(
                 Mapper.mapper().buildKey(pieceIndex, offset, blockLength), future);
         return future;

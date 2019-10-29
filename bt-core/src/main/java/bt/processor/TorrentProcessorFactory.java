@@ -39,7 +39,7 @@ import bt.processor.torrent.TorrentContext;
 import bt.processor.torrent.TorrentContextFinalizer;
 import bt.runtime.Config;
 import bt.torrent.TorrentRegistry;
-import bt.torrent.data.IDataWorkerFactory;
+import bt.torrent.data.DataWorker;
 import bt.tracker.ITrackerService;
 import com.google.inject.Inject;
 
@@ -51,7 +51,7 @@ import java.util.concurrent.ExecutorService;
 public class TorrentProcessorFactory implements ProcessorFactory {
 
     private TorrentRegistry torrentRegistry;
-    private IDataWorkerFactory dataWorkerFactory;
+    private DataWorker dataWorker;
     private IBufferedPieceRegistry bufferedPieceRegistry;
     private ITrackerService trackerService;
     private ExecutorService executor;
@@ -68,7 +68,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
 
     @Inject
     public TorrentProcessorFactory(TorrentRegistry torrentRegistry,
-                                   IDataWorkerFactory dataWorkerFactory,
+                                   DataWorker dataWorker,
                                    IBufferedPieceRegistry bufferedPieceRegistry,
                                    ITrackerService trackerService,
                                    @ClientExecutor ExecutorService executor,
@@ -81,7 +81,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
                                    EventSink eventSink,
                                    Config config) {
         this.torrentRegistry = torrentRegistry;
-        this.dataWorkerFactory = dataWorkerFactory;
+        this.dataWorker = dataWorker;
         this.bufferedPieceRegistry = bufferedPieceRegistry;
         this.trackerService = trackerService;
         this.executor = executor;
@@ -115,7 +115,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         ProcessingStage<TorrentContext> stage3 = new ChooseFilesStage<>(stage4, torrentRegistry, config);
 
         ProcessingStage<TorrentContext> stage2 = new InitializeTorrentProcessingStage<>(stage3, torrentRegistry,
-                dataWorkerFactory, bufferedPieceRegistry, eventSink, config);
+                dataWorker, bufferedPieceRegistry, eventSink, config);
 
         ProcessingStage<TorrentContext> stage1 = new CreateSessionStage<>(stage2, torrentRegistry, eventSource,
                 connectionSource, messageDispatcher, messagingAgents, config);
@@ -134,7 +134,7 @@ public class TorrentProcessorFactory implements ProcessorFactory {
         ProcessingStage<MagnetContext> stage3 = new ChooseFilesStage<>(stage4, torrentRegistry, config);
 
         ProcessingStage<MagnetContext> stage2 = new InitializeMagnetTorrentProcessingStage(stage3, torrentRegistry,
-                dataWorkerFactory, bufferedPieceRegistry, eventSink, config);
+                dataWorker, bufferedPieceRegistry, eventSink, config);
 
         ProcessingStage<MagnetContext> stage1 = new FetchMetadataStage(stage2, metadataService, torrentRegistry,
                 peerRegistry, eventSink, config);

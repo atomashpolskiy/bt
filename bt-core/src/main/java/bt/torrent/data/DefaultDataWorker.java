@@ -19,10 +19,11 @@ package bt.torrent.data;
 import bt.data.ChunkDescriptor;
 import bt.data.ChunkVerifier;
 import bt.data.DataDescriptor;
-import bt.data.DataRange;
+import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.net.buffer.BufferedData;
 import bt.service.IRuntimeLifecycleBinder;
+import bt.torrent.TorrentRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,12 +33,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
-class DefaultDataWorker implements DataWorker {
+public class DefaultDataWorker implements DataWorker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDataWorker.class);
 
-    private DataDescriptor data;
-    private ChunkVerifier verifier;
+    private final TorrentRegistry torrentRegistry;
+    private final ChunkVerifier verifier;
+    private final BlockCache blockCache;
 
     private final ExecutorService executor;
     private final ExecutorService verifierExecutor;
@@ -45,12 +47,15 @@ class DefaultDataWorker implements DataWorker {
     private final AtomicInteger pendingTasksCount;
 
     public DefaultDataWorker(IRuntimeLifecycleBinder lifecycleBinder,
-                             DataDescriptor data,
+                             TorrentRegistry torrentRegistry,
                              ChunkVerifier verifier,
+                             BlockCache blockCache,
                              int maxQueueLength) {
 
-        this.data = data;
+        this.torrentRegistry = torrentRegistry;
         this.verifier = verifier;
+        this.blockCache = blockCache;
+
         this.executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
 
             private AtomicInteger i = new AtomicInteger();
@@ -72,77 +77,100 @@ class DefaultDataWorker implements DataWorker {
         this.maxPendingTasks = maxQueueLength;
         this.pendingTasksCount = new AtomicInteger();
 
-        lifecycleBinder.onShutdown("Shutdown data worker for descriptor: " + data, this.executor::shutdownNow);
-        lifecycleBinder.onShutdown("Shutdown data verifier for descriptor: " + data, this.verifierExecutor::shutdownNow);
+        lifecycleBinder.onShutdown("Shutdown data worker", this.executor::shutdownNow);
+        lifecycleBinder.onShutdown("Shutdown data verifier", this.verifierExecutor::shutdownNow);
     }
 
     @Override
-    public BlockRead getBlock(Peer peer, int pieceIndex, int offset, int length) {
+    public CompletableFuture<BlockRead> addBlockRequest(TorrentId torrentId, Peer peer, int pieceIndex, int offset, int length) {
+        DataDescriptor data = getDataDescriptor(torrentId);
         if (!data.getBitfield().isVerified(pieceIndex)) {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Rejecting request to read block because the piece is not verified yet:" +
-                        " piece index {"+pieceIndex+"}, offset {"+offset+"}, length {"+length+"}, peer {"+peer+"}");
+                        " piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + length + "}, peer {" + peer + "}");
             }
-            return BlockRead.rejected(peer, pieceIndex, offset, length);
-        } else {
+            return CompletableFuture.completedFuture(BlockRead.rejected(peer, pieceIndex, offset, length));
+        } else if (!tryIncrementTaskCount()) {
+            LOGGER.warn("Rejecting request to read block because the queue is full:" +
+                    " piece index {"+pieceIndex+"}, offset {"+offset+"}, length {"+length+"}, peer {"+peer+"}");
+            return CompletableFuture.completedFuture(BlockRead.rejected(peer, pieceIndex, offset, length));
+        }
+
+        return CompletableFuture.supplyAsync(() -> {
             try {
-                ChunkDescriptor chunk = data.getChunkDescriptors().get(pieceIndex);
-                DataRange block = chunk.getData().getSubrange(offset, length);
-                return BlockRead.ready(peer, pieceIndex, offset, length, block::getBytesFully);
+                BlockReader blockReader = blockCache.get(torrentId, pieceIndex, offset, length);
+                return BlockRead.ready(peer, pieceIndex, offset, length, blockReader);
             } catch (Throwable e) {
                 LOGGER.error("Failed to perform request to read block:" +
-                        " piece index {"+pieceIndex+"}, offset {"+offset+"}, length {"+length+"}, peer {"+peer+"}", e);
+                        " piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + length + "}, peer {" + peer + "}", e);
                 return BlockRead.exceptional(peer, e, pieceIndex, offset, length);
+            } finally {
+                pendingTasksCount.decrementAndGet();
             }
-        }
+        }, executor);
     }
 
     @Override
-    public CompletableFuture<BlockWrite> addBlock(Peer peer, int pieceIndex, int offset, BufferedData buffer) {
-        if (pendingTasksCount.get() >= maxPendingTasks) {
+    public CompletableFuture<BlockWrite> addBlock(TorrentId torrentId, Peer peer, int pieceIndex, int offset, BufferedData buffer) {
+        if (!tryIncrementTaskCount()) {
             LOGGER.warn("Can't accept write block request -- queue is full");
             return CompletableFuture.completedFuture(BlockWrite.rejected(peer, pieceIndex, offset, buffer.length()));
-        } else {
-            pendingTasksCount.incrementAndGet();
-            return CompletableFuture.supplyAsync(() -> {
-                try {
-                    if (data.getBitfield().isVerified(pieceIndex)) {
-                        if (LOGGER.isDebugEnabled()) {
-                            LOGGER.debug("Rejecting request to write block because the chunk is already complete and verified: " +
-                                    "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + buffer.length() + "}");
-                        }
-                        return BlockWrite.rejected(peer, pieceIndex, offset, buffer.length());
-                    }
+        }
 
-                    ChunkDescriptor chunk = data.getChunkDescriptors().get(pieceIndex);
-                    chunk.getData().getSubrange(offset).putBytes(buffer.buffer());
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Successfully processed block: " +
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                DataDescriptor data = getDataDescriptor(torrentId);
+                if (data.getBitfield().isVerified(pieceIndex)) {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Rejecting request to write block because the chunk is already complete and verified: " +
                                 "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + buffer.length() + "}");
                     }
-
-                    CompletableFuture<Boolean> verificationFuture = null;
-                    if (chunk.isComplete()) {
-                        verificationFuture = CompletableFuture.supplyAsync(() -> {
-                            boolean verified = verifier.verify(chunk);
-                            if (verified) {
-                                data.getBitfield().markVerified(pieceIndex);
-                            } else {
-                                // reset data
-                                chunk.clear();
-                            }
-                            return verified;
-                        }, verifierExecutor);
-                    }
-
-                    return BlockWrite.complete(peer, pieceIndex, offset, buffer.length(), verificationFuture);
-                } catch (Throwable e) {
-                    return BlockWrite.exceptional(peer, e, pieceIndex, offset, buffer.length());
-                } finally {
-                    pendingTasksCount.decrementAndGet();
-                    buffer.dispose();
+                    return BlockWrite.rejected(peer, pieceIndex, offset, buffer.length());
                 }
-            }, executor);
-        }
+
+                ChunkDescriptor chunk = data.getChunkDescriptors().get(pieceIndex);
+                chunk.getData().getSubrange(offset).putBytes(buffer.buffer());
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Successfully processed block: " +
+                            "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + buffer.length() + "}");
+                }
+
+                CompletableFuture<Boolean> verificationFuture = null;
+                if (chunk.isComplete()) {
+                    verificationFuture = CompletableFuture.supplyAsync(() -> {
+                        boolean verified = verifier.verify(chunk);
+                        if (verified) {
+                            data.getBitfield().markVerified(pieceIndex);
+                        } else {
+                            // reset data
+                            chunk.clear();
+                        }
+                        return verified;
+                    }, verifierExecutor);
+                }
+
+                return BlockWrite.complete(peer, pieceIndex, offset, buffer.length(), verificationFuture);
+            } catch (Throwable e) {
+                return BlockWrite.exceptional(peer, e, pieceIndex, offset, buffer.length());
+            } finally {
+                pendingTasksCount.decrementAndGet();
+                buffer.dispose();
+            }
+        }, executor);
+    }
+
+    private boolean tryIncrementTaskCount() {
+        int newCount = pendingTasksCount.updateAndGet(oldCount -> {
+            if (oldCount == maxPendingTasks) {
+                return oldCount;
+            } else {
+                return oldCount + 1;
+            }
+        });
+        return newCount < maxPendingTasks;
+    }
+
+    private DataDescriptor getDataDescriptor(TorrentId torrentId) {
+        return torrentRegistry.getDescriptor(torrentId).get().getDataDescriptor();
     }
 }

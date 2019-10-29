@@ -16,6 +16,7 @@
 
 package bt.torrent.data;
 
+import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.net.buffer.BufferedData;
 
@@ -29,20 +30,22 @@ import java.util.concurrent.CompletableFuture;
 public interface DataWorker {
 
     /**
-     * Request to read a block.
+     * Add a read block request.
      *
+     * @param torrentId Torrent ID
      * @param peer Requestor
      * @param pieceIndex Index of the requested piece (0-based)
      * @param offset Offset in piece to start reading from (0-based)
      * @param length Amount of bytes to read
-     * @return Block read response
+     * @return Future; rejected requests are returned immediately (see {@link BlockRead#isRejected()})
      * @since 1.9
      */
-    BlockRead getBlock(Peer peer, int pieceIndex, int offset, int length);
+    CompletableFuture<BlockRead> addBlockRequest(TorrentId torrentId, Peer peer, int pieceIndex, int offset, int length);
 
     /**
      * Add a write block request.
      *
+     * @param torrentId Torrent ID
      * @param peer Peer, that the data has been received from
      * @param pieceIndex Index of the piece to write to (0-based)
      * @param offset Offset in piece to start writing to (0-based)
@@ -50,5 +53,5 @@ public interface DataWorker {
      * @return Future; rejected requests are returned immediately (see {@link BlockWrite#isRejected()})
      * @since 1.9
      */
-    CompletableFuture<BlockWrite> addBlock(Peer peer, int pieceIndex, int offset, BufferedData buffer);
+    CompletableFuture<BlockWrite> addBlock(TorrentId torrentId, Peer peer, int pieceIndex, int offset, BufferedData buffer);
 }

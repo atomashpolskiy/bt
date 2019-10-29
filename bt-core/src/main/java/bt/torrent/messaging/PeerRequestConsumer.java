@@ -17,6 +17,7 @@
 package bt.torrent.messaging;
 
 import bt.BtException;
+import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
@@ -29,6 +30,7 @@ import bt.torrent.data.DataWorker;
 
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
@@ -40,10 +42,12 @@ import java.util.function.Consumer;
  */
 public class PeerRequestConsumer {
 
-    private DataWorker dataWorker;
-    private Map<Peer, Queue<BlockRead>> completedRequests;
+    private final TorrentId torrentId;
+    private final DataWorker dataWorker;
+    private final Map<Peer, Queue<BlockRead>> completedRequests;
 
-    public PeerRequestConsumer(DataWorker dataWorker) {
+    public PeerRequestConsumer(TorrentId torrentId, DataWorker dataWorker) {
+        this.torrentId = torrentId;
         this.dataWorker = dataWorker;
         this.completedRequests = new ConcurrentHashMap<>();
     }
@@ -52,15 +56,20 @@ public class PeerRequestConsumer {
     public void consume(Request request, MessageContext context) {
         ConnectionState connectionState = context.getConnectionState();
         if (!connectionState.isChoking()) {
-            BlockRead block = getBlock(context.getPeer(), request);
-            if (!block.getError().isPresent() && !block.isRejected()) {
-                getCompletedRequestsForPeer(context.getPeer()).add(block);
-            }
+            addBlockRequest(context.getPeer(), request).whenComplete((block, error) -> {
+                if (error != null) {
+                    throw new RuntimeException("Failed to perform request to read block", error);
+                } else if (block.getError().isPresent()) {
+                    throw new RuntimeException("Failed to perform request to read block", block.getError().get());
+                } else if (!block.isRejected()) {
+                    getCompletedRequestsForPeer(context.getPeer()).add(block);
+                }
+            });
         }
     }
 
-    private BlockRead getBlock(Peer peer, Request request) {
-        return dataWorker.getBlock(peer, request.getPieceIndex(), request.getOffset(), request.getLength());
+    private CompletableFuture<BlockRead> addBlockRequest(Peer peer, Request request) {
+        return dataWorker.addBlockRequest(torrentId, peer, request.getPieceIndex(), request.getOffset(), request.getLength());
     }
 
     private Queue<BlockRead> getCompletedRequestsForPeer(Peer peer) {

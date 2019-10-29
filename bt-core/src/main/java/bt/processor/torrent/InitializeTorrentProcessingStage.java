@@ -19,6 +19,7 @@ package bt.processor.torrent;
 import bt.data.Bitfield;
 import bt.event.EventSink;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentId;
 import bt.net.pipeline.IBufferedPieceRegistry;
 import bt.processor.ProcessingStage;
 import bt.processor.TerminateOnErrorProcessingStage;
@@ -28,7 +29,6 @@ import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.data.DataWorker;
-import bt.torrent.data.IDataWorkerFactory;
 import bt.torrent.messaging.BitfieldConsumer;
 import bt.torrent.messaging.GenericConsumer;
 import bt.torrent.messaging.MetadataProducer;
@@ -39,20 +39,20 @@ import bt.torrent.messaging.RequestProducer;
 public class InitializeTorrentProcessingStage<C extends TorrentContext> extends TerminateOnErrorProcessingStage<C> {
 
     private TorrentRegistry torrentRegistry;
-    private IDataWorkerFactory dataWorkerFactory;
+    private DataWorker dataWorker;
     private IBufferedPieceRegistry bufferedPieceRegistry;
     private EventSink eventSink;
     private Config config;
 
     public InitializeTorrentProcessingStage(ProcessingStage<C> next,
                                             TorrentRegistry torrentRegistry,
-                                            IDataWorkerFactory dataWorkerFactory,
+                                            DataWorker dataWorker,
                                             IBufferedPieceRegistry bufferedPieceRegistry,
                                             EventSink eventSink,
                                             Config config) {
         super(next);
         this.torrentRegistry = torrentRegistry;
-        this.dataWorkerFactory = dataWorkerFactory;
+        this.dataWorker = dataWorker;
         this.bufferedPieceRegistry = bufferedPieceRegistry;
         this.eventSink = eventSink;
         this.config = config;
@@ -63,15 +63,14 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
         Torrent torrent = context.getTorrent().get();
         TorrentDescriptor descriptor = torrentRegistry.register(torrent, context.getStorage());
 
+        TorrentId torrentId = torrent.getTorrentId();
         Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();
         BitfieldBasedStatistics pieceStatistics = createPieceStatistics(bitfield);
 
-        DataWorker dataWorker = createDataWorker(descriptor);
-
         context.getRouter().registerMessagingAgent(GenericConsumer.consumer());
         context.getRouter().registerMessagingAgent(new BitfieldConsumer(bitfield, pieceStatistics, eventSink));
-        context.getRouter().registerMessagingAgent(new PieceConsumer(bitfield, dataWorker, bufferedPieceRegistry, eventSink));
-        context.getRouter().registerMessagingAgent(new PeerRequestConsumer(dataWorker));
+        context.getRouter().registerMessagingAgent(new PieceConsumer(torrentId, bitfield, dataWorker, bufferedPieceRegistry, eventSink));
+        context.getRouter().registerMessagingAgent(new PeerRequestConsumer(torrentId, dataWorker));
         context.getRouter().registerMessagingAgent(new RequestProducer(descriptor.getDataDescriptor()));
         context.getRouter().registerMessagingAgent(new MetadataProducer(() -> context.getTorrent().orElse(null), config));
 
@@ -81,10 +80,6 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
 
     private BitfieldBasedStatistics createPieceStatistics(Bitfield bitfield) {
         return new BitfieldBasedStatistics(bitfield);
-    }
-
-    private DataWorker createDataWorker(TorrentDescriptor descriptor) {
-        return dataWorkerFactory.createWorker(descriptor.getDataDescriptor());
     }
 
     @Override

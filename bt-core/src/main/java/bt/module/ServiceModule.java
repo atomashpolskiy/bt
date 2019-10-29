@@ -42,8 +42,10 @@ import bt.service.*;
 import bt.service.IRuntimeLifecycleBinder.LifecycleEvent;
 import bt.torrent.AdhocTorrentRegistry;
 import bt.torrent.TorrentRegistry;
-import bt.torrent.data.DataWorkerFactory;
-import bt.torrent.data.IDataWorkerFactory;
+import bt.torrent.data.BlockCache;
+import bt.torrent.data.DataWorker;
+import bt.torrent.data.DefaultDataWorker;
+import bt.torrent.data.LRUBlockCache;
 import bt.tracker.ITrackerService;
 import bt.tracker.TrackerFactory;
 import bt.tracker.TrackerService;
@@ -134,6 +136,7 @@ public class ServiceModule implements Module {
                 .addConnectionAcceptor(SocketChannelConnectionAcceptor.class);
 
         // core services that contribute startup lifecycle bindings and should be instantiated eagerly
+        binder.bind(BlockCache.class).to(LRUBlockCache.class).asEagerSingleton();
         binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).asEagerSingleton();
         binder.bind(IConnectionSource.class).to(ConnectionSource.class).asEagerSingleton();
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).asEagerSingleton();
@@ -186,11 +189,13 @@ public class ServiceModule implements Module {
 
     @Provides
     @Singleton
-    public IDataWorkerFactory provideDataWorkerFactory(
+    public DataWorker provideDataWorker(
             IRuntimeLifecycleBinder lifecycleBinder,
+            TorrentRegistry torrentRegistry,
             ChunkVerifier verifier,
+            BlockCache blockCache,
             Config config) {
-        return new DataWorkerFactory(lifecycleBinder, verifier, config.getMaxIOQueueSize());
+        return new DefaultDataWorker(lifecycleBinder, torrentRegistry, verifier, blockCache, config.getMaxIOQueueSize());
     }
 
     @Provides
