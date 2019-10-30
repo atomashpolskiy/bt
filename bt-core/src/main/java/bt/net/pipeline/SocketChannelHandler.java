@@ -61,10 +61,14 @@ public class SocketChannelHandler implements ChannelHandler {
     }
 
     @Override
-    public boolean send(Message message) {
-        boolean encoded = context.pipeline().encode(message);
+    public void send(Message message) {
+        if (!context.pipeline().encode(message)) {
+            flush();
+            if (!context.pipeline().encode(message)) {
+                throw new IllegalStateException("Failed to send message: " + message);
+            }
+        }
         flush();
-        return encoded;
     }
 
     @Override
@@ -135,8 +139,9 @@ public class SocketChannelHandler implements ChannelHandler {
             ByteBuffer buffer = outboundBuffer.lockAndGet();
             buffer.flip();
             try {
-                while (buffer.hasRemaining() && channel.write(buffer) > 0)
-                    ;
+                while (buffer.hasRemaining()) {
+                    channel.write(buffer);
+                }
                 buffer.compact();
                 outboundBuffer.unlock();
             } catch (IOException e) {
