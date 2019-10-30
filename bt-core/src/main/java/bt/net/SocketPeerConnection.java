@@ -123,12 +123,12 @@ public class SocketPeerConnection implements PeerConnection {
     }
 
     @Override
-    public synchronized boolean postMessage(Message message) throws IOException {
+    public synchronized void postMessage(Message message) {
         updateLastActive();
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Sending message to peer: " + remotePeer + " -- " + message);
         }
-        return handler.send(message);
+        handler.send(message);
     }
 
     private void updateLastActive() {

@@ -26,10 +26,9 @@ import bt.protocol.Message;
 public interface ChannelHandler {
 
     /**
-     * @return true, if the message has been sent
      * @since 1.6
      */
-    boolean send(Message message);
+    void send(Message message);
 
     /**
      * @return Message or null, if there are no incoming messages
