@@ -73,6 +73,9 @@ public class PieceConsumer {
 
         // check that this block was requested in the first place
         if (!checkBlockIsExpected(peer, connectionState, piece)) {
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Discarding unexpected block {} from peer: {}", piece, peer);
+            }
             disposeOfBlock(piece);
             return;
         }
@@ -96,9 +99,9 @@ public class PieceConsumer {
         } else {
             future.whenComplete((block, error) -> {
                 if (error != null) {
-                    throw new RuntimeException("Failed to perform request to write block", error);
+                    LOGGER.error("Failed to perform request to write block", error);
                 } else if (block.getError().isPresent()) {
-                    throw new RuntimeException("Failed to perform request to write block", block.getError().get());
+                    LOGGER.error("Failed to perform request to write block", block.getError().get());
                 }
                 if (block.isRejected()) {
                     if (LOGGER.isTraceEnabled()) {
@@ -109,10 +112,21 @@ public class PieceConsumer {
                     if (verificationFuture.isPresent()) {
                         verificationFuture.get().whenComplete((verified, error1) -> {
                             if (error1 != null) {
-                                throw new RuntimeException("Failed to verify block", error1);
+                                LOGGER.error("Failed to verify block " +
+                                        "piece index {" + piece.getPieceIndex() + "}, " +
+                                        "offset {" + piece.getOffset() + "}, " +
+                                        "length {" + piece.getLength() + "}", error1);
+                            } else if (verified) {
+                                completedBlocks.add(block);
+                                eventSink.firePieceVerified(context.getTorrentId().get(), piece.getPieceIndex());
+                            } else {
+                                LOGGER.error("Failed to verify block " +
+                                        "piece index {" + piece.getPieceIndex() + "}, " +
+                                        "offset {" + piece.getOffset() + "}, " +
+                                        "length {" + piece.getLength() + "}." +
+                                        " No error has been provided by I/O worker," +
+                                        " which means that the data itself might have been corrupted. Will re-download.");
                             }
-                            completedBlocks.add(block);
-                            eventSink.firePieceVerified(context.getTorrentId().get(), piece.getPieceIndex());
                         });
                     }
                 }
@@ -129,11 +143,7 @@ public class PieceConsumer {
 
     private boolean checkBlockIsExpected(Peer peer, ConnectionState connectionState, Piece piece) {
         Object key = Mapper.mapper().buildKey(piece.getPieceIndex(), piece.getOffset(), piece.getLength());
-        boolean expected = connectionState.getPendingRequests().remove(key);
-        if (!expected && LOGGER.isTraceEnabled()) {
-            LOGGER.trace("Discarding unexpected block {} from peer: {}", piece, peer);
-        }
-        return expected;
+        return connectionState.getPendingRequests().remove(key);
     }
 
     private /*nullable*/CompletableFuture<BlockWrite> addBlock(Peer peer, ConnectionState connectionState, Piece piece) {

@@ -202,12 +202,13 @@ public class InboundMessageProcessor {
                 if (message == null) {
                     break;
                 } else {
-                    messageQueue.add(message);
                     if (message instanceof Piece) {
                         Piece piece = (Piece) message;
                         int globalOffset = buffer.position() - piece.getLength();
                         processPieceMessage(piece, bufferView.duplicate(), globalOffset);
                     }
+                    // careful: post message only after having published buffered data
+                    messageQueue.add(message);
                     consumed += (buffer.position() - prevPosition);
                     prevPosition = buffer.position();
                 }
@@ -311,7 +312,6 @@ public class InboundMessageProcessor {
             if (message == null) {
                 break;
             } else {
-                messageQueue.add(message);
                 if (message instanceof Piece) {
                     Piece piece = (Piece) message;
                     int globalOffset = splicedBufferOffset + (splicedBuffer.position() - piece.getLength());
@@ -320,6 +320,9 @@ public class InboundMessageProcessor {
                     }
                     processPieceMessage(piece, splicedBuffer.duplicate(), globalOffset);
                 }
+                // careful: post message only after having published buffered data
+                messageQueue.add(message);
+
                 consumed += (splicedBuffer.position() - prevPosition);
                 prevPosition = splicedBuffer.position();
             }

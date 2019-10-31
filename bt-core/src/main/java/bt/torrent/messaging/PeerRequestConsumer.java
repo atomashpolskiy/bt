@@ -27,6 +27,8 @@ import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockRead;
 import bt.torrent.data.DataWorker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Queue;
@@ -41,6 +43,7 @@ import java.util.function.Consumer;
  * @since 1.0
  */
 public class PeerRequestConsumer {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PeerRequestConsumer.class);
 
     private final TorrentId torrentId;
     private final DataWorker dataWorker;
@@ -58,10 +61,12 @@ public class PeerRequestConsumer {
         if (!connectionState.isChoking()) {
             addBlockRequest(context.getPeer(), request).whenComplete((block, error) -> {
                 if (error != null) {
-                    throw new RuntimeException("Failed to perform request to read block", error);
+                    LOGGER.error("Failed to perform request to read block", error);
                 } else if (block.getError().isPresent()) {
-                    throw new RuntimeException("Failed to perform request to read block", block.getError().get());
-                } else if (!block.isRejected()) {
+                    LOGGER.error("Failed to perform request to read block", block.getError().get());
+                } else if (block.isRejected()) {
+                    LOGGER.warn("Failed to perform request to read block: rejected by I/O worker");
+                } else {
                     getCompletedRequestsForPeer(context.getPeer()).add(block);
                 }
             });

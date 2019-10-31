@@ -27,11 +27,11 @@ import java.util.Objects;
  */
 public final class Piece implements Message {
 
-    private int pieceIndex;
-    private int offset;
-    private int length;
-    private byte[] block;
-    private BlockReader reader;
+    private final int pieceIndex;
+    private final int offset;
+    private final int length;
+    private final byte[] block;
+    private final BlockReader reader;
 
     /**
      * @since 1.0
@@ -46,6 +46,7 @@ public final class Piece implements Message {
         this.offset = offset;
         this.length = block.length;
         this.block = block;
+        this.reader = null;
     }
 
     // TODO: using BlockReader here is sloppy... just temporary
@@ -57,6 +58,7 @@ public final class Piece implements Message {
         this.pieceIndex = pieceIndex;
         this.offset = offset;
         this.length = length;
+        this.block = null;
         this.reader = reader;
     }
 
@@ -69,6 +71,8 @@ public final class Piece implements Message {
         this.pieceIndex = pieceIndex;
         this.offset = offset;
         this.length = length;
+        this.block = null;
+        this.reader = null;
     }
 
     /**

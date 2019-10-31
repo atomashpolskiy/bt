@@ -37,12 +37,13 @@ public class DefaultDataWorker implements DataWorker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDataWorker.class);
 
+    private static final Exception QUEUE_FULL_EXCEPTION = new IllegalStateException("Queue is overloaded");
+
     private final TorrentRegistry torrentRegistry;
     private final ChunkVerifier verifier;
     private final BlockCache blockCache;
 
     private final ExecutorService executor;
-    private final ExecutorService verifierExecutor;
     private final int maxPendingTasks;
     private final AtomicInteger pendingTasksCount;
 
@@ -65,20 +66,10 @@ public class DefaultDataWorker implements DataWorker {
                 return new Thread(r, "bt.torrent.data.worker-" + i.incrementAndGet());
             }
         });
-        this.verifierExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
-
-            private AtomicInteger i = new AtomicInteger();
-
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "bt.torrent.data.verifier-" + i.incrementAndGet());
-            }
-        });
         this.maxPendingTasks = maxQueueLength;
         this.pendingTasksCount = new AtomicInteger();
 
         lifecycleBinder.onShutdown("Shutdown data worker", this.executor::shutdownNow);
-        lifecycleBinder.onShutdown("Shutdown data verifier", this.verifierExecutor::shutdownNow);
     }
 
     @Override
@@ -93,7 +84,8 @@ public class DefaultDataWorker implements DataWorker {
         } else if (!tryIncrementTaskCount()) {
             LOGGER.warn("Rejecting request to read block because the queue is full:" +
                     " piece index {"+pieceIndex+"}, offset {"+offset+"}, length {"+length+"}, peer {"+peer+"}");
-            return CompletableFuture.completedFuture(BlockRead.rejected(peer, pieceIndex, offset, length));
+            return CompletableFuture.completedFuture(BlockRead.exceptional(peer,
+                    QUEUE_FULL_EXCEPTION, pieceIndex, offset, length));
         }
 
         return CompletableFuture.supplyAsync(() -> {
@@ -114,7 +106,9 @@ public class DefaultDataWorker implements DataWorker {
     public CompletableFuture<BlockWrite> addBlock(TorrentId torrentId, Peer peer, int pieceIndex, int offset, BufferedData buffer) {
         if (!tryIncrementTaskCount()) {
             LOGGER.warn("Can't accept write block request -- queue is full");
-            return CompletableFuture.completedFuture(BlockWrite.rejected(peer, pieceIndex, offset, buffer.length()));
+            buffer.dispose();
+            return CompletableFuture.completedFuture(BlockWrite.exceptional(peer,
+                    QUEUE_FULL_EXCEPTION, pieceIndex, offset, buffer.length()));
         }
 
         return CompletableFuture.supplyAsync(() -> {
@@ -146,7 +140,7 @@ public class DefaultDataWorker implements DataWorker {
                             chunk.clear();
                         }
                         return verified;
-                    }, verifierExecutor);
+                    }, executor);
                 }
 
                 return BlockWrite.complete(peer, pieceIndex, offset, buffer.length(), verificationFuture);

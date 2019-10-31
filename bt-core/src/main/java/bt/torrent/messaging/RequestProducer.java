@@ -75,17 +75,26 @@ public class RequestProducer {
             }
             return;
         } else {
-            Queue<Integer> _assignedPieces = new ArrayDeque<>(assignedPieces);
-            for (Integer assignedPiece : _assignedPieces) {
+            List<Integer> finishedPieces = null;
+            for (Integer assignedPiece : assignedPieces) {
                 if (bitfield.isComplete(assignedPiece)) {
-                    assignment.finish(assignedPiece);
-                    connectionState.getEnqueuedPieces().remove(assignedPiece);
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Finished downloading piece #{}", assignedPiece);
+                    if (finishedPieces == null) {
+                        finishedPieces = new ArrayList<>(assignedPieces.size() + 1);
                     }
+                    // delay removing piece from assignments to avoid CME
+                    finishedPieces.add(assignedPiece);
                 } else if (connectionState.getEnqueuedPieces().add(assignedPiece)) {
                     addRequestsToQueue(connectionState, assignedPiece);
                 }
+            }
+            if (finishedPieces != null) {
+                finishedPieces.forEach(finishedPiece -> {
+                    assignment.finish(finishedPiece);
+                    connectionState.getEnqueuedPieces().remove(finishedPiece);
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Finished downloading piece #{}", finishedPiece);
+                    }
+                });
             }
         }
 
@@ -107,6 +116,7 @@ public class RequestProducer {
             });
         });
         connectionState.getPendingRequests().clear();
+        connectionState.getPendingWrites().clear();
     }
 
     private void addRequestsToQueue(ConnectionState connectionState, Integer pieceIndex) {
@@ -125,12 +135,12 @@ public class RequestProducer {
                         return false;
                     }
 
-                    boolean failed = future.isDone() && future.getNow(null).getError().isPresent();
+                    BlockWrite block = future.getNow(null);
+                    boolean failed = block.getError().isPresent();
                     if (failed) {
                         connectionState.getPendingWrites().remove(key);
                     }
                     return failed;
-
                 }).collect(Collectors.toList());
 
         Collections.shuffle(requests);

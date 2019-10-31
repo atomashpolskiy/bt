@@ -73,7 +73,7 @@ class FileSystemStorageUnit implements StorageUnit {
             }
 
             try {
-                sbc = Files.newByteChannel(file, StandardOpenOption.READ, StandardOpenOption.WRITE);
+                sbc = Files.newByteChannel(file, StandardOpenOption.READ, StandardOpenOption.WRITE, StandardOpenOption.DSYNC);
             } catch (IOException e) {
                 throw new BtException("Unexpected I/O error", e);
             }
@@ -160,9 +160,8 @@ class FileSystemStorageUnit implements StorageUnit {
 
         try {
             sbc.position(offset);
-            int written = 1;
-            while (buffer.hasRemaining() && written > 0) {
-              written = sbc.write(buffer);
+            while (buffer.hasRemaining()) {
+                sbc.write(buffer);
             }
 
         } catch (IOException e) {
@@ -186,9 +185,8 @@ class FileSystemStorageUnit implements StorageUnit {
 
         try {
             sbc.position(offset);
-            int written = 1;
-            while (buffer.hasRemaining() && written > 0) {
-                written = buffer.transferTo(sbc);
+            while (buffer.hasRemaining()) {
+                buffer.transferTo(sbc);
             }
 
         } catch (IOException e) {
@@ -214,9 +212,8 @@ class FileSystemStorageUnit implements StorageUnit {
         try {
             sbc.position(offset);
             ByteBuffer buf = ByteBuffer.wrap(block);
-            int written = 1;
-            while (buf.hasRemaining() && written > 0) {
-              written = sbc.write(buf);
+            while (buf.hasRemaining()) {
+                sbc.write(buf);
             }
 
         } catch (IOException e) {
