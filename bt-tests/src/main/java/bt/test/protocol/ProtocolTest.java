@@ -22,6 +22,7 @@ import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
+import bt.torrent.data.BlockReader;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -203,5 +204,23 @@ public class ProtocolTest {
         } else {
             assertTrue("Messages of type '" + expectedType.getName() + "' do not match", defaultMatcher.test(expected, actual));
         }
+    }
+
+    public static BlockReader asBlockReader(byte[] bytes) {
+        return new BlockReader() {
+            @Override
+            public boolean readTo(ByteBuffer buffer) {
+                if (buffer.remaining() < bytes.length) {
+                    return false;
+                }
+                buffer.put(bytes);
+                return true;
+            }
+
+            @Override
+            public void close() {
+                // do nothing
+            }
+        };
     }
 }

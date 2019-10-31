@@ -136,7 +136,7 @@ public class InboundMessageProcessorTest {
 
         byte[] block1 = new byte[10];
         Arrays.fill(block1, (byte) 1);
-        encodeToBuffer(new Piece(1, 1, block1));
+        encodeToBuffer(new Piece(1, 1, block1.length, ProtocolTest.asBlockReader(block1)));
 
         processor.processInboundData();
         Have have1 = (Have) processor.pollMessage();
@@ -163,7 +163,7 @@ public class InboundMessageProcessorTest {
 
         byte[] block2 = new byte[10];
         Arrays.fill(block2, (byte) 2);
-        encodeToBuffer(new Piece(2, 2, block2));
+        encodeToBuffer(new Piece(2, 2, block2.length, ProtocolTest.asBlockReader(block2)));
 
         processor.processInboundData();
         Bitfield bitfield1Message = (Bitfield) processor.pollMessage();

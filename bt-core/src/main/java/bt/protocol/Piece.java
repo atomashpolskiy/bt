@@ -30,24 +30,7 @@ public final class Piece implements Message {
     private final int pieceIndex;
     private final int offset;
     private final int length;
-    private final byte[] block;
     private final BlockReader reader;
-
-    /**
-     * @since 1.0
-     */
-    public Piece(int pieceIndex, int offset, byte[] block) throws InvalidMessageException {
-
-        if (pieceIndex < 0 || offset < 0 || block.length == 0) {
-            throw new InvalidMessageException("Invalid arguments: piece index (" +
-                    pieceIndex + "), offset (" + offset + "), block length (" + block.length + ")");
-        }
-        this.pieceIndex = pieceIndex;
-        this.offset = offset;
-        this.length = block.length;
-        this.block = block;
-        this.reader = null;
-    }
 
     // TODO: using BlockReader here is sloppy... just temporary
     public Piece(int pieceIndex, int offset, int length, BlockReader reader) throws InvalidMessageException {
@@ -58,7 +41,6 @@ public final class Piece implements Message {
         this.pieceIndex = pieceIndex;
         this.offset = offset;
         this.length = length;
-        this.block = null;
         this.reader = reader;
     }
 
@@ -71,7 +53,6 @@ public final class Piece implements Message {
         this.pieceIndex = pieceIndex;
         this.offset = offset;
         this.length = length;
-        this.block = null;
         this.reader = null;
     }
 
@@ -94,14 +75,6 @@ public final class Piece implements Message {
      */
     public int getLength() {
         return length;
-    }
-
-    /**
-     * @since 1.0
-     */
-    @Deprecated
-    public byte[] getBlock() {
-        return block;
     }
 
     public boolean writeBlockTo(ByteBuffer buffer) {
