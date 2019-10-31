@@ -32,9 +32,10 @@ import bt.torrent.data.DataWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayDeque;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 
 /**
@@ -51,7 +52,7 @@ public class PieceConsumer {
     private final DataWorker dataWorker;
     private final IBufferedPieceRegistry bufferedPieceRegistry;
     private final EventSink eventSink;
-    private final ConcurrentLinkedQueue<BlockWrite> completedBlocks;
+    private final Queue<Integer> completedPieces;
 
     public PieceConsumer(TorrentId torrentId,
                          Bitfield bitfield,
@@ -63,7 +64,7 @@ public class PieceConsumer {
         this.dataWorker = dataWorker;
         this.bufferedPieceRegistry = bufferedPieceRegistry;
         this.eventSink = eventSink;
-        this.completedBlocks = new ConcurrentLinkedQueue<>();
+        this.completedPieces = new ArrayDeque<>();
     }
 
     @Consumes
@@ -72,7 +73,7 @@ public class PieceConsumer {
         ConnectionState connectionState = context.getConnectionState();
 
         // check that this block was requested in the first place
-        if (!checkBlockIsExpected(peer, connectionState, piece)) {
+        if (!checkBlockIsExpected(connectionState, piece)) {
             if (LOGGER.isTraceEnabled()) {
                 LOGGER.trace("Discarding unexpected block {} from peer: {}", piece, peer);
             }
@@ -112,18 +113,12 @@ public class PieceConsumer {
                     if (verificationFuture.isPresent()) {
                         verificationFuture.get().whenComplete((verified, error1) -> {
                             if (error1 != null) {
-                                LOGGER.error("Failed to verify block " +
-                                        "piece index {" + piece.getPieceIndex() + "}, " +
-                                        "offset {" + piece.getOffset() + "}, " +
-                                        "length {" + piece.getLength() + "}", error1);
+                                LOGGER.error("Failed to verify piece index {" + piece.getPieceIndex() + "}", error1);
                             } else if (verified) {
-                                completedBlocks.add(block);
+                                completedPieces.add(piece.getPieceIndex());
                                 eventSink.firePieceVerified(context.getTorrentId().get(), piece.getPieceIndex());
                             } else {
-                                LOGGER.error("Failed to verify block " +
-                                        "piece index {" + piece.getPieceIndex() + "}, " +
-                                        "offset {" + piece.getOffset() + "}, " +
-                                        "length {" + piece.getLength() + "}." +
+                                LOGGER.error("Failed to verify piece index {" + piece.getPieceIndex() + "}." +
                                         " No error has been provided by I/O worker," +
                                         " which means that the data itself might have been corrupted. Will re-download.");
                             }
@@ -141,7 +136,7 @@ public class PieceConsumer {
         }
     }
 
-    private boolean checkBlockIsExpected(Peer peer, ConnectionState connectionState, Piece piece) {
+    private boolean checkBlockIsExpected(ConnectionState connectionState, Piece piece) {
         Object key = Mapper.mapper().buildKey(piece.getPieceIndex(), piece.getOffset(), piece.getLength());
         return connectionState.getPendingRequests().remove(key);
     }
@@ -175,12 +170,9 @@ public class PieceConsumer {
 
     @Produces
     public void produce(Consumer<Message> messageConsumer) {
-        BlockWrite block;
-        while ((block = completedBlocks.poll()) != null) {
-            int pieceIndex = block.getPieceIndex();
-            if (bitfield.getPieceStatus(pieceIndex) == Bitfield.PieceStatus.COMPLETE_VERIFIED) {
-                messageConsumer.accept(new Have(pieceIndex));
-            }
+        Integer completedPiece;
+        while ((completedPiece = completedPieces.poll()) != null) {
+            messageConsumer.accept(new Have(completedPiece));
         }
     }
 }
