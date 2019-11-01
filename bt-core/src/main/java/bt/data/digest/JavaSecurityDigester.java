@@ -20,6 +20,7 @@ import bt.BtException;
 import bt.data.DataRange;
 import bt.data.range.Range;
 
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -89,11 +90,17 @@ public class JavaSecurityDigester implements Digester {
                 throw new BtException("Too much data -- can't read to buffer");
             }
             byte[] bytes = new byte[step];
+            ByteBuffer buffer = ByteBuffer.wrap(bytes);
             do {
                 if (remaining < step) {
                     bytes = new byte[(int) remaining];
+                    buffer = ByteBuffer.wrap(bytes);
                 }
-                unit.readBlockFully(bytes, off);
+                buffer.clear();
+                unit.readBlockFully(buffer, off);
+                if (buffer.hasRemaining()) {
+                    throw new IllegalStateException("Failed to read data fully: " + buffer.remaining() + " bytes remaining");
+                }
                 digest.update(bytes);
                 remaining -= step;
                 off += step;

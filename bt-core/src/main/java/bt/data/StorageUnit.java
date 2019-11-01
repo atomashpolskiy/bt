@@ -72,13 +72,6 @@ public interface StorageUnit extends Closeable {
      }
 
     /**
-     * @since 1.9
-     */
-    default void readBlockFully(byte[] buffer, long offset) {
-        readBlockFully(ByteBuffer.wrap(buffer), offset);
-    }
-
-    /**
      * Try to write a block of data from the provided buffer to this storage, starting with a given offset.
      * <p>Maximum number of bytes to be written is determined by {@link Buffer#remaining()}.
      * <p>Storage must throw an exception if
@@ -141,13 +134,6 @@ public interface StorageUnit extends Closeable {
      */
     default int writeBlock(byte[] block, long offset) {
         return writeBlock(ByteBuffer.wrap(block), offset);
-    }
-
-    /**
-     * @since 1.9
-     */
-    default void writeBlockFully(byte[] block, long offset) {
-        writeBlockFully(ByteBuffer.wrap(block), offset);
     }
 
     /**
