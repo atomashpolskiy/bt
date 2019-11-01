@@ -32,10 +32,10 @@ import bt.torrent.data.DataWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayDeque;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 
 /**
@@ -64,7 +64,7 @@ public class PieceConsumer {
         this.dataWorker = dataWorker;
         this.bufferedPieceRegistry = bufferedPieceRegistry;
         this.eventSink = eventSink;
-        this.completedPieces = new ArrayDeque<>();
+        this.completedPieces = new LinkedBlockingQueue<>();
     }
 
     @Consumes
