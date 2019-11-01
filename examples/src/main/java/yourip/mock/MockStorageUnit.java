@@ -30,6 +30,11 @@ public class MockStorageUnit implements StorageUnit {
     }
 
     @Override
+    public void readBlockFully(ByteBuffer buffer, long offset) {
+        // do nothing
+    }
+
+    @Override
     public int readBlock(byte[] buffer, long offset) {
         return 0;
     }
@@ -40,8 +45,18 @@ public class MockStorageUnit implements StorageUnit {
     }
 
     @Override
+    public void writeBlockFully(ByteBuffer buffer, long offset) {
+        // do nothing
+    }
+
+    @Override
     public int writeBlock(ByteBufferView buffer, long offset) {
         return 0;
+    }
+
+    @Override
+    public void writeBlockFully(ByteBufferView buffer, long offset) {
+        // do nothing
     }
 
     @Override
