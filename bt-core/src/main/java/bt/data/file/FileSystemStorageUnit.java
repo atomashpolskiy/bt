@@ -107,6 +107,14 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
+    public synchronized void readBlockFully(ByteBuffer buffer, long offset) {
+        int read;
+        do {
+            read = readBlock(buffer, offset);
+        } while (read >= 0 && buffer.hasRemaining());
+    }
+
+    @Override
     public synchronized int writeBlock(ByteBuffer buffer, long offset) {
         if (closed) {
             if (!init(true)) {
@@ -131,6 +139,14 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
+    public synchronized void writeBlockFully(ByteBuffer buffer, long offset) {
+        int written;
+        do {
+            written = writeBlock(buffer, offset);
+        } while (written >= 0 && buffer.hasRemaining());
+    }
+
+    @Override
     public synchronized int writeBlock(ByteBufferView buffer, long offset) {
         if (closed) {
             if (!init(true)) {
@@ -152,6 +168,14 @@ class FileSystemStorageUnit implements StorageUnit {
             throw new UncheckedIOException("Failed to write bytes (offset: " + offset +
                     ", block length: " + buffer.remaining() + ", file capacity: " + capacity + ")", e);
         }
+    }
+
+    @Override
+    public synchronized void writeBlockFully(ByteBufferView buffer, long offset) {
+        int written;
+        do {
+            written = writeBlock(buffer, offset);
+        } while (written >= 0 && buffer.hasRemaining());
     }
 
     @Override

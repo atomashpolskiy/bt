@@ -50,12 +50,7 @@ public interface StorageUnit extends Closeable {
     /**
      * @since 1.9
      */
-    default void readBlockFully(ByteBuffer buffer, long offset) {
-        int read;
-        do {
-            read = readBlock(buffer, offset);
-        } while (read >= 0 && buffer.hasRemaining());
-    }
+    void readBlockFully(ByteBuffer buffer, long offset);
 
     /**
      * Try to read a block of data into the provided array, starting with a given offset.
@@ -104,12 +99,7 @@ public interface StorageUnit extends Closeable {
     /**
      * @since 1.9
      */
-    default void writeBlockFully(ByteBuffer buffer, long offset) {
-        int written;
-        do {
-            written = writeBlock(buffer, offset);
-        } while (written >= 0 && buffer.hasRemaining());
-    }
+    void writeBlockFully(ByteBuffer buffer, long offset);
 
     /**
      * Try to write a block of data from the provided buffer to this storage, starting with a given offset.
@@ -132,12 +122,7 @@ public interface StorageUnit extends Closeable {
     /**
      * @since 1.9
      */
-    default void writeBlockFully(ByteBufferView buffer, long offset) {
-        int written;
-        do {
-            written = writeBlock(buffer, offset);
-        } while (written >= 0 && buffer.hasRemaining());
-    }
+    void writeBlockFully(ByteBufferView buffer, long offset);
 
     /**
      * Try to write a block of data to this storage, starting with a given offset.
