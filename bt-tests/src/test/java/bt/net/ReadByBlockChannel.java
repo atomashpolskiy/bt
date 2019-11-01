@@ -26,7 +26,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-class ReadByBlockChannel implements ReadableByteChannel {
+public class ReadByBlockChannel implements ReadableByteChannel {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReadByBlockChannel.class);
 
     private final LinkedList<byte[]> data;
@@ -38,7 +38,7 @@ class ReadByBlockChannel implements ReadableByteChannel {
      * @param dataList Collection of data blocks that this channel will be reading
      *                 (in the same order as they should be read)
      */
-    ReadByBlockChannel(List<byte[]> dataList) {
+    public ReadByBlockChannel(List<byte[]> dataList) {
         this.data = new LinkedList<>(dataList);
     }
 
