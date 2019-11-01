@@ -16,13 +16,13 @@
 
 package bt.data.file;
 
-import bt.BtException;
 import bt.data.StorageUnit;
 import bt.net.buffer.ByteBufferView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
@@ -49,7 +49,6 @@ class FileSystemStorageUnit implements StorageUnit {
     // TODO: this is temporary fix for verification upon app start
     // should be re-done (probably need additional API to know if storage unit is "empty")
     private boolean init(boolean create) {
-
         if (closed) {
             if (!Files.exists(file)) {
                 if (create) {
@@ -57,14 +56,14 @@ class FileSystemStorageUnit implements StorageUnit {
                         try {
                             Files.createDirectories(parent);
                         } catch (IOException e) {
-                            throw new BtException("Failed to create file storage -- can't create (some of the) directories", e);
+                            throw new UncheckedIOException("Failed to create file storage -- can't create (some of the) directories", e);
                         }
                     }
 
                     try {
                         Files.createFile(file);
                     } catch (IOException e) {
-                        throw new BtException("Failed to create file storage -- " +
+                        throw new UncheckedIOException("Failed to create file storage -- " +
                                 "can't create new file: " + file.toAbsolutePath(), e);
                     }
                 } else {
@@ -75,7 +74,7 @@ class FileSystemStorageUnit implements StorageUnit {
             try {
                 sbc = Files.newByteChannel(file, StandardOpenOption.READ, StandardOpenOption.WRITE, StandardOpenOption.DSYNC);
             } catch (IOException e) {
-                throw new BtException("Unexpected I/O error", e);
+                throw new UncheckedIOException("Unexpected I/O error", e);
             }
 
             closed = false;
@@ -84,141 +83,74 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
-    public synchronized void readBlock(ByteBuffer buffer, long offset) {
-
+    public synchronized int readBlock(ByteBuffer buffer, long offset) {
         if (closed) {
             if (!init(false)) {
-                return;
+                return -1;
             }
         }
 
         if (offset < 0) {
-            throw new BtException("Illegal arguments: offset (" + offset + ")");
+            throw new IllegalArgumentException("Negative offset: " + offset);
         } else if (offset > capacity - buffer.remaining()) {
-            throw new BtException("Received a request to read past the end of file (offset: " + offset +
-                    ", requested block length: " + buffer.remaining() + ", file size: " + capacity);
+            throw new IllegalArgumentException("Received a request to read past the end of file (offset: " + offset +
+                    ", requested block length: " + buffer.remaining() + ", file capacity: " + capacity);
         }
 
         try {
             sbc.position(offset);
-            int read = 1;
-            while (buffer.hasRemaining() && read > 0) {
-              read = sbc.read(buffer);
-            }
-
+            return sbc.read(buffer);
         } catch (IOException e) {
-            throw new BtException("Failed to read bytes (offset: " + offset +
-                    ", requested block length: " + buffer.remaining() + ", file size: " + capacity + ")", e);
+            throw new UncheckedIOException("Failed to read bytes (offset: " + offset +
+                    ", requested block length: " + buffer.remaining() + ", file capacity: " + capacity + ")", e);
         }
     }
 
     @Override
-    public synchronized byte[] readBlock(long offset, int length) {
-
+    public synchronized int writeBlock(ByteBuffer buffer, long offset) {
         if (closed) {
-            if (!init(false)) {
-                // TODO: should we return null here? or init this "stub" in constructor?
-                return new byte[length];
+            if (!init(true)) {
+                return -1;
             }
-        }
-
-        if (offset < 0 || length < 0) {
-            throw new BtException("Illegal arguments: offset (" + offset + "), length (" + length + ")");
-        } else if (offset > capacity - length) {
-            throw new BtException("Received a request to read past the end of file (offset: " + offset +
-                    ", requested block length: " + length + ", file size: " + capacity);
-        }
-
-        try {
-            sbc.position(offset);
-            ByteBuffer buf = ByteBuffer.allocate(length);
-            int read = 1;
-            while(buf.hasRemaining() && read > 0) {
-              read = sbc.read(buf);
-            }
-            return buf.array();
-
-        } catch (IOException e) {
-            throw new BtException("Failed to read bytes (offset: " + offset +
-                    ", requested block length: " + length + ", file size: " + capacity + ")", e);
-        }
-    }
-
-    @Override
-    public synchronized void writeBlock(ByteBuffer buffer, long offset) {
-
-        if (closed) {
-            init(true);
         }
 
         if (offset < 0) {
-            throw new BtException("Negative offset: " + offset);
+            throw new IllegalArgumentException("Negative offset: " + offset);
         } else if (offset > capacity - buffer.remaining()) {
-            throw new BtException("Received a request to write past the end of file (offset: " + offset +
-                    ", block length: " + buffer.remaining() + ", file size: " + capacity);
+            throw new IllegalArgumentException("Received a request to write past the end of file (offset: " + offset +
+                    ", block length: " + buffer.remaining() + ", file capacity: " + capacity);
         }
 
         try {
             sbc.position(offset);
-            while (buffer.hasRemaining()) {
-                sbc.write(buffer);
-            }
-
+            return sbc.write(buffer);
         } catch (IOException e) {
-            throw new BtException("Failed to write bytes (offset: " + offset +
-                    ", block length: " + buffer.remaining() + ", file size: " + capacity + ")", e);
+            throw new UncheckedIOException("Failed to write bytes (offset: " + offset +
+                    ", block length: " + buffer.remaining() + ", file capacity: " + capacity + ")", e);
         }
     }
 
     @Override
-    public void writeBlock(ByteBufferView buffer, long offset) {
+    public int writeBlock(ByteBufferView buffer, long offset) {
         if (closed) {
-            init(true);
+            if (!init(true)) {
+                return -1;
+            }
         }
 
         if (offset < 0) {
-            throw new BtException("Negative offset: " + offset);
+            throw new IllegalArgumentException("Negative offset: " + offset);
         } else if (offset > capacity - buffer.remaining()) {
-            throw new BtException("Received a request to write past the end of file (offset: " + offset +
-                    ", block length: " + buffer.remaining() + ", file size: " + capacity);
+            throw new IllegalArgumentException("Received a request to write past the end of file (offset: " + offset +
+                    ", block length: " + buffer.remaining() + ", file capacity: " + capacity);
         }
 
         try {
             sbc.position(offset);
-            while (buffer.hasRemaining()) {
-                buffer.transferTo(sbc);
-            }
-
+            return buffer.transferTo(sbc);
         } catch (IOException e) {
-            throw new BtException("Failed to write bytes (offset: " + offset +
-                    ", block length: " + buffer.remaining() + ", file size: " + capacity + ")", e);
-        }
-    }
-
-    @Override
-    public synchronized void writeBlock(byte[] block, long offset) {
-
-        if (closed) {
-            init(true);
-        }
-
-        if (offset < 0) {
-            throw new BtException("Negative offset: " + offset);
-        } else if (offset > capacity - block.length) {
-            throw new BtException("Received a request to write past the end of file (offset: " + offset +
-                    ", block length: " + block.length + ", file size: " + capacity);
-        }
-
-        try {
-            sbc.position(offset);
-            ByteBuffer buf = ByteBuffer.wrap(block);
-            while (buf.hasRemaining()) {
-                sbc.write(buf);
-            }
-
-        } catch (IOException e) {
-            throw new BtException("Failed to write bytes (offset: " + offset +
-                    ", block length: " + block.length + ", file size: " + capacity + ")", e);
+            throw new UncheckedIOException("Failed to write bytes (offset: " + offset +
+                    ", block length: " + buffer.remaining() + ", file capacity: " + capacity + ")", e);
         }
     }
 
@@ -229,11 +161,10 @@ class FileSystemStorageUnit implements StorageUnit {
 
     @Override
     public long size() {
-
         try {
             return Files.exists(file) ? Files.size(file) : 0;
         } catch (IOException e) {
-            throw new BtException("Unexpected I/O error", e);
+            throw new UncheckedIOException("Unexpected I/O error", e);
         }
     }
 
@@ -243,7 +174,7 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         if (!closed) {
             try {
                 sbc.close();

@@ -43,4 +43,9 @@ public interface ChunkVerifier {
      * @since 1.2
      */
     boolean verify(ChunkDescriptor chunk);
+
+    /**
+     * @since 1.9
+     */
+    boolean verifyIfPresent(ChunkDescriptor chunk);
 }

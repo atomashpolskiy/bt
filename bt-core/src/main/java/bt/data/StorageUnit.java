@@ -30,83 +30,143 @@ import java.nio.ByteBuffer;
 public interface StorageUnit extends Closeable {
 
     /**
-     * Read a block of data into the provided buffer, starting with a given offset.
-     * Number of bytes to be read is determined by {@link Buffer#remaining()}.
-     * <p>Hence, storage must throw an exception if
+     * Try to read a block of data into the provided buffer, starting with a given offset.
+     * Maximum number of bytes to be read is determined by {@link Buffer#remaining()}.
+     * <p>Storage must throw an exception if
      * <blockquote>
      * <code>offset &gt; {@link #capacity()} - buffer.remaining()</code>
      * </blockquote>
      *
      * @param buffer Buffer to read bytes into.
-     *               Value returned by <b>buffer.remaining()</b> determines the total number of bytes to read.
+     *               Value returned by <b>buffer.remaining()</b> determines
+     *               the maximum number of bytes to read.
      * @param offset Index to start reading from (0-based)
+     * @return Actual number of bytes read
      *
      * @since 1.0
      */
-    void readBlock(ByteBuffer buffer, long offset);
+    int readBlock(ByteBuffer buffer, long offset);
 
     /**
-     * Read a block of data, starting with a given offset.
+     * @since 1.9
+     */
+    default void readBlockFully(ByteBuffer buffer, long offset) {
+        int read;
+        do {
+            read = readBlock(buffer, offset);
+            if (read < 0) {
+                throw new IllegalStateException("Failed to read " + this + " at offset " + offset + ". Size: " + size());
+            }
+        } while (read >= 0 && buffer.hasRemaining());
+    }
+
+    /**
+     * Try to read a block of data into the provided array, starting with a given offset.
+     * Maximum number of bytes to be read is determined by {@link Buffer#remaining()}.
      * <p>Storage must throw an exception if
      * <blockquote>
      * <code>offset &gt; {@link #capacity()} - length</code>
      * </blockquote>
      *
+     * @param buffer Array to read bytes into.
+     *               Array's length determines the maximum number of bytes to read.
      * @param offset Index to starting reading from (0-based)
-     * @param length Total number of bytes to read
+     * @return Actual number of bytes read
      *
      * @since 1.0
      */
-    byte[] readBlock(long offset, int length);
+     default int readBlock(byte[] buffer, long offset) {
+         return readBlock(ByteBuffer.wrap(buffer), offset);
+     }
 
     /**
-     * Write a block of data from the provided buffer to this storage, starting with a given offset.
-     * <p>Number of bytes to be written is determined by {@link Buffer#remaining()}.
-     * <p>Hence, storage must throw an exception if
+     * @since 1.9
+     */
+    default void readBlockFully(byte[] buffer, long offset) {
+        readBlockFully(ByteBuffer.wrap(buffer), offset);
+    }
+
+    /**
+     * Try to write a block of data from the provided buffer to this storage, starting with a given offset.
+     * <p>Maximum number of bytes to be written is determined by {@link Buffer#remaining()}.
+     * <p>Storage must throw an exception if
      * <blockquote>
      * <code>offset &gt; {@link #capacity()} - buffer.remaining()</code>
      * </blockquote>
      *
      * @param buffer Buffer containing the block of data to write to this storage.
      *               Value returned by <b>buffer.remaining()</b> determines
-     *               the total number of bytes to write.
+     *               the maximum number of bytes to write.
      * @param offset Offset in this storage's data to start writing to (0-based)
+     * @return Actual number of bytes written
      *
      * @since 1.0
      */
-    void writeBlock(ByteBuffer buffer, long offset);
+    int writeBlock(ByteBuffer buffer, long offset);
 
     /**
-     * Write a block of data from the provided buffer to this storage, starting with a given offset.
-     * <p>Number of bytes to be written is determined by {@link bt.net.buffer.ByteBufferView#remaining()}.
-     * <p>Hence, storage must throw an exception if
+     * @since 1.9
+     */
+    default void writeBlockFully(ByteBuffer buffer, long offset) {
+        int written;
+        do {
+            written = writeBlock(buffer, offset);
+        } while (written >= 0 && buffer.hasRemaining());
+    }
+
+    /**
+     * Try to write a block of data from the provided buffer to this storage, starting with a given offset.
+     * <p>Maximum number of bytes to be written is determined by {@link bt.net.buffer.ByteBufferView#remaining()}.
+     * <p>Storage must throw an exception if
      * <blockquote>
      * <code>offset &gt; {@link #capacity()} - buffer.remaining()</code>
      * </blockquote>
      *
      * @param buffer Buffer containing the block of data to write to this storage.
      *               Value returned by <b>buffer.remaining()</b> determines
-     *               the total number of bytes to write.
+     *               the maximum number of bytes to write.
      * @param offset Offset in this storage's data to start writing to (0-based)
+     * @return Actual number of bytes written
      *
      * @since 1.9
      */
-    void writeBlock(ByteBufferView buffer, long offset);
+    int writeBlock(ByteBufferView buffer, long offset);
 
     /**
-     * Write a block of data to this storage, starting with a given offset.
-     * <p>Number of bytes to be written is determined by block's length.
+     * @since 1.9
+     */
+    default void writeBlockFully(ByteBufferView buffer, long offset) {
+        int written;
+        do {
+            written = writeBlock(buffer, offset);
+        } while (written >= 0 && buffer.hasRemaining());
+    }
+
+    /**
+     * Try to write a block of data to this storage, starting with a given offset.
+     * <p>Maximum number of bytes to be written is determined by block's length.
      * <p>Storage must throw an exception if
      * <blockquote>
      * <code>offset &gt; {@link #capacity()} - block.length</code>
      * </blockquote>
      *
-     * @param block Block of data to write to this storage
+     * @param block Block of data to write to this storage.
+     *              Block's length determines the maximum number of bytes to write.
      * @param offset Offset in this storage's data to start writing to (0-based)
+     * @return Actual number of bytes written
      *
      * @since 1.0
      */
-    void writeBlock(byte[] block, long offset);
+    default int writeBlock(byte[] block, long offset) {
+        return writeBlock(ByteBuffer.wrap(block), offset);
+    }
+
+    /**
+     * @since 1.9
+     */
+    default void writeBlockFully(byte[] block, long offset) {
+        writeBlockFully(ByteBuffer.wrap(block), offset);
+    }
 
     /**
      * Get total maximum capacity of this storage.

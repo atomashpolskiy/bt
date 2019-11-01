@@ -65,6 +65,13 @@ public class DefaultChunkVerifier implements ChunkVerifier {
     @Override
     public boolean verify(ChunkDescriptor chunk) {
         byte[] expected = chunk.getChecksum();
+        byte[] actual = digester.digestForced(chunk.getData());
+        return Arrays.equals(expected, actual);
+    }
+
+    @Override
+    public boolean verifyIfPresent(ChunkDescriptor chunk) {
+        byte[] expected = chunk.getChecksum();
         byte[] actual = digester.digest(chunk.getData());
         return Arrays.equals(expected, actual);
     }
@@ -139,7 +146,7 @@ public class DefaultChunkVerifier implements ChunkVerifier {
                 // if any of this chunk's storage units is empty,
                 // then the chunk is neither complete nor verified
                 if (emptyUnits[0] == 0) {
-                    boolean verified = verify(chunks[i]);
+                    boolean verified = verifyIfPresent(chunks[i]);
                     if (verified) {
                         bitfield.markVerified(i);
                     }

@@ -109,10 +109,10 @@ class SynchronizedRange<T extends Range<T>> implements Range<T>, DelegatingRange
     }
 
     @Override
-    public boolean getBytesFully(ByteBuffer buffer) {
+    public boolean getBytes(ByteBuffer buffer) {
         lock.readLock().lock();
         try {
-            return delegate.getBytesFully(buffer);
+            return delegate.getBytes(buffer);
         } finally {
             lock.readLock().unlock();
         }

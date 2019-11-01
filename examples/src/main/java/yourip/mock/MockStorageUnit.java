@@ -25,28 +25,28 @@ import java.nio.ByteBuffer;
 public class MockStorageUnit implements StorageUnit {
 
     @Override
-    public void readBlock(ByteBuffer buffer, long offset) {
-        // do nothing
+    public int readBlock(ByteBuffer buffer, long offset) {
+        return 0;
     }
 
     @Override
-    public byte[] readBlock(long offset, int length) {
-        return new byte[0];
+    public int readBlock(byte[] buffer, long offset) {
+        return 0;
     }
 
     @Override
-    public void writeBlock(ByteBuffer buffer, long offset) {
-        // do nothing
+    public int writeBlock(ByteBuffer buffer, long offset) {
+        return 0;
     }
 
     @Override
-    public void writeBlock(ByteBufferView buffer, long offset) {
-        // do nothing
+    public int writeBlock(ByteBufferView buffer, long offset) {
+        return 0;
     }
 
     @Override
-    public void writeBlock(byte[] block, long offset) {
-        // do nothing
+    public int writeBlock(byte[] block, long offset) {
+        return 0;
     }
 
     @Override

@@ -92,7 +92,9 @@ class DefaultDataDescriptor implements DataDescriptor {
             } else {
                 try {
                     // TODO: think about adding some explicit "initialization/creation" method
-                    unit.writeBlock(new byte[0], 0);
+                    if (unit.writeBlock(new byte[0], 0) < 0) {
+                        throw new IllegalStateException("Failed to initialize storage unit: " + unit);
+                    }
                 } catch (Exception e) {
                     LOGGER.warn("Failed to create empty storage unit: " + unit, e);
                 }

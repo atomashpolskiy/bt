@@ -23,6 +23,7 @@ import com.google.inject.Inject;
 
 import java.nio.ByteBuffer;
 
+@SuppressWarnings("unused")
 public class NoCache implements BlockCache {
 
     private final TorrentRegistry torrentRegistry;
@@ -43,7 +44,7 @@ public class NoCache implements BlockCache {
             @Override
             public boolean readTo(ByteBuffer buffer) {
                 return data.getSubrange(offset, length)
-                        .getBytesFully(buffer);
+                        .getBytes(buffer);
             }
 
             @Override

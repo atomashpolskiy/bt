@@ -121,7 +121,7 @@ public class LRUBlockCache implements BlockCache {
                     @Override
                     public boolean readTo(ByteBuffer buffer) {
                         return data.getSubrange(offset, length)
-                                .getBytesFully(buffer);
+                                .getBytes(buffer);
                     }
 
                     @Override
@@ -130,7 +130,7 @@ public class LRUBlockCache implements BlockCache {
                     }
                 };
             }
-            if (!data.getBytesFully(slot.buffer)) {
+            if (!data.getBytes(slot.buffer)) {
                 throw new IllegalStateException("Failed to load data into buffer slot:" +
                         "torrent ID {" + torrentId + "}, piece index {" + pieceIndex + "}, slot {" + slot.buffer + "}");
             }

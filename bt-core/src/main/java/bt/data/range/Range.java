@@ -71,7 +71,7 @@ public interface Range<T extends Range<T>> {
      * @return true, if all data in the range has been read into the buffer
      * @since 1.9
      */
-    boolean getBytesFully(ByteBuffer buffer);
+    boolean getBytes(ByteBuffer buffer);
 
     /**
      * Put data at the beginning of this range.

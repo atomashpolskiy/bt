@@ -76,8 +76,8 @@ public class BlockRange<T extends Range<T>> implements Range<BlockRange<T>>, Del
     }
 
     @Override
-    public boolean getBytesFully(ByteBuffer buffer) {
-        return delegate.getBytesFully(buffer);
+    public boolean getBytes(ByteBuffer buffer) {
+        return delegate.getBytes(buffer);
     }
 
     @Override

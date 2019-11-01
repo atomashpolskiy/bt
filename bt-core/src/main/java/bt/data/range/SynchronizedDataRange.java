@@ -69,8 +69,8 @@ class SynchronizedDataRange<T extends Range<T>> implements DataRange, Delegating
     }
 
     @Override
-    public boolean getBytesFully(ByteBuffer buffer) {
-        return delegate.getBytesFully(buffer);
+    public boolean getBytes(ByteBuffer buffer) {
+        return delegate.getBytes(buffer);
     }
 
     @Override

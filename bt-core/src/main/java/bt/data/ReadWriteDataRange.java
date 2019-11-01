@@ -243,7 +243,7 @@ class ReadWriteDataRange implements DataRange {
     }
 
     @Override
-    public boolean getBytesFully(ByteBuffer buffer) {
+    public boolean getBytes(ByteBuffer buffer) {
         if (buffer.remaining() < length) {
             return false;
         }
@@ -271,7 +271,7 @@ class ReadWriteDataRange implements DataRange {
 
                 buffer.limit(offset + offsetInBlock + (int) len);
                 buffer.position(offset + offsetInBlock);
-                unit.readBlock(buffer, off);
+                unit.readBlockFully(buffer, off);
                 offsetInBlock += len;
 
                 return true;
@@ -323,7 +323,7 @@ class ReadWriteDataRange implements DataRange {
                 limitInBlock = Math.min(blockLength, offsetInBlock + (int) fileSize);
                 buffer.limit(offset + limitInBlock);
                 buffer.position(offset + offsetInBlock);
-                unit.writeBlock(buffer, off);
+                unit.writeBlockFully(buffer, off);
                 offsetInBlock = limitInBlock;
 
                 return offsetInBlock < blockLength - 1;
@@ -350,7 +350,7 @@ class ReadWriteDataRange implements DataRange {
                 limitInBlock = Math.min(blockLength, offsetInBlock + (int) fileSize);
                 buffer.limit(offset + limitInBlock);
                 buffer.position(offset + offsetInBlock);
-                unit.writeBlock(buffer, off);
+                unit.writeBlockFully(buffer, off);
                 offsetInBlock = limitInBlock;
 
                 return offsetInBlock < blockLength - 1;

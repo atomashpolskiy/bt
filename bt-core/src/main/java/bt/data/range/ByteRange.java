@@ -119,7 +119,7 @@ public class ByteRange implements Range<ByteRange> {
     }
 
     @Override
-    public boolean getBytesFully(ByteBuffer target) {
+    public boolean getBytes(ByteBuffer target) {
         if (target.remaining() < buffer.remaining()) {
             return false;
         }
