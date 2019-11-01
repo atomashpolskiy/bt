@@ -54,9 +54,6 @@ public interface StorageUnit extends Closeable {
         int read;
         do {
             read = readBlock(buffer, offset);
-            if (read < 0) {
-                throw new IllegalStateException("Failed to read " + this + " at offset " + offset + ". Size: " + size());
-            }
         } while (read >= 0 && buffer.hasRemaining());
     }
 
