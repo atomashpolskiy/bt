@@ -131,7 +131,7 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
-    public int writeBlock(ByteBufferView buffer, long offset) {
+    public synchronized int writeBlock(ByteBufferView buffer, long offset) {
         if (closed) {
             if (!init(true)) {
                 return -1;

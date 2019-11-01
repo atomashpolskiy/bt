@@ -48,7 +48,7 @@ class ReadWriteDataRange implements DataRange {
      *
      * Also, it's guaranted that the address at position n+1 is always greater than address at position n.
      */
-    private long[] fileOffsets;
+    private final long[] fileOffsets;
 
     /**
      * Create a data range.
@@ -272,6 +272,9 @@ class ReadWriteDataRange implements DataRange {
                 buffer.limit(offset + offsetInBlock + (int) len);
                 buffer.position(offset + offsetInBlock);
                 unit.readBlockFully(buffer, off);
+                if (buffer.hasRemaining()) {
+                    throw new IllegalStateException("Failed to read data fully: " + buffer.remaining() + " bytes not read");
+                }
                 offsetInBlock += len;
 
                 return true;
@@ -324,6 +327,9 @@ class ReadWriteDataRange implements DataRange {
                 buffer.limit(offset + limitInBlock);
                 buffer.position(offset + offsetInBlock);
                 unit.writeBlockFully(buffer, off);
+                if (buffer.hasRemaining()) {
+                    throw new IllegalStateException("Failed to write data fully: " + buffer.remaining() + " bytes remaining");
+                }
                 offsetInBlock = limitInBlock;
 
                 return offsetInBlock < blockLength - 1;
@@ -351,6 +357,9 @@ class ReadWriteDataRange implements DataRange {
                 buffer.limit(offset + limitInBlock);
                 buffer.position(offset + offsetInBlock);
                 unit.writeBlockFully(buffer, off);
+                if (buffer.hasRemaining()) {
+                    throw new IllegalStateException("Failed to write data fully: " + buffer.remaining() + " bytes remaining");
+                }
                 offsetInBlock = limitInBlock;
 
                 return offsetInBlock < blockLength - 1;
