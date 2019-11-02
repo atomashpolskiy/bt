@@ -14,6 +14,8 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * Make sure outgoing messages are never dropped
 * Continuous piece assignments (better request pipelining)
 * Direct I/O
+* Add configuration option for the number of outstanding requests
+* Add configuration option for send/receive buffer size
 
 ## 1.8
 
