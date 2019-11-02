@@ -50,14 +50,8 @@ public class ChunkDescriptorTestUtil {
 
     public static List<StorageUnit> mockStorageUnits(long... capacities) {
         return Arrays.stream(capacities)
-                .mapToObj(ChunkDescriptorTestUtil::mockStorageUnit)
+                .mapToObj(MockStorageUnit::new)
                 .collect(Collectors.<StorageUnit>toList());
-    }
-
-    public static StorageUnit mockStorageUnit(long capacity) {
-        StorageUnit storageUnit = mock(StorageUnit.class);
-        when(storageUnit.capacity()).thenReturn(capacity);
-        return storageUnit;
     }
 
     public static Torrent mockTorrent(String name, long size, long chunkSize, byte[][] chunkHashes, TorrentFile... files) {

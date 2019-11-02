@@ -18,7 +18,7 @@ package bt.torrent.data;
 
 import java.nio.ByteBuffer;
 
-public interface BlockReader extends AutoCloseable {
+public interface BlockReader {
 
     boolean readTo(ByteBuffer buffer);
 }

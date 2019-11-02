@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class LRUBlockCache implements BlockCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(LRUBlockCache.class);
@@ -120,13 +119,16 @@ public class LRUBlockCache implements BlockCache {
                 return new BlockReader() {
                     @Override
                     public boolean readTo(ByteBuffer buffer) {
-                        return data.getSubrange(offset, length)
-                                .getBytes(buffer);
-                    }
-
-                    @Override
-                    public void close() {
-                        // do nothing
+                        int bufferRemaining = buffer.remaining();
+                        if (!data.getSubrange(offset, length)
+                                .getBytes(buffer)) {
+                            throw new IllegalStateException("Failed to read data to buffer:" +
+                                    " piece index {" + pieceIndex + "}," +
+                                    " offset {" + offset + "}," +
+                                    " length: {" + length + "}," +
+                                    " buffer space {" + bufferRemaining + "}");
+                        }
+                        return true;
                     }
                 };
             }
@@ -171,7 +173,7 @@ public class LRUBlockCache implements BlockCache {
         Slot slot;
         while (iter.hasNext()) {
             slot = iter.next();
-            if (slot.currentUsers.get() == 0) {
+            if (slot.currentUsers == 0) {
                 iter.remove();
                 slot.buffer.clear();
                 slots.add(slot);
@@ -191,7 +193,7 @@ public class LRUBlockCache implements BlockCache {
     }
 
     private BlockReader readFromSlot(Slot slot, int offset, int length) {
-        int usedBy = slot.currentUsers.incrementAndGet();
+        int usedBy = slot.currentUsers += 1;
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("Slot {} usage count increased to {}", slot.index, usedBy);
         }
@@ -204,20 +206,19 @@ public class LRUBlockCache implements BlockCache {
             @Override
             public boolean readTo(ByteBuffer buffer) {
                 synchronized (LRUBlockCache.this) {
-                    if (buffer.remaining() < block.remaining()) {
-                        return false;
+                    try {
+                        if (buffer.remaining() < block.remaining()) {
+                            return false;
+                        }
+                        buffer.put(block);
+                        block.clear();
+                        return true;
+                    } finally {
+                        int usedBy = slot.currentUsers -= 1;
+                        if (LOGGER.isTraceEnabled()) {
+                            LOGGER.trace("Slot {} usage count decreased to {}", slot.index, usedBy);
+                        }
                     }
-                    buffer.put(block);
-                    block.clear();
-                    return true;
-                }
-            }
-
-            @Override
-            public void close() {
-                int usedBy = slot.currentUsers.decrementAndGet();
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Slot {} usage count decreased to {}", slot.index, usedBy);
                 }
             }
         };
@@ -226,12 +227,12 @@ public class LRUBlockCache implements BlockCache {
     private static class Slot {
         private final int index;
         private final ByteBuffer buffer;
-        private final AtomicInteger currentUsers;
+        private int currentUsers;
 
         private Slot(int index, ByteBuffer buffer) {
             this.index = index;
             this.buffer = buffer;
-            this.currentUsers = new AtomicInteger(0);
+            this.currentUsers = 0;
         }
     }
 }

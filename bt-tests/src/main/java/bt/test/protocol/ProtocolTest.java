@@ -207,20 +207,12 @@ public class ProtocolTest {
     }
 
     public static BlockReader asBlockReader(byte[] bytes) {
-        return new BlockReader() {
-            @Override
-            public boolean readTo(ByteBuffer buffer) {
-                if (buffer.remaining() < bytes.length) {
-                    return false;
-                }
-                buffer.put(bytes);
-                return true;
+        return buffer -> {
+            if (buffer.remaining() < bytes.length) {
+                return false;
             }
-
-            @Override
-            public void close() {
-                // do nothing
-            }
+            buffer.put(bytes);
+            return true;
         };
     }
 }

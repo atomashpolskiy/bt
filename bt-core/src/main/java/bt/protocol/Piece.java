@@ -79,15 +79,7 @@ public final class Piece implements Message {
 
     public boolean writeBlockTo(ByteBuffer buffer) {
         Objects.requireNonNull(reader);
-        try {
-            return reader.readTo(buffer);
-        } finally {
-            try {
-                reader.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+        return reader.readTo(buffer);
     }
 
     @Override

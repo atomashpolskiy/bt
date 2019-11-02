@@ -43,13 +43,16 @@ public class NoCache implements BlockCache {
         return new BlockReader() {
             @Override
             public boolean readTo(ByteBuffer buffer) {
-                return data.getSubrange(offset, length)
-                        .getBytes(buffer);
-            }
-
-            @Override
-            public void close() {
-                // do nothing
+                int bufferRemaining = buffer.remaining();
+                if (!data.getSubrange(offset, length)
+                        .getBytes(buffer)) {
+                    throw new IllegalStateException("Failed to read data to buffer:" +
+                            " piece index {" + pieceIndex + "}," +
+                            " offset {" + offset + "}," +
+                            " length: {" + length + "}," +
+                            " buffer space {" + bufferRemaining + "}");
+                }
+                return true;
             }
         };
     }
