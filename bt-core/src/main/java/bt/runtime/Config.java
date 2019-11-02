@@ -56,6 +56,7 @@ public class Config {
     private int metadataExchangeMaxSize;
     private int msePrivateKeySize;
     private int numberOfPeersToRequestFromTracker;
+    private int maxOutstandingRequests;
 
     /**
      * Create a config with default parameters.
@@ -90,6 +91,7 @@ public class Config {
         this.metadataExchangeMaxSize = 2 * 1024 * 1024; // 2 MB
         this.msePrivateKeySize = 20; // 20 bytes
         this.numberOfPeersToRequestFromTracker = 50;
+        this.maxOutstandingRequests = 250;
     }
 
     /**
@@ -126,6 +128,7 @@ public class Config {
         this.metadataExchangeMaxSize = config.getMetadataExchangeMaxSize();
         this.msePrivateKeySize = config.getMsePrivateKeySize();
         this.numberOfPeersToRequestFromTracker = config.getNumberOfPeersToRequestFromTracker();
+        this.maxOutstandingRequests = config.getMaxOutstandingRequests();
     }
 
     /**
@@ -565,5 +568,20 @@ public class Config {
      */
     public int getNumberOfPeersToRequestFromTracker() {
         return numberOfPeersToRequestFromTracker;
+    }
+
+    /**
+     * @param maxOutstandingRequests Limit on the number of outstanding requests to a peer
+     * @since 1.9
+     */
+    public void setMaxOutstandingRequests(int maxOutstandingRequests) {
+        this.maxOutstandingRequests = maxOutstandingRequests;
+    }
+
+    /**
+     * @since 1.9
+     */
+    public int getMaxOutstandingRequests() {
+        return maxOutstandingRequests;
     }
 }

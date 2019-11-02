@@ -44,14 +44,14 @@ public class RequestProducer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RequestProducer.class);
 
-    private static final int MAX_PENDING_REQUESTS = 5;
-
     private Bitfield bitfield;
     private List<ChunkDescriptor> chunks;
+    private final int maxOutstandingRequests;
 
-    public RequestProducer(DataDescriptor dataDescriptor) {
+    public RequestProducer(DataDescriptor dataDescriptor, int maxOutstandingRequests) {
         this.bitfield = dataDescriptor.getBitfield();
         this.chunks = dataDescriptor.getChunkDescriptors();
+        this.maxOutstandingRequests = maxOutstandingRequests;
     }
 
     @Produces
@@ -99,7 +99,7 @@ public class RequestProducer {
         }
 
         Queue<Request> requestQueue = connectionState.getRequestQueue();
-        while (!requestQueue.isEmpty() && connectionState.getPendingRequests().size() <= MAX_PENDING_REQUESTS) {
+        while (!requestQueue.isEmpty() && connectionState.getPendingRequests().size() <= maxOutstandingRequests) {
             Request request = requestQueue.poll();
             Object key = Mapper.mapper().buildKey(request.getPieceIndex(), request.getOffset(), request.getLength());
             messageConsumer.accept(request);
