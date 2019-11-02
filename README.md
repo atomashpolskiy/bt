@@ -162,7 +162,7 @@ To allow you test the changes that you've made to the core, **Bt** ships with a 
 
 ### Parallel downloads
 
-**Bt** has out-of-the-box support for multiple simultaneous torrent sessions with minimal system overhead. 1% CPU and 32M of RAM should be enough for everyone!
+**Bt** has out-of-the-box support for multiple simultaneous torrent sessions with minimal system overhead.
 
 ### Partial downloads
 
