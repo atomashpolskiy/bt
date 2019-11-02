@@ -28,12 +28,12 @@ import java.util.function.Function;
  *
  * @since 1.3
  */
-class SynchronizedDataRange<T extends Range<T>> implements DataRange, DelegatingRange<T> {
+public class SynchronizedDataRange<T extends Range<T>> implements DataRange, DelegatingRange<T> {
 
     private SynchronizedRange<T> delegate;
     private Function<T, DataRange> converter;
 
-    SynchronizedDataRange(SynchronizedRange<T> delegate, Function<T, DataRange> converter) {
+    public SynchronizedDataRange(SynchronizedRange<T> delegate, Function<T, DataRange> converter) {
         this.delegate = delegate;
         this.converter = converter;
     }

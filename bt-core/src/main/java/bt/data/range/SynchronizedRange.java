@@ -27,7 +27,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * @since 1.2
  */
-class SynchronizedRange<T extends Range<T>> implements Range<T>, DelegatingRange<T> {
+public class SynchronizedRange<T extends Range<T>> implements Range<T>, DelegatingRange<T> {
 
     private final Range<T> delegate;
 
@@ -41,7 +41,7 @@ class SynchronizedRange<T extends Range<T>> implements Range<T>, DelegatingRange
      *
      * @since 1.2
      */
-    SynchronizedRange(Range<T> delegate) {
+    public SynchronizedRange(Range<T> delegate) {
         this.delegate = delegate;
         this.lock = new ReentrantReadWriteLock();
     }

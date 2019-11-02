@@ -28,7 +28,7 @@ import java.util.function.Function;
  *
  * @since 1.3
  */
-class DelegatingDataRange<T extends Range<T>> implements DataRange, DelegatingRange<T> {
+public class DelegatingDataRange<T extends Range<T>> implements DataRange, DelegatingRange<T> {
 
     private Range<T> delegate;
     private Function<Range<T>, DataRange> converter;

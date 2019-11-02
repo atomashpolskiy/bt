@@ -19,6 +19,9 @@ package bt.data;
 import bt.BtException;
 import bt.data.range.BlockRange;
 import bt.data.range.Ranges;
+import bt.data.range.SynchronizedBlockSet;
+import bt.data.range.SynchronizedDataRange;
+import bt.data.range.SynchronizedRange;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 import org.slf4j.Logger;
@@ -139,8 +142,10 @@ class DefaultDataDescriptor implements DataDescriptor {
 
     private ChunkDescriptor buildChunkDescriptor(DataRange data, long blockSize, byte[] checksum) {
         BlockRange<DataRange> blockData = Ranges.blockRange(data, blockSize);
-        DataRange synchronizedData = Ranges.synchronizedDataRange(blockData);
-        BlockSet synchronizedBlockSet = Ranges.synchronizedBlockSet(blockData.getBlockSet());
+        SynchronizedRange<BlockRange<DataRange>> synchronizedRange = new SynchronizedRange<>(blockData);
+        SynchronizedDataRange<BlockRange<DataRange>> synchronizedData =
+                new SynchronizedDataRange<>(synchronizedRange, BlockRange::getDelegate);
+        SynchronizedBlockSet synchronizedBlockSet = new SynchronizedBlockSet(blockData.getBlockSet(), synchronizedRange);
 
         return new DefaultChunkDescriptor(synchronizedData, synchronizedBlockSet, checksum);
     }

@@ -20,7 +20,7 @@ import bt.data.BlockSet;
 
 import java.util.BitSet;
 
-class MutableBlockSet implements BlockSet {
+public class MutableBlockSet implements BlockSet {
 
     private final long length;
     private final long blockSize;
