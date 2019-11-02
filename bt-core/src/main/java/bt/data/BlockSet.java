@@ -83,4 +83,11 @@ public interface BlockSet {
      * @since 1.2
      */
     boolean isEmpty();
+
+    /**
+     * Reset block presence information (may not perform actual deletion of data)
+     *
+     * @since 1.9
+     */
+    void clear();
 }

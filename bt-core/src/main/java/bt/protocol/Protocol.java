@@ -16,7 +16,8 @@
 
 package bt.protocol;
 
-import java.nio.ByteBuffer;
+import bt.net.buffer.ByteBufferView;
+
 import java.util.Collection;
 
 /**
@@ -47,5 +48,5 @@ public interface Protocol<T> {
      * @throws InvalidMessageException if prefix is invalid or the message type is not supported
      * @since 1.0
      */
-    Class<? extends T> readMessageType(ByteBuffer buffer);
+    Class<? extends T> readMessageType(ByteBufferView buffer);
 }

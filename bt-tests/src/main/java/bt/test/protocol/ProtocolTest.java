@@ -16,10 +16,13 @@
 
 package bt.test.protocol;
 
+import bt.net.buffer.ByteBufferView;
+import bt.net.buffer.DelegatingByteBufferView;
 import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
+import bt.torrent.data.BlockReader;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -111,11 +114,12 @@ public class ProtocolTest {
                                                          byte[] data) throws Exception {
 
         ByteBuffer buffer = ByteBuffer.wrap(data).asReadOnlyBuffer();
+        ByteBufferView bufferView = new DelegatingByteBufferView(buffer);
         buffer.mark();
 
         byte[] copy = Arrays.copyOf(data, data.length);
 
-        Class<? extends Message> actualType = protocol.readMessageType(buffer);
+        Class<? extends Message> actualType = protocol.readMessageType(bufferView);
         buffer.reset();
         if (expectedType == null) {
             assertNull(actualType);
@@ -124,7 +128,7 @@ public class ProtocolTest {
         }
 
         DecodingContext context = decodingContextSupplier.get();
-        int consumed = protocol.decode(context, buffer);
+        int consumed = protocol.decode(context, bufferView);
         buffer.reset();
 
         // check that buffer is not changed
@@ -150,13 +154,14 @@ public class ProtocolTest {
                               byte[] data) throws Exception {
 
         ByteBuffer in = ByteBuffer.wrap(data).asReadOnlyBuffer();
+        ByteBufferView inView = new DelegatingByteBufferView(in);
         in.mark();
 
-        assertEquals(expectedMessage.getClass(), protocol.readMessageType(in));
+        assertEquals(expectedMessage.getClass(), protocol.readMessageType(inView));
         in.reset();
 
         DecodingContext context = decodingContextSupplier.get();
-        int consumed = protocol.decode(context, in);
+        int consumed = protocol.decode(context, inView);
         in.reset();
 
         assertEquals(expectedBytesConsumed, consumed);
@@ -199,5 +204,15 @@ public class ProtocolTest {
         } else {
             assertTrue("Messages of type '" + expectedType.getName() + "' do not match", defaultMatcher.test(expected, actual));
         }
+    }
+
+    public static BlockReader asBlockReader(byte[] bytes) {
+        return buffer -> {
+            if (buffer.remaining() < bytes.length) {
+                return false;
+            }
+            buffer.put(bytes);
+            return true;
+        };
     }
 }

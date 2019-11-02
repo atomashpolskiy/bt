@@ -16,6 +16,9 @@
 
 package bt.data.range;
 
+import bt.net.buffer.ByteBufferView;
+
+import java.nio.ByteBuffer;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -24,7 +27,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * @since 1.2
  */
-class SynchronizedRange<T extends Range<T>> implements Range<T>, DelegatingRange<T> {
+public class SynchronizedRange<T extends Range<T>> implements Range<T>, DelegatingRange<T> {
 
     private final Range<T> delegate;
 
@@ -38,7 +41,7 @@ class SynchronizedRange<T extends Range<T>> implements Range<T>, DelegatingRange
      *
      * @since 1.2
      */
-    SynchronizedRange(Range<T> delegate) {
+    public SynchronizedRange(Range<T> delegate) {
         this.delegate = delegate;
         this.lock = new ReentrantReadWriteLock();
     }
@@ -105,7 +108,17 @@ class SynchronizedRange<T extends Range<T>> implements Range<T>, DelegatingRange
         }
     }
 
-     /**
+    @Override
+    public boolean getBytes(ByteBuffer buffer) {
+        lock.readLock().lock();
+        try {
+            return delegate.getBytes(buffer);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
      * {@inheritDoc}
      *
      * Blocks current thread if there are concurrent read or write operations in progress.
@@ -118,6 +131,16 @@ class SynchronizedRange<T extends Range<T>> implements Range<T>, DelegatingRange
         lock.writeLock().lock();
         try {
             delegate.putBytes(block);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    @Override
+    public void putBytes(ByteBufferView buffer) {
+        lock.writeLock().lock();
+        try {
+            delegate.putBytes(buffer);
         } finally {
             lock.writeLock().unlock();
         }

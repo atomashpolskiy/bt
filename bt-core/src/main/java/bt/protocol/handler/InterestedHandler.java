@@ -16,6 +16,7 @@
 
 package bt.protocol.handler;
 
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.EncodingContext;
 import bt.protocol.Interested;
 import bt.protocol.DecodingContext;
@@ -31,7 +32,7 @@ public final class InterestedHandler extends UniqueMessageHandler<Interested> {
     }
 
     @Override
-    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+    public int doDecode(DecodingContext context, ByteBufferView buffer) {
         verifyPayloadHasLength(Interested.class, 0, buffer.remaining());
         context.setMessage(Interested.instance());
         return 0;

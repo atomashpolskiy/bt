@@ -18,6 +18,7 @@ package bt.peerexchange;
 
 import bt.bencoding.BEParser;
 import bt.bencoding.model.BEMap;
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
 import bt.protocol.handler.MessageHandler;
@@ -42,12 +43,12 @@ class PeerExchangeMessageHandler implements MessageHandler<PeerExchange> {
     }
 
     @Override
-    public Class<PeerExchange> readMessageType(ByteBuffer buffer) {
+    public Class<PeerExchange> readMessageType(ByteBufferView buffer) {
         return PeerExchange.class;
     }
 
     @Override
-    public int decode(DecodingContext context, ByteBuffer buffer) {
+    public int decode(DecodingContext context, ByteBufferView buffer) {
 
         byte[] payload = new byte[buffer.remaining()];
         buffer.get(payload);

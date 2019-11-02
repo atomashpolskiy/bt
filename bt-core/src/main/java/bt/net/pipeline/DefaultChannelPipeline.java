@@ -24,24 +24,15 @@ import bt.protocol.handler.MessageHandler;
 
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class DefaultChannelPipeline implements ChannelPipeline {
 
-    private final MessageDeserializer deserializer;
+    private final InboundMessageProcessor inboundMessageProcessor;
     private final MessageSerializer serializer;
 
     private final BorrowedBuffer<ByteBuffer> inboundBuffer;
     private final BorrowedBuffer<ByteBuffer> outboundBuffer;
-    private final List<BufferMutator> decoders;
     private final List<BufferMutator> encoders;
-
-    private final Queue<Message> inboundQueue;
-
-    // inbound buffer parameters
-    private int decodedDataOffset;
-    private int undecodedDataOffset;
 
     private DefaultChannelHandlerContext context;
 
@@ -51,17 +42,22 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             BorrowedBuffer<ByteBuffer> inboundBuffer,
             BorrowedBuffer<ByteBuffer> outboundBuffer,
             List<BufferMutator> decoders,
-            List<BufferMutator> encoders) {
+            List<BufferMutator> encoders,
+            IBufferedPieceRegistry bufferedPieceRegistry) {
 
-        this.deserializer = new MessageDeserializer(peer, protocol);
+        ByteBuffer buffer;
+        try {
+            buffer = inboundBuffer.lockAndGet();
+        } finally {
+            inboundBuffer.unlock();
+        }
+
+        this.inboundMessageProcessor = new InboundMessageProcessor(peer, buffer,
+                new MessageDeserializer(peer, protocol), decoders, bufferedPieceRegistry);
         this.serializer = new MessageSerializer(peer, protocol);
-
         this.inboundBuffer = inboundBuffer;
         this.outboundBuffer = outboundBuffer;
-
-        this.decoders = decoders;
         this.encoders = encoders;
-        this.inboundQueue = new LinkedBlockingQueue<>();
 
         // process existing data immediately (e.g. there might be leftovers from MSE handshake)
         fireDataReceived();
@@ -71,62 +67,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public Message decode() {
         checkHandlerIsBound();
 
-        return inboundQueue.poll();
+        return inboundMessageProcessor.pollMessage();
     }
 
     private void fireDataReceived() {
-        ByteBuffer buffer = inboundBuffer.lockAndGet();
         try {
-            processInboundData(buffer);
+            inboundBuffer.lockAndGet();
+            inboundMessageProcessor.processInboundData();
         } finally {
             inboundBuffer.unlock();
-        }
-    }
-
-    private void processInboundData(ByteBuffer buffer) {
-        int undecodedDataLimit = buffer.position();
-        if (undecodedDataOffset <= undecodedDataLimit) {
-            if (undecodedDataOffset < undecodedDataLimit) {
-                buffer.flip();
-                decoders.forEach(mutator -> {
-                    buffer.position(undecodedDataOffset);
-                    mutator.mutate(buffer);
-                });
-                undecodedDataOffset = undecodedDataLimit;
-                buffer.clear();
-                buffer.position(undecodedDataOffset);
-            }
-
-            if (decodedDataOffset < undecodedDataOffset) {
-                buffer.position(decodedDataOffset);
-                buffer.limit(undecodedDataOffset);
-                Message message;
-                for (; ; ) {
-                    message = deserializer.deserialize(buffer);
-                    if (message == null) {
-                        break;
-                    } else {
-                        inboundQueue.add(message);
-                        decodedDataOffset = buffer.position();
-                    }
-                }
-
-                buffer.clear();
-                buffer.position(undecodedDataOffset);
-                if (!buffer.hasRemaining()) {
-                    buffer.position(decodedDataOffset);
-                    buffer.compact();
-                    undecodedDataOffset -= decodedDataOffset;
-                    buffer.position(undecodedDataOffset);
-                    decodedDataOffset = 0;
-                }
-            } else if (decodedDataOffset == undecodedDataOffset) {
-                buffer.clear();
-            } if (decodedDataOffset > undecodedDataOffset) {
-                throw new IllegalStateException("decodedDataOffset > undecodedDataOffset: " + decodedDataOffset + " > " + undecodedDataOffset);
-            }
-        } else if (undecodedDataOffset > undecodedDataLimit) {
-            throw new IllegalStateException("undecodedDataOffset > undecodedDataLimit: " + undecodedDataOffset + " > " + undecodedDataLimit);
         }
     }
 
@@ -137,6 +86,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         ByteBuffer buffer = outboundBuffer.lockAndGet();
         if (buffer == null) {
             // buffer has been released
+            // TODO: So what? Maybe throw an exception then?
             return false;
         }
 
@@ -203,8 +153,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void fireChannelReady() {
-            handler.read();
+        public boolean readFromChannel() {
+            return handler.read();
         }
 
         @Override

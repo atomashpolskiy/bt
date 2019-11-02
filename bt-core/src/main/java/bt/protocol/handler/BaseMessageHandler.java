@@ -17,6 +17,7 @@
 package bt.protocol.handler;
 
 import bt.BtException;
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.EncodingContext;
 import bt.protocol.Message;
 import bt.protocol.DecodingContext;
@@ -81,7 +82,7 @@ public abstract class BaseMessageHandler<T extends Message> implements MessageHa
     protected abstract boolean doEncode(EncodingContext context, T message, ByteBuffer buffer);
 
     @Override
-    public int decode(DecodingContext context, ByteBuffer buffer) {
+    public int decode(DecodingContext context, ByteBufferView buffer) {
 
         if (buffer.remaining() < MESSAGE_PREFIX_SIZE) {
             return 0;
@@ -116,5 +117,5 @@ public abstract class BaseMessageHandler<T extends Message> implements MessageHa
      *               Message payload starts precisely at buffer's {@link Buffer#position()}.
      * @since 1.0
      */
-    protected abstract int doDecode(DecodingContext context, ByteBuffer buffer);
+    protected abstract int doDecode(DecodingContext context, ByteBufferView buffer);
 }

@@ -77,9 +77,9 @@ public class SocketChannelHandler implements ChannelHandler {
     }
 
     @Override
-    public void read() {
+    public boolean read() {
         try {
-            processInboundData();
+            return processInboundData();
         } catch (Exception e) {
             shutdown();
             throw new RuntimeException("Unexpected error", e);
@@ -110,33 +110,23 @@ public class SocketChannelHandler implements ChannelHandler {
         context.fireChannelInactive();
     }
 
-    private void processInboundData() throws IOException {
+    private boolean processInboundData() throws IOException {
         synchronized (inboundBufferLock) {
             ByteBuffer buffer = inboundBuffer.lockAndGet();
-
             try {
-                int readLast, readTotal = 0;
-                boolean processed = false;
-                while ((readLast = channel.read(buffer)) > 0) {
-                    processed = false;
-                    readTotal += readLast;
-                    if (!buffer.hasRemaining()) {
-                        // TODO: currently this will be executed in the same thread,
-                        // but still would be nice to unlock the buffer prior to firing the event,
-                        // so that in future we would not need to rewrite this part of code
-                        context.fireDataReceived();
-                        processed = true;
-                        if (!buffer.hasRemaining()) {
-                            throw new IOException("Can't receive data: insufficient space in the incoming buffer");
-                        }
-                    }
-                }
-                if (readTotal > 0 && !processed) {
+                do {
+                    int readLast;
+                    while ((readLast = channel.read(buffer)) > 0)
+                        ;
+                    boolean insufficientSpace = !buffer.hasRemaining();
                     context.fireDataReceived();
-                }
-                if (readLast == -1) {
-                    throw new EOFException();
-                }
+                    if (readLast == -1) {
+                        throw new EOFException();
+                    } else if (!insufficientSpace) {
+                        return true;
+                    }
+                } while (buffer.hasRemaining());
+                return false;
             } finally {
                 inboundBuffer.unlock();
             }

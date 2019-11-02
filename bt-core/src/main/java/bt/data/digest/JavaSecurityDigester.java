@@ -20,8 +20,10 @@ import bt.BtException;
 import bt.data.DataRange;
 import bt.data.range.Range;
 
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 public class JavaSecurityDigester implements Digester {
 
@@ -52,8 +54,54 @@ public class JavaSecurityDigester implements Digester {
             if (remaining > Integer.MAX_VALUE) {
                 throw new BtException("Too much data -- can't read to buffer");
             }
+            byte[] bytes = new byte[step];
             do {
-                digest.update(unit.readBlock(off, Math.min(step, (int) remaining)));
+                if (remaining < step) {
+                    bytes = new byte[(int) remaining];
+                }
+                int read = unit.readBlock(bytes, off);
+                if (read == -1) {
+                    // end of data, terminate
+                    return false;
+                } else if (read < bytes.length) {
+                    digest.update(Arrays.copyOfRange(bytes, 0, read));
+                    remaining -= read;
+                    off += read;
+                } else {
+                    digest.update(bytes);
+                    remaining -= step;
+                    off += step;
+                }
+            } while (remaining > 0);
+
+            return true;
+        });
+
+        return digest.digest();
+    }
+
+    @Override
+    public byte[] digestForced(DataRange data) {
+        MessageDigest digest = createDigest();
+
+        data.visitUnits((unit, off, lim) -> {
+            long remaining = lim - off;
+            if (remaining > Integer.MAX_VALUE) {
+                throw new BtException("Too much data -- can't read to buffer");
+            }
+            byte[] bytes = new byte[step];
+            ByteBuffer buffer = ByteBuffer.wrap(bytes);
+            do {
+                if (remaining < step) {
+                    bytes = new byte[(int) remaining];
+                    buffer = ByteBuffer.wrap(bytes);
+                }
+                buffer.clear();
+                unit.readBlockFully(buffer, off);
+                if (buffer.hasRemaining()) {
+                    throw new IllegalStateException("Failed to read data fully: " + buffer.remaining() + " bytes remaining");
+                }
+                digest.update(bytes);
                 remaining -= step;
                 off += step;
             } while (remaining > 0);

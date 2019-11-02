@@ -17,6 +17,7 @@
 package bt.protocol.handler;
 
 import bt.BtException;
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
@@ -42,7 +43,7 @@ public final class PortMessageHandler extends UniqueMessageHandler<Port> {
     }
 
     @Override
-    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+    public int doDecode(DecodingContext context, ByteBufferView buffer) {
         verifyPayloadHasLength(Port.class, EXPECTED_PAYLOAD_LENGTH, buffer.remaining());
         return decodePort(context, buffer);
     }
@@ -65,7 +66,7 @@ public final class PortMessageHandler extends UniqueMessageHandler<Port> {
         return true;
     }
 
-    private static int decodePort(DecodingContext context, ByteBuffer buffer) throws InvalidMessageException {
+    private static int decodePort(DecodingContext context, ByteBufferView buffer) throws InvalidMessageException {
         int consumed = 0;
         int length = Short.BYTES;
 

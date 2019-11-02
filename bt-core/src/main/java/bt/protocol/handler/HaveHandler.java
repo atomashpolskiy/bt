@@ -16,6 +16,7 @@
 
 package bt.protocol.handler;
 
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.EncodingContext;
 import bt.protocol.Have;
 import bt.protocol.InvalidMessageException;
@@ -34,7 +35,7 @@ public final class HaveHandler extends UniqueMessageHandler<Have> {
     }
 
     @Override
-    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+    public int doDecode(DecodingContext context, ByteBufferView buffer) {
         verifyPayloadHasLength(Have.class, 4, buffer.remaining());
         return decodeHave(context, buffer);
     }
@@ -57,7 +58,7 @@ public final class HaveHandler extends UniqueMessageHandler<Have> {
         return true;
     }
 
-    private static int decodeHave(DecodingContext context, ByteBuffer buffer) {
+    private static int decodeHave(DecodingContext context, ByteBufferView buffer) {
 
         int consumed = 0;
         int length = Integer.BYTES;

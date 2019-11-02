@@ -18,6 +18,7 @@ package bt.test.protocol;
 
 import bt.protocol.Piece;
 
+import java.nio.ByteBuffer;
 import java.util.function.BiPredicate;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -29,7 +30,14 @@ final class PieceMatcher implements BiPredicate<Piece, Piece> {
     public boolean test(Piece piece, Piece piece2) {
         assertEquals(piece.getPieceIndex(), piece.getPieceIndex());
         assertEquals(piece.getOffset(), piece.getOffset());
-        assertArrayEquals(piece.getBlock(), piece.getBlock());
+
+        ByteBuffer buf1 = ByteBuffer.allocate(piece.getLength());
+        ByteBuffer buf2 = ByteBuffer.allocate(piece.getLength());
+
+        piece.writeBlockTo(buf1);
+        piece2.writeBlockTo(buf2);
+
+        assertArrayEquals(buf1.array(), buf2.array());
         return true;
     }
 }

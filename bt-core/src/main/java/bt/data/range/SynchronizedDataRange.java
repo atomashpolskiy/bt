@@ -18,7 +18,9 @@ package bt.data.range;
 
 import bt.data.DataRange;
 import bt.data.DataRangeVisitor;
+import bt.net.buffer.ByteBufferView;
 
+import java.nio.ByteBuffer;
 import java.util.function.Function;
 
 /**
@@ -26,12 +28,12 @@ import java.util.function.Function;
  *
  * @since 1.3
  */
-class SynchronizedDataRange<T extends Range<T>> implements DataRange, DelegatingRange<T> {
+public class SynchronizedDataRange<T extends Range<T>> implements DataRange, DelegatingRange<T> {
 
     private SynchronizedRange<T> delegate;
     private Function<T, DataRange> converter;
 
-    SynchronizedDataRange(SynchronizedRange<T> delegate, Function<T, DataRange> converter) {
+    public SynchronizedDataRange(SynchronizedRange<T> delegate, Function<T, DataRange> converter) {
         this.delegate = delegate;
         this.converter = converter;
     }
@@ -67,8 +69,18 @@ class SynchronizedDataRange<T extends Range<T>> implements DataRange, Delegating
     }
 
     @Override
+    public boolean getBytes(ByteBuffer buffer) {
+        return delegate.getBytes(buffer);
+    }
+
+    @Override
     public void putBytes(byte[] block) {
         delegate.putBytes(block);
+    }
+
+    @Override
+    public void putBytes(ByteBufferView buffer) {
+        delegate.putBytes(buffer);
     }
 
     @Override

@@ -86,4 +86,9 @@ class DefaultChunkDescriptor implements ChunkDescriptor {
     public boolean isEmpty() {
         return blockSet.isEmpty();
     }
+
+    @Override
+    public void clear() {
+        blockSet.clear();
+    }
 }

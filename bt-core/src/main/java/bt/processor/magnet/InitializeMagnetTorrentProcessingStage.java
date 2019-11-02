@@ -20,6 +20,7 @@ import bt.data.Bitfield;
 import bt.event.EventSink;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
+import bt.net.pipeline.IBufferedPieceRegistry;
 import bt.processor.ProcessingStage;
 import bt.processor.listener.ProcessingEvent;
 import bt.processor.torrent.InitializeTorrentProcessingStage;
@@ -27,7 +28,7 @@ import bt.protocol.BitOrder;
 import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.TorrentRegistry;
-import bt.torrent.data.IDataWorkerFactory;
+import bt.torrent.data.DataWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,10 +42,11 @@ public class InitializeMagnetTorrentProcessingStage extends InitializeTorrentPro
 
     public InitializeMagnetTorrentProcessingStage(ProcessingStage<MagnetContext> next,
                                                   TorrentRegistry torrentRegistry,
-                                                  IDataWorkerFactory dataWorkerFactory,
+                                                  DataWorker dataWorker,
+                                                  IBufferedPieceRegistry bufferedPieceRegistry,
                                                   EventSink eventSink,
                                                   Config config) {
-        super(next, torrentRegistry, dataWorkerFactory, eventSink, config);
+        super(next, torrentRegistry, dataWorker, bufferedPieceRegistry, eventSink, config);
         this.eventSink = eventSink;
     }
 

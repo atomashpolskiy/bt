@@ -30,11 +30,24 @@ public interface Digester {
     /**
      * Calculates hash of a data range.
      *
+     * Important: If some of the data can't be read immediately
+     * (e.g. due to idiosyncrasies of underlying storage),
+     * then this method may return incorrect result.
+     *
      * @return Hash (depends on the algorithm being used)
      *
      * @since 1.2
      */
     byte[] digest(DataRange data);
+
+    /**
+     * Calculates hash of a data range.
+     *
+     * @return Hash (depends on the algorithm being used)
+     *
+     * @since 1.9
+     */
+    byte[] digestForced(DataRange data);
 
     /**
      * Calculates hash of a binary range.

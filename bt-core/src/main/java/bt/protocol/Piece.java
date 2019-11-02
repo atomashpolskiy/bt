@@ -16,27 +16,44 @@
 
 package bt.protocol;
 
+import bt.torrent.data.BlockReader;
+import com.google.common.base.MoreObjects;
+
+import java.nio.ByteBuffer;
+import java.util.Objects;
+
 /**
  * @since 1.0
  */
 public final class Piece implements Message {
 
-    private int pieceIndex;
-    private int offset;
-    private byte[] block;
+    private final int pieceIndex;
+    private final int offset;
+    private final int length;
+    private final BlockReader reader;
 
-    /**
-     * @since 1.0
-     */
-    public Piece(int pieceIndex, int offset, byte[] block) throws InvalidMessageException {
-
-        if (pieceIndex < 0 || offset < 0 || block.length == 0) {
+    // TODO: using BlockReader here is sloppy... just temporary
+    public Piece(int pieceIndex, int offset, int length, BlockReader reader) throws InvalidMessageException {
+        if (pieceIndex < 0 || offset < 0 || length <= 0) {
             throw new InvalidMessageException("Invalid arguments: piece index (" +
-                    pieceIndex + "), offset (" + offset + "), block length (" + block.length + ")");
+                    pieceIndex + "), offset (" + offset + "), block length (" + length + ")");
         }
         this.pieceIndex = pieceIndex;
         this.offset = offset;
-        this.block = block;
+        this.length = length;
+        this.reader = reader;
+    }
+
+    // TODO: Temporary (used only for incoming pieces)
+    public Piece(int pieceIndex, int offset, int length) throws InvalidMessageException {
+        if (pieceIndex < 0 || offset < 0 || length <= 0) {
+            throw new InvalidMessageException("Invalid arguments: piece index (" +
+                    pieceIndex + "), offset (" + offset + "), block length (" + length + ")");
+        }
+        this.pieceIndex = pieceIndex;
+        this.offset = offset;
+        this.length = length;
+        this.reader = null;
     }
 
     /**
@@ -54,16 +71,24 @@ public final class Piece implements Message {
     }
 
     /**
-     * @since 1.0
+     * @since 1.9
      */
-    public byte[] getBlock() {
-        return block;
+    public int getLength() {
+        return length;
+    }
+
+    public boolean writeBlockTo(ByteBuffer buffer) {
+        Objects.requireNonNull(reader);
+        return reader.readTo(buffer);
     }
 
     @Override
     public String toString() {
-        return "[" + this.getClass().getSimpleName() + "] piece index {" + pieceIndex + "}, offset {" + offset +
-                "}, block {" + block.length + " bytes}";
+        return MoreObjects.toStringHelper(this)
+                .add("pieceIndex", pieceIndex)
+                .add("offset", offset)
+                .add("length", length)
+                .toString();
     }
 
     @Override

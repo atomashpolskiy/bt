@@ -18,6 +18,7 @@ package yourip;
 
 import bt.bencoding.BEParser;
 import bt.bencoding.model.BEMap;
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
 import bt.protocol.handler.MessageHandler;
@@ -48,7 +49,7 @@ public class YourIPMessageHandler implements MessageHandler<YourIP> {
     }
 
     @Override
-    public int decode(DecodingContext context, ByteBuffer buffer) {
+    public int decode(DecodingContext context, ByteBufferView buffer) {
         byte[] payload = new byte[buffer.remaining()];
         buffer.get(payload);
         try (BEParser parser = new BEParser(payload)) {
@@ -65,7 +66,7 @@ public class YourIPMessageHandler implements MessageHandler<YourIP> {
     }
 
     @Override
-    public Class<? extends YourIP> readMessageType(ByteBuffer buffer) {
+    public Class<? extends YourIP> readMessageType(ByteBufferView buffer) {
         return YourIP.class;
     }
 }

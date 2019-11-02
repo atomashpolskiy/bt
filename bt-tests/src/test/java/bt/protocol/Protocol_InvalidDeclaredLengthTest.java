@@ -16,6 +16,8 @@
 
 package bt.protocol;
 
+import bt.net.buffer.ByteBufferView;
+import bt.net.buffer.DelegatingByteBufferView;
 import bt.test.protocol.ProtocolTest;
 import org.junit.Test;
 
@@ -85,6 +87,7 @@ public class Protocol_InvalidDeclaredLengthTest {
                                                byte[] data) throws Exception {
 
         ByteBuffer buffer = ByteBuffer.wrap(data).asReadOnlyBuffer();
+        ByteBufferView bufferView = new DelegatingByteBufferView(buffer);
         buffer.mark();
 
         int payloadLength = declaredLength - 1;
@@ -94,7 +97,7 @@ public class Protocol_InvalidDeclaredLengthTest {
 
         InvalidMessageException e = null;
         try {
-            TEST.getProtocol().decode(TEST.createDecodingContext(), buffer);
+            TEST.getProtocol().decode(TEST.createDecodingContext(), bufferView);
         } catch (InvalidMessageException e1) {
             e = e1;
         }

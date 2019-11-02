@@ -18,22 +18,31 @@ package bt.data.range;
 
 import bt.data.BlockSet;
 
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @since 1.2
  */
-class SynchronizedBlockSet implements BlockSet {
+public class SynchronizedBlockSet implements BlockSet {
 
     private final BlockSet delegate;
-    private final ReentrantLock lock;
+    private final Lock lock;
 
     /**
      * @since 1.2
      */
-    SynchronizedBlockSet(BlockSet delegate) {
+    public SynchronizedBlockSet(BlockSet delegate) {
         this.delegate = delegate;
         this.lock = new ReentrantLock();
+    }
+
+    /**
+     * @since 1.9
+     */
+    public SynchronizedBlockSet(BlockSet delegate, SynchronizedRange<?> parentRange) {
+        this.delegate = delegate;
+        this.lock = parentRange.getLock().readLock();
     }
 
     @Override
@@ -81,6 +90,16 @@ class SynchronizedBlockSet implements BlockSet {
         lock.lock();
         try {
             return delegate.isEmpty();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void clear() {
+        lock.lock();
+        try {
+            delegate.clear();
         } finally {
             lock.unlock();
         }

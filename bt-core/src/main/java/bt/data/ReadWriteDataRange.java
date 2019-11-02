@@ -16,6 +16,8 @@
 
 package bt.data;
 
+import bt.net.buffer.ByteBufferView;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,7 +48,7 @@ class ReadWriteDataRange implements DataRange {
      *
      * Also, it's guaranted that the address at position n+1 is always greater than address at position n.
      */
-    private long[] fileOffsets;
+    private final long[] fileOffsets;
 
     /**
      * Create a data range.
@@ -236,6 +238,21 @@ class ReadWriteDataRange implements DataRange {
 
         byte[] block = new byte[(int) length()];
         ByteBuffer buffer = ByteBuffer.wrap(block);
+        transferToBuffer(buffer);
+        return block;
+    }
+
+    @Override
+    public boolean getBytes(ByteBuffer buffer) {
+        if (buffer.remaining() < length) {
+            return false;
+        }
+        transferToBuffer(buffer);
+        return true;
+    }
+
+    private void transferToBuffer(ByteBuffer buffer) {
+        int offset = buffer.position();
 
         visitUnits(new DataRangeVisitor() {
             int offsetInBlock = 0;
@@ -252,16 +269,17 @@ class ReadWriteDataRange implements DataRange {
                     throw new IllegalStateException("Integer overflow while constructing block");
                 }
 
-                buffer.limit(offsetInBlock + (int) len);
-                buffer.position(offsetInBlock);
-                unit.readBlock(buffer, off);
+                buffer.limit(offset + offsetInBlock + (int) len);
+                buffer.position(offset + offsetInBlock);
+                unit.readBlockFully(buffer, off);
+                if (buffer.hasRemaining()) {
+                    throw new IllegalStateException("Failed to read data fully: " + buffer.remaining() + " bytes not read");
+                }
                 offsetInBlock += len;
 
                 return true;
             }
         });
-
-        return block;
     }
 
     @Override
@@ -274,6 +292,25 @@ class ReadWriteDataRange implements DataRange {
         }
 
         ByteBuffer buffer = ByteBuffer.wrap(block).asReadOnlyBuffer();
+        transferFromBuffer(buffer);
+    }
+
+    @Override
+    public void putBytes(ByteBufferView buffer) {
+        if (!buffer.hasRemaining()) {
+            return;
+        } else if (buffer.remaining() > length()) {
+            throw new IllegalArgumentException(String.format(
+                    "Data does not fit in this range (expected max %d bytes, actual: %d)", length(), buffer.remaining()));
+        }
+
+        transferFromBuffer(buffer);
+    }
+
+    private void transferFromBuffer(ByteBuffer buffer) {
+        int blockLength = buffer.remaining();
+        int offset = buffer.position();
+
         visitUnits(new DataRangeVisitor() {
 
             int offsetInBlock = 0;
@@ -286,13 +323,46 @@ class ReadWriteDataRange implements DataRange {
                     throw new IllegalStateException("Unexpected file size -- insufficient data in block");
                 }
 
-                limitInBlock = Math.min(buffer.capacity(), offsetInBlock + (int) fileSize);
-                buffer.limit(limitInBlock);
-                buffer.position(offsetInBlock);
-                unit.writeBlock(buffer, off);
+                limitInBlock = Math.min(blockLength, offsetInBlock + (int) fileSize);
+                buffer.limit(offset + limitInBlock);
+                buffer.position(offset + offsetInBlock);
+                unit.writeBlockFully(buffer, off);
+                if (buffer.hasRemaining()) {
+                    throw new IllegalStateException("Failed to write data fully: " + buffer.remaining() + " bytes remaining");
+                }
                 offsetInBlock = limitInBlock;
 
-                return offsetInBlock < block.length - 1;
+                return offsetInBlock < blockLength - 1;
+            }
+        });
+    }
+
+    private void transferFromBuffer(ByteBufferView buffer) {
+        int blockLength = buffer.remaining();
+        int offset = buffer.position();
+
+        visitUnits(new DataRangeVisitor() {
+
+            int offsetInBlock = 0;
+            int limitInBlock;
+
+            @Override
+            public boolean visitUnit(StorageUnit unit, long off, long lim) {
+                long fileSize = lim - off;
+                if (fileSize > Integer.MAX_VALUE) {
+                    throw new IllegalStateException("Unexpected file size -- insufficient data in block");
+                }
+
+                limitInBlock = Math.min(blockLength, offsetInBlock + (int) fileSize);
+                buffer.limit(offset + limitInBlock);
+                buffer.position(offset + offsetInBlock);
+                unit.writeBlockFully(buffer, off);
+                if (buffer.hasRemaining()) {
+                    throw new IllegalStateException("Failed to write data fully: " + buffer.remaining() + " bytes remaining");
+                }
+                offsetInBlock = limitInBlock;
+
+                return offsetInBlock < blockLength - 1;
             }
         });
     }

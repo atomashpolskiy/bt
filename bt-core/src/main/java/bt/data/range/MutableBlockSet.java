@@ -20,7 +20,7 @@ import bt.data.BlockSet;
 
 import java.util.BitSet;
 
-class MutableBlockSet implements BlockSet {
+public class MutableBlockSet implements BlockSet {
 
     private final long length;
     private final long blockSize;
@@ -97,6 +97,11 @@ class MutableBlockSet implements BlockSet {
     @Override
     public boolean isEmpty() {
         return bitmask.isEmpty();
+    }
+
+    @Override
+    public void clear() {
+        bitmask.clear();
     }
 
     /*

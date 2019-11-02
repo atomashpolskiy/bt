@@ -17,6 +17,7 @@
 package bt.torrent.messaging;
 
 import bt.BtException;
+import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
@@ -42,13 +43,14 @@ import java.util.function.Consumer;
  * @since 1.0
  */
 public class PeerRequestConsumer {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerRequestConsumer.class);
 
-    private DataWorker dataWorker;
-    private Map<Peer, Queue<BlockRead>> completedRequests;
+    private final TorrentId torrentId;
+    private final DataWorker dataWorker;
+    private final Map<Peer, Queue<BlockRead>> completedRequests;
 
-    public PeerRequestConsumer(DataWorker dataWorker) {
+    public PeerRequestConsumer(TorrentId torrentId, DataWorker dataWorker) {
+        this.torrentId = torrentId;
         this.dataWorker = dataWorker;
         this.completedRequests = new ConcurrentHashMap<>();
     }
@@ -59,16 +61,11 @@ public class PeerRequestConsumer {
         if (!connectionState.isChoking()) {
             addBlockRequest(context.getPeer(), request).whenComplete((block, error) -> {
                 if (error != null) {
-                    throw new RuntimeException("Failed to perform request to read block", error);
+                    LOGGER.error("Failed to perform request to read block", error);
                 } else if (block.getError().isPresent()) {
-                    throw new RuntimeException("Failed to perform request to read block", block.getError().get());
-                }
-                if (block.isRejected()) {
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Request to read block could not be completed: " + request);
-                    }
-                    // called in the same thread, no sync needed
-                    connectionState.setShouldChoke(true);
+                    LOGGER.error("Failed to perform request to read block", block.getError().get());
+                } else if (block.isRejected()) {
+                    LOGGER.warn("Failed to perform request to read block: rejected by I/O worker");
                 } else {
                     getCompletedRequestsForPeer(context.getPeer()).add(block);
                 }
@@ -77,7 +74,7 @@ public class PeerRequestConsumer {
     }
 
     private CompletableFuture<BlockRead> addBlockRequest(Peer peer, Request request) {
-        return dataWorker.addBlockRequest(peer, request.getPieceIndex(), request.getOffset(), request.getLength());
+        return dataWorker.addBlockRequest(torrentId, peer, request.getPieceIndex(), request.getOffset(), request.getLength());
     }
 
     private Queue<BlockRead> getCompletedRequestsForPeer(Peer peer) {
@@ -99,7 +96,8 @@ public class PeerRequestConsumer {
         BlockRead block;
         while ((block = queue.poll()) != null) {
             try {
-                messageConsumer.accept(new Piece(block.getPieceIndex(), block.getOffset(), block.getBlock().get()));
+                messageConsumer.accept(new Piece(block.getPieceIndex(), block.getOffset(),
+                        block.getLength(), block.getReader().get()));
             } catch (InvalidMessageException e) {
                 throw new BtException("Failed to send PIECE", e);
             }

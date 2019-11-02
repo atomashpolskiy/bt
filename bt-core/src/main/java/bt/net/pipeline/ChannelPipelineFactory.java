@@ -32,10 +32,12 @@ import java.util.Optional;
 public class ChannelPipelineFactory implements IChannelPipelineFactory {
 
     private final IBufferManager bufferManager;
+    private final IBufferedPieceRegistry bufferedPieceRegistry;
 
     @Inject
-    public ChannelPipelineFactory(IBufferManager bufferManager) {
+    public ChannelPipelineFactory(IBufferManager bufferManager, IBufferedPieceRegistry bufferedPieceRegistry) {
         this.bufferManager = bufferManager;
+        this.bufferedPieceRegistry = bufferedPieceRegistry;
     }
 
     @Override
@@ -54,7 +56,8 @@ public class ChannelPipelineFactory implements IChannelPipelineFactory {
                 BorrowedBuffer<ByteBuffer> _inboundBuffer = inboundBuffer.orElseGet(bufferManager::borrowByteBuffer);
                 BorrowedBuffer<ByteBuffer> _outboundBuffer = outboundBuffer.orElseGet(bufferManager::borrowByteBuffer);
 
-                return new DefaultChannelPipeline(peer, protocol, _inboundBuffer, _outboundBuffer, decoders, encoders);
+                return new DefaultChannelPipeline(peer, protocol, _inboundBuffer, _outboundBuffer,
+                        decoders, encoders, bufferedPieceRegistry);
             }
         };
     }

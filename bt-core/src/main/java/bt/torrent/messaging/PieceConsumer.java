@@ -17,7 +17,10 @@
 package bt.torrent.messaging;
 
 import bt.event.EventSink;
+import bt.metainfo.TorrentId;
 import bt.net.Peer;
+import bt.net.buffer.BufferedData;
+import bt.net.pipeline.IBufferedPieceRegistry;
 import bt.protocol.Have;
 import bt.protocol.Message;
 import bt.protocol.Piece;
@@ -30,8 +33,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 
 /**
@@ -43,16 +47,24 @@ public class PieceConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PieceConsumer.class);
 
+    private final TorrentId torrentId;
     private final Bitfield bitfield;
     private final DataWorker dataWorker;
+    private final IBufferedPieceRegistry bufferedPieceRegistry;
     private final EventSink eventSink;
-    private final ConcurrentLinkedQueue<BlockWrite> completedBlocks;
+    private final Queue<Integer> completedPieces;
 
-    public PieceConsumer(Bitfield bitfield, DataWorker dataWorker, EventSink eventSink) {
+    public PieceConsumer(TorrentId torrentId,
+                         Bitfield bitfield,
+                         DataWorker dataWorker,
+                         IBufferedPieceRegistry bufferedPieceRegistry,
+                         EventSink eventSink) {
+        this.torrentId = torrentId;
         this.bitfield = bitfield;
         this.dataWorker = dataWorker;
+        this.bufferedPieceRegistry = bufferedPieceRegistry;
         this.eventSink = eventSink;
-        this.completedBlocks = new ConcurrentLinkedQueue<>();
+        this.completedPieces = new LinkedBlockingQueue<>();
     }
 
     @Consumes
@@ -61,84 +73,106 @@ public class PieceConsumer {
         ConnectionState connectionState = context.getConnectionState();
 
         // check that this block was requested in the first place
-        if (!checkBlockIsExpected(peer, connectionState, piece)) {
+        if (!checkBlockIsExpected(connectionState, piece)) {
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Discarding unexpected block {} from peer: {}", piece, peer);
+            }
+            disposeOfBlock(piece);
             return;
         }
 
         // discard blocks for pieces that have already been verified
-        if (bitfield.isVerified(piece.getPieceIndex())) {
+        if (bitfield.isComplete(piece.getPieceIndex())) {
+            disposeOfBlock(piece);
             if (LOGGER.isTraceEnabled()) {
                 LOGGER.trace(
-                        "Discarding received block because the chunk is already complete and verified: " +
+                        "Discarding received block because the chunk is already complete and/or verified: " +
                         "piece index {" + piece.getPieceIndex() + "}, " +
                         "offset {" + piece.getOffset() + "}, " +
-                        "length {" + piece.getBlock().length + "}");
+                        "length {" + piece.getLength() + "}");
             }
             return;
         }
 
-        addBlock(peer, connectionState, piece).whenComplete((block, error) -> {
-            if (error != null) {
-                throw new RuntimeException("Failed to perform request to write block", error);
-            } else if (block.getError().isPresent()) {
-                throw new RuntimeException("Failed to perform request to write block", block.getError().get());
-            }
-            if (block.isRejected()) {
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Request to write block could not be completed: " + piece);
+        CompletableFuture<BlockWrite> future = addBlock(peer, connectionState, piece);
+        if (future == null) {
+            disposeOfBlock(piece);
+        } else {
+            future.whenComplete((block, error) -> {
+                if (error != null) {
+                    LOGGER.error("Failed to perform request to write block", error);
+                } else if (block.getError().isPresent()) {
+                    LOGGER.error("Failed to perform request to write block", block.getError().get());
                 }
-            } else {
-                Optional<CompletableFuture<Boolean>> verificationFuture = block.getVerificationFuture();
-                if (verificationFuture.isPresent()) {
-                    verificationFuture.get().whenComplete((verified, error1) -> {
-                        if (error1 != null) {
-                            throw new RuntimeException("Failed to verify block", error1);
-                        }
-                        completedBlocks.add(block);
-                        eventSink.firePieceVerified(context.getTorrentId().get(), piece.getPieceIndex());
-                    });
+                if (block.isRejected()) {
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Request to write block could not be completed: " + piece);
+                    }
+                } else {
+                    Optional<CompletableFuture<Boolean>> verificationFuture = block.getVerificationFuture();
+                    if (verificationFuture.isPresent()) {
+                        verificationFuture.get().whenComplete((verified, error1) -> {
+                            if (error1 != null) {
+                                LOGGER.error("Failed to verify piece index {" + piece.getPieceIndex() + "}", error1);
+                            } else if (verified) {
+                                completedPieces.add(piece.getPieceIndex());
+                                eventSink.firePieceVerified(context.getTorrentId().get(), piece.getPieceIndex());
+                            } else {
+                                LOGGER.error("Failed to verify piece index {" + piece.getPieceIndex() + "}." +
+                                        " No error has been provided by I/O worker," +
+                                        " which means that the data itself might have been corrupted. Will re-download.");
+                            }
+                        });
+                    }
                 }
-            }
-        });
-    }
-
-    private boolean checkBlockIsExpected(Peer peer, ConnectionState connectionState, Piece piece) {
-        Object key = Mapper.mapper().buildKey(piece.getPieceIndex(), piece.getOffset(), piece.getBlock().length);
-        boolean expected = connectionState.getPendingRequests().remove(key);
-        if (!expected && LOGGER.isTraceEnabled()) {
-            LOGGER.trace("Discarding unexpected block {} from peer: {}", piece, peer);
+            });
         }
-        return expected;
     }
 
-    private CompletableFuture<BlockWrite> addBlock(Peer peer, ConnectionState connectionState, Piece piece) {
+    private void disposeOfBlock(Piece piece) {
+        BufferedData buffer = bufferedPieceRegistry.getBufferedPiece(piece.getPieceIndex(), piece.getOffset());
+        if (buffer != null) {
+            buffer.dispose();
+        }
+    }
+
+    private boolean checkBlockIsExpected(ConnectionState connectionState, Piece piece) {
+        Object key = Mapper.mapper().buildKey(piece.getPieceIndex(), piece.getOffset(), piece.getLength());
+        return connectionState.getPendingRequests().remove(key);
+    }
+
+    private /*nullable*/CompletableFuture<BlockWrite> addBlock(Peer peer, ConnectionState connectionState, Piece piece) {
         int pieceIndex = piece.getPieceIndex(),
-                offset = piece.getOffset();
+                offset = piece.getOffset(),
+                blockLength = piece.getLength();
 
-        byte[] block = piece.getBlock();
-
-        connectionState.incrementDownloaded(block.length);
+        connectionState.incrementDownloaded(piece.getLength());
         if (connectionState.getCurrentAssignment().isPresent()) {
             Assignment assignment = connectionState.getCurrentAssignment().get();
-            if (pieceIndex == assignment.getPiece()) {
+            if (assignment.isAssigned(pieceIndex)) {
                 assignment.check();
             }
         }
 
-        CompletableFuture<BlockWrite> future = dataWorker.addBlock(peer, pieceIndex, offset, block);
+        BufferedData buffer = bufferedPieceRegistry.getBufferedPiece(pieceIndex, offset);
+        if (buffer == null) {
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Buffered block has already been processed:" +
+                        " piece index (" + piece + "), offset (" + offset + ")");
+            }
+            return null;
+        }
+        CompletableFuture<BlockWrite> future = dataWorker.addBlock(torrentId, peer, pieceIndex, offset, buffer);
         connectionState.getPendingWrites().put(
-                Mapper.mapper().buildKey(pieceIndex, offset, block.length), future);
+                Mapper.mapper().buildKey(pieceIndex, offset, blockLength), future);
         return future;
     }
 
     @Produces
     public void produce(Consumer<Message> messageConsumer) {
-        BlockWrite block;
-        while ((block = completedBlocks.poll()) != null) {
-            int pieceIndex = block.getPieceIndex();
-            if (bitfield.getPieceStatus(pieceIndex) == Bitfield.PieceStatus.COMPLETE_VERIFIED) {
-                messageConsumer.accept(new Have(pieceIndex));
-            }
+        Integer completedPiece;
+        while ((completedPiece = completedPieces.poll()) != null) {
+            messageConsumer.accept(new Have(completedPiece));
         }
     }
 }

@@ -20,6 +20,7 @@ import bt.BtException;
 import bt.metainfo.TorrentId;
 import bt.module.MessageHandlers;
 import bt.net.PeerId;
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.handler.BitfieldHandler;
 import bt.protocol.handler.CancelHandler;
 import bt.protocol.handler.ChokeHandler;
@@ -190,7 +191,7 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
     }
 
     @Override
-    public final Class<? extends Message> readMessageType(ByteBuffer buffer) {
+    public final Class<? extends Message> readMessageType(ByteBufferView buffer) {
 
         Objects.requireNonNull(buffer);
 
@@ -231,7 +232,7 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
     }
 
     @Override
-    public final int decode(DecodingContext context, ByteBuffer buffer) {
+    public final int decode(DecodingContext context, ByteBufferView buffer) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(buffer);
@@ -312,7 +313,7 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
         return true;
     }
 
-    private static int decodeHandshake(DecodingContext context, ByteBuffer buffer) {
+    private static int decodeHandshake(DecodingContext context, ByteBufferView buffer) {
 
         int consumed = 0;
         int offset = HANDSHAKE_RESERVED_OFFSET;

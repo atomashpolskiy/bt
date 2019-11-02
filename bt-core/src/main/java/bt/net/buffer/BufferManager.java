@@ -41,11 +41,12 @@ public class BufferManager implements IBufferManager {
         this.releasedBuffers = new ConcurrentHashMap<>();
     }
 
+    // TODO: Probably should make this an explicit config option
     private static int getBufferSize(long maxTransferBlockSize) {
         if (maxTransferBlockSize > ((Integer.MAX_VALUE - 13) / 2)) {
             throw new IllegalArgumentException("Transfer block size is too large: " + maxTransferBlockSize);
         }
-        return (int) (maxTransferBlockSize) * 2;
+        return (int) (maxTransferBlockSize) * 16;
     }
 
     @Override

@@ -31,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.junit.Assert.assertEquals;
 
+// TODO: Investigate why this test hangs
 public class Swarm_LocalServiceDiscoveryIT extends BaseBtTest {
 
     private static final int NUMBER_OF_SEEDERS = 5;

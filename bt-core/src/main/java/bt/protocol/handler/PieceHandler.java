@@ -16,8 +16,8 @@
 
 package bt.protocol.handler;
 
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.EncodingContext;
-import bt.protocol.InvalidMessageException;
 import bt.protocol.DecodingContext;
 import bt.protocol.Piece;
 
@@ -33,37 +33,31 @@ public final class PieceHandler extends UniqueMessageHandler<Piece> {
     }
 
     @Override
-    public int doDecode(DecodingContext context, ByteBuffer buffer) {
+    public int doDecode(DecodingContext context, ByteBufferView buffer) {
         return decodePiece(context, buffer, buffer.remaining());
     }
 
     @Override
     public boolean doEncode(EncodingContext context, Piece message, ByteBuffer buffer) {
-        return writePiece(message.getPieceIndex(), message.getOffset(), message.getBlock(), buffer);
+        return writePiece(message, buffer);
     }
 
     // piece: <len=0009+X><id=7><index><begin><block>
-    private static boolean writePiece(int pieceIndex, int offset, byte[] block, ByteBuffer buffer) {
-
-        if (pieceIndex < 0 || offset < 0) {
-            throw new InvalidMessageException("Invalid arguments: pieceIndex (" + pieceIndex
-                    + "), offset (" + offset + ")");
-        }
-        if (block.length == 0) {
-            throw new InvalidMessageException("Invalid block: empty");
-        }
-        if (buffer.remaining() < Integer.BYTES * 2 + block.length) {
+    private static boolean writePiece(Piece message, ByteBuffer buffer) {
+        int pieceIndex = message.getPieceIndex();
+        int offset = message.getOffset();
+        int length = message.getLength();
+        if (buffer.remaining() < Integer.BYTES * 2 + length) {
             return false;
         }
 
         buffer.putInt(pieceIndex);
         buffer.putInt(offset);
-        buffer.put(block);
 
-        return true;
+        return message.writeBlockTo(buffer);
     }
 
-    private static int decodePiece(DecodingContext context, ByteBuffer buffer, int length) {
+    private static int decodePiece(DecodingContext context, ByteBufferView buffer, int length) {
 
         int consumed = 0;
 
@@ -71,10 +65,10 @@ public final class PieceHandler extends UniqueMessageHandler<Piece> {
 
             int pieceIndex = Objects.requireNonNull(readInt(buffer));
             int blockOffset = Objects.requireNonNull(readInt(buffer));
-            byte[] block = new byte[length - Integer.BYTES * 2];
-            buffer.get(block);
+            int blockLength = length - Integer.BYTES * 2;
+            buffer.position(buffer.position() + blockLength);
 
-            context.setMessage(new Piece(pieceIndex, blockOffset, block));
+            context.setMessage(new Piece(pieceIndex, blockOffset, blockLength));
             consumed = length;
         }
 

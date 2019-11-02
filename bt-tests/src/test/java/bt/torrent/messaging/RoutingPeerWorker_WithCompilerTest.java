@@ -20,6 +20,7 @@ import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
 import bt.protocol.Piece;
+import bt.test.protocol.ProtocolTest;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import org.junit.Before;
@@ -145,7 +146,7 @@ public class RoutingPeerWorker_WithCompilerTest {
 
     @Test
     public void testPeerWorker_Consumer() {
-        peerWorker.accept(new Piece(0,0,new byte[1]));
+        peerWorker.accept(new Piece(0,0, 1, ProtocolTest.asBlockReader(new byte[1])));
         assertAllExecuted(c1, Arrays.asList("consume_generic", "consume_piece1", "consume_piece2"));
     }
 

@@ -16,6 +16,7 @@
 
 package bt.protocol.handler;
 
+import bt.net.buffer.ByteBufferView;
 import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
@@ -58,5 +59,5 @@ public interface MessageHandler<T extends Message> extends Protocol<T> {
      * @throws InvalidMessageException if data is invalid
      * @since 1.0
      */
-    int decode(DecodingContext context, ByteBuffer buffer);
+    int decode(DecodingContext context, ByteBufferView buffer);
 }

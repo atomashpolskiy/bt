@@ -28,6 +28,9 @@ import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -37,6 +40,7 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
     private static final int NO_OPS = 0;
 
     private final SharedSelector selector;
+    private final ConcurrentMap<SelectableChannel, Integer> interestOpsUpdates;
 
     private volatile boolean shutdown;
 
@@ -44,13 +48,14 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
     public DataReceivingLoop(@PeerConnectionSelector SharedSelector selector,
                              IRuntimeLifecycleBinder lifecycleBinder) {
         this.selector = selector;
+        this.interestOpsUpdates = new ConcurrentHashMap<>();
 
         schedule(lifecycleBinder);
     }
 
     private void schedule(IRuntimeLifecycleBinder lifecycleBinder) {
         ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.net.data-receiver"));
-        lifecycleBinder.onStartup("Initialize message receiver", () -> executor.execute(this::run));
+        lifecycleBinder.onStartup("Initialize message receiver", () -> executor.execute(this));
         lifecycleBinder.onShutdown("Shutdown message receiver", () -> {
             try {
                 shutdown();
@@ -85,13 +90,7 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
     }
 
     private void updateInterestOps(SelectableChannel channel, int interestOps) {
-        selector.keyFor(channel).ifPresent(key -> {
-            // synchronizing on the selection key,
-            // as we will be using it in a separate, message receiving thread
-            synchronized (key) {
-                key.interestOps(interestOps);
-            }
-        });
+        interestOpsUpdates.put(channel, interestOps);
     }
 
     @Override
@@ -103,42 +102,59 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
             }
 
             try {
-                // wakeup periodically to check if there are unprocessed keys left
-                long t1 = System.nanoTime();
-                long timeToBlockMillis = 1000;
-                while (selector.select(timeToBlockMillis) == 0) {
-                    Thread.yield();
-                    long t2 = System.nanoTime();
-                    // check that the selection timeout period is expired, before dealing with unprocessed keys;
-                    // it could be a call to wake up, that made the select() return,
-                    // and we don't want to perform extra work on each spin iteration
-                    if ((t2 - t1 >= timeToBlockMillis * 1000) && !selector.selectedKeys().isEmpty()) {
-                        // try to deal with unprocessed keys, left from the previous iteration
-                        break;
+                do {
+                    if (!interestOpsUpdates.isEmpty()) {
+                        processInterestOpsUpdates();
                     }
-                }
+                } while (selector.select(1000) == 0);
 
-                Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
-                while (selectedKeys.hasNext()) {
-                    try {
-                        // do not remove the key if it hasn't been processed,
-                        // we'll try again in the next loop iteration
-                        if (processKey(selectedKeys.next())) {
+                while (!shutdown) {
+                    Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
+                    while (selectedKeys.hasNext()) {
+                        try {
+                            // do not remove the key if it hasn't been processed,
+                            // we'll try again in the next loop iteration
+                            if (processKey(selectedKeys.next())) {
+                                selectedKeys.remove();
+                            }
+                        } catch (ClosedSelectorException e) {
+                            // selector has been closed, there's no point to continue processing
+                            throw e;
+                        } catch (Exception e) {
+                            LOGGER.error("Failed to process key", e);
                             selectedKeys.remove();
                         }
-                    } catch (ClosedSelectorException e) {
-                        // selector has been closed, there's no point to continue processing
-                        throw e;
-                    } catch (Exception e) {
-                        LOGGER.error("Failed to process key", e);
-                        selectedKeys.remove();
                     }
+                    if (selector.selectedKeys().isEmpty()) {
+                        break;
+                    }
+                    Thread.sleep(1);
                 }
             } catch (ClosedSelectorException e) {
                 LOGGER.info("Selector has been closed, will stop receiving messages...");
                 return;
             } catch (IOException e) {
                 throw new RuntimeException("Unexpected I/O exception when selecting peer connections", e);
+            } catch (InterruptedException e) {
+                LOGGER.info("Terminating due to interrupt");
+                return;
+            }
+        }
+    }
+
+    private void processInterestOpsUpdates() {
+        Iterator<Map.Entry<SelectableChannel, Integer>> iter = interestOpsUpdates.entrySet().iterator();
+        while (iter.hasNext()) {
+            Map.Entry<SelectableChannel, Integer> entry = iter.next();
+            SelectableChannel channel = entry.getKey();
+            int interestOps = entry.getValue();
+            try {
+                selector.keyFor(entry.getKey())
+                        .ifPresent(key -> key.interestOps(interestOps));
+            } catch (Exception e) {
+                LOGGER.error("Failed to set interest ops for channel " + channel + " to " + interestOps, e);
+            } finally {
+                iter.remove();
             }
         }
     }
@@ -147,24 +163,16 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
      * @return true, if the key has been processed and can be removed
      */
     private boolean processKey(final SelectionKey key) {
-        ChannelHandlerContext handler;
-
-        // synchronizing on the selection key,
-        // as we will be updating it in a separate, event-listening thread
-        synchronized (key) {
-            handler = getHandlerContext(key);
-            if (!key.isValid() || !key.isReadable()) {
-                return false;
-            }
+        ChannelHandlerContext handler = getHandlerContext(key);
+        if (!key.isValid() || !key.isReadable()) {
+            return true;
         }
-
-        handler.fireChannelReady();
-        return true;
+        return handler.readFromChannel();
     }
 
     private ChannelHandlerContext getHandlerContext(SelectionKey key) {
         Object obj = key.attachment();
-        if (obj == null || !(obj instanceof ChannelHandlerContext)) {
+        if (!(obj instanceof ChannelHandlerContext)) {
             throw new RuntimeException("Unexpected attachment in selection key: " + obj);
         }
         return (ChannelHandlerContext) obj;
