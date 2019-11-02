@@ -45,7 +45,7 @@ import bt.torrent.TorrentRegistry;
 import bt.torrent.data.BlockCache;
 import bt.torrent.data.DataWorker;
 import bt.torrent.data.DefaultDataWorker;
-import bt.torrent.data.LRUBlockCache;
+import bt.torrent.data.NoCache;
 import bt.tracker.ITrackerService;
 import bt.tracker.TrackerFactory;
 import bt.tracker.TrackerService;
@@ -136,7 +136,7 @@ public class ServiceModule implements Module {
                 .addConnectionAcceptor(SocketChannelConnectionAcceptor.class);
 
         // core services that contribute startup lifecycle bindings and should be instantiated eagerly
-        binder.bind(BlockCache.class).to(LRUBlockCache.class).asEagerSingleton();
+        binder.bind(BlockCache.class).to(NoCache.class).asEagerSingleton();
         binder.bind(IMessageDispatcher.class).to(MessageDispatcher.class).asEagerSingleton();
         binder.bind(IConnectionSource.class).to(ConnectionSource.class).asEagerSingleton();
         binder.bind(IPeerConnectionPool.class).to(PeerConnectionPool.class).asEagerSingleton();
