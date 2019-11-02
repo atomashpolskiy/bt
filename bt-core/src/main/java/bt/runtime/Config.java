@@ -75,7 +75,7 @@ public class Config {
         this.trackerQueryInterval = Duration.ofMinutes(5);
         this.maxPeerConnections = 500;
         this.maxPeerConnectionsPerTorrent = maxPeerConnections; // assume single torrent per runtime by default; change this to (maxActive * 2) maybe?
-        this.transferBlockSize = 8 * 1024; // 8 KB
+        this.transferBlockSize = 16 * 1024; // 16 KB
         this.maxTransferBlockSize = 128 * 1024; // 128 KB
         this.maxIOQueueSize = Integer.MAX_VALUE;
         this.shutdownHookTimeout = Duration.ofSeconds(30);
