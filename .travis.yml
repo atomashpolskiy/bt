@@ -1,8 +1,6 @@
 language: java
 matrix:
   include:
-  - jdk: oraclejdk8
-    env: MAIN_BUILD=true
   - sudo: required
     dist: trusty
     group: edge
@@ -12,9 +10,7 @@ matrix:
         packages:
         - oracle-java9-installer
         - oracle-java9-set-default
-    env: MAIN_BUILD=false
-  allow_failures:
-  - jdk: oraclejdk9
+    env: MAIN_BUILD=true
 branches:
   only:
   - master
