@@ -108,9 +108,10 @@ class FileSystemStorageUnit implements StorageUnit {
 
     @Override
     public synchronized void readBlockFully(ByteBuffer buffer, long offset) {
-        int read;
+        int read = 0, total = 0;
         do {
-            read = readBlock(buffer, offset);
+            total += read;
+            read = readBlock(buffer, offset + total);
         } while (read >= 0 && buffer.hasRemaining());
     }
 
@@ -140,9 +141,10 @@ class FileSystemStorageUnit implements StorageUnit {
 
     @Override
     public synchronized void writeBlockFully(ByteBuffer buffer, long offset) {
-        int written;
+        int written = 0, total = 0;
         do {
-            written = writeBlock(buffer, offset);
+            total += written;
+            written = writeBlock(buffer, offset + total);
         } while (written >= 0 && buffer.hasRemaining());
     }
 
@@ -172,9 +174,10 @@ class FileSystemStorageUnit implements StorageUnit {
 
     @Override
     public synchronized void writeBlockFully(ByteBufferView buffer, long offset) {
-        int written;
+        int written = 0, total = 0;
         do {
-            written = writeBlock(buffer, offset);
+            total += written;
+            written = writeBlock(buffer, offset + total);
         } while (written >= 0 && buffer.hasRemaining());
     }
 

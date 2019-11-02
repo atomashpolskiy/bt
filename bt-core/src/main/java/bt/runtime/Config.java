@@ -76,11 +76,11 @@ public class Config {
         this.maxPeerConnectionsPerTorrent = maxPeerConnections; // assume single torrent per runtime by default; change this to (maxActive * 2) maybe?
         this.transferBlockSize = 8 * 1024; // 8 KB
         this.maxTransferBlockSize = 128 * 1024; // 128 KB
-        this.maxIOQueueSize = 1000;
+        this.maxIOQueueSize = Integer.MAX_VALUE;
         this.shutdownHookTimeout = Duration.ofSeconds(30);
         this.numOfHashingThreads = 1; // do not parallelize by default
         this.maxConcurrentlyActivePeerConnectionsPerTorrent = 10;
-        this.maxPieceReceivingTime = Duration.ofSeconds(30);
+        this.maxPieceReceivingTime = Duration.ofSeconds(5);
         this.maxMessageProcessingInterval = Duration.ofMillis(100);
         this.unreachablePeerBanDuration = Duration.ofMinutes(30);
         this.maxPendingConnectionRequests = 50;

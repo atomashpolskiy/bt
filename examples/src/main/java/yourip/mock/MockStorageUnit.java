@@ -31,7 +31,7 @@ public class MockStorageUnit implements StorageUnit {
 
     @Override
     public void readBlockFully(ByteBuffer buffer, long offset) {
-        // do nothing
+        buffer.position(buffer.limit());
     }
 
     @Override
@@ -46,7 +46,7 @@ public class MockStorageUnit implements StorageUnit {
 
     @Override
     public void writeBlockFully(ByteBuffer buffer, long offset) {
-        // do nothing
+        buffer.position(buffer.limit());
     }
 
     @Override
@@ -56,7 +56,7 @@ public class MockStorageUnit implements StorageUnit {
 
     @Override
     public void writeBlockFully(ByteBufferView buffer, long offset) {
-        // do nothing
+        buffer.position(buffer.limit());
     }
 
     @Override
