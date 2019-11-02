@@ -57,6 +57,7 @@ public class Config {
     private int msePrivateKeySize;
     private int numberOfPeersToRequestFromTracker;
     private int maxOutstandingRequests;
+    private int networkBufferSize;
 
     /**
      * Create a config with default parameters.
@@ -92,6 +93,7 @@ public class Config {
         this.msePrivateKeySize = 20; // 20 bytes
         this.numberOfPeersToRequestFromTracker = 50;
         this.maxOutstandingRequests = 250;
+        this.networkBufferSize = 1 * 1024 * 1024; // 1 MB
     }
 
     /**
@@ -129,6 +131,7 @@ public class Config {
         this.msePrivateKeySize = config.getMsePrivateKeySize();
         this.numberOfPeersToRequestFromTracker = config.getNumberOfPeersToRequestFromTracker();
         this.maxOutstandingRequests = config.getMaxOutstandingRequests();
+        this.networkBufferSize = config.getNetworkBufferSize();
     }
 
     /**
@@ -583,5 +586,20 @@ public class Config {
      */
     public int getMaxOutstandingRequests() {
         return maxOutstandingRequests;
+    }
+
+    /**
+     * @param networkBufferSize Size of send and receive network buffers (in bytes)
+     * @since 1.9
+     */
+    public void setNetworkBufferSize(int networkBufferSize) {
+        this.networkBufferSize = networkBufferSize;
+    }
+
+    /**
+     * @since 1.9
+     */
+    public int getNetworkBufferSize() {
+        return networkBufferSize;
     }
 }

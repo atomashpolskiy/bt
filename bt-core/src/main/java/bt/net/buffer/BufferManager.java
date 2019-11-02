@@ -37,16 +37,8 @@ public class BufferManager implements IBufferManager {
 
     @Inject
     public BufferManager(Config config) {
-        this.bufferSize = getBufferSize(config.getMaxTransferBlockSize());
+        this.bufferSize = config.getNetworkBufferSize();
         this.releasedBuffers = new ConcurrentHashMap<>();
-    }
-
-    // TODO: Probably should make this an explicit config option
-    private static int getBufferSize(long maxTransferBlockSize) {
-        if (maxTransferBlockSize > ((Integer.MAX_VALUE - 13) / 2)) {
-            throw new IllegalArgumentException("Transfer block size is too large: " + maxTransferBlockSize);
-        }
-        return (int) (maxTransferBlockSize) * 16;
     }
 
     @Override
