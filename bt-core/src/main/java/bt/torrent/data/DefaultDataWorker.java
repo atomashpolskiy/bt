@@ -114,15 +114,17 @@ public class DefaultDataWorker implements DataWorker {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 DataDescriptor data = getDataDescriptor(torrentId);
-                if (data.getBitfield().isVerified(pieceIndex)) {
+                ChunkDescriptor chunk = data.getChunkDescriptors().get(pieceIndex);
+
+                if (chunk.isComplete()) {
                     if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Rejecting request to write block because the chunk is already complete and verified: " +
+                        LOGGER.debug("Rejecting request to write block because" +
+                                " the chunk is already complete and verified (or awaiting verification): " +
                                 "piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + buffer.length() + "}");
                     }
                     return BlockWrite.rejected(peer, pieceIndex, offset, buffer.length());
                 }
 
-                ChunkDescriptor chunk = data.getChunkDescriptors().get(pieceIndex);
                 chunk.getData().getSubrange(offset).putBytes(buffer.buffer());
                 if (LOGGER.isTraceEnabled()) {
                     LOGGER.trace("Successfully processed block: " +
