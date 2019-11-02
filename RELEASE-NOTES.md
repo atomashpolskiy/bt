@@ -13,6 +13,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * Allow cookie to be missing in the LSD announce message
 * Make sure outgoing messages are never dropped
 * Continuous piece assignments (better request pipelining)
+* Direct I/O
 
 ## 1.8
 
