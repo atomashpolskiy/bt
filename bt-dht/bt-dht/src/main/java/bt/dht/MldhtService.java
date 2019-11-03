@@ -17,7 +17,9 @@
 package bt.dht;
 
 import bt.BtException;
+import bt.data.DataDescriptor;
 import bt.dht.stream.StreamAdapter;
+import bt.event.EventSource;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
@@ -27,6 +29,7 @@ import bt.net.portmapping.PortMapper;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.LifecycleBinding;
+import bt.torrent.TorrentRegistry;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
 import lbms.plugins.mldht.DHTConfiguration;
@@ -34,9 +37,12 @@ import lbms.plugins.mldht.kad.DHT;
 import lbms.plugins.mldht.kad.DHT.DHTtype;
 import lbms.plugins.mldht.kad.DHT.LogLevel;
 import lbms.plugins.mldht.kad.DHTLogger;
+import lbms.plugins.mldht.kad.Key;
+import lbms.plugins.mldht.kad.PeerAddressDBItem;
 import lbms.plugins.mldht.kad.tasks.PeerLookupTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import the8472.utils.io.NetMask;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -44,6 +50,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -81,7 +88,8 @@ public class MldhtService implements DHTService {
         };
     }
 
-    private final DHTConfiguration config;
+    private final Config config;
+    private final DHTConfiguration dhtConfig;
     private final DHT dht;
 
     private final InetAddress localAddress;
@@ -89,22 +97,28 @@ public class MldhtService implements DHTService {
     private final Collection<InetPeerAddress> publicBootstrapNodes;
     private final Collection<InetPeerAddress> bootstrapNodes;
     private final Set<PortMapper> portMappers;
+    private final TorrentRegistry torrentRegistry;
 
     @Inject
-    public MldhtService(IRuntimeLifecycleBinder lifecycleBinder, Config config, DHTConfig dhtConfig, Set<PortMapper> portMappers) {
+    public MldhtService(IRuntimeLifecycleBinder lifecycleBinder, Config config, DHTConfig dhtConfig,
+                        Set<PortMapper> portMappers, TorrentRegistry torrentRegistry, EventSource eventSource) {
         this.dht = new DHT(dhtConfig.shouldUseIPv6() ? DHTtype.IPV6_DHT : DHTtype.IPV4_DHT);
-        this.config = toMldhtConfig(dhtConfig);
+        this.config = config;
+        this.dhtConfig = toMldhtConfig(dhtConfig);
         this.localAddress = config.getAcceptorAddress();
         this.useRouterBootstrap = dhtConfig.shouldUseRouterBootstrap();
         this.publicBootstrapNodes = dhtConfig.getPublicBootstrapNodes();
         this.bootstrapNodes = dhtConfig.getBootstrapNodes();
         this.portMappers = portMappers;
+        this.torrentRegistry = torrentRegistry;
+
+        eventSource.onTorrentStarted(e -> onTorrentStarted(e.getTorrentId()));
 
         lifecycleBinder.onStartup(LifecycleBinding.bind(this::start).description("Initialize DHT facilities").async().build());
         lifecycleBinder.onShutdown("Shutdown DHT facilities", this::shutdown);
     }
 
-    private DHTConfiguration toMldhtConfig(DHTConfig config) {
+    private DHTConfiguration toMldhtConfig(DHTConfig dhtConfig) {
         return new DHTConfiguration() {
             private final ConcurrentMap<InetAddress, Boolean> couldUseCacheMap = new ConcurrentHashMap<>();
 
@@ -120,7 +134,7 @@ public class MldhtService implements DHTService {
 
             @Override
             public int getListeningPort() {
-                return config.getListeningPort();
+                return dhtConfig.getListeningPort();
             }
 
             @Override
@@ -155,12 +169,15 @@ public class MldhtService implements DHTService {
     private void start() {
         if (!dht.isRunning()) {
             try {
-                dht.start(config);
+                dht.start(dhtConfig);
                 if (useRouterBootstrap) {
                     publicBootstrapNodes.forEach(this::addNode);
+                } else {
+                    // assume that the environment is safe;
+                    // might make this configuration more intelligent in future
+                    dht.getNode().setTrustedNetMasks(Collections.singleton(NetMask.fromString("0.0.0.0/0")));
                 }
                 bootstrapNodes.forEach(this::addNode);
-
                 mapPorts();
 
             } catch (SocketException e) {
@@ -170,13 +187,22 @@ public class MldhtService implements DHTService {
     }
 
     private void mapPorts() {
-        final int listeningPort = config.getListeningPort();
+        final int listeningPort = dhtConfig.getListeningPort();
 
         dht.getServerManager().getAllServers().forEach(s ->
                 portMappers.forEach(m -> {
                     final InetAddress bindAddress = s.getBindAddress();
                     m.mapPort(listeningPort, bindAddress.toString(), UDP, "bt DHT");
                 }));
+    }
+
+    private void onTorrentStarted(TorrentId torrentId) {
+        torrentRegistry.getDescriptor(torrentId).ifPresent(td -> {
+            DataDescriptor dd = td.getDataDescriptor();
+            boolean seed = (dd != null) && (dd.getBitfield().getPiecesIncomplete() == 0);
+            dht.getDatabase().store(new Key(torrentId.getBytes()),
+                    PeerAddressDBItem.createFromAddress(config.getAcceptorAddress(), config.getAcceptorPort(), seed));
+        });
     }
 
     private void shutdown() {
@@ -198,7 +224,16 @@ public class MldhtService implements DHTService {
                 Peer peer = new InetPeer(p.getInetAddress(), p.getPort());
                 streamAdapter.addItem(peer);
             });
-            lookup.addListener(t -> streamAdapter.finishStream());
+            lookup.addListener(t -> {
+                streamAdapter.finishStream();
+                if (torrentRegistry.isSupportedAndActive(torrentId)) {
+                    torrentRegistry.getDescriptor(torrentId).ifPresent(td -> {
+                        DataDescriptor dd = td.getDataDescriptor();
+                        boolean seed = (dd != null) && (dd.getBitfield().getPiecesIncomplete() == 0);
+                        dht.announce(lookup, seed, config.getAcceptorPort());
+                    });
+                }
+            });
             dht.getTaskManager().addTask(lookup);
             return streamAdapter.stream();
         } catch (Throwable e) {

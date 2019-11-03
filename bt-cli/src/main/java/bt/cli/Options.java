@@ -43,6 +43,7 @@ public class Options {
     private static final OptionSpec<Void> traceOptionSpec;
     private static final OptionSpec<String> ifaceOptionSpec;
     private static final OptionSpec<Integer> torrentPortOptionSpec;
+    private static final OptionSpec<Integer> dhtPortOptionSpec;
     private static final OptionSpec<Void> shouldDownloadAllFiles;
 
     private static final OptionParser parser;
@@ -81,6 +82,9 @@ public class Options {
         torrentPortOptionSpec = parser.acceptsAll(Arrays.asList("p", "port"), "Listen on specific port for incoming connections")
                 .withRequiredArg().ofType(Integer.class);
 
+        dhtPortOptionSpec = parser.accepts("dht-port", "Listen on specific port for incoming DHT connections")
+                .withRequiredArg().ofType(Integer.class);
+
         shouldDownloadAllFiles = parser.acceptsAll(Arrays.asList("a", "all"), "Download all files (file selection will be disabled)");
     }
 
@@ -102,6 +106,7 @@ public class Options {
                 opts.has(traceOptionSpec),
                 opts.valueOf(ifaceOptionSpec),
                 opts.valueOf(torrentPortOptionSpec),
+                opts.valueOf(dhtPortOptionSpec),
                 opts.has(shouldDownloadAllFiles));
     }
 
@@ -124,6 +129,7 @@ public class Options {
     private boolean traceLogging;
     private String iface;
     private Integer port;
+    private Integer dhtPort;
     private boolean downloadAllFiles;
 
     public Options(File metainfoFile,
@@ -137,6 +143,7 @@ public class Options {
                    boolean traceLogging,
                    String iface,
                    Integer port,
+                   Integer dhtPort,
                    boolean downloadAllFiles) {
         this.metainfoFile = metainfoFile;
         this.magnetUri = magnetUri;
@@ -149,6 +156,7 @@ public class Options {
         this.traceLogging = traceLogging;
         this.iface = iface;
         this.port = port;
+        this.dhtPort = dhtPort;
         this.downloadAllFiles = downloadAllFiles;
     }
 
@@ -190,6 +198,10 @@ public class Options {
 
     public Integer getPort() {
         return port;
+    }
+
+    public Integer getDHTPort() {
+        return dhtPort;
     }
 
     public boolean shouldDownloadAllFiles() {

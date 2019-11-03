@@ -51,6 +51,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 public class CliClient  {
 
@@ -92,6 +93,7 @@ public class CliClient  {
 
         Optional<InetAddress> acceptorAddressOverride = getAcceptorAddressOverride();
         Optional<Integer> portOverride = getPortOverride();
+        Optional<Integer> dhtPortOverride = getDHTPortOverride();
 
         Config config = new Config() {
             @Override
@@ -116,6 +118,11 @@ public class CliClient  {
         };
 
         Module dhtModule = new DHTModule(new DHTConfig() {
+            @Override
+            public int getListeningPort() {
+                return dhtPortOverride.orElseGet(super::getListeningPort);
+            }
+
             @Override
             public boolean shouldUseRouterBootstrap() {
                 return true;
@@ -162,7 +169,15 @@ public class CliClient  {
     }
 
     private Optional<Integer> getPortOverride() {
-        Integer port = options.getPort();
+        return getOptionalPort(options::getPort);
+    }
+
+    private Optional<Integer> getDHTPortOverride() {
+        return getOptionalPort(options::getDHTPort);
+    }
+
+    private static Optional<Integer> getOptionalPort(Supplier<Integer> portSupplier) {
+        Integer port = portSupplier.get();
         if (port == null) {
             return Optional.empty();
         } else if (port < 1024 || port >= 65535) {
