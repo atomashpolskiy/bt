@@ -447,7 +447,10 @@ public class Node {
 	
 	
 	void insertEntry(KBucketEntry toInsert, Set<InsertOptions> opts) {
-		if(usedIDs.contains(toInsert.getID()) || AddressUtils.isBogon(toInsert.getAddress()))
+		if(usedIDs.contains(toInsert.getID()))
+			return;
+
+		if(!dht.getConfig().noRouterBootstrap() && AddressUtils.isBogon(toInsert.getAddress()))
 			return;
 
 		if(!dht.getType().canUseSocketAddress(toInsert.getAddress()))

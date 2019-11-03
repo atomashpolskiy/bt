@@ -1,0 +1,109 @@
+Index: src/lbms/plugins/mldht/kad/RPCServer.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/lbms/plugins/mldht/kad/RPCServer.java	(revision 0540d44552637ddd2184239e6c6874b62729b796)
++++ src/lbms/plugins/mldht/kad/RPCServer.java	(date 1572796326000)
+@@ -154,7 +154,8 @@
+ 			return null;
+ 		
+ 		InetAddress addr = ((DatagramChannel)chan).socket().getLocalAddress();
+-		if(dh_table.getType().PREFERRED_ADDRESS_TYPE.isInstance(addr) && AddressUtils.isGlobalUnicast(addr))
++		if(dh_table.getType().PREFERRED_ADDRESS_TYPE.isInstance(addr) &&
++				(dh_table.getConfig().noRouterBootstrap() || AddressUtils.isGlobalUnicast(addr)))
+ 			return addr;
+ 		return null;
+ 	}
+Index: src/lbms/plugins/mldht/kad/Node.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/lbms/plugins/mldht/kad/Node.java	(revision 0540d44552637ddd2184239e6c6874b62729b796)
++++ src/lbms/plugins/mldht/kad/Node.java	(date 1572796241000)
+@@ -447,7 +447,10 @@
+ 	
+ 	
+ 	void insertEntry(KBucketEntry toInsert, Set<InsertOptions> opts) {
+-		if(usedIDs.contains(toInsert.getID()) || AddressUtils.isBogon(toInsert.getAddress()))
++		if(usedIDs.contains(toInsert.getID()))
++			return;
++
++		if(!dht.getConfig().noRouterBootstrap() && AddressUtils.isBogon(toInsert.getAddress()))
+ 			return;
+ 
+ 		if(!dht.getType().canUseSocketAddress(toInsert.getAddress()))
+Index: src/lbms/plugins/mldht/kad/DHT.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/lbms/plugins/mldht/kad/DHT.java	(revision 0540d44552637ddd2184239e6c6874b62729b796)
++++ src/lbms/plugins/mldht/kad/DHT.java	(date 1572796728000)
+@@ -280,7 +280,7 @@
+ 		if(v4 > 0) {
+ 			getSiblingByType(DHTtype.IPV4_DHT).filter(DHT::isRunning).ifPresent(sib -> {
+ 				KClosestNodesSearch kns = new KClosestNodesSearch(target, v4, sib);
+-				kns.fill(DHTtype.IPV4_DHT != type);
++				kns.fill(DHTtype.IPV4_DHT == type);
+ 				rsp.setNodes(kns.asNodeList());
+ 			});
+ 		}
+@@ -288,7 +288,7 @@
+ 		if(v6 > 0) {
+ 			getSiblingByType(DHTtype.IPV6_DHT).filter(DHT::isRunning).ifPresent(sib -> {
+ 				KClosestNodesSearch kns = new KClosestNodesSearch(target, v6, sib);
+-				kns.fill(DHTtype.IPV6_DHT != type);
++				kns.fill(DHTtype.IPV6_DHT == type);
+ 				rsp.setNodes(kns.asNodeList());
+ 			});
+ 		}
+@@ -467,7 +467,7 @@
+ 		// everything OK, so store the value
+ 		PeerAddressDBItem item = PeerAddressDBItem.createFromAddress(r.getOrigin().getAddress(), r.getPort(), r.isSeed());
+ 		r.getVersion().ifPresent(item::setVersion);
+-		if(!AddressUtils.isBogon(item))
++		if(config.noRouterBootstrap() || !AddressUtils.isBogon(item))
+ 			db.store(r.getInfoHash(), item);
+ 
+ 		// send a proper response to indicate everything is OK
+@@ -520,7 +520,7 @@
+ 		}
+ 		InetSocketAddress addr = new InetSocketAddress(host, hport);
+ 
+-		if (!addr.isUnresolved() && !AddressUtils.isBogon(addr)) {
++		if (!addr.isUnresolved() && (config.noRouterBootstrap() || !AddressUtils.isBogon(addr))) {
+ 			if(!type.PREFERRED_ADDRESS_TYPE.isInstance(addr.getAddress()) || node.getNumEntriesInRoutingTable() > DHTConstants.BOOTSTRAP_IF_LESS_THAN_X_PEERS)
+ 				return;
+ 			RPCServer srv = serverManager.getRandomActiveServer(true);
+Index: src/lbms/plugins/mldht/kad/tasks/PeerLookupTask.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/lbms/plugins/mldht/kad/tasks/PeerLookupTask.java	(revision 0540d44552637ddd2184239e6c6874b62729b796)
++++ src/lbms/plugins/mldht/kad/tasks/PeerLookupTask.java	(date 1572796728000)
+@@ -140,7 +140,12 @@
+ 		
+ 		if (nodes != null)
+ 		{
+-			nodes.entries().filter(e -> !AddressUtils.isBogon(e.getAddress()) && !node.isLocalId(e.getID())).forEach(e -> {
++			nodes.entries().filter(e -> {
++				if (node.isLocalId(e.getID())) {
++					return false;
++				}
++				return rpc.getDHT().getConfig().noRouterBootstrap() || !AddressUtils.isBogon(e.getAddress());
++			}).forEach(e -> {
+ 				returnedNodes.add(e);
+ 			});
+ 		}
+@@ -156,7 +161,7 @@
+ 				continue;
+ 			PeerAddressDBItem it = (PeerAddressDBItem) item;
+ 			// also add the items to the returned_items list
+-			if(!AddressUtils.isBogon(it)) {
++			if(rpc.getDHT().getConfig().noRouterBootstrap() || !AddressUtils.isBogon(it)) {
+ 				resultHandler.accept(match, it);
+ 				returnedItems.add(it);
+ 			}

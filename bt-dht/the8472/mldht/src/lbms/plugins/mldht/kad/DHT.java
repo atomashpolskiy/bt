@@ -280,7 +280,7 @@ public class DHT implements DHTBase {
 		if(v4 > 0) {
 			getSiblingByType(DHTtype.IPV4_DHT).filter(DHT::isRunning).ifPresent(sib -> {
 				KClosestNodesSearch kns = new KClosestNodesSearch(target, v4, sib);
-				kns.fill(DHTtype.IPV4_DHT != type);
+				kns.fill(DHTtype.IPV4_DHT == type);
 				rsp.setNodes(kns.asNodeList());
 			});
 		}
@@ -288,7 +288,7 @@ public class DHT implements DHTBase {
 		if(v6 > 0) {
 			getSiblingByType(DHTtype.IPV6_DHT).filter(DHT::isRunning).ifPresent(sib -> {
 				KClosestNodesSearch kns = new KClosestNodesSearch(target, v6, sib);
-				kns.fill(DHTtype.IPV6_DHT != type);
+				kns.fill(DHTtype.IPV6_DHT == type);
 				rsp.setNodes(kns.asNodeList());
 			});
 		}
@@ -467,7 +467,7 @@ public class DHT implements DHTBase {
 		// everything OK, so store the value
 		PeerAddressDBItem item = PeerAddressDBItem.createFromAddress(r.getOrigin().getAddress(), r.getPort(), r.isSeed());
 		r.getVersion().ifPresent(item::setVersion);
-		if(!AddressUtils.isBogon(item))
+		if(config.noRouterBootstrap() || !AddressUtils.isBogon(item))
 			db.store(r.getInfoHash(), item);
 
 		// send a proper response to indicate everything is OK
@@ -520,7 +520,7 @@ public class DHT implements DHTBase {
 		}
 		InetSocketAddress addr = new InetSocketAddress(host, hport);
 
-		if (!addr.isUnresolved() && !AddressUtils.isBogon(addr)) {
+		if (!addr.isUnresolved() && (config.noRouterBootstrap() || !AddressUtils.isBogon(addr))) {
 			if(!type.PREFERRED_ADDRESS_TYPE.isInstance(addr.getAddress()) || node.getNumEntriesInRoutingTable() > DHTConstants.BOOTSTRAP_IF_LESS_THAN_X_PEERS)
 				return;
 			RPCServer srv = serverManager.getRandomActiveServer(true);

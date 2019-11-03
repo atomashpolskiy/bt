@@ -154,7 +154,8 @@ public class RPCServer {
 			return null;
 		
 		InetAddress addr = ((DatagramChannel)chan).socket().getLocalAddress();
-		if(dh_table.getType().PREFERRED_ADDRESS_TYPE.isInstance(addr) && AddressUtils.isGlobalUnicast(addr))
+		if(dh_table.getType().PREFERRED_ADDRESS_TYPE.isInstance(addr) &&
+				(dh_table.getConfig().noRouterBootstrap() || AddressUtils.isGlobalUnicast(addr)))
 			return addr;
 		return null;
 	}
