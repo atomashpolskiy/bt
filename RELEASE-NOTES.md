@@ -16,6 +16,8 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * Direct I/O
 * Add configuration option for the number of outstanding requests
 * Add configuration option for send/receive buffer size
+* Add CLI parameter for DHT port
+* Allow bogon addresses, when using private DHT
 
 ## 1.8
 
