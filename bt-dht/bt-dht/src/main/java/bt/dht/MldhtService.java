@@ -248,6 +248,9 @@ public class MldhtService implements DHTService {
 
     @Override
     public void addNode(Peer node) {
+        if (node.isPortUnknown()) {
+            throw new IllegalArgumentException("Peer's port is unknown: " + node);
+        }
         addNode(node.getInetAddress().getHostAddress(), node.getPort());
     }
 

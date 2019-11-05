@@ -19,6 +19,7 @@ package bt.peerexchange;
 import bt.BtException;
 import bt.event.EventSource;
 import bt.metainfo.TorrentId;
+import bt.net.ConnectionKey;
 import bt.net.Peer;
 import bt.peer.PeerSource;
 import bt.peer.PeerSourceFactory;
@@ -61,10 +62,11 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     private Map<TorrentId, Queue<PeerEvent>> peerEvents;
     private ReentrantReadWriteLock rwLock;
 
-    private Set<Peer> peers;
-    private Map<Peer, Long> lastSentPEXMessage;
+    private Set<ConnectionKey> peers;
+    private Map<ConnectionKey, Long> lastSentPEXMessage;
 
     private Duration minMessageInterval;
+    private Duration maxMessageInterval;
     private int minEventsPerMessage;
     private int maxEventsPerMessage;
 
@@ -77,12 +79,16 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         this.rwLock = new ReentrantReadWriteLock();
         this.peers = ConcurrentHashMap.newKeySet();
         this.lastSentPEXMessage = new ConcurrentHashMap<>();
+        if (config.getMaxMessageInterval().compareTo(config.getMinMessageInterval()) < 0) {
+            throw new IllegalArgumentException("Max message interval is greater than min interval");
+        }
         this.minMessageInterval = config.getMinMessageInterval();
+        this.maxMessageInterval = config.getMaxMessageInterval();
         this.minEventsPerMessage = config.getMinEventsPerMessage();
         this.maxEventsPerMessage = config.getMaxEventsPerMessage();
 
-        eventSource.onPeerConnected(e -> onPeerConnected(e.getTorrentId(), e.getPeer()))
-                .onPeerDisconnected(e -> onPeerDisconnected(e.getTorrentId(), e.getPeer()));
+        eventSource.onPeerConnected(e -> onPeerConnected(e.getConnectionKey()))
+                .onPeerDisconnected(e -> onPeerDisconnected(e.getConnectionKey()));
 
         ScheduledExecutorService executor =
                 Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "bt.peerexchange.cleaner"));
@@ -91,14 +97,16 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         lifecycleBinder.onShutdown("Shutdown PEX cleanup scheduler", executor::shutdownNow);
     }
 
-    private void onPeerConnected(TorrentId torrentId, Peer peer) {
-        getPeerEvents(torrentId).add(PeerEvent.added(peer));
+    private void onPeerConnected(ConnectionKey connectionKey) {
+        getPeerEvents(connectionKey.getTorrentId())
+                .add(PeerEvent.added(connectionKey.getPeer()));
     }
 
-    private void onPeerDisconnected(TorrentId torrentId, Peer peer) {
-        getPeerEvents(torrentId).add(PeerEvent.dropped(peer));
-        peers.remove(peer);
-        lastSentPEXMessage.remove(peer);
+    private void onPeerDisconnected(ConnectionKey connectionKey) {
+        getPeerEvents(connectionKey.getTorrentId())
+                .add(PeerEvent.dropped(connectionKey.getPeer()));
+        peers.remove(connectionKey);
+        lastSentPEXMessage.remove(connectionKey);
     }
 
     private Queue<PeerEvent> getPeerEvents(TorrentId torrentId) {
@@ -136,33 +144,42 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
             // TODO: peer may eventually turn off the PEX extension
             // moreover the extended handshake message type map is additive,
             // so we can't learn about the peer turning off extensions solely from the message
-            peers.add(messageContext.getPeer());
+            peers.add(messageContext.getConnectionKey());
         }
     }
 
     @Consumes
     public void consume(PeerExchange message, MessageContext messageContext) {
-        messageContext.getTorrentId().ifPresent(torrentId ->
-                getOrCreatePeerSource(torrentId).addMessage(message));
+        getOrCreatePeerSource(messageContext.getTorrentId()).addMessage(message);
     }
 
     @Produces
     public void produce(Consumer<Message> messageConsumer, MessageContext messageContext) {
-        Peer peer = messageContext.getPeer();
+        ConnectionKey connectionKey = messageContext.getConnectionKey();
         long currentTime = System.currentTimeMillis();
-        long lastSentPEXMessageToPeer = lastSentPEXMessage.getOrDefault(peer, 0L);
+        long lastSentPEXMessageToPeer = lastSentPEXMessage.getOrDefault(connectionKey, 0L);
 
-        if (peers.contains(peer) && (currentTime - lastSentPEXMessageToPeer) >= minMessageInterval.toMillis()) {
+        if (peers.contains(connectionKey) && (currentTime - lastSentPEXMessageToPeer) >= minMessageInterval.toMillis()) {
             List<PeerEvent> events = new ArrayList<>();
 
             rwLock.readLock().lock();
             try {
-                Queue<PeerEvent> torrentPeerEvents = getPeerEvents(messageContext.getTorrentId().get());
+                Queue<PeerEvent> torrentPeerEvents = getPeerEvents(messageContext.getTorrentId());
                 for (PeerEvent event : torrentPeerEvents) {
                     if (event.getInstant() - lastSentPEXMessageToPeer >= 0) {
-                        if (!event.getPeer().equals(peer)) {
+                        Peer exchangedPeer = event.getPeer();
+                        // don't send PEX message if anything of the above is true:
+                        // - we don't know the listening port of the event's peer yet
+                        // - we don't know the listening port of the current connection's peer yet
+                        // - event's peer and connection's peer are the same
+                        if (!exchangedPeer.isPortUnknown()
+                                && !connectionKey.getPeer().isPortUnknown()
+                                && !exchangedPeer.getInetAddress().equals(connectionKey.getPeer().getInetAddress())
+                                && exchangedPeer.getPort() != connectionKey.getRemotePort()) {
                             events.add(event);
                         }
+                    } else {
+                        break;
                     }
                     if (events.size() >= maxEventsPerMessage) {
                         break;
@@ -172,8 +189,8 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
                 rwLock.readLock().unlock();
             }
 
-            if (events.size() >= minEventsPerMessage) {
-                lastSentPEXMessage.put(peer, currentTime);
+            if (events.size() >= minEventsPerMessage || (currentTime - lastSentPEXMessageToPeer) >= maxMessageInterval.toMillis()) {
+                lastSentPEXMessage.put(connectionKey, currentTime);
                 PeerExchange.Builder messageBuilder = PeerExchange.builder();
                 events.forEach(event -> {
                     switch (event.getType()) {

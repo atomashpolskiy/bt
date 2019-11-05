@@ -21,11 +21,13 @@ import java.time.Duration;
 public class PeerExchangeConfig {
 
     private Duration minMessageInterval;
+    private Duration maxMessageInterval;
     private int minEventsPerMessage;
     private int maxEventsPerMessage;
 
     public PeerExchangeConfig() {
         this.minMessageInterval = Duration.ofMinutes(1);
+        this.maxMessageInterval = Duration.ofMinutes(5);
         this.minEventsPerMessage = 10;
         this.maxEventsPerMessage = 50;
     }
@@ -73,5 +75,20 @@ public class PeerExchangeConfig {
      */
     public int getMaxEventsPerMessage() {
         return maxEventsPerMessage;
+    }
+
+    /**
+     * @param maxMessageInterval Maximal interval between sending peer exchange messages to a peer
+     * @since 1.9
+     */
+    public void setMaxMessageInterval(Duration maxMessageInterval) {
+        this.maxMessageInterval = maxMessageInterval;
+    }
+
+    /**
+     * @since 1.9
+     */
+    public Duration getMaxMessageInterval() {
+        return maxMessageInterval;
     }
 }

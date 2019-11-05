@@ -35,6 +35,8 @@ public interface Peer {
     InetAddress getInetAddress();
 
     /**
+     * @return true, if the peer's listening port is not known yet
+     * @see #getPort()
      * @since 1.9
      */
     boolean isPortUnknown();
