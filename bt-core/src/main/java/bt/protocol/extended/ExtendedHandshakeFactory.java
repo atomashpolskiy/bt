@@ -33,6 +33,8 @@ import java.nio.charset.Charset;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import static bt.protocol.extended.ExtendedHandshake.*;
+
 /**
  *<p><b>Note that this class implements a service.
  * Hence, is not a part of the public API and is a subject to change.</b></p>
@@ -40,9 +42,6 @@ import java.util.concurrent.ConcurrentMap;
 public class ExtendedHandshakeFactory implements IExtendedHandshakeFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(ExtendedHandshakeFactory.class);
 
-    private static final String ENCRYPTION_PROPERTY = "e";
-    private static final String TCPPORT_PROPERTY = "p";
-    private static final String VERSION_PROPERTY = "v";
     private static final String UT_METADATA_SIZE_PROPERTY = "metadata_size";
 
     private static final String VERSION_TEMPLATE = "Bt %s";

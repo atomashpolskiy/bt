@@ -16,12 +16,13 @@
 
 package bt.net;
 
-import java.net.InetSocketAddress;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Objects;
 
 /**
  * Holds parts of inet address and resolves it on demand.
- * Helps prevent unsolicited blocking that can happen when directly creating an {@link InetSocketAddress}.
+ * Helps prevent unsolicited blocking that can happen when directly creating an {@link java.net.InetSocketAddress}.
  *
  * @since 1.3
  */
@@ -31,7 +32,7 @@ public class InetPeerAddress {
     private final int port;
     private final int hashCode;
 
-    private volatile InetSocketAddress address;
+    private volatile InetAddress address;
     private final Object lock;
 
     /**
@@ -45,13 +46,17 @@ public class InetPeerAddress {
     }
 
     /**
-     * @since 1.3
+     * @since 1.9
      */
-    public InetSocketAddress getAddress() {
+    public InetAddress getAddress() {
         if (address == null) {
             synchronized (lock) {
                 if (address == null) {
-                    address = new InetSocketAddress(hostname, port);
+                    try {
+                        address = InetAddress.getByName(hostname);
+                    } catch (UnknownHostException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         }

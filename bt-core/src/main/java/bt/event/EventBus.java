@@ -19,6 +19,7 @@ package bt.event;
 import bt.data.Bitfield;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
+import bt.net.ConnectionKey;
 import bt.net.Peer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,29 +60,29 @@ public class EventBus implements EventSink, EventSource {
     }
 
     @Override
-    public synchronized void firePeerConnected(TorrentId torrentId, Peer peer) {
+    public synchronized void firePeerConnected(ConnectionKey connectionKey) {
         long timestamp = System.currentTimeMillis();
         if (hasListeners(PeerConnectedEvent.class)) {
             long id = nextId();
-            fireEvent(new PeerConnectedEvent(id, timestamp, torrentId, peer));
+            fireEvent(new PeerConnectedEvent(id, timestamp, connectionKey));
         }
     }
 
     @Override
-    public synchronized void firePeerDisconnected(TorrentId torrentId, Peer peer) {
+    public synchronized void firePeerDisconnected(ConnectionKey connectionKey) {
         long timestamp = System.currentTimeMillis();
         if (hasListeners(PeerDisconnectedEvent.class)) {
             long id = nextId();
-            fireEvent(new PeerDisconnectedEvent(id, timestamp, torrentId, peer));
+            fireEvent(new PeerDisconnectedEvent(id, timestamp, connectionKey));
         }
     }
 
     @Override
-    public void firePeerBitfieldUpdated(TorrentId torrentId, Peer peer, Bitfield bitfield) {
+    public void firePeerBitfieldUpdated(TorrentId torrentId, ConnectionKey connectionKey, Bitfield bitfield) {
         long timestamp = System.currentTimeMillis();
         if (hasListeners(PeerBitfieldUpdatedEvent.class)) {
             long id = nextId();
-            fireEvent(new PeerBitfieldUpdatedEvent(id, timestamp, torrentId, peer, bitfield));
+            fireEvent(new PeerBitfieldUpdatedEvent(id, timestamp, connectionKey, bitfield));
         }
     }
 

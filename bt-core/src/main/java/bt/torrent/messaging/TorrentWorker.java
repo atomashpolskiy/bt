@@ -19,6 +19,7 @@ package bt.torrent.messaging;
 import bt.data.Bitfield;
 import bt.event.EventSource;
 import bt.metainfo.TorrentId;
+import bt.net.ConnectionKey;
 import bt.net.IConnectionSource;
 import bt.net.IMessageDispatcher;
 import bt.net.Peer;
@@ -33,7 +34,6 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
@@ -62,12 +62,12 @@ public class TorrentWorker {
 
     private final IConnectionSource connectionSource;
     private IPeerWorkerFactory peerWorkerFactory;
-    private ConcurrentMap<Peer, PieceAnnouncingPeerWorker> peerMap;
+    private ConcurrentMap<ConnectionKey, PieceAnnouncingPeerWorker> peerMap;
     private final int MAX_CONCURRENT_ACTIVE_CONNECTIONS;
     private final int MAX_TOTAL_CONNECTIONS;
-    private Map<Peer, Long> timeoutedPeers;
-    private Queue<Peer> disconnectedPeers;
-    private Map<Peer, Message> interestUpdates;
+    private Map<ConnectionKey, Long> timeoutedPeers;
+    private Queue<ConnectionKey> disconnectedPeers;
+    private Map<ConnectionKey, Message> interestUpdates;
     private long lastUpdatedAssignments;
 
     private Supplier<Bitfield> bitfieldSupplier;
@@ -108,13 +108,13 @@ public class TorrentWorker {
 
         eventSource.onPeerConnected(e -> {
             if (torrentId.equals(e.getTorrentId())) {
-                onPeerConnected(e.getPeer());
+                onPeerConnected(e.getConnectionKey());
             }
         });
 
         eventSource.onPeerDisconnected(e -> {
             if (torrentId.equals(e.getTorrentId())) {
-                onPeerDisconnected(e.getPeer());
+                onPeerDisconnected(e.getConnectionKey());
             }
         });
     }
@@ -136,39 +136,36 @@ public class TorrentWorker {
      *
      * @since 1.0
      */
-    private void addPeer(Peer peer) {
-        PieceAnnouncingPeerWorker worker = createPeerWorker(peer);
-        PieceAnnouncingPeerWorker existing = peerMap.putIfAbsent(peer, worker);
+    private void addPeer(ConnectionKey connectionKey) {
+        PieceAnnouncingPeerWorker worker = createPeerWorker(connectionKey);
+        PieceAnnouncingPeerWorker existing = peerMap.putIfAbsent(connectionKey, worker);
         if (existing == null) {
-            dispatcher.addMessageConsumer(torrentId, peer, message -> consume(peer, message));
-            dispatcher.addMessageSupplier(torrentId, peer, () -> produce(peer));
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Added connection for peer: " + peer);
-            }
+            dispatcher.addMessageConsumer(connectionKey, message -> consume(connectionKey, message));
+            dispatcher.addMessageSupplier(connectionKey, () -> produce(connectionKey));
         }
     }
 
-    private void consume(Peer peer, Message message) {
-        getWorker(peer).ifPresent(worker -> worker.accept(message));
+    private void consume(ConnectionKey connectionKey, Message message) {
+        getWorker(connectionKey).ifPresent(worker -> worker.accept(message));
     }
 
-    private Message produce(Peer peer) {
+    private Message produce(ConnectionKey connectionKey) {
         Message message = null;
 
-        Optional<PieceAnnouncingPeerWorker> workerOptional = getWorker(peer);
+        Optional<PieceAnnouncingPeerWorker> workerOptional = getWorker(connectionKey);
         if (workerOptional.isPresent()) {
             PieceAnnouncingPeerWorker worker = workerOptional.get();
             Bitfield bitfield = getBitfield();
             Assignments assignments = getAssignments();
 
             if (bitfield != null && assignments != null && (bitfield.getPiecesRemaining() > 0 || assignments.count() > 0)) {
-                inspectAssignment(peer, worker, assignments);
+                inspectAssignment(connectionKey, worker, assignments);
                 if (shouldUpdateAssignments(assignments)) {
                     processDisconnectedPeers(assignments, getStatistics());
                     processTimeoutedPeers();
                     updateAssignments(assignments);
                 }
-                Message interestUpdate = interestUpdates.remove(peer);
+                Message interestUpdate = interestUpdates.remove(connectionKey);
                 message = (interestUpdate == null) ? worker.get() : interestUpdate;
             } else {
                 message = worker.get();
@@ -178,16 +175,16 @@ public class TorrentWorker {
         return message;
     }
 
-    private Optional<PieceAnnouncingPeerWorker> getWorker(Peer peer) {
-        return Optional.ofNullable(peerMap.get(peer));
+    private Optional<PieceAnnouncingPeerWorker> getWorker(ConnectionKey connectionKey) {
+        return Optional.ofNullable(peerMap.get(connectionKey));
     }
 
-    private void inspectAssignment(Peer peer, PeerWorker peerWorker, Assignments assignments) {
+    private void inspectAssignment(ConnectionKey connectionKey, PeerWorker peerWorker, Assignments assignments) {
         ConnectionState connectionState = peerWorker.getConnectionState();
-        Assignment assignment = assignments.get(peer);
+        Assignment assignment = assignments.get(connectionKey);
         if (assignment != null) {
             if (assignment.getStatus() == Assignment.Status.TIMEOUT) {
-                timeoutedPeers.put(peer, System.currentTimeMillis());
+                timeoutedPeers.put(connectionKey, System.currentTimeMillis());
                 assignments.remove(assignment);
                 if (LOGGER.isTraceEnabled()) {
                     LOGGER.trace("Peer assignment removed due to TIMEOUT: {}", assignment);
@@ -200,7 +197,7 @@ public class TorrentWorker {
             }
         } else if (!connectionState.isPeerChoking()) {
             if (mightCreateMoreAssignments(assignments)) {
-                assignments.assign(peer)
+                assignments.assign(connectionKey)
                         .ifPresent(newAssignment -> newAssignment.start(connectionState));
             }
         }
@@ -225,7 +222,7 @@ public class TorrentWorker {
     }
 
     private void processDisconnectedPeers(Assignments assignments, BitfieldBasedStatistics statistics) {
-        Peer disconnectedPeer;
+        ConnectionKey disconnectedPeer;
         while ((disconnectedPeer = disconnectedPeers.poll()) != null) {
             if (assignments != null) {
                 Assignment assignment = assignments.get(disconnectedPeer);
@@ -244,20 +241,16 @@ public class TorrentWorker {
     }
 
     private void processTimeoutedPeers() {
-        Iterator<Map.Entry<Peer, Long>> timeoutedPeersIter = timeoutedPeers.entrySet().iterator();
-        while (timeoutedPeersIter.hasNext()) {
-            Map.Entry<Peer, Long> entry = timeoutedPeersIter.next();
-            if (System.currentTimeMillis() - entry.getValue() >= config.getTimeoutedAssignmentPeerBanDuration().toMillis()) {
-                timeoutedPeersIter.remove();
-            }
-        }
+        timeoutedPeers.entrySet().removeIf(entry ->
+                System.currentTimeMillis() - entry.getValue() >=
+                        config.getTimeoutedAssignmentPeerBanDuration().toMillis());
     }
 
     private void updateAssignments(Assignments assignments) {
         interestUpdates.clear();
 
-        Set<Peer> ready = new HashSet<>();
-        Set<Peer> choking = new HashSet<>();
+        Set<ConnectionKey> ready = new HashSet<>();
+        Set<ConnectionKey> choking = new HashSet<>();
 
         peerMap.forEach((peer, worker) -> {
             boolean timeouted = timeoutedPeers.containsKey(peer);
@@ -271,7 +264,7 @@ public class TorrentWorker {
             }
         });
 
-        Set<Peer> interesting = assignments.update(ready, choking);
+        Set<ConnectionKey> interesting = assignments.update(ready, choking);
 
         ready.stream().filter(peer -> !interesting.contains(peer)).forEach(peer -> {
             getWorker(peer).ifPresent(worker -> {
@@ -301,8 +294,8 @@ public class TorrentWorker {
         lastUpdatedAssignments = System.currentTimeMillis();
     }
 
-    private PieceAnnouncingPeerWorker createPeerWorker(Peer peer) {
-        return new PieceAnnouncingPeerWorker(peerWorkerFactory.createPeerWorker(torrentId, peer));
+    private PieceAnnouncingPeerWorker createPeerWorker(ConnectionKey connectionKey) {
+        return new PieceAnnouncingPeerWorker(peerWorkerFactory.createPeerWorker(connectionKey));
     }
 
     /**
@@ -310,22 +303,19 @@ public class TorrentWorker {
      *
      * @since 1.0
      */
-    public void removePeer(Peer peer) {
-        PeerWorker removed = peerMap.remove(peer);
+    public void removePeer(ConnectionKey connectionKey) {
+        PeerWorker removed = peerMap.remove(connectionKey);
         if (removed != null) {
-            disconnectedPeers.add(peer);
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Removed connection for peer: " + peer);
-            }
+            disconnectedPeers.add(connectionKey);
         }
     }
 
     /**
      * Get all peers, that this torrent worker is currently working with.
      *
-     * @since 1.0
+     * @since 1.9
      */
-    public Set<Peer> getPeers() {
+    public Set<ConnectionKey> getPeers() {
         return peerMap.keySet();
     }
 
@@ -335,8 +325,8 @@ public class TorrentWorker {
      * @return Connection state or null, if the peer is not connected to this torrent worker
      * @since 1.0
      */
-    public ConnectionState getConnectionState(Peer peer) {
-        PeerWorker worker = peerMap.get(peer);
+    public ConnectionState getConnectionState(ConnectionKey connectionKey) {
+        PeerWorker worker = peerMap.get(connectionKey);
         return (worker == null) ? null : worker.getConnectionState();
     }
 
@@ -387,22 +377,22 @@ public class TorrentWorker {
     private synchronized void onPeerDiscovered(Peer peer) {
         // TODO: Store discovered peers to use them later,
         // when some of the currently connected peers disconnects
-        if (mightAddPeer(peer)) {
+        if (mightAddPeer()) {
             connectionSource.getConnectionAsync(peer, torrentId);
         }
     }
 
-    private synchronized void onPeerConnected(Peer peer) {
-        if (mightAddPeer(peer)) {
-            addPeer(peer);
+    private synchronized void onPeerConnected(ConnectionKey connectionKey) {
+        if (mightAddPeer()) {
+            addPeer(connectionKey);
         }
     }
 
-    private boolean mightAddPeer(Peer peer) {
-        return getPeers().size() < MAX_TOTAL_CONNECTIONS && !getPeers().contains(peer);
+    private boolean mightAddPeer() {
+        return getPeers().size() < MAX_TOTAL_CONNECTIONS;
     }
 
-    private synchronized void onPeerDisconnected(Peer peer) {
-        removePeer(peer);
+    private synchronized void onPeerDisconnected(ConnectionKey connectionKey) {
+        removePeer(connectionKey);
     }
 }

@@ -35,6 +35,11 @@ class WriteOnlyPeerConnection implements PeerConnection {
     }
 
     @Override
+    public int getRemotePort() {
+        return delegate.getRemotePort();
+    }
+
+    @Override
     public TorrentId setTorrentId(TorrentId torrentId) {
         return delegate.setTorrentId(torrentId);
     }

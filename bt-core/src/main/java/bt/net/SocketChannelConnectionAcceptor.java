@@ -16,7 +16,6 @@
 
 package bt.net;
 
-import bt.peer.IPeerCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +37,6 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
     private static final Logger LOGGER = LoggerFactory.getLogger(SocketChannelConnectionAcceptor.class);
 
     private final Selector selector;
-    private final IPeerCache peerCache;
     private final IPeerConnectionFactory connectionFactory;
     private final InetSocketAddress localAddress;
 
@@ -46,12 +44,10 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
 
     public SocketChannelConnectionAcceptor(
             Selector selector,
-            IPeerCache peerCache,
             IPeerConnectionFactory connectionFactory,
             InetSocketAddress localAddress) {
 
         this.selector = selector;
-        this.peerCache = peerCache;
         this.connectionFactory = connectionFactory;
         this.localAddress = localAddress;
     }
@@ -152,7 +148,8 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
 
     private ConnectionResult createConnection(SocketChannel incomingChannel, SocketAddress remoteAddress) {
         try {
-            Peer peer = peerCache.getPeerForAddress((InetSocketAddress) remoteAddress);
+            InetAddress address = ((InetSocketAddress)remoteAddress).getAddress();
+            Peer peer = InetPeer.builder(address).build();
             return connectionFactory.createIncomingConnection(peer, incomingChannel);
         } catch (Exception e) {
             LOGGER.error("Failed to establish incoming connection from peer: " + remoteAddress, e);

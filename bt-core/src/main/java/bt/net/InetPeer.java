@@ -17,9 +17,10 @@
 package bt.net;
 
 import bt.peer.PeerOptions;
+import com.google.common.base.MoreObjects;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -28,124 +29,34 @@ import java.util.function.Supplier;
  */
 public class InetPeer implements Peer {
 
-    private Supplier<InetSocketAddress> addressSupplier;
-    private Optional<PeerId> peerId;
+    public static final int UNKNOWN_PORT = -1;
+
+    private final Supplier<InetAddress> addressSupplier;
+    private volatile int port;
+    private final Optional<PeerId> peerId;
 
     private final PeerOptions options;
 
-    /**
-     * @since 1.0
-     */
-    public InetPeer(InetAddress inetAddress, int port) {
-        this(inetAddress, port, null, PeerOptions.defaultOptions());
-    }
-
-    /**
-     * @since 1.2
-     */
-    public InetPeer(InetSocketAddress address) {
-        this(() -> address, null, PeerOptions.defaultOptions());
-    }
-
-    /**
-     * @since 1.3
-     */
-    public InetPeer(InetPeerAddress addressHolder) {
-        this(addressHolder::getAddress, null, PeerOptions.defaultOptions());
-    }
-
-    /**
-     * @since 1.0
-     */
-    public InetPeer(InetAddress inetAddress, int port, PeerOptions options) {
-        this(inetAddress, port, null, options);
-    }
-
-    /**
-     * @since 1.0
-     */
-    public InetPeer(InetSocketAddress address, PeerOptions options) {
-        this(() -> address, null, options);
-    }
-
-    /**
-     * @since 1.3
-     */
-    public InetPeer(InetPeerAddress addressHolder, PeerOptions options) {
-        this(addressHolder::getAddress, null, options);
-    }
-
-    /**
-     * @since 1.0
-     */
-    public InetPeer(InetAddress inetAddress, int port, PeerId peerId) {
-        this(inetAddress, port, peerId, PeerOptions.defaultOptions());
-    }
-
-    /**
-     * @since 1.2
-     */
-    public InetPeer(InetSocketAddress address, PeerId peerId) {
-        this(() -> address, peerId, PeerOptions.defaultOptions());
-    }
-
-    /**
-     * @since 1.3
-     */
-    public InetPeer(InetPeerAddress addressHolder, PeerId peerId) {
-        this(addressHolder::getAddress, peerId, PeerOptions.defaultOptions());
-    }
-
-    /**
-     * @since 1.0
-     */
-    public InetPeer(InetAddress inetAddress, int port, PeerId peerId, PeerOptions options) {
-        this(() -> createAddress(inetAddress, port), peerId, options);
-    }
-
-    /**
-     * @since 1.2
-     */
-    public InetPeer(InetSocketAddress address, PeerId peerId, PeerOptions options) {
-        this(() -> address, peerId, options);
-    }
-
-    /**
-     * @since 1.3
-     */
-    public InetPeer(InetPeerAddress addressHolder, PeerId peerId, PeerOptions options) {
-        this(addressHolder::getAddress, peerId, options);
-    }
-
-    private InetPeer(Supplier<InetSocketAddress> addressSupplier, PeerId peerId, PeerOptions options) {
+    private InetPeer(Supplier<InetAddress> addressSupplier, int port, PeerId peerId, PeerOptions options) {
         this.addressSupplier = addressSupplier;
+        this.port = port;
         this.peerId = Optional.ofNullable(peerId);
         this.options = options;
     }
 
-    private static InetSocketAddress createAddress(InetAddress inetAddress, int port) {
-        if (inetAddress == null || port < 0) {
-            throw new IllegalArgumentException("Invalid arguments (address: <" + inetAddress + ":" + port + ">)");
-        }
-        return new InetSocketAddress(inetAddress, port);
-    }
-
     @Override
-    public InetSocketAddress getInetSocketAddress() {
+    public InetAddress getInetAddress() {
         return addressSupplier.get();
     }
 
     @Override
-    public InetAddress getInetAddress() {
-        return addressSupplier.get().getAddress();
+    public boolean isPortUnknown() {
+        return (port == UNKNOWN_PORT);
     }
 
-    // TODO: probably need an additional property isReachable()
-    // to distinguish between outbound and inbound connections
-    // and to not send unreachable peers via PEX
     @Override
     public int getPort() {
-        return addressSupplier.get().getPort();
+        return port;
     }
 
     @Override
@@ -158,30 +69,83 @@ public class InetPeer implements Peer {
         return options;
     }
 
-    @Override
-    public int hashCode() {
-        return addressSupplier.get().hashCode();
+    public void setPort(int newPort) {
+        checkPort(newPort);
+        if (port != UNKNOWN_PORT && port != newPort) {
+            throw new IllegalStateException("Port already set to: " + port + "." +
+                    " Attempted to update to: " + newPort);
+        }
+        port = newPort;
     }
 
-    /**
-     * Compares peers by address, regardless of the particular classes.
-     */
-    @Override
-    public boolean equals(Object object) {
-        if (object == this) {
-            return true;
+    private static void checkPort(int port) {
+        if (port < 0 || port > 65535) {
+            throw new IllegalArgumentException("Invalid port: " + port);
         }
-
-        if (object == null || !Peer.class.isAssignableFrom(object.getClass())) {
-            return false;
-        }
-
-        Peer that = (Peer) object;
-        return addressSupplier.get().equals(that.getInetSocketAddress());
     }
 
     @Override
     public String toString() {
-        return addressSupplier.get().toString();
+        MoreObjects.ToStringHelper builder = MoreObjects.toStringHelper(this)
+                .add("address", addressSupplier.get())
+                .add("port", port);
+
+        peerId.ifPresent(id -> builder.add("peerId", id));
+
+        return builder.toString();
+    }
+
+    public static Builder builder(InetPeerAddress holder) {
+        int port = holder.getPort();
+        checkPort(port);
+        return new Builder(holder::getAddress, port);
+    }
+
+    public static Builder builder(InetAddress address, int port) {
+        checkPort(port);
+        return new Builder(() -> address, port);
+    }
+
+    public static Builder builder(InetAddress address) {
+        return new Builder(() -> address, UNKNOWN_PORT);
+    }
+
+    public static InetPeer build(InetPeerAddress peerAddress) {
+        return builder(peerAddress).build();
+    }
+
+    public static InetPeer build(InetAddress address, int port) {
+        return builder(address, port).build();
+    }
+
+    public static InetPeer build(InetAddress address) {
+        return builder(address).build();
+    }
+
+    public static class Builder {
+
+        private final Supplier<InetAddress> addressSupplier;
+        private final int port;
+        private PeerId peerId;
+        private PeerOptions options;
+
+        private Builder(Supplier<InetAddress> addressSupplier, int port) {
+            this.addressSupplier = addressSupplier;
+            this.port = port;
+        }
+
+        public Builder peerId(PeerId peerId) {
+            this.peerId = Objects.requireNonNull(peerId);
+            return this;
+        }
+
+        public Builder options(PeerOptions options) {
+            this.options = Objects.requireNonNull(options);
+            return this;
+        }
+
+        public InetPeer build() {
+            return new InetPeer(addressSupplier, port, peerId, options);
+        }
     }
 }

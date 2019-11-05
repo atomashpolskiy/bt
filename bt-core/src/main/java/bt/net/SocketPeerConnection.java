@@ -40,6 +40,7 @@ public class SocketPeerConnection implements PeerConnection {
 
     private final AtomicReference<TorrentId> torrentId;
     private final Peer remotePeer;
+    private final int remotePort;
 
     private final ChannelHandler handler;
 
@@ -48,9 +49,10 @@ public class SocketPeerConnection implements PeerConnection {
     private final ReentrantLock readLock;
     private final Condition condition;
 
-    SocketPeerConnection(Peer remotePeer, ChannelHandler handler) {
+    SocketPeerConnection(Peer remotePeer, int remotePort, ChannelHandler handler) {
         this.torrentId = new AtomicReference<>();
         this.remotePeer = remotePeer;
+        this.remotePort = remotePort;
         this.handler = handler;
         this.lastActive = new AtomicLong();
         this.readLock = new ReentrantLock(true);
@@ -76,7 +78,7 @@ public class SocketPeerConnection implements PeerConnection {
         if (message != null) {
             updateLastActive();
             if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Received message from peer: " + remotePeer + " -- " + message);
+                LOGGER.trace("Received message from peer: " + getPeerString() + " -- " + message);
             }
         }
         return message;
@@ -103,13 +105,13 @@ public class SocketPeerConnection implements PeerConnection {
                     message = readMessageNow();
                     if (message != null) {
                         if (LOGGER.isTraceEnabled()) {
-                            LOGGER.trace("Received message from peer: " + remotePeer + " -- " + message +
+                            LOGGER.trace("Received message from peer: " + getPeerString() + " -- " + message +
                                     " (in " + (System.currentTimeMillis() - started) + " ms)");
                         }
                         return message;
                     } else if (remaining <= 0) {
                         if (LOGGER.isTraceEnabled()) {
-                            LOGGER.trace("Failed to read message from peer: " + remotePeer +
+                            LOGGER.trace("Failed to read message from peer: " + getPeerString() +
                                     " (in " + (System.currentTimeMillis() - started) + " ms)");
                         }
                         return null;
@@ -126,7 +128,7 @@ public class SocketPeerConnection implements PeerConnection {
     public synchronized void postMessage(Message message) {
         updateLastActive();
         if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("Sending message to peer: " + remotePeer + " -- " + message);
+            LOGGER.trace("Sending message to peer: " + getPeerString() + " -- " + message);
         }
         handler.send(message);
     }
@@ -141,11 +143,16 @@ public class SocketPeerConnection implements PeerConnection {
     }
 
     @Override
+    public int getRemotePort() {
+        return remotePort;
+    }
+
+    @Override
     public void closeQuietly() {
         try {
             close();
         } catch (IOException e) {
-            LOGGER.warn("Failed to close connection for peer: " + remotePeer, e);
+            LOGGER.warn("Failed to close connection for peer: " + getPeerString(), e);
         }
     }
 
@@ -153,7 +160,7 @@ public class SocketPeerConnection implements PeerConnection {
     public void close() throws IOException {
         if (!isClosed()) {
             if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Closing connection for peer: " + remotePeer);
+                LOGGER.trace("Closing connection for peer: " + getPeerString());
             }
             handler.close();
         }
@@ -167,5 +174,9 @@ public class SocketPeerConnection implements PeerConnection {
     @Override
     public long getLastActive() {
         return lastActive.get();
+    }
+
+    private String getPeerString() {
+        return remotePeer.getInetAddress() + ":" + remotePort;
     }
 }

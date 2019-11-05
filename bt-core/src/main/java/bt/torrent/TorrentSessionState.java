@@ -16,7 +16,7 @@
 
 package bt.torrent;
 
-import bt.net.Peer;
+import bt.net.ConnectionKey;
 
 import java.util.Set;
 
@@ -77,7 +77,7 @@ public interface TorrentSessionState {
 
     /**
      * @return Collection of peers, that this session is connected to
-     * @since 1.0
+     * @since 1.9
      */
-    Set<Peer> getConnectedPeers();
+    Set<ConnectionKey> getConnectedPeers();
 }

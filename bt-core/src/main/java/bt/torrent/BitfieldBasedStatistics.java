@@ -18,7 +18,7 @@ package bt.torrent;
 
 import bt.data.Bitfield;
 import bt.data.Bitfield.PieceStatus;
-import bt.net.Peer;
+import bt.net.ConnectionKey;
 
 import java.util.Map;
 import java.util.Optional;
@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class BitfieldBasedStatistics implements PieceStatistics {
 
     private final Bitfield localBitfield;
-    private final Map<Peer, Bitfield> peerBitfields;
+    private final Map<ConnectionKey, Bitfield> peerBitfields;
     private final int[] pieceTotals;
 
     /**
@@ -53,9 +53,9 @@ public class BitfieldBasedStatistics implements PieceStatistics {
      *
      * @since 1.0
      */
-    public void addBitfield(Peer peer, Bitfield bitfield) {
+    public void addBitfield(ConnectionKey connectionKey, Bitfield bitfield) {
         validateBitfieldLength(bitfield);
-        peerBitfields.put(peer, bitfield);
+        peerBitfields.put(connectionKey, bitfield);
 
         for (int i = 0; i < pieceTotals.length; i++) {
             if (bitfield.getPieceStatus(i) == PieceStatus.COMPLETE_VERIFIED) {
@@ -74,8 +74,8 @@ public class BitfieldBasedStatistics implements PieceStatistics {
      *
      * @since 1.0
      */
-    public void removeBitfield(Peer peer) {
-        Bitfield bitfield = peerBitfields.remove(peer);
+    public void removeBitfield(ConnectionKey connectionKey) {
+        Bitfield bitfield = peerBitfields.remove(connectionKey);
         if (bitfield == null) {
             return;
         }
@@ -104,11 +104,11 @@ public class BitfieldBasedStatistics implements PieceStatistics {
      *
      * @since 1.0
      */
-    public void addPiece(Peer peer, Integer pieceIndex) {
-        Bitfield bitfield = peerBitfields.get(peer);
+    public void addPiece(ConnectionKey connectionKey, Integer pieceIndex) {
+        Bitfield bitfield = peerBitfields.get(connectionKey);
         if (bitfield == null) {
             bitfield = new Bitfield(localBitfield.getPiecesTotal());
-            Bitfield existing = peerBitfields.putIfAbsent(peer, bitfield);
+            Bitfield existing = peerBitfields.putIfAbsent(connectionKey, bitfield);
             if (existing != null) {
                 bitfield = existing;
             }
@@ -129,8 +129,8 @@ public class BitfieldBasedStatistics implements PieceStatistics {
      *
      * @since 1.0
      */
-    public Optional<Bitfield> getPeerBitfield(Peer peer) {
-        return Optional.ofNullable(peerBitfields.get(peer));
+    public Optional<Bitfield> getPeerBitfield(ConnectionKey connectionKey) {
+        return Optional.ofNullable(peerBitfields.get(connectionKey));
     }
 
     @Override

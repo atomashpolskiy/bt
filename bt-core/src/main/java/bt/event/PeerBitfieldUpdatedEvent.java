@@ -18,6 +18,7 @@ package bt.event;
 
 import bt.data.Bitfield;
 import bt.metainfo.TorrentId;
+import bt.net.ConnectionKey;
 import bt.net.Peer;
 
 /**
@@ -27,27 +28,33 @@ import bt.net.Peer;
  */
 public class PeerBitfieldUpdatedEvent extends BaseEvent implements TorrentEvent {
 
-    private final TorrentId torrentId;
-    private final Peer peer;
+    private final ConnectionKey connectionKey;
     private final Bitfield bitfield;
 
-    protected PeerBitfieldUpdatedEvent(long id, long timestamp, TorrentId torrentId, Peer peer, Bitfield bitfield) {
+    protected PeerBitfieldUpdatedEvent(long id, long timestamp,
+                                       ConnectionKey connectionKey, Bitfield bitfield) {
         super(id, timestamp);
-        this.torrentId = torrentId;
-        this.peer = peer;
+        this.connectionKey = connectionKey;
         this.bitfield = bitfield;
     }
 
     @Override
     public TorrentId getTorrentId() {
-        return torrentId;
+        return connectionKey.getTorrentId();
     }
 
     /**
      * @since 1.5
      */
     public Peer getPeer() {
-        return peer;
+        return connectionKey.getPeer();
+    }
+
+    /**
+     * @since 1.9
+     */
+    public ConnectionKey getConnectionKey() {
+        return connectionKey;
     }
 
     /**
@@ -60,6 +67,6 @@ public class PeerBitfieldUpdatedEvent extends BaseEvent implements TorrentEvent 
     @Override
     public String toString() {
         return "[" + this.getClass().getSimpleName() + "] id {" + getId() + "}, timestamp {" + getTimestamp() +
-                "}, torrent {" + torrentId + "}, peer {" + peer + "}";
+                "}, connection key {" + connectionKey + "}";
     }
 }

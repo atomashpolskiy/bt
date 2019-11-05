@@ -152,7 +152,6 @@ public class ServiceModule implements Module {
         binder.bind(TorrentRegistry.class).to(AdhocTorrentRegistry.class).in(Singleton.class);
         binder.bind(IRuntimeLifecycleBinder.class).to(RuntimeLifecycleBinder.class).in(Singleton.class);
         binder.bind(ProcessorFactory.class).to(TorrentProcessorFactory.class).in(Singleton.class);
-        binder.bind(IPeerCache.class).to(PeerCache.class).in(Singleton.class);
         binder.bind(IBufferManager.class).to(BufferManager.class).in(Singleton.class);
         binder.bind(IChannelPipelineFactory.class).to(ChannelPipelineFactory.class).in(Singleton.class);
         binder.bind(IBufferedPieceRegistry.class).to(BufferedPieceRegistry.class).in(Singleton.class);
@@ -248,10 +247,9 @@ public class ServiceModule implements Module {
     @Singleton
     public SocketChannelConnectionAcceptor provideSocketChannelConnectionAcceptor(
             @PeerConnectionSelector SharedSelector selector,
-            IPeerCache peerCache,
             IPeerConnectionFactory connectionFactory,
             Config config) {
         InetSocketAddress localAddress = new InetSocketAddress(config.getAcceptorAddress(), config.getAcceptorPort());
-        return new SocketChannelConnectionAcceptor(selector, peerCache, connectionFactory, localAddress);
+        return new SocketChannelConnectionAcceptor(selector, connectionFactory, localAddress);
     }
 }

@@ -16,10 +16,7 @@
 
 package bt.torrent.messaging;
 
-import bt.metainfo.TorrentId;
-import bt.net.Peer;
-
-import java.util.Optional;
+import bt.net.ConnectionKey;
 
 /**
  *<p><b>Note that this class implements a service.
@@ -34,16 +31,7 @@ public class PeerWorkerFactory implements IPeerWorkerFactory {
     }
 
     @Override
-    public PeerWorker createPeerWorker(Peer peer) {
-        return createPeerWorker(Optional.empty(), peer);
-    }
-
-    @Override
-    public PeerWorker createPeerWorker(TorrentId torrentId, Peer peer) {
-        return createPeerWorker(Optional.of(torrentId), peer);
-    }
-
-    private PeerWorker createPeerWorker(Optional<TorrentId> torrentId, Peer peer) {
-        return new RoutingPeerWorker(peer, torrentId, router);
+    public PeerWorker createPeerWorker(ConnectionKey connectionKey) {
+        return new RoutingPeerWorker(connectionKey, router);
     }
 }

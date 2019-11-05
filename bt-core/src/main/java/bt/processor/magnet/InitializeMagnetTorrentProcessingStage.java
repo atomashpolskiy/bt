@@ -19,6 +19,7 @@ package bt.processor.magnet;
 import bt.data.Bitfield;
 import bt.event.EventSink;
 import bt.metainfo.TorrentId;
+import bt.net.ConnectionKey;
 import bt.net.Peer;
 import bt.net.pipeline.IBufferedPieceRegistry;
 import bt.processor.ProcessingStage;
@@ -58,7 +59,7 @@ public class InitializeMagnetTorrentProcessingStage extends InitializeTorrentPro
 
         BitfieldBasedStatistics statistics = context.getPieceStatistics();
         // process bitfields and haves that we received while fetching metadata
-        Collection<Peer> peersUpdated = new HashSet<>();
+        Collection<ConnectionKey> peersUpdated = new HashSet<>();
         context.getBitfieldConsumer().getBitfields().forEach((peer, bitfieldBytes) -> {
             if (statistics.getPeerBitfield(peer).isPresent()) {
                 // we should not have received peer's bitfields twice, but whatever.. ignore and continue

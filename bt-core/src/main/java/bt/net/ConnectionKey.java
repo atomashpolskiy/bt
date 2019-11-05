@@ -17,22 +17,29 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import com.google.common.base.MoreObjects;
 
 import java.util.Objects;
 
-class ConnectionKey {
+public class ConnectionKey {
     private final Peer peer;
+    private final int remotePort;
     private final TorrentId torrentId;
 
-    public ConnectionKey(Peer peer, TorrentId torrentId) {
+    public ConnectionKey(Peer peer, int remotePort, TorrentId torrentId) {
         Objects.requireNonNull(peer);
         Objects.requireNonNull(torrentId);
         this.peer = peer;
+        this.remotePort = remotePort;
         this.torrentId = torrentId;
     }
 
     public Peer getPeer() {
         return peer;
+    }
+
+    public int getRemotePort() {
+        return remotePort;
     }
 
     public TorrentId getTorrentId() {
@@ -48,14 +55,27 @@ class ConnectionKey {
             return false;
         }
         ConnectionKey that = (ConnectionKey) obj;
-        return peer.equals(that.peer) && torrentId.equals(that.torrentId);
+        // must not use peer's port, because it can be updated
+        return peer.getInetAddress().equals(that.peer.getInetAddress())
+                && remotePort == that.remotePort
+                && torrentId.equals(that.torrentId);
 
     }
 
     @Override
     public int hashCode() {
-        int result = peer.hashCode();
+        int result = peer.getInetAddress().hashCode();
+        result = 31 * result + remotePort;
         result = 31 * result + torrentId.hashCode();
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("peer", peer)
+                .add("remotePort", remotePort)
+                .add("torrentId", torrentId)
+                .toString();
     }
 }

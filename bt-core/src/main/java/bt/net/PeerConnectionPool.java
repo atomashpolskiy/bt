@@ -79,7 +79,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     @Override
     public PeerConnection getConnection(Peer peer, TorrentId torrentId) {
-        return connections.get(peer, torrentId).orElse(null);
+        return connections.get(peer, peer.getPort(), torrentId).orElse(null);
     }
 
     @Override
@@ -104,7 +104,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         if (!addConnection(newConnection)) {
             // check if it was already added simultaneously by another connection worker
-            PeerConnection existingConnection = connections.get(peer, torrentId)
+            PeerConnection existingConnection = connections.get(peer, newConnection.getRemotePort(), torrentId)
                     .orElseThrow(() -> new RuntimeException("Failed to add new connection for peer: " + peer));
             if (existingConnection == null) {
                 throw new RuntimeException("Failed to add new connection for peer: " + newConnection.getRemotePeer());
@@ -118,6 +118,9 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         boolean added = false;
         PeerConnection existingConnection = null;
 
+        ConnectionKey connectionKey = new ConnectionKey(newConnection.getRemotePeer(),
+                newConnection.getRemotePort(), newConnection.getTorrentId());
+
         cleanerLock.lock();
         try {
             if (connections.count() >= config.getMaxPeerConnections()) {
@@ -127,7 +130,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 }
                 newConnection.closeQuietly();
             } else {
-                existingConnection = connections.putIfAbsent(newConnection);
+                existingConnection = connections.putIfAbsent(connectionKey, newConnection);
                 added = (existingConnection == null);
             }
         } finally {
@@ -142,7 +145,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         }
 
         if (added) {
-            eventSink.firePeerConnected(newConnection.getTorrentId(), newConnection.getRemotePeer());
+            eventSink.firePeerConnected(connectionKey);
         }
         return added;
     }
@@ -178,9 +181,11 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     }
 
     private void purgeConnection(PeerConnection connection) {
-        connections.remove(connection);
+        ConnectionKey connectionKey = new ConnectionKey(connection.getRemotePeer(),
+                connection.getRemotePort(), connection.getTorrentId());
+        connections.remove(connectionKey, connection);
         connection.closeQuietly();
-        eventSink.firePeerDisconnected(connection.getTorrentId(), connection.getRemotePeer());
+        eventSink.firePeerDisconnected(connectionKey);
     }
 
     private void shutdown() {
@@ -214,42 +219,34 @@ class Connections {
         return connections.size();
     }
 
-    synchronized boolean remove(PeerConnection connection) {
+    synchronized boolean remove(ConnectionKey key, PeerConnection connection) {
         Objects.requireNonNull(connection);
-
-        Peer peer = connection.getRemotePeer();
-        TorrentId torrentId = connection.getTorrentId();
-        ConnectionKey key = new ConnectionKey(peer, torrentId);
 
         PeerConnection removed = connections.remove(key);
         boolean success = (removed == connection);
         if (success) {
-            Collection<PeerConnection> torrentConnections = connectionsByTorrent.get(torrentId);
+            Collection<PeerConnection> torrentConnections = connectionsByTorrent.get(key.getTorrentId());
             torrentConnections.remove(removed);
             if (torrentConnections.isEmpty()) {
-                connectionsByTorrent.remove(torrentId);
+                connectionsByTorrent.remove(key.getTorrentId());
             }
         }
         return success;
     }
 
-    synchronized PeerConnection putIfAbsent(PeerConnection connection) {
+    synchronized PeerConnection putIfAbsent(ConnectionKey key, PeerConnection connection) {
         Objects.requireNonNull(connection);
-
-        Peer peer = connection.getRemotePeer();
-        TorrentId torrentId = connection.getTorrentId();
-        ConnectionKey key = new ConnectionKey(peer, torrentId);
 
         PeerConnection existing = connections.putIfAbsent(key, connection);
         if (existing == null) {
-            connectionsByTorrent.computeIfAbsent(torrentId, id -> ConcurrentHashMap.newKeySet())
+            connectionsByTorrent.computeIfAbsent(key.getTorrentId(), id -> ConcurrentHashMap.newKeySet())
                     .add(connection);
         }
         return existing;
     }
 
-    Optional<PeerConnection> get(Peer peer, TorrentId torrentId) {
-        return get(new ConnectionKey(peer, torrentId));
+    Optional<PeerConnection> get(Peer peer, int remotePort, TorrentId torrentId) {
+        return get(new ConnectionKey(peer, remotePort, torrentId));
     }
 
     Optional<PeerConnection> get(ConnectionKey key) {

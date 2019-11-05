@@ -16,10 +16,11 @@
 
 package bt.torrent.messaging;
 
-import bt.net.Peer;
+import bt.net.ConnectionKey;
 import bt.data.Bitfield;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.selector.PieceSelector;
+import com.google.common.base.MoreObjects;
 
 import java.time.Duration;
 import java.util.*;
@@ -32,7 +33,7 @@ class Assignment {
 
     enum Status { ACTIVE, TIMEOUT };
 
-    private Peer peer;
+    private ConnectionKey connectionKey;
     private PieceSelector selector;
     private BitfieldBasedStatistics pieceStatistics;
     private Assignments assignments;
@@ -47,9 +48,9 @@ class Assignment {
 
     private boolean aborted;
 
-    Assignment(Peer peer, Duration limit, PieceSelector selector,
+    Assignment(ConnectionKey connectionKey, Duration limit, PieceSelector selector,
                BitfieldBasedStatistics pieceStatistics, Assignments assignments) {
-        this.peer = peer;
+        this.connectionKey = connectionKey;
         this.selector = selector;
         this.pieceStatistics = pieceStatistics;
         this.assignments = assignments;
@@ -60,8 +61,8 @@ class Assignment {
         claimPiecesIfNeeded();
     }
 
-    Peer getPeer() {
-        return peer;
+    ConnectionKey getConnectionKey() {
+        return connectionKey;
     }
 
     Queue<Integer> getPieces() {
@@ -70,7 +71,7 @@ class Assignment {
 
     private void claimPiecesIfNeeded() {
         if (pieces.size() < MAX_SIMULTANEOUSLY_ASSIGNED_PIECES) {
-            Bitfield peerBitfield = pieceStatistics.getPeerBitfield(peer).get();
+            Bitfield peerBitfield = pieceStatistics.getPeerBitfield(connectionKey).get();
 
             Iterator<Integer> iter;
             if (assignments.isEndgame()) {
@@ -140,13 +141,13 @@ class Assignment {
 
     @Override
     public String toString() {
-        return "Assignment{" +
-                "pieces=" + pieces +
-                ", peer=" + peer +
-                ", started=" + started +
-                ", limit=" + limit +
-                ", checked=" + checked +
-                ", aborted=" + aborted +
-                '}';
+        return MoreObjects.toStringHelper(this)
+                .add("connectionKey", connectionKey)
+                .add("pieces", pieces)
+                .add("limit", limit)
+                .add("started", started)
+                .add("checked", checked)
+                .add("aborted", aborted)
+                .toString();
     }
 }

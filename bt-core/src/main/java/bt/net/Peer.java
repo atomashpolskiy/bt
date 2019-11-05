@@ -19,7 +19,6 @@ package bt.net;
 import bt.peer.PeerOptions;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.Optional;
 
 /**
@@ -30,18 +29,20 @@ import java.util.Optional;
 public interface Peer {
 
     /**
-     * @since 1.2
-     */
-    InetSocketAddress getInetSocketAddress();
-
-    /**
      * @return Peer Internet address.
      * @since 1.0
      */
     InetAddress getInetAddress();
 
     /**
-     * @return Peer port.
+     * @since 1.9
+     */
+    boolean isPortUnknown();
+
+    /**
+     * @return Peer's listening port or {@link InetPeer#UNKNOWN_PORT}, if it's not known yet
+     *         (e.g. when the connection is incoming and the remote side hasn't
+     *         yet communicated to us its' listening port via extended handshake)
      * @since 1.0
      */
     int getPort();

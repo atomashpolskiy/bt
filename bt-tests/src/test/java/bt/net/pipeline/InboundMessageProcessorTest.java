@@ -42,7 +42,7 @@ public class InboundMessageProcessorTest {
 
     public void setUp(int bufferSize) {
         this.buffer = ByteBuffer.allocate(bufferSize);
-        InetPeer peer = new InetPeer(InetAddress.getLoopbackAddress(), 9999);
+        InetPeer peer = InetPeer.build(InetAddress.getLoopbackAddress(), 9999);
         this.encodingContext = new EncodingContext(peer);
         this.protocol = ProtocolTest.forBittorrentProtocol().build().getProtocol();
         MessageDeserializer deserializer = new MessageDeserializer(peer, protocol);

@@ -57,7 +57,6 @@ public class PeerRegistry implements IPeerRegistry {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerRegistry.class);
 
     private final Peer localPeer;
-    private final IPeerCache cache;
 
     private TorrentRegistry torrentRegistry;
     private ITrackerService trackerService;
@@ -74,12 +73,12 @@ public class PeerRegistry implements IPeerRegistry {
                         TorrentRegistry torrentRegistry,
                         ITrackerService trackerService,
                         EventSink eventSink,
-                        IPeerCache cache,
                         Set<PeerSourceFactory> extraPeerSourceFactories,
                         Config config) {
 
-        this.localPeer = new InetPeer(config.getAcceptorAddress(), config.getAcceptorPort(), idService.getLocalPeerId());
-        this.cache = cache;
+        this.localPeer = InetPeer.builder(config.getAcceptorAddress(), config.getAcceptorPort())
+                .peerId(idService.getLocalPeerId())
+                .build();
 
         this.torrentRegistry = torrentRegistry;
         this.trackerService = trackerService;
@@ -206,10 +205,12 @@ public class PeerRegistry implements IPeerRegistry {
 
     @Override
     public void addPeer(TorrentId torrentId, Peer peer) {
+        if (peer.getPort() < 0 || peer.getPort() > 65535) {
+            throw new IllegalArgumentException("Invalid port: " + peer.getPort());
+        }
         if (isLocal(peer)) {
             return;
         }
-        cache.store(peer);
         eventSink.firePeerDiscovered(torrentId, peer);
     }
 

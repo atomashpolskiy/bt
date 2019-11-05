@@ -83,7 +83,7 @@ public class ConnectionSource implements IConnectionSource {
 
     @Override
     public CompletableFuture<ConnectionResult> getConnectionAsync(Peer peer, TorrentId torrentId) {
-        ConnectionKey key = new ConnectionKey(peer, torrentId);
+        ConnectionKey key = new ConnectionKey(peer, peer.getPort(), torrentId);
 
         CompletableFuture<ConnectionResult> connection = getExistingOrPendingConnection(key);
         if (connection != null) {

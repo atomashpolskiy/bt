@@ -171,7 +171,8 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
         ChannelHandler channelHandler = new SocketChannelHandler(channel, in, out, pipeline::bindHandler, dataReceiver);
         channelHandler.register();
 
-        PeerConnection connection = new SocketPeerConnection(peer, channelHandler);
+        int remotePort = ((InetSocketAddress)channel.getRemoteAddress()).getPort();
+        PeerConnection connection = new SocketPeerConnection(peer, remotePort, channelHandler);
         ConnectionHandler connectionHandler;
         if (incoming) {
             connectionHandler = connectionHandlerFactory.getIncomingHandler();
@@ -224,15 +225,16 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
 
     private boolean initConnection(PeerConnection newConnection, ConnectionHandler connectionHandler) {
         boolean success = connectionHandler.handleConnection(newConnection);
+        int remotePort = newConnection.getRemotePort();
         if (success) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Successfully initialized newly established connection to peer: {}, handshake handler: {}",
-                        newConnection.getRemotePeer(), connectionHandler.getClass().getName());
+                LOGGER.debug("Successfully initialized newly established connection to peer: {}:{}, handshake handler: {}",
+                        newConnection.getRemotePeer().getInetAddress(), remotePort, connectionHandler.getClass().getName());
             }
         } else {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Failed to initialize newly established connection to peer: {}, handshake handler: {}",
-                        newConnection.getRemotePeer(), connectionHandler.getClass().getName());
+                LOGGER.debug("Failed to initialize newly established connection to peer: {}:{}, handshake handler: {}",
+                        newConnection.getRemotePeer().getInetAddress(), remotePort, connectionHandler.getClass().getName());
             }
         }
         return success;
