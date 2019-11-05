@@ -74,7 +74,7 @@ public class FetchMetadataStage extends TerminateOnErrorProcessingStage<MagnetCo
         getDescriptor(torrentId).start();
 
         context.getMagnetUri().getPeerAddresses().forEach(peerAddress -> {
-            peerRegistry.addPeer(torrentId, new InetPeer(peerAddress));
+            peerRegistry.addPeer(torrentId, InetPeer.build(peerAddress));
         });
 
         context.getMagnetUri().getTrackerUrls().forEach(trackerUrl -> {

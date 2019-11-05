@@ -17,6 +17,7 @@
 package bt.torrent.messaging;
 
 import bt.metainfo.TorrentId;
+import bt.net.ConnectionKey;
 import bt.net.Peer;
 import bt.protocol.Cancel;
 import bt.protocol.Choke;
@@ -48,10 +49,10 @@ class RoutingPeerWorker implements PeerWorker {
 
     private Choker choker;
 
-    public RoutingPeerWorker(Peer peer, Optional<TorrentId> torrentId, MessageRouter router) {
+    public RoutingPeerWorker(ConnectionKey connectionKey, MessageRouter router) {
         this.connectionState = new ConnectionState();
         this.router = router;
-        this.context = new MessageContext(torrentId, peer, connectionState);
+        this.context = new MessageContext(connectionKey, connectionState);
         this.outgoingMessages = new LinkedBlockingDeque<>();
         this.choker = Choker.choker();
     }

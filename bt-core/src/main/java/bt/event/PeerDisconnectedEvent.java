@@ -17,6 +17,7 @@
 package bt.event;
 
 import bt.metainfo.TorrentId;
+import bt.net.ConnectionKey;
 import bt.net.Peer;
 
 import java.util.Objects;
@@ -28,30 +29,42 @@ import java.util.Objects;
  */
 public class PeerDisconnectedEvent extends BaseEvent implements TorrentEvent {
 
-    private final TorrentId torrentId;
-    private final Peer peer;
+    private final ConnectionKey connectionKey;
 
-    protected PeerDisconnectedEvent(long id, long timestamp, TorrentId torrentId, Peer peer) {
+    protected PeerDisconnectedEvent(long id, long timestamp, ConnectionKey connectionKey) {
         super(id, timestamp);
-        this.torrentId = Objects.requireNonNull(torrentId);
-        this.peer = Objects.requireNonNull(peer);
+        this.connectionKey = Objects.requireNonNull(connectionKey);
     }
 
     @Override
     public TorrentId getTorrentId() {
-        return torrentId;
+        return connectionKey.getTorrentId();
     }
 
     /**
      * @since 1.5
      */
     public Peer getPeer() {
-        return peer;
+        return connectionKey.getPeer();
+    }
+
+    /**
+     * @since 1.9
+     */
+    public int getRemotePort() {
+        return connectionKey.getRemotePort();
+    }
+
+    /**
+     * @since 1.9
+     */
+    public ConnectionKey getConnectionKey() {
+        return connectionKey;
     }
 
     @Override
     public String toString() {
         return "[" + this.getClass().getSimpleName() + "] id {" + getId() + "}, timestamp {" + getTimestamp() +
-                "}, torrent {" + torrentId + "}, peer {" + peer + "}";
+                "}, connection key {" + connectionKey + "}";
     }
 }

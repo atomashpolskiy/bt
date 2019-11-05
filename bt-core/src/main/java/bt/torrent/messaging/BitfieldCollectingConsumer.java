@@ -16,7 +16,7 @@
 
 package bt.torrent.messaging;
 
-import bt.net.Peer;
+import bt.net.ConnectionKey;
 import bt.protocol.Bitfield;
 import bt.protocol.Have;
 import bt.torrent.annotation.Consumes;
@@ -34,8 +34,8 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class BitfieldCollectingConsumer {
 
-    private ConcurrentMap<Peer, byte[]> bitfields;
-    private ConcurrentMap<Peer, Set<Integer>> haves;
+    private ConcurrentMap<ConnectionKey, byte[]> bitfields;
+    private ConcurrentMap<ConnectionKey, Set<Integer>> haves;
 
     public BitfieldCollectingConsumer() {
         this.bitfields = new ConcurrentHashMap<>();
@@ -44,25 +44,21 @@ public class BitfieldCollectingConsumer {
 
     @Consumes
     public void consume(Bitfield bitfieldMessage, MessageContext context) {
-        bitfields.put(context.getPeer(), bitfieldMessage.getBitfield());
+        bitfields.put(context.getConnectionKey(), bitfieldMessage.getBitfield());
     }
 
     @Consumes
     public void consume(Have have, MessageContext context) {
-        Peer peer = context.getPeer();
-        Set<Integer> peerHaves = haves.get(peer);
-        if (peerHaves == null) {
-            peerHaves = ConcurrentHashMap.newKeySet();
-            haves.put(peer, peerHaves);
-        }
+        ConnectionKey peer = context.getConnectionKey();
+        Set<Integer> peerHaves = haves.computeIfAbsent(peer, k -> ConcurrentHashMap.newKeySet());
         peerHaves.add(have.getPieceIndex());
     }
 
-    public Map<Peer, byte[]> getBitfields() {
+    public Map<ConnectionKey, byte[]> getBitfields() {
         return bitfields;
     }
 
-    public Map<Peer, Set<Integer>> getHaves() {
+    public Map<ConnectionKey, Set<Integer>> getHaves() {
         return haves;
     }
 }

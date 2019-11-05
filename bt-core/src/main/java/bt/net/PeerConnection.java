@@ -36,6 +36,11 @@ public interface PeerConnection extends Closeable {
     Peer getRemotePeer();
 
     /**
+     * @since 1.9
+     */
+    int getRemotePort();
+
+    /**
      * Associate this connection with the given torrent ID.
      *
      * @param torrentId Torrent ID to associate this connection with

@@ -23,7 +23,6 @@ import bt.peer.PeerOptions;
 import bt.protocol.crypto.EncryptionPolicy;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -165,13 +164,12 @@ public class CompactPeerInfo implements Iterable<Peer> {
                 to = pos = pos + PORT_LENGTH;
                 port = (((peers[from] << 8) & 0xFF00) + (peers[to - 1] & 0x00FF));
 
-                InetSocketAddress addr = new InetSocketAddress(inetAddress, port);
                 PeerOptions options = PeerOptions.defaultOptions();
                 boolean requiresEncryption = cryptoFlags.isPresent() && cryptoFlags.get()[index] == 1;
                 if (requiresEncryption) {
                     options = options.withEncryptionPolicy(EncryptionPolicy.PREFER_ENCRYPTED);
                 }
-                Peer peer = new InetPeer(addr, options);
+                Peer peer = InetPeer.builder(inetAddress, port).options(options).build();
                 peerList.add(peer);
                 index++;
 

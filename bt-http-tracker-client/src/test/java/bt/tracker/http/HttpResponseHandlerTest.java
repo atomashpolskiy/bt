@@ -96,7 +96,7 @@ public class HttpResponseHandlerTest {
             throw new RuntimeException("Unexpected error", e);
         }
 
-        return new InetPeer(inetAddress, port);
+        return InetPeer.build(inetAddress, port);
     }
 
     @Test

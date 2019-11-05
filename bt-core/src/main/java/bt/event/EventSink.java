@@ -19,6 +19,7 @@ package bt.event;
 import bt.data.Bitfield;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
+import bt.net.ConnectionKey;
 import bt.net.Peer;
 
 /**
@@ -38,23 +39,23 @@ public interface EventSink {
     /**
      * Generate event, that a new connection with some peer has been established.
      *
-     * @since 1.5
+     * @since 1.9
      */
-    void firePeerConnected(TorrentId torrentId, Peer peer);
+    void firePeerConnected(ConnectionKey connectionKey);
 
     /**
      * Generate event, that a connection with some peer has been terminated.
      *
-     * @since 1.5
+     * @since 1.9
      */
-    void firePeerDisconnected(TorrentId torrentId, Peer peer);
+    void firePeerDisconnected(ConnectionKey connectionKey);
 
     /**
      * Generate event, that local information about some peer's data has been updated.
      *
-     * @since 1.5
+     * @since 1.9
      */
-    void firePeerBitfieldUpdated(TorrentId torrentId, Peer peer, Bitfield bitfield);
+    void firePeerBitfieldUpdated(TorrentId torrentId, ConnectionKey connectionKey, Bitfield bitfield);
 
     /**
      * Generate event, that processing of some torrent has begun.

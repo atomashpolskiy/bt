@@ -17,7 +17,7 @@
 package bt.torrent.messaging;
 
 import bt.data.Bitfield;
-import bt.net.Peer;
+import bt.net.ConnectionKey;
 import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.selector.PieceSelector;
@@ -38,7 +38,7 @@ public class Assignments {
     private BitfieldBasedStatistics pieceStatistics;
 
     private Set<Integer> assignedPieces;
-    private Map<Peer, Assignment> assignments;
+    private Map<ConnectionKey, Assignment> assignments;
 
     public Assignments(Bitfield bitfield, PieceSelector selector, BitfieldBasedStatistics pieceStatistics, Config config) {
         this.bitfield = bitfield;
@@ -50,13 +50,13 @@ public class Assignments {
         this.assignments = new HashMap<>();
     }
 
-    public Assignment get(Peer peer) {
-        return assignments.get(peer);
+    public Assignment get(ConnectionKey connectionKey) {
+        return assignments.get(connectionKey);
     }
 
     public void remove(Assignment assignment) {
         assignment.abort();
-        assignments.remove(assignment.getPeer());
+        assignments.remove(assignment.getConnectionKey());
         // TODO: investigate on how this might affect endgame?
         assignedPieces.removeAll(assignment.getPieces());
     }
@@ -65,14 +65,14 @@ public class Assignments {
         return assignments.size();
     }
 
-    public Optional<Assignment> assign(Peer peer) {
-        if (!hasInterestingPieces(peer)) {
+    public Optional<Assignment> assign(ConnectionKey connectionKey) {
+        if (!hasInterestingPieces(connectionKey)) {
             return Optional.empty();
         }
 
-        Assignment assignment = new Assignment(peer, config.getMaxPieceReceivingTime(),
+        Assignment assignment = new Assignment(connectionKey, config.getMaxPieceReceivingTime(),
                 selector, pieceStatistics, this);
-        assignments.put(peer, assignment);
+        assignments.put(connectionKey, assignment);
         return Optional.of(assignment);
     }
 
@@ -97,14 +97,14 @@ public class Assignments {
     /**
      * @return Collection of peers that have interesting pieces and can be given an assignment
      */
-    public Set<Peer> update(Set<Peer> ready, Set<Peer> choking) {
-        Set<Peer> result = new HashSet<>();
-        for (Peer peer : ready) {
+    public Set<ConnectionKey> update(Set<ConnectionKey> ready, Set<ConnectionKey> choking) {
+        Set<ConnectionKey> result = new HashSet<>();
+        for (ConnectionKey peer : ready) {
             if (hasInterestingPieces(peer)) {
                 result.add(peer);
             }
         }
-        for (Peer peer : choking) {
+        for (ConnectionKey peer : choking) {
             if (hasInterestingPieces(peer)) {
                 result.add(peer);
             }
@@ -113,8 +113,8 @@ public class Assignments {
         return result;
     }
 
-    private boolean hasInterestingPieces(Peer peer) {
-        Optional<Bitfield> peerBitfieldOptional = pieceStatistics.getPeerBitfield(peer);
+    private boolean hasInterestingPieces(ConnectionKey connectionKey) {
+        Optional<Bitfield> peerBitfieldOptional = pieceStatistics.getPeerBitfield(connectionKey);
         if (!peerBitfieldOptional.isPresent()) {
             return false;
         }

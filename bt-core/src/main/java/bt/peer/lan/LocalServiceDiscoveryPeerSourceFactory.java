@@ -115,7 +115,7 @@ public class LocalServiceDiscoveryPeerSourceFactory implements PeerSourceFactory
     }
 
     private void collectPeers(SocketAddress address, AnnounceMessage message) {
-        Peer peer = new InetPeer(((InetSocketAddress) address).getAddress(), message.getPort());
+        Peer peer = InetPeer.build(((InetSocketAddress) address).getAddress(), message.getPort());
         message.getTorrentIds().forEach(id -> collectedPeers.add(id, peer));
     }
 

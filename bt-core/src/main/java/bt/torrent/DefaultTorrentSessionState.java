@@ -16,7 +16,7 @@
 
 package bt.torrent;
 
-import bt.net.Peer;
+import bt.net.ConnectionKey;
 import bt.torrent.messaging.ConnectionState;
 import bt.torrent.messaging.TorrentWorker;
 
@@ -34,7 +34,7 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
     /**
      * Recently calculated amounts of downloaded and uploaded data
      */
-    private final Map<Peer, TransferAmounts> recentAmountsForConnectedPeers;
+    private final Map<ConnectionKey, TransferAmounts> recentAmountsForConnectedPeers;
 
     /**
      * Historical data (amount of data downloaded from disconnected peers)
@@ -125,10 +125,10 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
         return uploaded;
     }
 
-    private synchronized Map<Peer, TransferAmounts> getCurrentAmounts() {
-        Map<Peer, TransferAmounts> connectedPeers = getAmountsForConnectedPeers();
+    private synchronized Map<ConnectionKey, TransferAmounts> getCurrentAmounts() {
+        Map<ConnectionKey, TransferAmounts> connectedPeers = getAmountsForConnectedPeers();
 
-        Set<Peer> disconnectedPeers = new HashSet<>();
+        Set<ConnectionKey> disconnectedPeers = new HashSet<>();
         recentAmountsForConnectedPeers.forEach((peer, amounts) -> {
             if (!connectedPeers.containsKey(peer)) {
                 downloadedFromDisconnected.addAndGet(amounts.getDownloaded());
@@ -143,7 +143,7 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
         return recentAmountsForConnectedPeers;
     }
 
-    private Map<Peer, TransferAmounts> getAmountsForConnectedPeers() {
+    private Map<ConnectionKey, TransferAmounts> getAmountsForConnectedPeers() {
         return worker.getPeers().stream()
                 .collect(
                         HashMap::new,
@@ -158,7 +158,7 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
     }
 
     @Override
-    public Set<Peer> getConnectedPeers() {
+    public Set<ConnectionKey> getConnectedPeers() {
         return Collections.unmodifiableSet(worker.getPeers());
     }
 

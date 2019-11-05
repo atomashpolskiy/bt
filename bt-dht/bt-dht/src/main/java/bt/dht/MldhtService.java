@@ -221,7 +221,7 @@ public class MldhtService implements DHTService {
             final PeerLookupTask lookup = dht.createPeerLookup(torrentId.getBytes());
             final StreamAdapter<Peer> streamAdapter = new StreamAdapter<>();
             lookup.setResultHandler((k, p) -> {
-                Peer peer = new InetPeer(p.getInetAddress(), p.getPort());
+                Peer peer = InetPeer.build(p.getInetAddress(), p.getPort());
                 streamAdapter.addItem(peer);
             });
             lookup.addListener(t -> {

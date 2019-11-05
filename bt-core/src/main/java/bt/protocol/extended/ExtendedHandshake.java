@@ -47,6 +47,10 @@ public final class ExtendedHandshake extends ExtendedMessage {
      */
     public static final String MESSAGE_TYPE_MAPPING_KEY = "m";
 
+    public static final String ENCRYPTION_PROPERTY = "e";
+    public static final String TCPPORT_PROPERTY = "p";
+    public static final String VERSION_PROPERTY = "v";
+
     /**
      * @since 1.0
      */
@@ -74,6 +78,14 @@ public final class ExtendedHandshake extends ExtendedMessage {
      */
     public Map<String, BEObject<?>> getData() {
         return data;
+    }
+
+    /**
+     * @return TCP port or null, if absent in message data
+     * @since 1.9
+     */
+    public BEInteger getPort() {
+        return (BEInteger) data.get(TCPPORT_PROPERTY);
     }
 
     /**

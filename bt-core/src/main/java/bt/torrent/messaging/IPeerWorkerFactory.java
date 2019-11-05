@@ -16,8 +16,7 @@
 
 package bt.torrent.messaging;
 
-import bt.metainfo.TorrentId;
-import bt.net.Peer;
+import bt.net.ConnectionKey;
 
 /**
  * @since 1.0
@@ -25,16 +24,9 @@ import bt.net.Peer;
 public interface IPeerWorkerFactory {
 
     /**
-     * Create a peer worker for a given peer.
+     * Create a torrent-aware peer worker for a given peer connection.
      *
-     * @since 1.0
+     * @since 1.9
      */
-    PeerWorker createPeerWorker(Peer peer);
-
-    /**
-     * Create a torrent-aware peer worker for a given peer.
-     *
-     * @since 1.0
-     */
-    PeerWorker createPeerWorker(TorrentId torrentId, Peer peer);
+    PeerWorker createPeerWorker(ConnectionKey connectionKey);
 }

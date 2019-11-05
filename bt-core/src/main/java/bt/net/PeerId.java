@@ -17,6 +17,7 @@
 package bt.net;
 
 import bt.BtException;
+import bt.protocol.Protocols;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -80,6 +81,6 @@ public class PeerId {
 
     @Override
     public String toString() {
-        return Arrays.toString(peerId);
+        return Protocols.toHex(peerId);
     }
 }

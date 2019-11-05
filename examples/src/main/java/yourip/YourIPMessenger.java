@@ -63,7 +63,8 @@ public class YourIPMessenger {
     public void produce(Consumer<Message> messageConsumer, MessageContext context) {
         Peer peer = context.getPeer();
         if (supportingPeers.contains(peer) && !known.contains(peer)) {
-            String address = context.getPeer().getInetSocketAddress().toString();
+            String address = context.getPeer().getInetAddress().toString() +
+                    ":" + context.getConnectionKey().getRemotePort();
             messageConsumer.accept(new YourIP(address));
             known.add(peer);
         }

@@ -17,6 +17,7 @@
 package bt.torrent.messaging;
 
 import bt.metainfo.TorrentId;
+import bt.net.ConnectionKey;
 import bt.net.Peer;
 
 import java.util.Optional;
@@ -28,13 +29,11 @@ import java.util.Optional;
  */
 public class MessageContext {
 
-    private Optional<TorrentId> torrentId;
-    private Peer peer;
-    private ConnectionState connectionState;
+    private final ConnectionState connectionState;
+    private final ConnectionKey connectionKey;
 
-    MessageContext(Optional<TorrentId> torrentId, Peer peer, ConnectionState connectionState) {
-        this.torrentId = torrentId;
-        this.peer = peer;
+    MessageContext(ConnectionKey connectionKey, ConnectionState connectionState) {
+        this.connectionKey = connectionKey;
         this.connectionState = connectionState;
     }
 
@@ -44,7 +43,7 @@ public class MessageContext {
      * @since 1.0
      */
     public Optional<TorrentId> getTorrentId() {
-        return torrentId;
+        return Optional.of(connectionKey.getTorrentId());
     }
 
     /**
@@ -52,7 +51,7 @@ public class MessageContext {
      * @since 1.0
      */
     public Peer getPeer() {
-        return peer;
+        return connectionKey.getPeer();
     }
 
     /**
@@ -61,5 +60,12 @@ public class MessageContext {
      */
     public ConnectionState getConnectionState() {
         return connectionState;
+    }
+
+    /**
+     * @since 1.9
+     */
+    public ConnectionKey getConnectionKey() {
+        return connectionKey;
     }
 }
