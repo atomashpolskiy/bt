@@ -20,8 +20,6 @@ import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
 import bt.net.Peer;
 
-import java.util.Optional;
-
 /**
  * Provides basic information about the context of a message (both inbound and outbound).
  *
@@ -42,8 +40,8 @@ public class MessageContext {
      *         (e.g. if a message was received outside of a torrent processing session)
      * @since 1.0
      */
-    public Optional<TorrentId> getTorrentId() {
-        return Optional.of(connectionKey.getTorrentId());
+    public TorrentId getTorrentId() {
+        return connectionKey.getTorrentId();
     }
 
     /**
