@@ -26,7 +26,6 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -54,7 +53,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private EventSink eventSink;
     private ScheduledExecutorService cleaner;
     private Connections connections;
-    private ReentrantLock cleanerLock;
+    private ReentrantLock connectionLock;
     private Duration peerConnectionInactivityThreshold;
 
     @Inject
@@ -68,7 +67,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         this.eventSink = eventSink;
         this.peerConnectionInactivityThreshold = config.getPeerConnectionInactivityThreshold();
         this.connections = new Connections();
-        this.cleanerLock = new ReentrantLock();
+        this.connectionLock = new ReentrantLock();
 
         this.cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, "bt.net.pool.cleaner"));
         lifecycleBinder.onStartup("Schedule periodic cleanup of stale peer connections",
@@ -124,7 +123,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         ConnectionKey connectionKey = new ConnectionKey(newConnection.getRemotePeer(),
                 newConnection.getRemotePort(), newConnection.getTorrentId());
 
-        cleanerLock.lock();
+        connectionLock.lock();
         try {
             if (connections.count() >= config.getMaxPeerConnections()) {
                 if (LOGGER.isDebugEnabled()) {
@@ -133,11 +132,23 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 }
                 newConnection.closeQuietly();
             } else {
-                existingConnection = connections.putIfAbsent(connectionKey, newConnection);
-                added = (existingConnection == null);
+                List<PeerConnection> connectionsWithSameAddress =
+                        getConnectionsForAddress(newConnection.getTorrentId(), newConnection.getRemotePeer());
+                boolean duplicate = false;
+                for (PeerConnection connection : connectionsWithSameAddress) {
+                    if (connection.getRemotePeer().isPortUnknown()
+                            && connection.getRemotePeer().getPort() == newConnection.getRemotePeer().getPort()) {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (!duplicate) {
+                    existingConnection = connections.putIfAbsent(connectionKey, newConnection);
+                    added = (existingConnection == null);
+                }
             }
         } finally {
-            cleanerLock.unlock();
+            connectionLock.unlock();
         }
         if (existingConnection != null) {
             if (LOGGER.isDebugEnabled()) {
@@ -153,6 +164,48 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     }
 
     private void checkDuplicateConnections(TorrentId torrentId, Peer peer) {
+        connectionLock.lock();
+        try {
+            List<PeerConnection> connectionsWithSameAddress = getConnectionsForAddress(torrentId, peer);
+            PeerConnection outgoingConnection = null;
+            PeerConnection incomingConnection = null;
+            for (PeerConnection connection : connectionsWithSameAddress) {
+                if (connection.getRemotePort() == peer.getPort()) {
+                    outgoingConnection = connection;
+                } else if (connection.getRemotePeer().getPort() == peer.getPort()) {
+                    incomingConnection = connection;
+                }
+                if (outgoingConnection != null && incomingConnection != null) {
+                    break;
+                }
+            }
+            if (outgoingConnection != null && incomingConnection != null) {
+                long outgoingLastActive = outgoingConnection.getLastActive();
+                long incomingLastActive = incomingConnection.getLastActive();
+                if (incomingLastActive > outgoingLastActive) {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Closing duplicate outgoing connection with {}:{}" +
+                                " (more active incoming connection is from port {})",
+                                outgoingConnection.getRemotePeer().getInetAddress(), outgoingConnection.getRemotePort(),
+                                incomingConnection.getRemotePort());
+                    }
+                    outgoingConnection.closeQuietly();
+                } else {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Closing duplicate incoming connection with {}:{}" +
+                                        " (incoming connection is from port {})",
+                                incomingConnection.getRemotePeer().getInetAddress(), outgoingConnection.getRemotePort(),
+                                incomingConnection.getRemotePort());
+                    }
+                    incomingConnection.closeQuietly();
+                }
+            }
+        } finally {
+            connectionLock.unlock();
+        }
+    }
+
+    private List<PeerConnection> getConnectionsForAddress(TorrentId torrentId, Peer peer) {
         List<PeerConnection> connectionsWithSameAddress = new ArrayList<>();
         connections.visitConnections(torrentId, connection -> {
             Peer connectionPeer = connection.getRemotePeer();
@@ -160,39 +213,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 connectionsWithSameAddress.add(connection);
             }
         });
-        PeerConnection outgoingConnection = null;
-        PeerConnection incomingConnection = null;
-        for (PeerConnection connection : connectionsWithSameAddress) {
-            if (connection.getRemotePort() == peer.getPort()) {
-                outgoingConnection = connection;
-            } else if (connection.getRemotePeer().getPort() == peer.getPort()) {
-                incomingConnection = connection;
-            }
-            if (outgoingConnection != null && incomingConnection != null) {
-                break;
-            }
-        }
-        if (outgoingConnection != null && incomingConnection != null) {
-            long outgoingLastActive = outgoingConnection.getLastActive();
-            long incomingLastActive = incomingConnection.getLastActive();
-            if (incomingLastActive > outgoingLastActive) {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Closing duplicate outgoing connection with {}:{}" +
-                            " (more active incoming connection is from port {})",
-                            outgoingConnection.getRemotePeer().getInetAddress(), outgoingConnection.getRemotePort(),
-                            incomingConnection.getRemotePort());
-                }
-                outgoingConnection.closeQuietly();
-            } else {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Closing duplicate incoming connection with {}:{}" +
-                                    " (incoming connection is from port {})",
-                            incomingConnection.getRemotePeer().getInetAddress(), outgoingConnection.getRemotePort(),
-                            incomingConnection.getRemotePort());
-                }
-                incomingConnection.closeQuietly();
-            }
-        }
+        return connectionsWithSameAddress;
     }
 
     private class Cleaner implements Runnable {
@@ -202,7 +223,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 return;
             }
 
-            cleanerLock.lock();
+            connectionLock.lock();
             try {
                 connections.visitConnections(connection -> {
                     if (connection.isClosed()) {
@@ -220,7 +241,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 });
 
             } finally {
-                cleanerLock.unlock();
+                connectionLock.unlock();
             }
         }
     }
