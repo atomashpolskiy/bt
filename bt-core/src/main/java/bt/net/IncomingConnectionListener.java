@@ -82,8 +82,9 @@ public class IncomingConnectionListener {
                 ConnectionResult connectionResult = connectionRoutine.establish();
                 if (connectionResult.isSuccess()) {
                     if (!shutdown && mightAddConnection()) {
-                        connectionPool.addConnectionIfAbsent(connectionResult.getConnection());
-                        added = true;
+                        PeerConnection established = connectionResult.getConnection();
+                        PeerConnection existing = connectionPool.addConnectionIfAbsent(established);
+                        added = (established == existing);
                     }
                 }
             }
