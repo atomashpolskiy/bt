@@ -20,7 +20,7 @@ import bt.data.Bitfield;
 import bt.event.EventSink;
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
-import bt.net.Peer;
+import bt.net.IPeerConnectionPool;
 import bt.net.pipeline.IBufferedPieceRegistry;
 import bt.processor.ProcessingStage;
 import bt.processor.listener.ProcessingEvent;
@@ -42,12 +42,13 @@ public class InitializeMagnetTorrentProcessingStage extends InitializeTorrentPro
     private EventSink eventSink;
 
     public InitializeMagnetTorrentProcessingStage(ProcessingStage<MagnetContext> next,
+                                                  IPeerConnectionPool connectionPool,
                                                   TorrentRegistry torrentRegistry,
                                                   DataWorker dataWorker,
                                                   IBufferedPieceRegistry bufferedPieceRegistry,
                                                   EventSink eventSink,
                                                   Config config) {
-        super(next, torrentRegistry, dataWorker, bufferedPieceRegistry, eventSink, config);
+        super(next, connectionPool, torrentRegistry, dataWorker, bufferedPieceRegistry, eventSink, config);
         this.eventSink = eventSink;
     }
 

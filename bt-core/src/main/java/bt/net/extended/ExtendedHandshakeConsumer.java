@@ -17,20 +17,21 @@
 package bt.net.extended;
 
 import bt.bencoding.model.BEInteger;
+import bt.net.IPeerConnectionPool;
 import bt.net.InetPeer;
-import bt.peer.IPeerRegistry;
 import bt.protocol.extended.ExtendedHandshake;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.messaging.MessageContext;
-import com.google.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ExtendedHandshakeConsumer {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExtendedHandshakeConsumer.class);
 
-    private final IPeerRegistry peerRegistry;
+    private final IPeerConnectionPool connectionPool;
 
-    @Inject
-    public ExtendedHandshakeConsumer(IPeerRegistry peerRegistry) {
-        this.peerRegistry = peerRegistry;
+    public ExtendedHandshakeConsumer(IPeerConnectionPool connectionPool) {
+        this.connectionPool = connectionPool;
     }
 
     @Consumes
@@ -38,8 +39,13 @@ public class ExtendedHandshakeConsumer {
         BEInteger peerListeningPort = message.getPort();
         if (peerListeningPort != null) {
             InetPeer peer = (InetPeer) messageContext.getConnectionKey().getPeer();
-            peer.setPort(peerListeningPort.getValue().intValueExact());
-            peerRegistry.addPeer(messageContext.getConnectionKey().getTorrentId(), peer);
+            int listeningPort = peerListeningPort.getValue().intValueExact();
+            peer.setPort(listeningPort);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Updating listening port for peer {}:{} to {}",
+                        peer.getInetAddress(), messageContext.getConnectionKey().getRemotePort(), listeningPort);
+            }
+            connectionPool.checkDuplicateConnections(messageContext.getConnectionKey().getTorrentId(), peer);
         }
     }
 }

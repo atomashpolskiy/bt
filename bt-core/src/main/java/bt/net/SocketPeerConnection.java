@@ -19,6 +19,7 @@ package bt.net;
 import bt.metainfo.TorrentId;
 import bt.net.pipeline.ChannelHandler;
 import bt.protocol.Message;
+import com.google.common.base.MoreObjects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -178,5 +179,15 @@ public class SocketPeerConnection implements PeerConnection {
 
     private String getPeerString() {
         return remotePeer.getInetAddress() + ":" + remotePort;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("torrentId", torrentId)
+                .add("remotePeer", remotePeer)
+                .add("remotePort", remotePort)
+                .add("lastActive", lastActive)
+                .toString();
     }
 }
