@@ -105,19 +105,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     @Override
     public PeerConnection addConnectionIfAbsent(PeerConnection newConnection) {
-        Peer peer = newConnection.getRemotePeer();
-        TorrentId torrentId = newConnection.getTorrentId();
-
-        if (!addConnection(newConnection)) {
-            // check if it was already added simultaneously by another connection worker
-            newConnection = connections.get(peer, newConnection.getRemotePort(), torrentId)
-                    .orElseThrow(() -> new RuntimeException("Failed to add new connection for peer: " + peer));
-        }
-        return newConnection;
-    }
-
-    private boolean addConnection(PeerConnection newConnection) {
-        boolean added = false;
         PeerConnection existingConnection = null;
 
         ConnectionKey connectionKey = new ConnectionKey(newConnection.getRemotePeer(),
@@ -134,17 +121,17 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             } else {
                 List<PeerConnection> connectionsWithSameAddress =
                         getConnectionsForAddress(newConnection.getTorrentId(), newConnection.getRemotePeer());
-                boolean duplicate = false;
                 for (PeerConnection connection : connectionsWithSameAddress) {
-                    if (connection.getRemotePeer().isPortUnknown()
+                    if (!connection.getRemotePeer().isPortUnknown()
                             && connection.getRemotePeer().getPort() == newConnection.getRemotePeer().getPort()) {
-                        duplicate = true;
+                        existingConnection = connection;
                         break;
                     }
                 }
-                if (!duplicate) {
-                    existingConnection = connections.putIfAbsent(connectionKey, newConnection);
-                    added = (existingConnection == null);
+                if (existingConnection == null) {
+                    if (connections.putIfAbsent(connectionKey, newConnection) != null) {
+                        throw new IllegalStateException();
+                    }
                 }
             }
         } finally {
@@ -152,15 +139,14 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         }
         if (existingConnection != null) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Connection already exists for peer: " + newConnection.getRemotePeer());
+                LOGGER.debug("Connection already exists for peer {} (established remote port {})",
+                        newConnection.getRemotePeer(), existingConnection.getRemotePort());
             }
-            newConnection.closeQuietly();
-        }
-
-        if (added) {
+            return existingConnection;
+        } else {
             eventSink.firePeerConnected(connectionKey);
+            return newConnection;
         }
-        return added;
     }
 
     private void checkDuplicateConnections(TorrentId torrentId, Peer peer) {
