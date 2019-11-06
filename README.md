@@ -14,10 +14,6 @@ A full-featured BitTorrent implementation in Java 8
 </strong></p>
 
 <p align="center">
-    <img src="https://atomashpolskiy.github.io/static/img/bt-source-code.png" alt="Bt Example">
-</p>
-
-<p align="center">
     <img src="https://atomashpolskiy.github.io/static/img/bt-cli-demo.gif" alt="Bt CLI">
 </p>
 
@@ -123,7 +119,7 @@ Module dhtModule = new DHTModule(new DHTConfig() {
 });
 
 // get download directory
-Path targetDirectory = new File("~/Downloads").toPath();
+Path targetDirectory = Paths.get(System.getProperty("user.home"), "Downloads");
 
 // create file system based backend for torrent data
 Storage storage = new FileSystemStorage(targetDirectory);
