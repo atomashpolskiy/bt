@@ -116,7 +116,7 @@ public class PieceConsumer {
                                 LOGGER.error("Failed to verify piece index {" + piece.getPieceIndex() + "}", error1);
                             } else if (verified) {
                                 completedPieces.add(piece.getPieceIndex());
-                                eventSink.firePieceVerified(context.getTorrentId().get(), piece.getPieceIndex());
+                                eventSink.firePieceVerified(context.getTorrentId(), piece.getPieceIndex());
                             } else {
                                 LOGGER.error("Failed to verify piece index {" + piece.getPieceIndex() + "}." +
                                         " No error has been provided by I/O worker," +

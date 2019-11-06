@@ -205,10 +205,11 @@ public class PeerRegistry implements IPeerRegistry {
 
     @Override
     public void addPeer(TorrentId torrentId, Peer peer) {
-        if (peer.getPort() < 0 || peer.getPort() > 65535) {
+        if (peer.isPortUnknown()) {
+            throw new IllegalArgumentException("Peer's port is unknown: " + peer);
+        } else if (peer.getPort() < 0 || peer.getPort() > 65535) {
             throw new IllegalArgumentException("Invalid port: " + peer.getPort());
-        }
-        if (isLocal(peer)) {
+        } else if (isLocal(peer)) {
             return;
         }
         eventSink.firePeerDiscovered(torrentId, peer);
@@ -237,7 +238,8 @@ public class PeerRegistry implements IPeerRegistry {
     }
 
     private boolean isLocal(Peer peer) {
-        return peer.getInetAddress().isAnyLocalAddress() && localPeer.getPort() == peer.getPort();
+        return peer.getInetAddress().equals(localPeer.getInetAddress())
+                && localPeer.getPort() == peer.getPort();
     }
 
     @Override

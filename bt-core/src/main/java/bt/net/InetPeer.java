@@ -145,6 +145,8 @@ public class InetPeer implements Peer {
         }
 
         public InetPeer build() {
+            PeerOptions options = (this.options == null) ?
+                    PeerOptions.defaultOptions() : this.options;
             return new InetPeer(addressSupplier, port, peerId, options);
         }
     }
