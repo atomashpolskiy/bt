@@ -18,7 +18,7 @@ A full-featured BitTorrent implementation in Java 8
 </p>
 
 <p align="center">
-    <img src="https://atomashpolskiy.github.io/static/img/bt-animated.gif" alt="Bt CLI">
+    <img src="https://atomashpolskiy.github.io/static/img/bt-cli-demo.gif" alt="Bt CLI">
 </p>
 
 <p align="center">
