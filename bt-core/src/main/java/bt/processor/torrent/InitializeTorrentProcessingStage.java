@@ -20,6 +20,8 @@ import bt.data.Bitfield;
 import bt.event.EventSink;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
+import bt.net.IPeerConnectionPool;
+import bt.net.extended.ExtendedHandshakeConsumer;
 import bt.net.pipeline.IBufferedPieceRegistry;
 import bt.processor.ProcessingStage;
 import bt.processor.TerminateOnErrorProcessingStage;
@@ -38,6 +40,7 @@ import bt.torrent.messaging.RequestProducer;
 
 public class InitializeTorrentProcessingStage<C extends TorrentContext> extends TerminateOnErrorProcessingStage<C> {
 
+    private IPeerConnectionPool connectionPool;
     private TorrentRegistry torrentRegistry;
     private DataWorker dataWorker;
     private IBufferedPieceRegistry bufferedPieceRegistry;
@@ -45,12 +48,14 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
     private Config config;
 
     public InitializeTorrentProcessingStage(ProcessingStage<C> next,
+                                            IPeerConnectionPool connectionPool,
                                             TorrentRegistry torrentRegistry,
                                             DataWorker dataWorker,
                                             IBufferedPieceRegistry bufferedPieceRegistry,
                                             EventSink eventSink,
                                             Config config) {
         super(next);
+        this.connectionPool = connectionPool;
         this.torrentRegistry = torrentRegistry;
         this.dataWorker = dataWorker;
         this.bufferedPieceRegistry = bufferedPieceRegistry;
@@ -69,6 +74,7 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
 
         context.getRouter().registerMessagingAgent(GenericConsumer.consumer());
         context.getRouter().registerMessagingAgent(new BitfieldConsumer(bitfield, pieceStatistics, eventSink));
+        context.getRouter().registerMessagingAgent(new ExtendedHandshakeConsumer(connectionPool));
         context.getRouter().registerMessagingAgent(new PieceConsumer(torrentId, bitfield, dataWorker, bufferedPieceRegistry, eventSink));
         context.getRouter().registerMessagingAgent(new PeerRequestConsumer(torrentId, dataWorker));
         context.getRouter().registerMessagingAgent(new RequestProducer(descriptor.getDataDescriptor(), config.getMaxOutstandingRequests()));

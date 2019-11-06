@@ -57,4 +57,9 @@ public interface IPeerConnectionPool {
      * @since 1.6
      */
     PeerConnection addConnectionIfAbsent(PeerConnection connection);
+
+    /**
+     * @since 1.9
+     */
+    void checkDuplicateConnections(TorrentId torrentId, Peer peer);
 }
