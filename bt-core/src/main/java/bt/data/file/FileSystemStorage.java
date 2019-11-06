@@ -74,9 +74,7 @@ public class FileSystemStorage implements Storage {
      *
      * @param rootDirectory Root directory for this storage. All torrent files will be stored inside this directory.
      * @since 1.0
-     * @deprecated since 1.3 in favor of more generic {@link #FileSystemStorage(Path)}
      */
-    @Deprecated
     public FileSystemStorage(File rootDirectory) {
         this(rootDirectory.toPath());
     }

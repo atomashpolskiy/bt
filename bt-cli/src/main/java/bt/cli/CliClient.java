@@ -135,7 +135,7 @@ public class CliClient  {
                 .disableAutomaticShutdown()
                 .build();
 
-        Storage storage = new FileSystemStorage(options.getTargetDirectory());
+        Storage storage = new FileSystemStorage(options.getTargetDirectory().toPath());
         PieceSelector selector = options.downloadSequentially() ?
                 SequentialSelector.sequential() : RarestFirstSelector.randomizedRarest();
 
