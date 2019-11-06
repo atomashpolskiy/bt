@@ -50,7 +50,7 @@ public class BitfieldConsumer {
         ConnectionKey peer = context.getConnectionKey();
         bt.data.Bitfield peerBitfield = new bt.data.Bitfield(bitfieldMessage.getBitfield(), BitOrder.LITTLE_ENDIAN, bitfield.getPiecesTotal());
         pieceStatistics.addBitfield(peer, peerBitfield);
-        eventSink.firePeerBitfieldUpdated(context.getTorrentId().get(), peer, peerBitfield);
+        eventSink.firePeerBitfieldUpdated(context.getTorrentId(), peer, peerBitfield);
     }
 
     @Consumes
@@ -58,6 +58,6 @@ public class BitfieldConsumer {
         ConnectionKey peer = context.getConnectionKey();
         pieceStatistics.addPiece(peer, have.getPieceIndex());
         pieceStatistics.getPeerBitfield(peer).ifPresent(
-                bitfield -> eventSink.firePeerBitfieldUpdated(context.getTorrentId().get(), peer, bitfield));
+                bitfield -> eventSink.firePeerBitfieldUpdated(context.getTorrentId(), peer, bitfield));
     }
 }

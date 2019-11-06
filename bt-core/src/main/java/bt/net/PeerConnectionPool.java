@@ -18,6 +18,7 @@ package bt.net;
 
 import bt.CountingThreadFactory;
 import bt.event.EventSink;
+import bt.event.EventSource;
 import bt.metainfo.TorrentId;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
@@ -25,8 +26,11 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -56,6 +60,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     @Inject
     public PeerConnectionPool(
             EventSink eventSink,
+            EventSource eventSource,
             IRuntimeLifecycleBinder lifecycleBinder,
             Config config) {
 
@@ -75,6 +80,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         lifecycleBinder.onShutdown("Shutdown outgoing connection request processor", executor::shutdownNow);
         lifecycleBinder.onShutdown("Shutdown connection pool", this::shutdown);
+
+        eventSource.onPeerDiscovered(e -> checkDuplicateConnections(e.getTorrentId(), e.getPeer()));
     }
 
     @Override
@@ -104,12 +111,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
         if (!addConnection(newConnection)) {
             // check if it was already added simultaneously by another connection worker
-            PeerConnection existingConnection = connections.get(peer, newConnection.getRemotePort(), torrentId)
+            newConnection = connections.get(peer, newConnection.getRemotePort(), torrentId)
                     .orElseThrow(() -> new RuntimeException("Failed to add new connection for peer: " + peer));
-            if (existingConnection == null) {
-                throw new RuntimeException("Failed to add new connection for peer: " + newConnection.getRemotePeer());
-            }
-            newConnection = existingConnection;
         }
         return newConnection;
     }
@@ -141,13 +144,55 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 LOGGER.debug("Connection already exists for peer: " + newConnection.getRemotePeer());
             }
             newConnection.closeQuietly();
-            newConnection = existingConnection;
         }
 
         if (added) {
             eventSink.firePeerConnected(connectionKey);
         }
         return added;
+    }
+
+    private void checkDuplicateConnections(TorrentId torrentId, Peer peer) {
+        List<PeerConnection> connectionsWithSameAddress = new ArrayList<>();
+        connections.visitConnections(torrentId, connection -> {
+            Peer connectionPeer = connection.getRemotePeer();
+            if (connectionPeer.getInetAddress().equals(peer.getInetAddress())) {
+                connectionsWithSameAddress.add(connection);
+            }
+        });
+        PeerConnection outgoingConnection = null;
+        PeerConnection incomingConnection = null;
+        for (PeerConnection connection : connectionsWithSameAddress) {
+            if (connection.getRemotePort() == peer.getPort()) {
+                outgoingConnection = connection;
+            } else if (connection.getRemotePeer().getPort() == peer.getPort()) {
+                incomingConnection = connection;
+            }
+            if (outgoingConnection != null && incomingConnection != null) {
+                break;
+            }
+        }
+        if (outgoingConnection != null && incomingConnection != null) {
+            long outgoingLastActive = outgoingConnection.getLastActive();
+            long incomingLastActive = incomingConnection.getLastActive();
+            if (incomingLastActive > outgoingLastActive) {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Closing duplicate outgoing connection with {}:{}" +
+                            " (more active incoming connection is from port {})",
+                            outgoingConnection.getRemotePeer().getInetAddress(), outgoingConnection.getRemotePort(),
+                            incomingConnection.getRemotePort());
+                }
+                outgoingConnection.closeQuietly();
+            } else {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Closing duplicate incoming connection with {}:{}" +
+                                    " (incoming connection is from port {})",
+                            incomingConnection.getRemotePeer().getInetAddress(), outgoingConnection.getRemotePort(),
+                            incomingConnection.getRemotePort());
+                }
+                incomingConnection.closeQuietly();
+            }
+        }
     }
 
     private class Cleaner implements Runnable {

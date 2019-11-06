@@ -189,7 +189,8 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
                 rwLock.readLock().unlock();
             }
 
-            if (events.size() >= minEventsPerMessage || (currentTime - lastSentPEXMessageToPeer) >= maxMessageInterval.toMillis()) {
+            if (events.size() >= minEventsPerMessage ||
+                    (!events.isEmpty() && (currentTime - lastSentPEXMessageToPeer >= maxMessageInterval.toMillis()))) {
                 lastSentPEXMessage.put(connectionKey, currentTime);
                 PeerExchange.Builder messageBuilder = PeerExchange.builder();
                 events.forEach(event -> {
