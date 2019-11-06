@@ -18,6 +18,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * Add configuration option for send/receive buffer size
 * Add CLI parameter for DHT port
 * Allow bogon addresses, when using private DHT
+* Reliably eliminate duplicate peer connections and self connections
 
 ## 1.8
 
