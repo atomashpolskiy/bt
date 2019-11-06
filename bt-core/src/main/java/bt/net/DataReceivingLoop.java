@@ -129,6 +129,10 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
                         break;
                     }
                     Thread.sleep(1);
+                    if (!interestOpsUpdates.isEmpty()) {
+                        processInterestOpsUpdates();
+                    }
+                    selector.selectNow();
                 }
             } catch (ClosedSelectorException e) {
                 LOGGER.info("Selector has been closed, will stop receiving messages...");
