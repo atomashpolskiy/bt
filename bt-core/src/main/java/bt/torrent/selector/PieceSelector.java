@@ -18,7 +18,7 @@ package bt.torrent.selector;
 
 import bt.torrent.PieceStatistics;
 
-import java.util.stream.Stream;
+import java.util.stream.IntStream;
 
 /**
  * Implements a continuous piece selection algorithm.
@@ -34,5 +34,5 @@ public interface PieceSelector {
      * @return Stream of selected piece indices
      * @since 1.1
      */
-    Stream<Integer> getNextPieces(PieceStatistics pieceStatistics);
+    IntStream getNextPieces(PieceStatistics pieceStatistics);
 }

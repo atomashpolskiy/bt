@@ -18,8 +18,8 @@ package bt.torrent.selector;
 
 import bt.torrent.PieceStatistics;
 
-import java.util.function.Predicate;
-import java.util.stream.Stream;
+import java.util.function.IntPredicate;
+import java.util.stream.IntStream;
 
 /**
  * Decorator that applies a filter to the selector stream.
@@ -28,7 +28,7 @@ import java.util.stream.Stream;
  */
 public class ValidatingSelector implements PieceSelector {
 
-    private Predicate<Integer> validator;
+    private IntPredicate validator;
     private PieceSelector delegate;
 
     /**
@@ -38,13 +38,14 @@ public class ValidatingSelector implements PieceSelector {
      * @param delegate Delegate selector
      * @since 1.1
      */
-    public ValidatingSelector(Predicate<Integer> validator, PieceSelector delegate) {
+    public ValidatingSelector(IntPredicate validator, PieceSelector delegate) {
         this.validator = validator;
         this.delegate = delegate;
     }
 
     @Override
-    public Stream<Integer> getNextPieces(PieceStatistics pieceStatistics) {
-        return delegate.getNextPieces(pieceStatistics).filter(validator::test);
+    public IntStream getNextPieces(PieceStatistics pieceStatistics) {
+        return delegate.getNextPieces(pieceStatistics)
+                .filter(validator);
     }
 }

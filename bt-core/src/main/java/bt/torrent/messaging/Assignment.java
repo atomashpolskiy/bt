@@ -24,7 +24,7 @@ import com.google.common.base.MoreObjects;
 
 import java.time.Duration;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.concurrent.ThreadLocalRandom;
 
 class Assignment {
 
@@ -73,24 +73,29 @@ class Assignment {
         if (pieces.size() < MAX_SIMULTANEOUSLY_ASSIGNED_PIECES) {
             Bitfield peerBitfield = pieceStatistics.getPeerBitfield(connectionKey).get();
 
-            Iterator<Integer> iter;
+            // randomize order of pieces to keep the number of pieces
+            // requested from different peers at the same time to a minimum
+            int[] requiredPieces = selector.getNextPieces(pieceStatistics).toArray();
             if (assignments.isEndgame()) {
-                // randomize order of pieces to keep the number of pieces
-                // requested from different peers at the same time to a minimum
-                List<Integer> requiredPieces = selector.getNextPieces(pieceStatistics)
-                        .collect(Collectors.toList());
-                Collections.shuffle(requiredPieces);
-                iter = requiredPieces.iterator();
-            } else {
-                iter = selector.getNextPieces(pieceStatistics).iterator();
+                shuffle(requiredPieces);
             }
 
-            while (iter.hasNext() && pieces.size() < 3) {
-                Integer pieceIndex = iter.next();
+            for (int i = 0; i < requiredPieces.length && pieces.size() < 3; i++) {
+                int pieceIndex = requiredPieces[i];
                 if (peerBitfield.isVerified(pieceIndex) && assignments.claim(pieceIndex)) {
                     pieces.add(pieceIndex);
                 }
             }
+        }
+    }
+
+    private static void shuffle(int[] arr) {
+        Random rnd = ThreadLocalRandom.current();
+        for (int k = arr.length - 1; k > 0; k--) {
+            int i = rnd.nextInt(k + 1);
+            int a = arr[i];
+            arr[i] = arr[k];
+            arr[k] = a;
         }
     }
 

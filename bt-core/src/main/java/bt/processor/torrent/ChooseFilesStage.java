@@ -37,7 +37,7 @@ import bt.torrent.selector.ValidatingSelector;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Predicate;
+import java.util.function.IntPredicate;
 import java.util.stream.IntStream;
 
 public class ChooseFilesStage<C extends TorrentContext> extends TerminateOnErrorProcessingStage<C> {
@@ -108,9 +108,9 @@ public class ChooseFilesStage<C extends TorrentContext> extends TerminateOnError
     private PieceSelector createSelector(PieceSelector selector,
                                          Bitfield bitfield,
                                          Set<Integer> selectedFilesPieces) {
-        Predicate<Integer> incompletePiecesValidator = new IncompletePiecesValidator(bitfield);
-        Predicate<Integer> selectedFilesValidator = selectedFilesPieces::contains;
-        Predicate<Integer> validator = (pieceIndex) ->
+        IntPredicate incompletePiecesValidator = new IncompletePiecesValidator(bitfield);
+        IntPredicate selectedFilesValidator = selectedFilesPieces::contains;
+        IntPredicate validator = (pieceIndex) ->
                 selectedFilesValidator.test(pieceIndex) && incompletePiecesValidator.test(pieceIndex);
         return new ValidatingSelector(validator, selector);
     }

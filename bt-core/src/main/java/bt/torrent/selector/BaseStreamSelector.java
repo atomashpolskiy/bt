@@ -21,7 +21,7 @@ import bt.torrent.PieceStatistics;
 import java.util.PrimitiveIterator;
 import java.util.Spliterator;
 import java.util.Spliterators;
-import java.util.stream.Stream;
+import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 /**
@@ -32,9 +32,9 @@ import java.util.stream.StreamSupport;
 public abstract class BaseStreamSelector implements PieceSelector {
 
     @Override
-    public final Stream<Integer> getNextPieces(PieceStatistics pieceStatistics) {
-        return StreamSupport.stream(() -> Spliterators.spliteratorUnknownSize(createIterator(pieceStatistics),
-                characteristics()), characteristics(), false);
+    public final IntStream getNextPieces(PieceStatistics pieceStatistics) {
+        return StreamSupport.intStream(Spliterators.spliteratorUnknownSize(createIterator(pieceStatistics),
+                characteristics()), false);
     }
 
     /**

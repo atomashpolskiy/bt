@@ -18,9 +18,9 @@ package bt.torrent.selector;
 
 import bt.data.Bitfield;
 
-import java.util.function.Predicate;
+import java.util.function.IntPredicate;
 
-public class IncompletePiecesValidator implements Predicate<Integer> {
+public class IncompletePiecesValidator implements IntPredicate {
 
     private Bitfield bitfield;
 
@@ -29,11 +29,11 @@ public class IncompletePiecesValidator implements Predicate<Integer> {
     }
 
     @Override
-    public boolean test(Integer pieceIndex) {
+    public boolean test(int pieceIndex) {
         return !isComplete(pieceIndex);
     }
 
-    private boolean isComplete(Integer pieceIndex) {
+    private boolean isComplete(int pieceIndex) {
         Bitfield.PieceStatus pieceStatus = bitfield.getPieceStatus(pieceIndex);
         return pieceStatus == Bitfield.PieceStatus.COMPLETE || pieceStatus == Bitfield.PieceStatus.COMPLETE_VERIFIED;
     }

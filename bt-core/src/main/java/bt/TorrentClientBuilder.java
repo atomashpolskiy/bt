@@ -28,11 +28,9 @@ import bt.processor.listener.ProcessingEvent;
 import bt.processor.magnet.MagnetContext;
 import bt.processor.torrent.TorrentContext;
 import bt.runtime.BtRuntime;
-import bt.torrent.PieceSelectionStrategy;
 import bt.torrent.fileselector.TorrentFileSelector;
 import bt.torrent.selector.PieceSelector;
 import bt.torrent.selector.RarestFirstSelector;
-import bt.torrent.selector.SelectorAdapter;
 import bt.torrent.selector.SequentialSelector;
 
 import java.net.URL;
@@ -134,19 +132,6 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
         this.torrentUrl = null;
         this.torrentSupplier = null;
         this.magnetUri = Objects.requireNonNull(magnetUri, "Missing magnet URI");
-        return (B) this;
-    }
-
-    /**
-     * Set piece selection strategy
-     *
-     * @see #selector(PieceSelector)
-     * @since 1.4
-     */
-    @SuppressWarnings("unchecked")
-    public B selector(PieceSelectionStrategy pieceSelectionStrategy) {
-        Objects.requireNonNull(pieceSelectionStrategy, "Missing piece selection strategy");
-        this.pieceSelector = new SelectorAdapter(pieceSelectionStrategy);
         return (B) this;
     }
 
