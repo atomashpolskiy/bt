@@ -11,7 +11,7 @@ order: 2
 
 In this tutorial we are going to create a simple extension that will let peers know what their external IP address looks like (or how this peer is seen by the others). In real BitTorrent this information is provided during the extended handshake procedure. 
 
-Source code and runnable program are available in [Bt examples](https://github.com/atomashpolskiy/bt/tree/master/examples/src/main/java/yourip).
+Source code and runnable program are available in [Bt examples](https://github.com/atomashpolskiy/bittorrent/tree/master/examples/src/main/java/yourip).
 
 First, let's design the message itself. It must be a subtype of `ExtendedMessage` to be recognized by the extension protocol. A helper method `writeTo(OutputStream)` will take care of transforming the message object into bytes.
 

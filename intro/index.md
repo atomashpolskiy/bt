@@ -31,7 +31,7 @@ Declare the following dependencies in your project's **pom.xml**:
  
 Bt CLI client is a very simple program for downloading/seeding a single torrent. It illustrates the most basic use case of Bt library.
 
-See [usage notes](https://github.com/atomashpolskiy/bt/tree/master/bt-cli) and explore the [CliClient](https://github.com/atomashpolskiy/bt/blob/master/bt-cli/src/main/java/bt/cli/CliClient.java) class for an example of assembling a basic Bt client.
+See [usage notes](https://github.com/atomashpolskiy/bittorrent/tree/master/bt-cli) and explore the [CliClient](https://github.com/atomashpolskiy/bittorrent/blob/master/bt-cli/src/main/java/bt/cli/CliClient.java) class for an example of assembling a basic Bt client.
 
 # **Overall design**
 
@@ -88,13 +88,13 @@ Bt is built around [Google Guice](https://github.com/google/guice) DI container 
 
 Core Bt modules are:
 
-- [bt.module.ServiceModule](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/module/ServiceModule.html)
-- [bt.module.ProtocolModule](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/module/ProtocolModule.html)
-- [bt.peerexchange.PeerExchangeModule](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/peerexchange/PeerExchangeModule.html)
+- [bt.module.ServiceModule](http://atomashpolskiy.github.io/bittorrent/javadoc/latest/bt/module/ServiceModule.html)
+- [bt.module.ProtocolModule](http://atomashpolskiy.github.io/bittorrent/javadoc/latest/bt/module/ProtocolModule.html)
+- [bt.peerexchange.PeerExchangeModule](http://atomashpolskiy.github.io/bittorrent/javadoc/latest/bt/peerexchange/PeerExchangeModule.html)
 
 By default only UDP trackers are supported by the core library. HTTP tracker integration is shipped as a standalone module in a separate Maven library:
 
-- [bt.tracker.http.HttpTrackerModule](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/tracker/http/HttpTrackerModule.html)
+- [bt.tracker.http.HttpTrackerModule](http://atomashpolskiy.github.io/bittorrent/javadoc/latest/bt/tracker/http/HttpTrackerModule.html)
 
 The reason for not including HTTP tracker support in the core is that it depends on [Apache HTTP Components](http://hc.apache.org/) library. Thus, if you plan on using HTTP tracker, include the following dependency in **pom.xml**:
 
@@ -148,19 +148,19 @@ config.setAcceptorPort(/* network port */);
 BtRuntime runtime = BtRuntime.builder(config).build();
 ```
 
-See full list of configuration parameters on [Config](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/Config.html) page in the JavaDoc.
+See full list of configuration parameters on [Config](http://atomashpolskiy.github.io/bittorrent/javadoc/latest/bt/runtime/Config.html) page in the JavaDoc.
 
 # **Client lifecycle**
 
 ## _**Startup**_
 
-There are two methods for starting the torrent session in [BtClient](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtClient.html):
+There are two methods for starting the torrent session in [BtClient](http://atomashpolskiy.github.io/bittorrent/javadoc/latest/bt/runtime/BtClient.html):
 
-- [BtClient#startAsync()](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtClient.html#startAsync--)
+- [BtClient#startAsync()](http://atomashpolskiy.github.io/bittorrent/javadoc/latest/bt/runtime/BtClient.html#startAsync--)
 
-- [BtClient#startAsync(Consumer&lt;TorrentSessionState&gt;, long)](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtClient.html#startAsync-java.util.function.Consumer-long-)
+- [BtClient#startAsync(Consumer&lt;TorrentSessionState&gt;, long)](http://atomashpolskiy.github.io/bittorrent/javadoc/latest/bt/runtime/BtClient.html#startAsync-java.util.function.Consumer-long-)
 
-The no-argument method will just begin the torrent processing. The overloaded version will also launch a scheduled future, that will be calling the provided listener with current session state at a given interval. [Session state](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/torrent/TorrentSessionState.html) contains some useful information, e.g. a list of connected peers, download progress and such, so it might be a good idea to inspect it from time to time. E.g. the [CLI client](https://github.com/atomashpolskiy/bt/tree/master/bt-cli) uses session state to determine whether it should stop:
+The no-argument method will just begin the torrent processing. The overloaded version will also launch a scheduled future, that will be calling the provided listener with current session state at a given interval. [Session state](http://atomashpolskiy.github.io/bittorrent/javadoc/latest/bt/torrent/TorrentSessionState.html) contains some useful information, e.g. a list of connected peers, download progress and such, so it might be a good idea to inspect it from time to time. E.g. the [CLI client](https://github.com/atomashpolskiy/bittorrent/tree/master/bt-cli) uses session state to determine whether it should stop:
 
 ```java
 client.startAsync(state -> {
@@ -174,7 +174,7 @@ Both methods return a [CompletableFuture&lt;?&gt;](https://docs.oracle.com/javas
 
 ## _**Shutdown**_
 
-Stopping the client is as easy as calling [BtClient#stop()](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtClient.html#stop--).
+Stopping the client is as easy as calling [BtClient#stop()](http://atomashpolskiy.github.io/bittorrent/javadoc/latest/bt/runtime/BtClient.html#stop--).
 
 ## _**Interconnection between runtime and its' clients**_
 
@@ -182,8 +182,8 @@ By default the runtime is configured to startup and shutdown synchronously with 
 
 This is not always the desired behaviour. E.g. when implementing a "pause" button, the client should be stopped and then started again after a user event. In such case creating and starting a new runtime each time the user clicks "resume" would be inefficient. That's why there is a dedicated method for turning this feature off:
 
-- [BtRuntimeBuilder#disableAutomaticShutdown()](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtRuntimeBuilder.html#disableAutomaticShutdown--).
+- [BtRuntimeBuilder#disableAutomaticShutdown()](http://atomashpolskiy.github.io/bittorrent/javadoc/latest/bt/runtime/BtRuntimeBuilder.html#disableAutomaticShutdown--).
 
-Manual runtime shutdown is performed by calling [BtRuntime#shutdown()](http://atomashpolskiy.github.io/bt/javadoc/latest/bt/runtime/BtRuntime.html#shutdown--). Behaviour is completely identical to the automatic mode: stopping all clients (if any of them are still executing), performing registered shutdown hooks, releasing resources, done.
+Manual runtime shutdown is performed by calling [BtRuntime#shutdown()](http://atomashpolskiy.github.io/bittorrent/javadoc/latest/bt/runtime/BtRuntime.html#shutdown--). Behaviour is completely identical to the automatic mode: stopping all clients (if any of them are still executing), performing registered shutdown hooks, releasing resources, done.
 
 Everything stated above also applies when the runtime is shared among several clients (multiple simultaneous torrent sessions). With the only difference that this time runtime fires up when _any_ of the clients is started and shutdowns when _all_ of the clients are finished (unless automatic shutdown is disabled like in the single client case).
