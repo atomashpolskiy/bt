@@ -8,10 +8,10 @@ description: >
  <a href="https://github.com/atomashpolskiy/bittorrent" target="_blank">Bt</a> is a modern Java 8 BitTorrent library.
  It offers good performance, reliability and is highly customizable.
 baseurl: "/bittorrent"
-url: "http://atomashpolskiy.github.io"
+url: "https://atomashpolskiy.github.io"
 repository: atomashpolskiy/bittorrent
 github:
-  url: "http://atomashpolskiy.github.io/bittorrent"
+  url: "https://atomashpolskiy.github.io/bittorrent"
   repo: "https://github.com/atomashpolskiy/bittorrent"
 author:
   name: Andrei Tomashpolskiy
