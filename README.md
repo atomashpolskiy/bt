@@ -1,5 +1,5 @@
 <h1 align="center">
-    <a href="http://atomashpolskiy.github.io/bittorrent/">Bt</a>
+    <a href="https://atomashpolskiy.github.io/bittorrent/">Bt</a>
     <a href="https://twitter.com/intent/tweet?text=Bt%3A%20A%20Java%208%20BitTorrent%20library%20with%20DHT%2C%20magnet%20links%2C%20encryption%20and%20more&url=https://github.com/atomashpolskiy/bittorrent&via=atomashpolskiy&hashtags=java,bittorrent,dht,library">
         <img src="https://img.shields.io/twitter/url/http/shields.io.svg?style=social&logo=twitter"
             alt="Tweet">
@@ -30,7 +30,7 @@ A full-featured BitTorrent implementation in Java 8
         <img src="https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/badge.svg"
              alt="Maven Central">
     </a>
-    <a href="http://atomashpolskiy.github.io/bittorrent/javadoc/latest/">
+    <a href="https://atomashpolskiy.github.io/bittorrent/javadoc/latest/">
         <img src="https://img.shields.io/badge/javadoc-latest-orange.svg"
              alt="JavaDoc">
     </a>
@@ -40,7 +40,7 @@ A full-featured BitTorrent implementation in Java 8
     </a>
 </p>
 
-* **[HOME](http://atomashpolskiy.github.io/bittorrent/)** – website with documentation and tutorials
+* **[HOME](https://atomashpolskiy.github.io/bittorrent/)** – website with documentation and tutorials
 * **[RELEASE NOTES](https://github.com/atomashpolskiy/bittorrent/blob/master/RELEASE-NOTES.md#bt-release-notes)** – list of features, bugfixes and improments for each version
 * **[UPGRADE INSTRUCTIONS](https://github.com/atomashpolskiy/bittorrent/blob/master/UPGRADE.md#upgrade-instructions)** – version migration guide
 * **[FORUM](https://groups.google.com/forum/#!forum/bttorrent)** – Google group for support and feedback
