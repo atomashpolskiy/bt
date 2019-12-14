@@ -4,7 +4,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 ## 1.9
 
-#### Date:
+#### Date: 12/14/2019
 
 ### Bug Fixes/Improvements:
 
