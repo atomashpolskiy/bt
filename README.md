@@ -1,6 +1,6 @@
 <h1 align="center">
-    <a href="https://atomashpolskiy.github.io/bittorrent/">Bt</a>
-    <a href="https://twitter.com/intent/tweet?text=Bt%3A%20A%20Java%208%20BitTorrent%20library%20with%20DHT%2C%20magnet%20links%2C%20encryption%20and%20more&url=https://github.com/atomashpolskiy/bittorrent&via=atomashpolskiy&hashtags=java,bittorrent,dht,library">
+    <a href="https://atomashpolskiy.github.io/bt/">Bt</a>
+    <a href="https://twitter.com/intent/tweet?text=Bt%3A%20A%20Java%208%20BitTorrent%20library%20with%20DHT%2C%20magnet%20links%2C%20encryption%20and%20more&url=https://github.com/atomashpolskiy/bt&via=atomashpolskiy&hashtags=java,bittorrent,dht,library">
         <img src="https://img.shields.io/twitter/url/http/shields.io.svg?style=social&logo=twitter"
             alt="Tweet">
     </a>
@@ -30,7 +30,7 @@ A full-featured BitTorrent implementation in Java 8
         <img src="https://maven-badges.herokuapp.com/maven-central/com.github.atomashpolskiy/bt-core/badge.svg"
              alt="Maven Central">
     </a>
-    <a href="https://atomashpolskiy.github.io/bittorrent/javadoc/latest/">
+    <a href="https://atomashpolskiy.github.io/bt/javadoc/latest/">
         <img src="https://img.shields.io/badge/javadoc-latest-orange.svg"
              alt="JavaDoc">
     </a>
@@ -40,18 +40,18 @@ A full-featured BitTorrent implementation in Java 8
     </a>
 </p>
 
-* **[HOME](https://atomashpolskiy.github.io/bittorrent/)** – website with documentation and tutorials
-* **[RELEASE NOTES](https://github.com/atomashpolskiy/bittorrent/blob/master/RELEASE-NOTES.md#bt-release-notes)** – list of features, bugfixes and improments for each version
-* **[UPGRADE INSTRUCTIONS](https://github.com/atomashpolskiy/bittorrent/blob/master/UPGRADE.md#upgrade-instructions)** – version migration guide
+* **[HOME](https://atomashpolskiy.github.io/bt/)** – website with documentation and tutorials
+* **[RELEASE NOTES](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.md#bt-release-notes)** – list of features, bugfixes and improments for each version
+* **[UPGRADE INSTRUCTIONS](https://github.com/atomashpolskiy/bt/blob/master/UPGRADE.md#upgrade-instructions)** – version migration guide
 * **[FORUM](https://groups.google.com/forum/#!forum/bttorrent)** – Google group for support and feedback
 * **[TROUBLESHOOTING](#troubleshooting)** - solutions for some common problems
-* **[LICENSE](https://github.com/atomashpolskiy/bittorrent/blob/master/LICENSE)** – licensed under Apache License 2.0
+* **[LICENSE](https://github.com/atomashpolskiy/bt/blob/master/LICENSE)** – licensed under Apache License 2.0
 
 ## Runnable apps and demos
 
-* **[CLI](https://github.com/atomashpolskiy/bittorrent/tree/master/bt-cli#simple-command-line-torrent-downloader)** – command-line downloader
-* **[PEER TRACKER](https://github.com/atomashpolskiy/bittorrent/tree/master/examples/src/main/java/peertracker#peer-tracker)** – tracking of swarm statistics via events
-* **[YOURIP MESSENGER](https://github.com/atomashpolskiy/bittorrent/tree/master/examples/src/main/java/yourip#yourip-messenger)** – usage of custom messages
+* **[CLI](https://github.com/atomashpolskiy/bt/tree/master/bt-cli#simple-command-line-torrent-downloader)** – command-line downloader
+* **[PEER TRACKER](https://github.com/atomashpolskiy/bt/tree/master/examples/src/main/java/peertracker#peer-tracker)** – tracking of swarm statistics via events
+* **[YOURIP MESSENGER](https://github.com/atomashpolskiy/bt/tree/master/examples/src/main/java/yourip#yourip-messenger)** – usage of custom messages
 
 ## Media
 
@@ -94,7 +94,7 @@ Declare the following dependencies in your project’s **pom.xml**:
 ## Building from source
 
 ```
-git clone https://github.com/atomashpolskiy/bittorrent.git
+git clone https://github.com/atomashpolskiy/bt.git
 cd bt
 mvn clean install -DskipTests
 ```
@@ -200,7 +200,7 @@ There seem to be some issues with dual-stack networking in Windows JDK (e.g. see
 
 Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new features and BEPs to be added. You have the following options to share your ideas, receive help or report bugs:
 
-* open a new [GitHub issue](https://github.com/atomashpolskiy/bittorrent/issues)
+* open a new [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
 * post your question on the [Bt forum](https://groups.google.com/forum/#!forum/bttorrent)
 
 ## List of supported BEPs
