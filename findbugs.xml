@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+http://findbugs.sourceforge.net/manual/filter.html
+
+Confidence: This element matches warnings with a particular bug confidence. The value attribute should be an integer value: 1 to match high-confidence warnings, 2 to match normal-confidence warnings, or 3 to match low-confidence warnings.
+
+Rank: This element matches warnings with a particular bug rank. The value attribute should be an integer value between 1 and 20, where 1 to 4 are scariest, 5 to 9 scary, 10 to 14 troubling, and 15 to 20 of concern bugs.
+
+See bug descriptions here: http://findbugs.sourceforge.net/bugDescriptions.html
+-->
+<FindBugsFilter>
+    <Match>
+        <Class name="~bt\..*" />
+        <Confidence value="2"/>
+        <Not>
+            <!-- Rank must be <15 -->
+            <Rank value="15"/>
+        </Not>
+        <Not>
+            <!-- Allow to synchronize on instances of java.util.concurrent classes -->
+            <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER"/>
+        </Not>
+    </Match>
+    <Match>
+        <!-- Report only the most severe bugs for libmldht -->
+        <Or>
+            <Class name="~lbms\..*" />
+            <Class name="~the8472\..*" />
+        </Or>
+        <Confidence value="2"/>
+        <Not>
+            <!-- Rank must be <5 -->
+            <Rank value="5"/>
+        </Not>
+    </Match>
+</FindBugsFilter>

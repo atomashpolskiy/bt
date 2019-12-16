@@ -258,6 +258,11 @@
                     <artifactId>sonar-maven-plugin</artifactId>
                     <version>3.3.0.603</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>findbugs-maven-plugin</artifactId>
+                    <version>3.0.5</version>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -340,6 +345,21 @@
                     <releaseProfiles>release</releaseProfiles>
                     <goals>deploy</goals>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <configuration>
+                    <includeFilterFile>${maven.multiModuleProjectDirectory}/findbugs.xml</includeFilterFile>
+                    <effort>Max</effort>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

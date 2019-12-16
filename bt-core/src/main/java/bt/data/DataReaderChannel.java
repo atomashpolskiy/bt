@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.util.BitSet;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *<p><b>Note that this class is not a part of the public API and is a subject to change.</b></p>
@@ -33,7 +34,7 @@ public class DataReaderChannel implements ReadableByteChannel {
 
     private int position;
     private long remaining;
-    private volatile int limit;
+    private volatile AtomicInteger limit;
     private volatile boolean closed;
 
     public DataReaderChannel(DataDescriptor dataDescriptor, long chunkSize) {
@@ -51,14 +52,16 @@ public class DataReaderChannel implements ReadableByteChannel {
         while (skipped.get(limit) || bitmask.get(limit)) {
             limit++;
         }
-        this.limit = limit;
+        this.limit = new AtomicInteger(limit);
     }
 
     public synchronized void onPieceVerified(int pieceIndex) {
+        int limit = this.limit.intValue();
         if (pieceIndex >= limit) {
             while (limit < bitfield.getPiecesTotal() && bitfield.isVerified(limit)) {
                 limit++;
             }
+            this.limit.set(limit);
             notifyAll();
         }
     }
@@ -69,10 +72,10 @@ public class DataReaderChannel implements ReadableByteChannel {
             return -1;
         }
 
-        if (position == limit) {
+        if (position == limit.intValue()) {
             synchronized (this) {
                 try {
-                    while (position == limit) {
+                    while (position == limit.intValue()) {
                         wait();
                     }
                 } catch (InterruptedException e) {
@@ -120,7 +123,7 @@ public class DataReaderChannel implements ReadableByteChannel {
                 position++;
                 remaining = chunkSize;
             }
-        } while (position < limit && dst.remaining() > 0);
+        } while (position < limit.intValue() && dst.remaining() > 0);
 
         return readTotal;
     }

@@ -92,17 +92,16 @@ public class BufferManager implements IBufferManager {
         @Override
         public void release() {
             lock.lock();
-            // check if lockAndGet() has been called by the current thread and not followed by unlock()
-            if (lock.getHoldCount() > 1) {
-                lock.unlock(); // make sure to unlock the lock before throwing an exception
-                throw new IllegalStateException("Buffer is locked and can't be released");
-            }
             try {
+                // check if lockAndGet() has been called by the current thread and not followed by unlock()
+                if (lock.getHoldCount() > 1) {
+                    throw new IllegalStateException("Buffer is locked and can't be released");
+                }
                 if (buffer != null) {
                     getReleasedBuffersDeque(ByteBuffer.class).add(new SoftReference<>(buffer));
+                    buffer = null;
                 }
             } finally {
-                buffer = null;
                 lock.unlock();
             }
         }
