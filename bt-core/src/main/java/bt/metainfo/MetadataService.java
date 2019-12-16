@@ -36,6 +36,7 @@ import java.io.InputStream;
 import java.math.BigInteger;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,7 +71,7 @@ public class MetadataService implements IMetadataService {
     private Charset defaultCharset;
 
     public MetadataService() {
-        this.defaultCharset = Charset.forName("UTF-8");
+        this.defaultCharset = StandardCharsets.UTF_8;
 
         try {
             try (InputStream in = MetadataService.class.getResourceAsStream("/metainfo.yml")) {

@@ -23,6 +23,7 @@ import org.junit.Test;
 
 import java.math.BigInteger;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -33,7 +34,7 @@ import static org.junit.Assert.assertTrue;
 
 public class BEParserTest {
 
-    private Charset charset = Charset.forName("UTF-8");
+    private Charset charset = StandardCharsets.UTF_8;
 
     @Test
     public void testParse_String1() {

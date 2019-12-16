@@ -174,11 +174,11 @@ public class ByteChannelReader {
     }
 
     private long getTimeoutMillis() {
-        return timeout.isPresent()? timeout.get().toMillis() : 0;
+        return timeout.map(Duration::toMillis).orElse(0L);
     }
 
     private long getWaitBetweenReadsMillis() {
-        return waitBetweenReads.isPresent()? waitBetweenReads.get().toMillis() : 0;
+        return waitBetweenReads.map(Duration::toMillis).orElse(0L);
     }
 
     private void ensureSufficientSpace(ByteBuffer buf) {

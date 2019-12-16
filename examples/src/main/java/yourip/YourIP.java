@@ -23,7 +23,7 @@ import bt.protocol.extended.ExtendedMessage;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 
 public class YourIP extends ExtendedMessage {
@@ -51,7 +51,7 @@ public class YourIP extends ExtendedMessage {
 
     void writeTo(OutputStream out) throws IOException {
         BEMap message = new BEMap(null, new HashMap<String, BEObject<?>>() {{
-            put(addressField, new BEString(address.getBytes(Charset.forName("UTF-8"))));
+            put(addressField, new BEString(address.getBytes(StandardCharsets.UTF_8)));
         }});
         message.writeTo(out);
     }

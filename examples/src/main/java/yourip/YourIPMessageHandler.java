@@ -26,7 +26,7 @@ import bt.protocol.handler.MessageHandler;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -54,7 +54,7 @@ public class YourIPMessageHandler implements MessageHandler<YourIP> {
         buffer.get(payload);
         try (BEParser parser = new BEParser(payload)) {
             BEMap message = parser.readMap();
-            String address = new String(message.getValue().get(YourIP.addressField()).getContent(), Charset.forName("UTF-8"));
+            String address = new String(message.getValue().get(YourIP.addressField()).getContent(), StandardCharsets.UTF_8);
             context.setMessage(new YourIP(address));
             return message.getContent().length;
         }

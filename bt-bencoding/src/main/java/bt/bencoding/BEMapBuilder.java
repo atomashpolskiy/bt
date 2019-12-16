@@ -20,6 +20,7 @@ import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,7 +34,7 @@ class BEMapBuilder extends BEPrefixedTypeBuilder<BEMap> {
 
     BEMapBuilder() {
         map = new HashMap<>();
-        keyCharset = Charset.forName("UTF-8");
+        keyCharset = StandardCharsets.UTF_8;
     }
 
     @Override

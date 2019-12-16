@@ -21,7 +21,7 @@ import bt.test.protocol.ProtocolTest;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -40,7 +40,7 @@ public class Protocol_InvalidDataTest {
 
         String expectedMessage = "Unexpected protocol name (decoded with ASCII): " +
                 new String(new byte[]{-1,105,116,84,111,114,114,101,110,116,32,112,114,111,116,111,99,111,108},
-                        Charset.forName("ASCII"));
+                        StandardCharsets.US_ASCII);
 
         InvalidMessageException e = null;
         try {

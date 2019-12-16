@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -115,7 +115,7 @@ public class ExtendedHandshakeFactory implements IExtendedHandshakeFactory {
             LOGGER.error("Failed to get version", e);
             version = getDefaultVersion();
         }
-        builder.property(VERSION_PROPERTY, new BEString(version.getBytes(Charset.forName("UTF-8"))));
+        builder.property(VERSION_PROPERTY, new BEString(version.getBytes(StandardCharsets.UTF_8)));
 
         messageTypeMapping.visitMappings(builder::addMessageType);
         return builder.build();

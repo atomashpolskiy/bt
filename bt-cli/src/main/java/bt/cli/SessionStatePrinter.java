@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
@@ -114,7 +114,7 @@ public class SessionStatePrinter {
     public SessionStatePrinter() {
         try {
             Terminal terminal = new DefaultTerminalFactory(System.out, System.in,
-                     Charset.forName("UTF-8")).createTerminal();
+                    StandardCharsets.UTF_8).createTerminal();
             terminal.setCursorVisible(false);
 
             screen = new TerminalScreen(terminal);

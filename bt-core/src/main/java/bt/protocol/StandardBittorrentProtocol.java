@@ -34,7 +34,7 @@ import bt.protocol.handler.UnchokeHandler;
 import com.google.inject.Inject;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -121,7 +121,7 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
 
     static {
 
-        PROTOCOL_NAME_BYTES = PROTOCOL_NAME.getBytes(Charset.forName("ASCII"));
+        PROTOCOL_NAME_BYTES = PROTOCOL_NAME.getBytes(StandardCharsets.US_ASCII);
         int protocolNameLength = PROTOCOL_NAME_BYTES.length;
         int prefixLength = 1;
 
@@ -328,7 +328,7 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
             buffer.get(protocolNameBytes);
             if (!Arrays.equals(PROTOCOL_NAME_BYTES, protocolNameBytes)) {
                 throw new InvalidMessageException("Unexpected protocol name (decoded with ASCII): " +
-                        new String(protocolNameBytes, Charset.forName("ASCII")));
+                        new String(protocolNameBytes, StandardCharsets.US_ASCII));
             }
 
             byte[] reserved = new byte[HANDSHAKE_RESERVED_LENGTH];

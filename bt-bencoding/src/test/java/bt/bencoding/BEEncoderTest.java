@@ -27,6 +27,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -37,7 +38,7 @@ import static org.junit.Assert.assertEquals;
 
 public class BEEncoderTest {
 
-    private static final Charset defaultCharset = Charset.forName("UTF-8");
+    private static final Charset defaultCharset = StandardCharsets.UTF_8;
 
     @Test
     public void testEncoder_String() {
