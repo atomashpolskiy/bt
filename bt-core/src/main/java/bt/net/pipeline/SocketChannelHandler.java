@@ -137,6 +137,10 @@ public class SocketChannelHandler implements ChannelHandler {
     public void flush() {
         synchronized (outboundBufferLock) {
             ByteBuffer buffer = outboundBuffer.lockAndGet();
+            if (buffer == null) {
+                // buffer has been released
+                return;
+            }
             buffer.flip();
             try {
                 while (buffer.hasRemaining()) {
