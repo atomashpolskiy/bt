@@ -2,6 +2,14 @@
 
 For the latest information visit project web site: http://atomashpolskiy.github.io/bt/
 
+## 1.10
+
+#### Date:
+
+### Bug Fixes/Improvements:
+
+* Allow announce key to be missing in the torrent dictionary [#42](https://github.com/atomashpolskiy/bt/issues/42)
+
 ## 1.9
 
 #### Date: 12/14/2019

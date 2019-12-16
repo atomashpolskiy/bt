@@ -19,7 +19,7 @@
 - model:
     type: dictionary
     entries:
-      - {key: announce, type: string}
+      - {key: announce, type: string, required: false}
       - key: announce-list
         required: false
         type: list
