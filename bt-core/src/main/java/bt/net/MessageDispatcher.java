@@ -265,7 +265,7 @@ public class MessageDispatcher implements IMessageDispatcher {
                 try {
                     wait(timeToSleep);
                 } catch (InterruptedException e) {
-                    throw new RuntimeException("Unexpectedly interrupted", e);
+                    LOGGER.info("Wait interrupted");
                 }
 
                 if (timeToSleep < maxTimeToSleep) {
