@@ -7,6 +7,7 @@ package the8472.test;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.*;
 
 import lbms.plugins.mldht.kad.DHT.DHTtype;
 import lbms.plugins.mldht.kad.KBucketEntry;
@@ -23,9 +24,8 @@ public class Bep42 {
 	
 	@Test
 	public void testBep42Parsing() throws UnknownHostException {
-		if(KBucketEntry.crc32c == null)
-			return;
-		
+		assumeNotNull(KBucketEntry.crc32c);
+
 		/*
 		124.31.75.21   1   5fbfbf f10c5d6a4ec8a88e4c6ab4c28b95eee4 01
 		21.75.31.124  86   5a3ce9 c14e7a08645677bbd1cfe7d8f956d532 56
