@@ -61,7 +61,7 @@ A full-featured BitTorrent implementation in Java 8
 ## Support the author
 
 <p align="left">
-    <img src="https://atomashpolskiy.github.io/static/img/bt-donate-btc-qr.png" width="100px" alt="Donate">
+    <img src="https://atomashpolskiy.github.io/static/img/bt-donate-btc-qr.png" width="200px" alt="Donate">
 </p>
 
 ## Prerequisites
