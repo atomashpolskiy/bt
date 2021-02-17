@@ -58,6 +58,12 @@ A full-featured BitTorrent implementation in Java 8
 * **[HABRAHABR.RU: Пишем свой BitTorrent клиент на базе библиотеки Bt](https://habrahabr.ru/post/350076/)** - Introductory article and demonstration of basic capabilities (in Russian)
 * **[SMARTSPATE.COM: How To Write Your Own BitTorrent Client By Using Bt Library](https://www.smartspate.com/how-to-write-your-own-bittorrent-client-by-using-bt-library/)** - English translation of the above article
 
+## Support the author
+
+<p align="left">
+    <img src="https://atomashpolskiy.github.io/static/img/bt-donate-btc-qr.png" width="100px" alt="Donate">
+</p>
+
 ## Prerequisites
 
 <sup>Currently, all peer connections are established via [encryption negotation protocol](http://wiki.vuze.com/w/Message_Stream_Encryption) (also called MSE handshake). If you're using Oracle JDK ([pre 8u152](http://www.oracle.com/technetwork/java/javase/8u152-relnotes-3850503.html)), in order to be able to connect to peers you must install [Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy](http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html). The reason for this requirement is that the [MSE RC4 cipher](http://wiki.vuze.com/w/Message_Stream_Encryption) uses 160 bit keys, while default Java installation allows at most 128 bit keys.</sup>
