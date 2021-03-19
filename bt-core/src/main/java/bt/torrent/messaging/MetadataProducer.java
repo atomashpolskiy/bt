@@ -58,6 +58,7 @@ public class MetadataProducer {
                 // TODO: spam protection
                 processMetadataRequest(peer, message.getPieceIndex());
             }
+            break;
             default: {
                 // ignore
             }
