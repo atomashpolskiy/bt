@@ -104,9 +104,11 @@ public class MetadataConsumer {
                 }
                 processMetadataBlock(message.getPieceIndex(), totalSize, message.getData().get());
             }
+            break;
             case REJECT: {
                 peersWithoutMetadata.put(peer, System.currentTimeMillis());
             }
+            break;
             default: {
                 // ignore
             }
