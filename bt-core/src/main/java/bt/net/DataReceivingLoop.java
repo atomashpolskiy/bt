@@ -18,6 +18,7 @@ package bt.net;
 
 import bt.module.PeerConnectionSelector;
 import bt.net.pipeline.ChannelHandlerContext;
+import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
@@ -46,15 +47,17 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
 
     @Inject
     public DataReceivingLoop(@PeerConnectionSelector SharedSelector selector,
-                             IRuntimeLifecycleBinder lifecycleBinder) {
+                             IRuntimeLifecycleBinder lifecycleBinder,
+                             Config config) {
         this.selector = selector;
         this.interestOpsUpdates = new ConcurrentHashMap<>();
 
-        schedule(lifecycleBinder);
+        schedule(lifecycleBinder, config);
     }
 
-    private void schedule(IRuntimeLifecycleBinder lifecycleBinder) {
-        ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.net.data-receiver"));
+    private void schedule(IRuntimeLifecycleBinder lifecycleBinder, Config config) {
+        String threadName = String.format("%d.bt.net.data-receiver", config.getAcceptorPort());
+        ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, threadName));
         lifecycleBinder.onStartup("Initialize message receiver", () -> executor.execute(this));
         lifecycleBinder.onShutdown("Shutdown message receiver", () -> {
             try {

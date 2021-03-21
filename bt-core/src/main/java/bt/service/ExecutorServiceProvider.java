@@ -16,6 +16,7 @@
 
 package bt.service;
 
+import bt.runtime.Config;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
@@ -32,10 +33,12 @@ public class ExecutorServiceProvider implements Provider<ExecutorService> {
 
     private volatile ExecutorService executorService;
     private final Object lock;
+    private final Config config;
 
     @Inject
-    public ExecutorServiceProvider() {
-        lock = new Object();
+    public ExecutorServiceProvider(Config config) {
+        this.lock = new Object();
+        this.config = config;
     }
 
     @Override
@@ -64,6 +67,6 @@ public class ExecutorServiceProvider implements Provider<ExecutorService> {
      * @since 1.6
      */
     protected String getNamePrefix() {
-        return "bt.service.executor-thread";
+        return String.format("%d.bt.service.executor-thread", config.getAcceptorPort());
     }
 }

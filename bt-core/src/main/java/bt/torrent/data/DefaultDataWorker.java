@@ -22,6 +22,7 @@ import bt.data.DataDescriptor;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.net.buffer.BufferedData;
+import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.torrent.TorrentRegistry;
 import org.slf4j.Logger;
@@ -51,7 +52,7 @@ public class DefaultDataWorker implements DataWorker {
                              TorrentRegistry torrentRegistry,
                              ChunkVerifier verifier,
                              BlockCache blockCache,
-                             int maxQueueLength) {
+                             Config config) {
 
         this.torrentRegistry = torrentRegistry;
         this.verifier = verifier;
@@ -63,10 +64,10 @@ public class DefaultDataWorker implements DataWorker {
 
             @Override
             public Thread newThread(Runnable r) {
-                return new Thread(r, "bt.torrent.data.worker-" + i.incrementAndGet());
+                return new Thread(r, String.format("%d.bt.torrent.data.worker-%d", config.getAcceptorPort(), i.incrementAndGet()));
             }
         });
-        this.maxPendingTasks = maxQueueLength;
+        this.maxPendingTasks = config.getMaxIOQueueSize();
         this.pendingTasksCount = new AtomicInteger();
 
         lifecycleBinder.onShutdown("Shutdown data worker", this.executor::shutdownNow);

@@ -34,7 +34,7 @@ public class UdpTrackerConnection extends ExternalResource {
 
     public UdpTrackerConnection(SingleClientUdpTracker tracker) {
         InetSocketAddress localAddress = new InetSocketAddress(Inet4Address.getLoopbackAddress(), 0);
-        this.worker = new UdpMessageWorker(localAddress, tracker.getServerAddress(), mock(IRuntimeLifecycleBinder.class));
+        this.worker = new UdpMessageWorker(localAddress, tracker.getServerAddress(), mock(IRuntimeLifecycleBinder.class), 0);
         LOGGER.info("Established connection (local: {}, remote: {}", localAddress, tracker.getServerAddress());
     }
 

@@ -56,9 +56,10 @@ public class ConnectionSource implements IConnectionSource {
         this.connectionPool = connectionPool;
         this.config = config;
 
+        String threadName = String.format("%d.bt.net.pool.connection-worker", config.getAcceptorPort());
         this.connectionExecutor = Executors.newFixedThreadPool(
                 config.getMaxPendingConnectionRequests(),
-                CountingThreadFactory.daemonFactory("bt.net.pool.connection-worker"));
+                CountingThreadFactory.daemonFactory(threadName));
         lifecycleBinder.onShutdown("Shutdown connection workers", connectionExecutor::shutdownNow);
 
         this.pendingConnections = new ConcurrentHashMap<>();

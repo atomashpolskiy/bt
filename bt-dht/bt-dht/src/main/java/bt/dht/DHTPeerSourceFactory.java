@@ -19,6 +19,7 @@ package bt.dht;
 import bt.metainfo.TorrentId;
 import bt.peer.PeerSource;
 import bt.peer.PeerSourceFactory;
+import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import com.google.inject.Inject;
 
@@ -41,9 +42,11 @@ public class DHTPeerSourceFactory implements PeerSourceFactory {
 
     @Inject
     public DHTPeerSourceFactory(IRuntimeLifecycleBinder lifecycleBinder,
-                                DHTService dhtService) {
+                                DHTService dhtService,
+                                Config config) {
         this.dhtService = dhtService;
-        this.executor = Executors.newCachedThreadPool(r -> new Thread(r, "bt.dht.executor"));
+        String threadName = String.format("%d.bt.dht.executor", config.getAcceptorPort());
+        this.executor = Executors.newCachedThreadPool(r -> new Thread(r, threadName));
         lifecycleBinder.onShutdown("Shutdown DHT peer sources", executor::shutdownNow);
 
         this.peerSources = new ConcurrentHashMap<>();

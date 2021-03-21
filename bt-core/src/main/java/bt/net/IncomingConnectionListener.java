@@ -45,9 +45,10 @@ public class IncomingConnectionListener {
         this.connectionPool = connectionPool;
         this.config = config;
 
+        String threadName = String.format("%d.bt.net.pool.incoming-acceptor", config.getAcceptorPort());
         this.executor = Executors.newFixedThreadPool(
                 connectionAcceptors.size(),
-                CountingThreadFactory.factory("bt.net.pool.incoming-acceptor"));
+                CountingThreadFactory.factory(threadName));
     }
 
     public void startup() {
