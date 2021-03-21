@@ -148,6 +148,7 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
         int k = config.getLocalServiceDiscoveryMaxTorrentsPerAnnounce();
         List<TorrentId> ids = new ArrayList<>(k * 2);
         Iterator<TorrentId> iter = announceQueue.iterator();
+        List<TorrentId> toAdd = new ArrayList<>();
         while (iter.hasNext()) {
             TorrentId id = iter.next();
             StatusChange statusChange = statusChanges.get(id);
@@ -155,7 +156,7 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
                 if (ids.size() < k) {
                     iter.remove(); // temporary remove from the queue
                     ids.add(id);
-                    announceQueue.add(id); // add to the end of the queue
+                    toAdd.add(id); // add to the end of the queue
                 }
             } else if (statusChange == StatusChange.STOPPED) {
                 // remove inactive
@@ -164,6 +165,7 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
             // last case is that the torrent has been stopped and started in between the announces,
             // which means that we should leave it in the announce queue
         }
+        announceQueue.addAll(toAdd);
         // add all new started torrents to the announce queue
         statusChanges.forEach((id, statusChange) -> {
             if (statusChange == StatusChange.STARTED) {
