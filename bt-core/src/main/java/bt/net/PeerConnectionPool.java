@@ -197,6 +197,9 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private List<PeerConnection> getConnectionsForAddress(TorrentId torrentId, Peer peer) {
         List<PeerConnection> connectionsWithSameAddress = new ArrayList<>();
         connections.visitConnections(torrentId, connection -> {
+            if (connection.isClosed()) {
+                return;
+            }
             Peer connectionPeer = connection.getRemotePeer();
             if (connectionPeer.getInetAddress().equals(peer.getInetAddress())) {
                 connectionsWithSameAddress.add(connection);
