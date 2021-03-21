@@ -194,7 +194,7 @@ public class ServiceModule implements Module {
             ChunkVerifier verifier,
             BlockCache blockCache,
             Config config) {
-        return new DefaultDataWorker(lifecycleBinder, torrentRegistry, verifier, blockCache, config.getMaxIOQueueSize());
+        return new DefaultDataWorker(lifecycleBinder, torrentRegistry, verifier, blockCache, config);
     }
 
     @Provides

@@ -93,7 +93,8 @@ public class BtRuntime {
     private boolean manualShutdownOnly;
 
     BtRuntime(Injector injector, Config config) {
-        Runtime.getRuntime().addShutdownHook(new Thread("bt.runtime.shutdown-manager") {
+        String threadName = String.format("%d.bt.runtime.shutdown-manager", config.getAcceptorPort());
+        Runtime.getRuntime().addShutdownHook(new Thread(threadName) {
             @Override
             public void run() {
                 shutdown();
@@ -280,7 +281,8 @@ public class BtRuntime {
     private ExecutorService createLifecycleExecutor(LifecycleEvent event) {
         AtomicInteger threadCount = new AtomicInteger();
         return Executors.newCachedThreadPool(r -> {
-            Thread t = new Thread(r, "bt.runtime." + event.name().toLowerCase() + "-worker-" + threadCount.incrementAndGet());
+            String threadName = String.format("%d.bt.runtime.%s.worker-%d", config.getAcceptorPort(), event.name().toLowerCase(), threadCount.incrementAndGet());
+            Thread t = new Thread(r, threadName);
             t.setDaemon(true);
             return t;
         });

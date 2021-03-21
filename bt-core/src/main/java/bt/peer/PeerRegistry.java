@@ -84,20 +84,20 @@ public class PeerRegistry implements IPeerRegistry {
         this.trackerService = trackerService;
         this.eventSink = eventSink;
         this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, torrentRegistry,
-                lifecycleBinder, config.getTrackerQueryInterval());
+                lifecycleBinder, config.getTrackerQueryInterval(), config.getAcceptorPort());
         this.extraPeerSourceFactories = extraPeerSourceFactories;
 
         this.extraAnnounceKeys = new ConcurrentHashMap<>();
         this.extraAnnounceKeysLock = new ReentrantLock();
 
-        createExecutor(lifecycleBinder, config.getPeerDiscoveryInterval());
+        createExecutor(lifecycleBinder, config);
     }
 
-    private void createExecutor(IRuntimeLifecycleBinder lifecycleBinder, Duration peerDiscoveryInterval) {
-        ScheduledExecutorService executor =
-                Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "bt.peer.peer-collector"));
+    private void createExecutor(IRuntimeLifecycleBinder lifecycleBinder, Config config) {
+        String threadName = String.format("%d.bt.peer.peer-collector", config.getAcceptorPort());
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, threadName));
         lifecycleBinder.onStartup("Schedule periodic peer lookup", () -> executor.scheduleAtFixedRate(
-                this::collectAndVisitPeers, 1, peerDiscoveryInterval.toMillis(), TimeUnit.MILLISECONDS));
+                this::collectAndVisitPeers, 1, config.getPeerDiscoveryInterval().toMillis(), TimeUnit.MILLISECONDS));
         lifecycleBinder.onShutdown("Shutdown peer lookup scheduler", executor::shutdownNow);
     }
 

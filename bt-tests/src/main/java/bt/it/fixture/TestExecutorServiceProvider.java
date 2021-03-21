@@ -29,6 +29,7 @@ public class TestExecutorServiceProvider extends ExecutorServiceProvider {
 
     @Inject
     public TestExecutorServiceProvider(Config config) {
+        super(config);
         this.prefix = String.format(PREFIX_FORMAT, getLiteralIP(config.getAcceptorAddress()), config.getAcceptorPort());
     }
 

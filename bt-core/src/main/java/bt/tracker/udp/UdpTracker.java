@@ -65,7 +65,7 @@ class UdpTracker implements Tracker {
         this.numberOfPeersToRequestFromTracker = numberOfPeersToRequestFromTracker;
         // TODO: one UDP socket for all outgoing tracker connections
         this.trackerUrl = toUrl(trackerUrl);
-        this.worker = new UdpMessageWorker(new InetSocketAddress(localAddress, 0), getSocketAddress(this.trackerUrl), lifecycleBinder);
+        this.worker = new UdpMessageWorker(new InetSocketAddress(localAddress, 0), getSocketAddress(this.trackerUrl), lifecycleBinder, listeningPort);
     }
 
     private URL toUrl(String s) {

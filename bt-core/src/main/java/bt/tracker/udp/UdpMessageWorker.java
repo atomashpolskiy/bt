@@ -59,12 +59,14 @@ class UdpMessageWorker {
 
     public UdpMessageWorker(SocketAddress localAddress,
                             SocketAddress remoteAddress,
-                            IRuntimeLifecycleBinder lifecycleBinder) {
+                            IRuntimeLifecycleBinder lifecycleBinder,
+                            int listeningPort) {
         this.localAddress = localAddress;
         this.remoteAddress = remoteAddress;
         this.lock = new Object();
 
-        this.executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.tracker.udp.message-worker"));
+        String threadName = String.format("%d.bt.tracker.udp.message-worker", listeningPort);
+        this.executor = Executors.newSingleThreadExecutor(r -> new Thread(r, threadName));
         lifecycleBinder.onShutdown("Shutdown UDP message worker", () -> {
             try {
                 this.shutdown();

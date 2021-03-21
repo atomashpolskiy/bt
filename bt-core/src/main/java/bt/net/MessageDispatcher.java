@@ -66,7 +66,8 @@ public class MessageDispatcher implements IMessageDispatcher {
     private void initializeMessageLoop(IRuntimeLifecycleBinder lifecycleBinder,
                                        IPeerConnectionPool pool,
                                        Config config) {
-        ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "bt.net.message-dispatcher"));
+        String threadName = String.format("%d.bt.net.message-dispatcher", config.getAcceptorPort());
+        ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, threadName));
         LoopControl loopControl = new LoopControl(config.getMaxMessageProcessingInterval().toMillis());
         MessageDispatchingLoop loop = new MessageDispatchingLoop(pool, loopControl);
         lifecycleBinder.onStartup("Initialize message dispatcher", () -> executor.execute(loop));

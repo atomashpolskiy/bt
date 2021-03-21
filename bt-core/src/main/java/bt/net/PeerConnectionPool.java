@@ -68,13 +68,15 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         this.connections = new Connections();
         this.connectionLock = new ReentrantLock();
 
-        this.cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, "bt.net.pool.cleaner"));
+        String cleanerThreadName = String.format("%d.bt.net.pool.cleaner", config.getAcceptorPort());
+        this.cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, cleanerThreadName));
         lifecycleBinder.onStartup("Schedule periodic cleanup of stale peer connections",
                 () -> cleaner.scheduleAtFixedRate(new Cleaner(), 1, 1, TimeUnit.SECONDS));
 
+        String workerThreadName = String.format("%d.bt.net.pool.connection-worker", config.getAcceptorPort());
         ExecutorService executor = Executors.newFixedThreadPool(
                 config.getMaxPendingConnectionRequests(),
-                CountingThreadFactory.daemonFactory("bt.net.pool.connection-worker"));
+                CountingThreadFactory.daemonFactory(workerThreadName));
 
         lifecycleBinder.onShutdown("Shutdown outgoing connection request processor", executor::shutdownNow);
         lifecycleBinder.onShutdown("Shutdown connection pool", this::shutdown);

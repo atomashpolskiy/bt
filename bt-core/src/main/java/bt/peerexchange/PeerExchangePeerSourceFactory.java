@@ -25,6 +25,7 @@ import bt.peer.PeerSource;
 import bt.peer.PeerSourceFactory;
 import bt.protocol.Message;
 import bt.protocol.extended.ExtendedHandshake;
+import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
@@ -73,25 +74,27 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     @Inject
     public PeerExchangePeerSourceFactory(EventSource eventSource,
                                          IRuntimeLifecycleBinder lifecycleBinder,
-                                         PeerExchangeConfig config) {
+                                         PeerExchangeConfig pexConfig,
+                                         Config config) {
         this.peerSources = new ConcurrentHashMap<>();
         this.peerEvents = new ConcurrentHashMap<>();
         this.rwLock = new ReentrantReadWriteLock();
         this.peers = ConcurrentHashMap.newKeySet();
         this.lastSentPEXMessage = new ConcurrentHashMap<>();
-        if (config.getMaxMessageInterval().compareTo(config.getMinMessageInterval()) < 0) {
+        if (pexConfig.getMaxMessageInterval().compareTo(pexConfig.getMinMessageInterval()) < 0) {
             throw new IllegalArgumentException("Max message interval is greater than min interval");
         }
-        this.minMessageInterval = config.getMinMessageInterval();
-        this.maxMessageInterval = config.getMaxMessageInterval();
-        this.minEventsPerMessage = config.getMinEventsPerMessage();
-        this.maxEventsPerMessage = config.getMaxEventsPerMessage();
+        this.minMessageInterval = pexConfig.getMinMessageInterval();
+        this.maxMessageInterval = pexConfig.getMaxMessageInterval();
+        this.minEventsPerMessage = pexConfig.getMinEventsPerMessage();
+        this.maxEventsPerMessage = pexConfig.getMaxEventsPerMessage();
 
         eventSource.onPeerConnected(e -> onPeerConnected(e.getConnectionKey()))
                 .onPeerDisconnected(e -> onPeerDisconnected(e.getConnectionKey()));
 
+        String threadName = String.format("%d.bt.peerexchange.cleaner", config.getAcceptorPort());
         ScheduledExecutorService executor =
-                Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "bt.peerexchange.cleaner"));
+                Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, threadName));
         lifecycleBinder.onStartup("Schedule periodic cleanup of PEX messages", () -> executor.scheduleAtFixedRate(
                 new Cleaner(), CLEANER_INTERVAL.toMillis(), CLEANER_INTERVAL.toMillis(), TimeUnit.MILLISECONDS));
         lifecycleBinder.onShutdown("Shutdown PEX cleanup scheduler", executor::shutdownNow);
@@ -220,7 +223,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
             rwLock.writeLock().lock();
             try {
                 long lruEventTime = lastSentPEXMessage.values().stream()
-                        .reduce(Long.MAX_VALUE, (a, b) -> (a < b) ? a : b);;
+                        .reduce(Long.MAX_VALUE, (a, b) -> (a < b) ? a : b);
 
                 if (LOGGER.isTraceEnabled()) {
                     LOGGER.trace("Prior to cleaning events. LRU event time: {}, peer events: {}", lruEventTime, peerEvents);

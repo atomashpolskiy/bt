@@ -47,7 +47,8 @@ class TrackerPeerSourceFactory implements PeerSourceFactory {
     public TrackerPeerSourceFactory(ITrackerService trackerService,
                                     TorrentRegistry torrentRegistry,
                                     IRuntimeLifecycleBinder lifecycleBinder,
-                                    Duration trackerQueryInterval) {
+                                    Duration trackerQueryInterval,
+                                    int port) {
         this.trackerService = trackerService;
         this.torrentRegistry = torrentRegistry;
         this.trackerQueryInterval = trackerQueryInterval;
@@ -58,7 +59,7 @@ class TrackerPeerSourceFactory implements PeerSourceFactory {
 
             @Override
             public Thread newThread(Runnable r) {
-                return new Thread(r, "bt.peer.tracker-peer-source-" + i.incrementAndGet());
+                return new Thread(r, String.format("%d.bt.peer.tracker-peer-source-%d", port, i.incrementAndGet()));
             }
         });
         lifecycleBinder.onShutdown("Shutdown tracker peer sources", executor::shutdownNow);
