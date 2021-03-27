@@ -18,7 +18,7 @@ A full-featured BitTorrent implementation in Java 8
 </p>
 
 <p align="center">
-    <a href="https://travis-ci.org/atomashpolskiy/bt">
+    <a href="https://travis-ci.com/github/atomashpolskiy/bt">
         <img src="https://img.shields.io/travis/atomashpolskiy/bt/master.svg?label=Linux%20build"
              alt="Linux build">
     </a>
