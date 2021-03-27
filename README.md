@@ -1,6 +1,6 @@
 <h1 align="center">
     <a href="https://atomashpolskiy.github.io/bt/">Bt</a>
-    <a href="https://twitter.com/intent/tweet?text=Bt%3A%20A%20Java%208%20BitTorrent%20library%20with%20DHT%2C%20magnet%20links%2C%20encryption%20and%20more&url=https://github.com/atomashpolskiy/bt&via=atomashpolskiy&hashtags=java,bittorrent,dht,library">
+    <a href="https://twitter.com/intent/tweet?text=Bt%3A%20A%20Java%208%20BitTorrent%20library%20with%20DHT%2C%20magnet%20links%2C%20encryption%20and%20more&url=https://github.com/atomashpolskiy/bt&via=atomashpolskiy&hashtags=java,torrent,bittorrent,dht">
         <img src="https://img.shields.io/twitter/url/http/shields.io.svg?style=social&logo=twitter"
             alt="Tweet">
     </a>
@@ -40,6 +40,24 @@ A full-featured BitTorrent implementation in Java 8
     </a>
 </p>
 
+## Supported BEPs and extensions
+
+* [BEP-3: The BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html)
+* [BEP-5: DHT Protocol](http://bittorrent.org/beps/bep_0005.html)
+* [BEP-9: Extension for Peers to Send Metadata Files](http://bittorrent.org/beps/bep_0009.html)
+* [BEP-10: Extension Protocol](http://bittorrent.org/beps/bep_0010.html)
+* [BEP-11: Peer Exchange (PEX)](http://bittorrent.org/beps/bep_0011.html)
+* [BEP-12: Multitracker metadata extension](http://bittorrent.org/beps/bep_0012.html)
+* [BEP-14: Local Service Discovery](http://bittorrent.org/beps/bep_0014.html)
+* [BEP-15: UDP Tracker Protocol](http://bittorrent.org/beps/bep_0015.html)
+* [BEP-20: Peer ID Conventions](http://bittorrent.org/beps/bep_0020.html)
+* [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
+* [BEP-27: Private Torrents](http://bittorrent.org/beps/bep_0027.html)
+* [BEP-41: UDP Tracker Protocol Extensions](http://bittorrent.org/beps/bep_0041.html)
+* [Message Stream Encryption](http://wiki.vuze.com/w/Message_Stream_Encryption)
+
+## Resources
+
 * **[HOME](https://atomashpolskiy.github.io/bt/)** – website with documentation and tutorials
 * **[RELEASE NOTES](https://github.com/atomashpolskiy/bt/blob/master/RELEASE-NOTES.md#bt-release-notes)** – list of features, bugfixes and improments for each version
 * **[UPGRADE INSTRUCTIONS](https://github.com/atomashpolskiy/bt/blob/master/UPGRADE.md#upgrade-instructions)** – version migration guide
@@ -57,12 +75,6 @@ A full-featured BitTorrent implementation in Java 8
 
 * **[HABRAHABR.RU: Пишем свой BitTorrent клиент на базе библиотеки Bt](https://habrahabr.ru/post/350076/)** - Introductory article and demonstration of basic capabilities (in Russian)
 * **[SMARTSPATE.COM: How To Write Your Own BitTorrent Client By Using Bt Library](https://www.smartspate.com/how-to-write-your-own-bittorrent-client-by-using-bt-library/)** - English translation of the above article
-
-## Support the author
-
-<p align="left">
-    <img src="https://atomashpolskiy.github.io/static/img/bt-donate-btc-qr.png" width="200px" alt="Donate">
-</p>
 
 ## Prerequisites
 
@@ -209,18 +221,8 @@ Any thoughts, ideas, criticism, etc. are welcome, as well as votes for new featu
 * open a new [GitHub issue](https://github.com/atomashpolskiy/bt/issues)
 * post your question on the [Bt forum](https://groups.google.com/forum/#!forum/bttorrent)
 
-## List of supported BEPs
+## Donate
 
-* [BEP-3: The BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html)
-* [BEP-5: DHT Protocol](http://bittorrent.org/beps/bep_0005.html)
-* [BEP-9: Extension for Peers to Send Metadata Files](http://bittorrent.org/beps/bep_0009.html)
-* [BEP-10: Extension Protocol](http://bittorrent.org/beps/bep_0010.html)
-* [BEP-11: Peer Exchange (PEX)](http://bittorrent.org/beps/bep_0011.html)
-* [BEP-12: Multitracker metadata extension](http://bittorrent.org/beps/bep_0012.html)
-* [BEP-14: Local Service Discovery](http://bittorrent.org/beps/bep_0014.html)
-* [BEP-15: UDP Tracker Protocol](http://bittorrent.org/beps/bep_0015.html)
-* [BEP-20: Peer ID Conventions](http://bittorrent.org/beps/bep_0020.html)
-* [BEP-23: Tracker Returns Compact Peer Lists](http://bittorrent.org/beps/bep_0023.html)
-* [BEP-27: Private Torrents](http://bittorrent.org/beps/bep_0027.html)
-* [BEP-41: UDP Tracker Protocol Extensions](http://bittorrent.org/beps/bep_0041.html)
-* [Message Stream Encryption](http://wiki.vuze.com/w/Message_Stream_Encryption)
+<p align="left">
+    <img src="https://atomashpolskiy.github.io/static/img/bt-donate-btc-qr.png" width="200px" alt="Donate">
+</p>
