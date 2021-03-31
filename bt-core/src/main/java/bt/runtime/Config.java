@@ -19,6 +19,8 @@ package bt.runtime;
 import bt.net.crypto.MSEHandshakeProcessor;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.service.NetworkUtil;
+import bt.torrent.data.DataWorker;
+import bt.torrent.data.DefaultDataWorker;
 
 import java.net.InetAddress;
 import java.time.Duration;
@@ -62,6 +64,9 @@ public class Config {
     private int maxOutstandingRequests;
     private int networkBufferSize;
 
+    private int dataWorkerCorePoolSize;
+    private int dataWorkerMaxPoolSize;
+
     /**
      * Create a config with default parameters.
      *
@@ -99,6 +104,9 @@ public class Config {
         this.numberOfPeersToRequestFromTracker = 50;
         this.maxOutstandingRequests = 250;
         this.networkBufferSize = 1 * 1024 * 1024; // 1 MB
+
+        this.dataWorkerCorePoolSize = 1;
+        this.dataWorkerMaxPoolSize = 1;
     }
 
     /**
@@ -566,7 +574,7 @@ public class Config {
     }
 
     /**
-     * @since 1.3
+     * @since 1.10
      */
     public boolean isMseDisabled() {
         return mseDisabled;
@@ -636,5 +644,37 @@ public class Config {
      */
     public int getNetworkBufferSize() {
         return networkBufferSize;
+    }
+
+    /**
+     * @since 1.10
+     */
+    public int getDataWorkerCorePoolSize() {
+        return dataWorkerCorePoolSize;
+    }
+
+    /**
+     * @param dataWorkerCorePoolSize set the min thread count of {@link DefaultDataWorker}
+     * @since 1.10
+     */
+    public void setDataWorkerCorePoolSize(int dataWorkerCorePoolSize) {
+        this.dataWorkerCorePoolSize = dataWorkerCorePoolSize;
+    }
+
+    /**
+     * @since 1.10
+     */
+    public int getDataWorkerMaxPoolSize() {
+        return dataWorkerMaxPoolSize;
+    }
+
+    /**
+     * @param dataWorkerMaxPoolSize set the max thread count of {@link DefaultDataWorker}
+     *                              {@link DefaultDataWorker} response for reading/writing data from/to Storage. It also response for verifying chunks.
+     *                              These are CPU intensive operations, increase this value may help improving performance.
+     * @since 1.10
+     */
+    public void setDataWorkerMaxPoolSize(int dataWorkerMaxPoolSize) {
+        this.dataWorkerMaxPoolSize = dataWorkerMaxPoolSize;
     }
 }

@@ -30,8 +30,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DefaultDataWorker implements DataWorker {
@@ -58,15 +60,17 @@ public class DefaultDataWorker implements DataWorker {
         this.verifier = verifier;
         this.blockCache = blockCache;
 
-        this.executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+        this.executor = new ThreadPoolExecutor(config.getDataWorkerCorePoolSize(),
+                config.getDataWorkerMaxPoolSize(), 10, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+                new ThreadFactory() {
+                    private final AtomicInteger i = new AtomicInteger();
 
-            private AtomicInteger i = new AtomicInteger();
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, String.format("%d.bt.torrent.data.worker-%02d", config.getAcceptorPort(), i.incrementAndGet()));
+                    }
+                });
 
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, String.format("%d.bt.torrent.data.worker-%d", config.getAcceptorPort(), i.incrementAndGet()));
-            }
-        });
         this.maxPendingTasks = config.getMaxIOQueueSize();
         this.pendingTasksCount = new AtomicInteger();
 
