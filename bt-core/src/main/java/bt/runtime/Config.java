@@ -16,6 +16,7 @@
 
 package bt.runtime;
 
+import bt.net.crypto.MSEHandshakeProcessor;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.service.NetworkUtil;
 
@@ -55,6 +56,8 @@ public class Config {
     private int metadataExchangeBlockSize;
     private int metadataExchangeMaxSize;
     private int msePrivateKeySize;
+    private boolean mseDisabled;
+    private Duration mseWaitBetweenReads;
     private int numberOfPeersToRequestFromTracker;
     private int maxOutstandingRequests;
     private int networkBufferSize;
@@ -91,6 +94,8 @@ public class Config {
         this.metadataExchangeBlockSize = 16 * 1024; // 16 KB
         this.metadataExchangeMaxSize = 2 * 1024 * 1024; // 2 MB
         this.msePrivateKeySize = 20; // 20 bytes
+        this.mseDisabled = false;
+        this.mseWaitBetweenReads = Duration.ofSeconds(1);
         this.numberOfPeersToRequestFromTracker = 50;
         this.maxOutstandingRequests = 250;
         this.networkBufferSize = 1 * 1024 * 1024; // 1 MB
@@ -129,6 +134,8 @@ public class Config {
         this.metadataExchangeBlockSize = config.getMetadataExchangeBlockSize();
         this.metadataExchangeMaxSize = config.getMetadataExchangeMaxSize();
         this.msePrivateKeySize = config.getMsePrivateKeySize();
+        this.mseDisabled = config.isMseDisabled();
+        this.mseWaitBetweenReads = config.getMseWaitBetweenReads();
         this.numberOfPeersToRequestFromTracker = config.getNumberOfPeersToRequestFromTracker();
         this.maxOutstandingRequests = config.getMaxOutstandingRequests();
         this.networkBufferSize = config.getNetworkBufferSize();
@@ -180,7 +187,7 @@ public class Config {
     }
 
     /**
-     * @param peerHandshakeTimeout  Time to wait for a peer's handshake.
+     * @param peerHandshakeTimeout Time to wait for a peer's handshake.
      * @since 1.0
      */
     public void setPeerHandshakeTimeout(Duration peerHandshakeTimeout) {
@@ -379,12 +386,12 @@ public class Config {
     /**
      * Maximum number of peer connections that are allowed to request and receive pieces.
      * Affects performance (too few or too many is bad).
-     *
+     * <p>
      * Note that this value implicitly affects when the torrent processing session enters
      * the so-called "endgame" mode. By default it's assumed that the endgame mode should
      * be activated when the number of remaining (incomplete) pieces is smaller than the
      * number of pending requests, which in its' turn is no greater than this value.
-     *
+     * <p>
      * E.g. if the limit for concurrently active connections is 20, and there are in fact 20
      * peers that we are downloading from at the moment, then the endgame will begin
      * as soon as there are 20 pieces left to download. At the same time if there are only 15
@@ -430,8 +437,8 @@ public class Config {
      * Reasonable value (in 100..1000 ms range) greatly reduces the CPU load when there is little network activity
      * without compromising the overall message exchange rates.
      *
-     * @see bt.net.MessageDispatcher
      * @param maxMessageProcessingInterval Maximum time to sleep between message processing loop iterations, in millis.
+     * @see bt.net.MessageDispatcher
      * @since 1.1
      */
     public void setMaxMessageProcessingInterval(Duration maxMessageProcessingInterval) {
@@ -556,6 +563,34 @@ public class Config {
      */
     public int getMsePrivateKeySize() {
         return msePrivateKeySize;
+    }
+
+    /**
+     * @since 1.3
+     */
+    public boolean isMseDisabled() {
+        return mseDisabled;
+    }
+
+    /**
+     * @param mseDisabled set true to disable mse, see {@link MSEHandshakeProcessor}
+     * @since 1.10
+     */
+    public void setMseDisabled(boolean mseDisabled) {
+        this.mseDisabled = mseDisabled;
+    }
+
+    public Duration getMseWaitBetweenReads() {
+        return mseWaitBetweenReads;
+    }
+
+    /**
+     * @param mseWaitBetweenReads read timeout when doing mse handshake.
+     *                            in good network environment, turn down this value may decrease mse handshake time cost.
+     * @since 1.10
+     */
+    public void setMseWaitBetweenReads(Duration mseWaitBetweenReads) {
+        this.mseWaitBetweenReads = mseWaitBetweenReads;
     }
 
     /**

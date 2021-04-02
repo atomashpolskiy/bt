@@ -50,14 +50,13 @@ import java.util.Random;
 
 /**
  * Implements Message Stream Encryption protocol negotiation.
- *
+ * <p>
  * This class is not a part of the public API and is subject to change.
  */
 public class MSEHandshakeProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(MSEHandshakeProcessor.class);
 
     private static final Duration receiveTimeout = Duration.ofSeconds(10);
-    private static final Duration waitBetweenReads = Duration.ofSeconds(1);
     private static final int paddingMaxLength = 512;
     private static final byte[] VC_RAW_BYTES = new byte[8];
 
@@ -65,6 +64,7 @@ public class MSEHandshakeProcessor {
     private final TorrentRegistry torrentRegistry;
     private final MessageHandler<Message> protocol;
     private final EncryptionPolicy localEncryptionPolicy;
+    private final Duration waitBetweenReads;
 
     // indicates, that MSE encryption negotiation procedure should not be used
     private final boolean mseDisabled;
@@ -75,6 +75,7 @@ public class MSEHandshakeProcessor {
             Config config) {
 
         this.localEncryptionPolicy = config.getEncryptionPolicy();
+        this.waitBetweenReads = config.getMseWaitBetweenReads();
 
         int msePrivateKeySize = config.getMsePrivateKeySize();
         boolean mseDisabled = !MSECipher.isKeySizeSupported(msePrivateKeySize);
@@ -84,11 +85,11 @@ public class MSEHandshakeProcessor {
                             + " and the preferred encryption policy is %s."
                             + " The aforementioned key size is not allowed in the current JDK configuration."
                             + " Hence, MSE encryption negotiation procedure will NOT be used",
-                            msePrivateKeySize, localEncryptionPolicy.name());
+                    msePrivateKeySize, localEncryptionPolicy.name());
 
             String postfix = " To fix this problem, please do one of the following:"
-                            + " (a) update your JDK or Java runtime environment settings for unlimited cryptography support;"
-                            + " (b) specify a different private key size (not recommended)";
+                    + " (a) update your JDK or Java runtime environment settings for unlimited cryptography support;"
+                    + " (b) specify a different private key size (not recommended)";
 
             switch (localEncryptionPolicy) {
                 case REQUIRE_PLAINTEXT:
@@ -113,7 +114,7 @@ public class MSEHandshakeProcessor {
             }
 
         }
-        this.mseDisabled = mseDisabled;
+        this.mseDisabled = mseDisabled || config.isMseDisabled();
 
         this.keyGenerator = new MSEKeyPairGenerator(msePrivateKeySize);
         this.torrentRegistry = torrentRegistry;
@@ -327,7 +328,7 @@ public class MSEHandshakeProcessor {
         DecodingContext context = new DecodingContext(peer);
         int consumed = 0;
         try {
-             consumed = protocol.decode(context, new DelegatingByteBufferView(in));
+            consumed = protocol.decode(context, new DelegatingByteBufferView(in));
         } catch (Exception e) {
             // ignore
         }
@@ -430,7 +431,7 @@ public class MSEHandshakeProcessor {
         byte[] theirVC = new byte[8];
         in.get(theirVC);
         if (!Arrays.equals(VC_RAW_BYTES, theirVC)) {
-            throw new IllegalStateException("Invalid VC: "+ Arrays.toString(theirVC));
+            throw new IllegalStateException("Invalid VC: " + Arrays.toString(theirVC));
         }
 
         byte[] crypto_provide = new byte[4];
