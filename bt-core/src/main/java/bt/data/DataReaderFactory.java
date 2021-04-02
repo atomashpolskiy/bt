@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *<p><b>Note that this class is not a part of the public API and is a subject to change.</b></p>
+ * <p><b>Note that this class is not a part of the public API and is a subject to change.</b></p>
  */
 public class DataReaderFactory {
 
