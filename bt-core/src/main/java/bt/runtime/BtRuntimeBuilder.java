@@ -30,7 +30,14 @@ import com.google.inject.util.Modules;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.ServiceLoader;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -50,6 +57,9 @@ public class BtRuntimeBuilder {
     private boolean shouldDisableAutomaticShutdown;
     private boolean shouldAutoLoadModules;
     private boolean shouldDisableStandardExtensions;
+
+    private boolean shouldDisablePeerExchange = false;
+    private boolean shouldDisableLocalServiceDiscovery = false;
 
     /**
      * Create runtime builder with default config.
@@ -137,7 +147,7 @@ public class BtRuntimeBuilder {
     /**
      * If this option is set, Bt will use the service loading mechanism
      * to load any modules that are available on application's classpath.
-     *
+     * <p>
      * To support auto-loading a module should expose {@link BtModuleProvider} provider.
      * Auto-loaded modules will be used in default configuration.
      *
@@ -156,6 +166,26 @@ public class BtRuntimeBuilder {
      */
     public BtRuntimeBuilder disableStandardExtensions() {
         this.shouldDisableStandardExtensions = true;
+        return this;
+    }
+
+    /**
+     * If this options is set, Bt will not automatically load standard extension {@link PeerExchangeModule}
+     *
+     * @since 1.10
+     */
+    public BtRuntimeBuilder disablePeerExchange() {
+        this.shouldDisablePeerExchange = true;
+        return this;
+    }
+
+    /**
+     * If this options is set, Bt will not automatically load standard extension {@link LocalServiceDiscoveryModule}
+     *
+     * @since 1.10
+     */
+    public BtRuntimeBuilder disableLocalServiceDiscovery() {
+        this.shouldDisableLocalServiceDiscovery = true;
         return this;
     }
 
@@ -275,8 +305,12 @@ public class BtRuntimeBuilder {
 
     private Collection<BtModuleProvider> standardExtensionProviders() {
         Collection<BtModuleProvider> standardExtensionProviders = new ArrayList<>();
-        standardExtensionProviders.add(PeerExchangeModule::new);
-        standardExtensionProviders.add(LocalServiceDiscoveryModule::new);
+        if (!shouldDisablePeerExchange) {
+            standardExtensionProviders.add(PeerExchangeModule::new);
+        }
+        if (!shouldDisableLocalServiceDiscovery) {
+            standardExtensionProviders.add(LocalServiceDiscoveryModule::new);
+        }
         return standardExtensionProviders;
     }
 
