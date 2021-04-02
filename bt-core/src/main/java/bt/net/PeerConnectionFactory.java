@@ -171,7 +171,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
         ChannelHandler channelHandler = new SocketChannelHandler(channel, in, out, pipeline::bindHandler, dataReceiver);
         channelHandler.register();
 
-        int remotePort = ((InetSocketAddress)channel.getRemoteAddress()).getPort();
+        int remotePort = ((InetSocketAddress) channel.getRemoteAddress()).getPort();
         PeerConnection connection = new SocketPeerConnection(peer, remotePort, channelHandler);
         ConnectionHandler connectionHandler;
         if (incoming) {
@@ -190,16 +190,8 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
     }
 
     private void subscribeHandler(TorrentId torrentId, ChannelHandler channelHandler) {
-        eventSource.onTorrentStarted(event -> {
-            if (event.getTorrentId().equals(torrentId)) {
-                channelHandler.activate();
-            }
-        });
-        eventSource.onTorrentStopped(event -> {
-            if (event.getTorrentId().equals(torrentId)) {
-                channelHandler.deactivate();
-            }
-        });
+        eventSource.onTorrentStarted(torrentId, event -> channelHandler.activate());
+        eventSource.onTorrentStopped(torrentId, event -> channelHandler.deactivate());
     }
 
     private ChannelPipeline createPipeline(

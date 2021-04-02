@@ -75,8 +75,8 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
 
         // do not enable LSD if there are no groups to announce to
         if (groupChannels.size() > 0) {
-            eventSource.onTorrentStarted(this::onTorrentStarted);
-            eventSource.onTorrentStopped(this::onTorrentStopped);
+            eventSource.onTorrentStarted(null, this::onTorrentStarted);
+            eventSource.onTorrentStopped(null, this::onTorrentStopped);
         }
     }
 

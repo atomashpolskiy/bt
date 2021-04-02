@@ -16,6 +16,8 @@
 
 package bt.event;
 
+import bt.metainfo.TorrentId;
+
 import java.util.function.Consumer;
 
 /**
@@ -30,54 +32,54 @@ public interface EventSource {
      *
      * @since 1.5
      */
-    EventSource onPeerDiscovered(Consumer<PeerDiscoveredEvent> listener);
+    EventSource onPeerDiscovered(TorrentId torrentId, Consumer<PeerDiscoveredEvent> listener);
 
     /**
      * Fired, when a new connection with some peer has been established.
      *
      * @since 1.5
      */
-    EventSource onPeerConnected(Consumer<PeerConnectedEvent> listener);
+    EventSource onPeerConnected(TorrentId torrentId, Consumer<PeerConnectedEvent> listener);
 
     /**
      * Fired, when a connection with some peer has been terminated.
      *
      * @since 1.5
      */
-    EventSource onPeerDisconnected(Consumer<PeerDisconnectedEvent> listener);
+    EventSource onPeerDisconnected(TorrentId torrentId, Consumer<PeerDisconnectedEvent> listener);
 
     /**
      * Fired, when local information about some peer's data has been updated.
      *
      * @since 1.5
      */
-    EventSource onPeerBitfieldUpdated(Consumer<PeerBitfieldUpdatedEvent> listener);
+    EventSource onPeerBitfieldUpdated(TorrentId torrentId, Consumer<PeerBitfieldUpdatedEvent> listener);
 
     /**
      * Fired, when processing of some torrent has begun.
      *
      * @since 1.5
      */
-    EventSource onTorrentStarted(Consumer<TorrentStartedEvent> listener);
+    EventSource onTorrentStarted(TorrentId torrentId, Consumer<TorrentStartedEvent> listener);
 
     /**
      * Fired, when torrent's metadata has been fetched.
      *
      * @since 1.9
      */
-    EventSource onMetadataAvailable(Consumer<MetadataAvailableEvent> listener);
+    EventSource onMetadataAvailable(TorrentId torrentId, Consumer<MetadataAvailableEvent> listener);
 
     /**
      * Fired, when processing of some torrent has finished.
      *
      * @since 1.5
      */
-    EventSource onTorrentStopped(Consumer<TorrentStoppedEvent> listener);
+    EventSource onTorrentStopped(TorrentId torrentId, Consumer<TorrentStoppedEvent> listener);
 
     /**
      * Fired, when downloading and verification of one of torrent's pieces has been finished.
      *
      * @since 1.8
      */
-    EventSource onPieceVerified(Consumer<PieceVerifiedEvent> listener);
+    EventSource onPieceVerified(TorrentId torrentId, Consumer<PieceVerifiedEvent> listener);
 }

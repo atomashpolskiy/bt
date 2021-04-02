@@ -26,7 +26,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 public class LRUBlockCache implements BlockCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(LRUBlockCache.class);
@@ -45,8 +49,8 @@ public class LRUBlockCache implements BlockCache {
         this.lruSlots = new HashMap<>();
         this.slotByPieceIndexMap = new HashMap<>();
 
-        eventSource.onTorrentStarted(e -> initializeBuffer(e.getTorrentId()));
-        eventSource.onTorrentStopped(e -> releaseBuffer(e.getTorrentId()));
+        eventSource.onTorrentStarted(null, e -> initializeBuffer(e.getTorrentId()));
+        eventSource.onTorrentStopped(null, e -> releaseBuffer(e.getTorrentId()));
     }
 
     private synchronized void initializeBuffer(TorrentId torrentId) {

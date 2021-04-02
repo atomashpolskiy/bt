@@ -151,9 +151,9 @@ public class Main {
     private static void attachPeerListener(BtRuntime runtime, TorrentId torrentId) {
         PeerStats perTorrentStats = STATS.computeIfAbsent(torrentId, it -> new PeerStats());
         runtime.getEventSource()
-                .onPeerDiscovered(perTorrentStats::onPeerDiscovered)
-                .onPeerConnected(perTorrentStats::onPeerConnected)
-                .onPeerDisconnected(perTorrentStats::onPeerDisconnected)
-                .onPeerBitfieldUpdated(perTorrentStats::onPeerBitfieldUpdated);
+                .onPeerDiscovered(torrentId, perTorrentStats::onPeerDiscovered)
+                .onPeerConnected(torrentId, perTorrentStats::onPeerConnected)
+                .onPeerDisconnected(torrentId, perTorrentStats::onPeerDisconnected)
+                .onPeerBitfieldUpdated(torrentId, perTorrentStats::onPeerBitfieldUpdated);
     }
 }

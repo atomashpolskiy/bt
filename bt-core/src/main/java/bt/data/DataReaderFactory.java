@@ -36,7 +36,7 @@ public class DataReaderFactory {
     public DataReaderFactory(EventSource eventSource) {
         this.channelsByTorrentId = new HashMap<>();
 
-        eventSource.onPieceVerified(e -> onPieceVerified(e.getTorrentId(), e.getPieceIndex()));
+        eventSource.onPieceVerified(null, e -> onPieceVerified(e.getTorrentId(), e.getPieceIndex()));
     }
 
     public DataReader createReader(Torrent torrent, DataDescriptor dataDescriptor) {
