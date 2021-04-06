@@ -144,7 +144,12 @@ public class SocketChannelHandler implements ChannelHandler {
             buffer.flip();
             try {
                 while (buffer.hasRemaining()) {
-                    channel.write(buffer);
+                    int written = channel.write(buffer);
+                    // for unknown reason, -2 is returned of every call to channel.write, and no data is written, buffer.hasRemaining() is always true.
+                    // thus program falls into dead loop.
+                    if (written < 0) {
+                        throw new IOException("Write method returns " + written);
+                    }
                 }
                 buffer.compact();
                 outboundBuffer.unlock();
