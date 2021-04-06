@@ -41,7 +41,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 /**
@@ -74,6 +77,8 @@ public class TorrentWorker {
     private Supplier<Assignments> assignmentsSupplier;
     private Supplier<BitfieldBasedStatistics> statisticsSupplier;
 
+    private ExecutorService assignmentsUpdateExecutorService;
+
     public TorrentWorker(TorrentId torrentId,
                          IMessageDispatcher dispatcher,
                          IConnectionSource connectionSource,
@@ -105,6 +110,47 @@ public class TorrentWorker {
         eventSource.onPeerConnected(torrentId, e -> onPeerConnected(e.getConnectionKey()));
 
         eventSource.onPeerDisconnected(torrentId, e -> onPeerDisconnected(e.getConnectionKey()));
+
+        startAssignmentsUpdateThread(torrentId, eventSource, config);
+    }
+
+    private void startAssignmentsUpdateThread(TorrentId torrentId, EventSource eventSource, Config config) {
+        String threadName = String.format("%d.bt.torrent.assignments.update.%s", config.getAcceptorPort(), torrentId);
+        AtomicBoolean shutdown = new AtomicBoolean(false);
+        assignmentsUpdateExecutorService = Executors.newSingleThreadExecutor(r -> new Thread(r, threadName));
+        assignmentsUpdateExecutorService.submit(() -> {
+            while (!shutdown.get()) {
+                try {
+                    updateAssignments();
+                } catch (Throwable e) {
+                    LOGGER.error(e.getMessage(), e);
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    LOGGER.error(e.getMessage(), e);
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+
+        eventSource.onTorrentStopped(torrentId, x -> {
+            shutdown.set(true);
+            assignmentsUpdateExecutorService.shutdown();
+        });
+    }
+
+    private void updateAssignments() {
+        Bitfield bitfield = getBitfield();
+        Assignments assignments = getAssignments();
+
+        if (bitfield != null && assignments != null && (assignments.count() > 0 || bitfield.getPiecesRemaining() > 0)) {
+            if (shouldUpdateAssignments(assignments)) {
+                processDisconnectedPeers(assignments, getStatistics());
+                processTimeoutedPeers();
+                updateAssignments(assignments);
+            }
+        }
     }
 
     private Bitfield getBitfield() {
@@ -148,11 +194,7 @@ public class TorrentWorker {
 
             if (bitfield != null && assignments != null && (bitfield.getPiecesRemaining() > 0 || assignments.count() > 0)) {
                 inspectAssignment(connectionKey, worker, assignments);
-                if (shouldUpdateAssignments(assignments)) {
-                    processDisconnectedPeers(assignments, getStatistics());
-                    processTimeoutedPeers();
-                    updateAssignments(assignments);
-                }
+
                 Message interestUpdate = interestUpdates.remove(connectionKey);
                 message = (interestUpdate == null) ? worker.get() : interestUpdate;
             } else {
@@ -193,8 +235,8 @@ public class TorrentWorker {
 
     private boolean shouldUpdateAssignments(Assignments assignments) {
         return (timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_OPTIONAL_INTERVAL.toMillis()
-                    && mightUseMoreAssignees(assignments))
-            || timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_MANDATORY_INTERVAL.toMillis();
+                && mightUseMoreAssignees(assignments))
+                || timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_MANDATORY_INTERVAL.toMillis();
     }
 
     private boolean mightUseMoreAssignees(Assignments assignments) {
@@ -341,7 +383,7 @@ public class TorrentWorker {
         @Override
         public Message get() {
             Message message = pieceAnnouncements.poll();
-            ;
+
             if (message != null) {
                 return message;
             }
