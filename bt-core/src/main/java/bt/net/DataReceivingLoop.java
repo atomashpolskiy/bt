@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectableChannel;
@@ -58,7 +59,14 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
     private void schedule(IRuntimeLifecycleBinder lifecycleBinder, Config config) {
         String threadName = String.format("%d.bt.net.data-receiver", config.getAcceptorPort());
         ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, threadName));
-        lifecycleBinder.onStartup("Initialize message receiver", () -> executor.execute(this));
+
+        lifecycleBinder.onStartup("Initialize message receiver", () -> executor.execute(() -> {
+            try {
+                DataReceivingLoop.this.run();
+            } catch (Throwable e) {
+                LOGGER.error(e.getMessage(), e);
+            }
+        }));
         lifecycleBinder.onShutdown("Shutdown message receiver", () -> {
             try {
                 shutdown();
@@ -124,7 +132,9 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
                             // selector has been closed, there's no point to continue processing
                             throw e;
                         } catch (Exception e) {
-                            LOGGER.error("Failed to process key", e);
+                            if (!(e.getCause() instanceof EOFException)) {
+                                LOGGER.error("Failed to process key", e);
+                            }
                             selectedKeys.remove();
                         }
                     }
