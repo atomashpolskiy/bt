@@ -176,7 +176,7 @@ public class ServiceModule implements Module {
     @Provides
     @Singleton
     public ChunkVerifier provideVerifier(Config config, Digester digester) {
-        return new DefaultChunkVerifier(digester, config.getNumOfHashingThreads());
+        return new DefaultChunkVerifier(digester, config.getNumOfHashingThreads(), config.isSystemGcAfterVerify());
     }
 
     @Provides

@@ -53,7 +53,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
         int step = 8;
         Digester digester = SHA1Digester.rolling(step);
         int numOfHashingThreads = 4;
-        this.verifier = new DefaultChunkVerifier(digester, numOfHashingThreads);
+        this.verifier = new DefaultChunkVerifier(digester, numOfHashingThreads, true);
         int transferBlockSize = 4;
         this.dataDescriptorFactory = new DataDescriptorFactory(new DataReaderFactory(new EventBus()),
                 verifier, transferBlockSize);

@@ -16,6 +16,7 @@
 
 package bt.runtime;
 
+import bt.data.Bitfield;
 import bt.net.crypto.MSEHandshakeProcessor;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.service.NetworkUtil;
@@ -24,6 +25,7 @@ import bt.torrent.data.DefaultDataWorker;
 
 import java.net.InetAddress;
 import java.time.Duration;
+import java.util.List;
 
 /**
  * Provides runtime configuration parameters.
@@ -67,6 +69,8 @@ public class Config {
     private int dataWorkerCorePoolSize;
     private int dataWorkerMaxPoolSize;
 
+    private boolean systemGcAfterVerify;
+
     /**
      * Create a config with default parameters.
      *
@@ -107,6 +111,8 @@ public class Config {
 
         this.dataWorkerCorePoolSize = 1;
         this.dataWorkerMaxPoolSize = 1;
+
+        this.systemGcAfterVerify = true;
     }
 
     /**
@@ -147,6 +153,7 @@ public class Config {
         this.numberOfPeersToRequestFromTracker = config.getNumberOfPeersToRequestFromTracker();
         this.maxOutstandingRequests = config.getMaxOutstandingRequests();
         this.networkBufferSize = config.getNetworkBufferSize();
+        this.systemGcAfterVerify = config.isSystemGcAfterVerify();
     }
 
     /**
@@ -676,5 +683,17 @@ public class Config {
      */
     public void setDataWorkerMaxPoolSize(int dataWorkerMaxPoolSize) {
         this.dataWorkerMaxPoolSize = dataWorkerMaxPoolSize;
+    }
+
+    public boolean isSystemGcAfterVerify() {
+        return systemGcAfterVerify;
+    }
+
+    /**
+     * @param systemGcAfterVerify set true to disable System.gc() call after verify, see {@link bt.data.DefaultChunkVerifier#verify(List, Bitfield)}
+     * @since 1.10
+     */
+    public void setSystemGcAfterVerify(boolean systemGcAfterVerify) {
+        this.systemGcAfterVerify = systemGcAfterVerify;
     }
 }

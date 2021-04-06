@@ -37,10 +37,12 @@ public class DefaultChunkVerifier implements ChunkVerifier {
 
     private Digester digester;
     private int numOfHashingThreads;
+    private boolean systemGcAfterVerify;
 
-    public DefaultChunkVerifier(Digester digester, int numOfHashingThreads) {
+    public DefaultChunkVerifier(Digester digester, int numOfHashingThreads, boolean systemGcAfterVerify) {
         this.digester = digester;
         this.numOfHashingThreads = numOfHashingThreads;
+        this.systemGcAfterVerify = systemGcAfterVerify;
     }
 
     @Override
@@ -56,8 +58,10 @@ public class DefaultChunkVerifier implements ChunkVerifier {
         } else {
             createWorker(arr, 0, arr.length, bitfield).run();
         }
-        // try to purge all data that was loaded by the verifiers
-        System.gc();
+        if (systemGcAfterVerify) {
+            // try to purge all data that was loaded by the verifiers
+            System.gc();
+        }
 
         return bitfield.getPiecesRemaining() == 0;
     }

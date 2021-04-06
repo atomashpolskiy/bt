@@ -65,7 +65,7 @@ public class DataDescriptor_DataReaderTest {
         int numOfHashingThreads = 4;
         int transferBlockSize = 4;
 
-        this.verifier = new DefaultChunkVerifier(digester, numOfHashingThreads);
+        this.verifier = new DefaultChunkVerifier(digester, numOfHashingThreads, true);
         this.eventBus = new EventBus();
 
         byte[][] chunkHashes = new byte[chunkCount][];
