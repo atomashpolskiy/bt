@@ -56,7 +56,7 @@ public class CliFileSelector extends TorrentFileSelector {
     }
 
     @Override
-    protected SelectionResult select(TorrentFile file) {
+    public SelectionResult select(TorrentFile file) {
         while (!shutdown) {
             System.out.println(getPromptMessage(file));
 
@@ -66,7 +66,7 @@ public class CliFileSelector extends TorrentFileSelector {
                         throw new IllegalStateException("EOF");
                     }
                     case '\n': { // <Enter>
-                        return SelectionResult.select().build();
+                        return SelectionResult.select();
                     }
                     case 0x1B: { // <Esc>
                         return SelectionResult.skip();

@@ -21,18 +21,22 @@ package bt.torrent.fileselector;
  */
 public class SelectionResult {
 
+    public static final SelectionResult SELECTED = new SelectionResult(false);
+
+    public static final SelectionResult SKIPPED = new SelectionResult(true);
+
     /**
      * @since 1.7
      */
-    public static Builder select() {
-        return new Builder();
+    public static SelectionResult select() {
+        return SELECTED;
     }
 
     /**
      * @since 1.7
      */
     public static SelectionResult skip() {
-        return new SelectionResult(true);
+        return SKIPPED;
     }
 
     private final boolean skip;
