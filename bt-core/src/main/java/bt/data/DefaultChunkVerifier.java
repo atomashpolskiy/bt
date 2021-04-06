@@ -56,8 +56,6 @@ public class DefaultChunkVerifier implements ChunkVerifier {
         } else {
             createWorker(arr, 0, arr.length, bitfield).run();
         }
-        // try to purge all data that was loaded by the verifiers
-        System.gc();
 
         return bitfield.getPiecesRemaining() == 0;
     }

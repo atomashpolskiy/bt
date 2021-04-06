@@ -16,12 +16,14 @@
 
 package bt.runtime;
 
+import bt.data.Bitfield;
 import bt.net.crypto.MSEHandshakeProcessor;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.service.NetworkUtil;
 
 import java.net.InetAddress;
 import java.time.Duration;
+import java.util.List;
 
 /**
  * Provides runtime configuration parameters.
@@ -139,6 +141,7 @@ public class Config {
         this.numberOfPeersToRequestFromTracker = config.getNumberOfPeersToRequestFromTracker();
         this.maxOutstandingRequests = config.getMaxOutstandingRequests();
         this.networkBufferSize = config.getNetworkBufferSize();
+        this.systemGcAfterVerify = config.isSystemGcAfterVerify();
     }
 
     /**
@@ -637,4 +640,5 @@ public class Config {
     public int getNetworkBufferSize() {
         return networkBufferSize;
     }
+
 }
