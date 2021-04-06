@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 /**
  * Provides API for file selection (aka partial downloads).
- *
+ * <p>
  * Currently there's a limitation that empty files will always be created (even if they weren't selected).
  *
  * @since 1.7
@@ -44,5 +44,5 @@ public abstract class TorrentFileSelector {
      *
      * @since 1.7
      */
-    protected abstract SelectionResult select(TorrentFile file);
+    public abstract SelectionResult select(TorrentFile file);
 }

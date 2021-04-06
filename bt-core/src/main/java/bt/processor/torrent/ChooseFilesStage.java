@@ -27,7 +27,6 @@ import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
-import bt.torrent.fileselector.SelectionResult;
 import bt.torrent.fileselector.TorrentFileSelector;
 import bt.torrent.messaging.Assignments;
 import bt.torrent.selector.IncompletePiecesValidator;
@@ -35,7 +34,6 @@ import bt.torrent.selector.PieceSelector;
 import bt.torrent.selector.ValidatingSelector;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.function.IntPredicate;
 import java.util.stream.IntStream;
@@ -57,17 +55,12 @@ public class ChooseFilesStage<C extends TorrentContext> extends TerminateOnError
         Torrent torrent = context.getTorrent().get();
         TorrentDescriptor descriptor = torrentRegistry.getDescriptor(torrent.getTorrentId()).get();
 
-        Set<TorrentFile> selectedFiles = new HashSet<>();
+        Set<TorrentFile> selectedFiles = new HashSet<>(torrent.getFiles().size());
         if (context.getFileSelector().isPresent()) {
             TorrentFileSelector selector = context.getFileSelector().get();
-            List<TorrentFile> files = torrent.getFiles();
-            List<SelectionResult> selectionResults = selector.selectFiles(files);
-            if (selectionResults.size() != files.size()) {
-                throw new IllegalStateException("Invalid number of selection results");
-            }
-            for (int i = 0; i < files.size(); i++) {
-                if (!selectionResults.get(i).shouldSkip()) {
-                    selectedFiles.add(files.get(i));
+            for (TorrentFile file : torrent.getFiles()) {
+                if (!selector.select(file).shouldSkip()) {
+                    selectedFiles.add(file);
                 }
             }
         } else {
