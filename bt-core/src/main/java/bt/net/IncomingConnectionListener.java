@@ -60,7 +60,9 @@ public class IncomingConnectionListener {
                         try {
                             connectionRoutine = acceptor.accept();
                         } catch (Exception e) {
-                            LOGGER.error("Unexpected error", e);
+                            if (!shutdown) {
+                                LOGGER.error("Unexpected error", e);
+                            }
                             return;
                         }
 
