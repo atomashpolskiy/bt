@@ -31,16 +31,11 @@ import java.util.function.Consumer;
 
 public class DefaultMessageRouter implements MessageRouter {
 
-    private MessagingAgentCompiler compiler;
+    private final MessagingAgentCompiler compiler;
 
-    private List<MessageConsumer<Message>> genericConsumers;
-    private Map<Class<?>, Collection<MessageConsumer<?>>> typedConsumers;
-    private List<MessageProducer> producers;
-
-    // collection of added consumers/producers in the form of runnable "commands"..
-    // quick and dirty!
-    private List<Runnable> changes;
-    private final Object changesLock;
+    private volatile List<MessageConsumer<Message>> genericConsumers;
+    private volatile Map<Class<?>, Collection<MessageConsumer<?>>> typedConsumers;
+    private volatile List<MessageProducer> producers;
 
     public DefaultMessageRouter() {
         this(Collections.emptyList());
@@ -52,9 +47,6 @@ public class DefaultMessageRouter implements MessageRouter {
         this.genericConsumers = new ArrayList<>();
         this.typedConsumers = new HashMap<>();
         this.producers = new ArrayList<>();
-
-        this.changes = new ArrayList<>();
-        this.changesLock = new Object();
 
         messagingAgents.forEach(this::registerMessagingAgent);
     }
@@ -74,47 +66,47 @@ public class DefaultMessageRouter implements MessageRouter {
 
     @SuppressWarnings("unchecked")
     private void addConsumers(List<MessageConsumer<?>> messageConsumers) {
+        if (messageConsumers.isEmpty()) {
+            return;
+        }
 
-        List<MessageConsumer<Message>> genericConsumers = new ArrayList<>();
-        Map<Class<?>, Collection<MessageConsumer<?>>> typedMessageConsumers = new HashMap<>();
+        synchronized (this) {
+            List<MessageConsumer<Message>> newGenericConsumers = new ArrayList<>(this.genericConsumers);
+            Map<Class<?>, Collection<MessageConsumer<?>>> newTypedConsumers = new HashMap<>(this.typedConsumers);
 
-        messageConsumers.forEach(consumer -> {
-            Class<?> consumedType = consumer.getConsumedType();
-            if (Message.class.equals(consumedType)) {
-                genericConsumers.add((MessageConsumer<Message>) consumer);
-            } else {
-                typedMessageConsumers.computeIfAbsent(consumedType, k -> new ArrayList<>()).add(consumer);
-            }
-        });
-
-        synchronized (changesLock) {
-            this.changes.add(() -> {
-                this.genericConsumers.addAll(genericConsumers);
-                typedMessageConsumers.keySet().forEach(key -> this.typedConsumers
-                        .computeIfAbsent(key, k -> new ArrayList<>()).addAll(typedMessageConsumers.get(key))
-                );
+            messageConsumers.forEach(consumer -> {
+                Class<?> consumedType = consumer.getConsumedType();
+                if (Message.class.equals(consumedType)) {
+                    newGenericConsumers.add((MessageConsumer<Message>) consumer);
+                } else {
+                    newTypedConsumers.computeIfAbsent(consumedType, k -> new ArrayList<>()).add(consumer);
+                }
             });
+
+            this.genericConsumers = newGenericConsumers;
+            this.typedConsumers = newTypedConsumers;
         }
     }
 
     private void addProducers(Collection<MessageProducer> producers) {
-        synchronized (changesLock) {
-            this.changes.add(() -> {
-                this.producers.addAll(producers);
-            });
+        if (producers.isEmpty()) {
+            return;
+        }
+
+        synchronized (this) {
+            List<MessageProducer> newProducers = new ArrayList<>(this.producers);
+            newProducers.addAll(producers);
+            this.producers = newProducers;
         }
     }
 
     @Override
     public void consume(Message message, MessageContext context) {
-        mergeChanges();
         doConsume(message, context);
     }
 
     private <T extends Message> void doConsume(T message, MessageContext context) {
-        genericConsumers.forEach(consumer -> {
-            consumer.consume(message, context);
-        });
+        genericConsumers.forEach(consumer -> consumer.consume(message, context));
 
         Collection<MessageConsumer<?>> consumers = typedConsumers.get(message.getClass());
         if (consumers != null) {
@@ -128,24 +120,12 @@ public class DefaultMessageRouter implements MessageRouter {
 
     @Override
     public void produce(Consumer<Message> messageConsumer, MessageContext context) {
-        mergeChanges();
-        producers.forEach(producer -> {
-            producer.produce(messageConsumer, context);
-        });
-    }
-
-    private void mergeChanges() {
-        synchronized (changesLock) {
-            if (!changes.isEmpty()) {
-                changes.forEach(Runnable::run);
-                changes.clear();
-            }
-        }
+        producers.forEach(producer -> producer.produce(messageConsumer, context));
     }
 
     private static class CollectingCompilerVisitor implements CompilerVisitor {
 
-        private Object agent;
+        private final Object agent;
         private final List<MessageConsumer<?>> consumers;
         private final List<MessageProducer> producers;
 
@@ -187,10 +167,10 @@ public class DefaultMessageRouter implements MessageRouter {
             producers.add((messageConsumer, context) -> {
                 try {
                     if (reduced) {
-                            handle.invoke(agent, messageConsumer);
-                        } else {
-                            handle.invoke(agent, messageConsumer, context);
-                        }
+                        handle.invoke(agent, messageConsumer);
+                    } else {
+                        handle.invoke(agent, messageConsumer, context);
+                    }
                 } catch (Throwable t) {
                     throw new RuntimeException("Failed to invoke message producer", t);
                 }
