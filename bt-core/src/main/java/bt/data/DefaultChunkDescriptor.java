@@ -19,7 +19,7 @@ package bt.data;
 /**
  * @since 1.0
  */
-class DefaultChunkDescriptor implements ChunkDescriptor {
+public class DefaultChunkDescriptor implements ChunkDescriptor {
 
     private final DataRange data;
     private final BlockSet blockSet;
