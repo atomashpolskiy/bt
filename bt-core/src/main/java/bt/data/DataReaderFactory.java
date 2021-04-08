@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *<p><b>Note that this class is not a part of the public API and is a subject to change.</b></p>
+ * <p><b>Note that this class is not a part of the public API and is a subject to change.</b></p>
  */
 public class DataReaderFactory {
 
@@ -36,7 +36,7 @@ public class DataReaderFactory {
     public DataReaderFactory(EventSource eventSource) {
         this.channelsByTorrentId = new HashMap<>();
 
-        eventSource.onPieceVerified(e -> onPieceVerified(e.getTorrentId(), e.getPieceIndex()));
+        eventSource.onPieceVerified(null, e -> onPieceVerified(e.getTorrentId(), e.getPieceIndex()));
     }
 
     public DataReader createReader(Torrent torrent, DataDescriptor dataDescriptor) {

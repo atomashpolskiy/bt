@@ -89,8 +89,8 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         this.minEventsPerMessage = pexConfig.getMinEventsPerMessage();
         this.maxEventsPerMessage = pexConfig.getMaxEventsPerMessage();
 
-        eventSource.onPeerConnected(e -> onPeerConnected(e.getConnectionKey()))
-                .onPeerDisconnected(e -> onPeerDisconnected(e.getConnectionKey()));
+        eventSource.onPeerConnected(null, e -> onPeerConnected(e.getConnectionKey()))
+                .onPeerDisconnected(null, e -> onPeerDisconnected(e.getConnectionKey()));
 
         String threadName = String.format("%d.bt.peerexchange.cleaner", config.getAcceptorPort());
         ScheduledExecutorService executor =

@@ -16,11 +16,14 @@
 
 package bt;
 
+import bt.metainfo.TorrentId;
 import bt.processor.ProcessingContext;
 import bt.processor.Processor;
 import bt.processor.listener.ListenerSource;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
+import bt.torrent.TorrentDescriptor;
+import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentSessionState;
 
 import java.util.Optional;
@@ -117,6 +120,13 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
             futureOptional = Optional.empty();
             detachFromRuntime();
             f.complete(null);
+            // if TorrentProcessing is processing at ProcessTorrentStage or SeedState, stopping TorrentDescriptor cause stage complete immediately
+            context.getTorrentId().ifPresent(new Consumer<TorrentId>() {
+                @Override
+                public void accept(TorrentId torrentId) {
+                    runtime.service(TorrentRegistry.class).getDescriptor(torrentId).ifPresent(TorrentDescriptor::stop);
+                }
+            });
         }
     }
 

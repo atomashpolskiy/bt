@@ -67,9 +67,9 @@ public interface StorageUnit extends Closeable {
      *
      * @since 1.0
      */
-     default int readBlock(byte[] buffer, long offset) {
-         return readBlock(ByteBuffer.wrap(buffer), offset);
-     }
+    default int readBlock(byte[] buffer, long offset) {
+        return readBlock(ByteBuffer.wrap(buffer), offset);
+    }
 
     /**
      * Try to write a block of data from the provided buffer to this storage, starting with a given offset.

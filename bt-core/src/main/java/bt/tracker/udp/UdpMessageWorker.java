@@ -140,7 +140,7 @@ class UdpMessageWorker {
                         String error = new String(Arrays.copyOfRange(data, DATA_OFFSET, response.getLength()), StandardCharsets.US_ASCII);
                         if (LOGGER.isTraceEnabled()) {
                             LOGGER.trace("[Session {}] Received error from remote address: {}; " +
-                                    "message ID: {}, messageType: {}, error: {}",
+                                            "message ID: {}, messageType: {}, error: {}",
                                     session.getId(), remoteAddress, message.getId(), messageType, error);
                         }
                         return responseHandler.onError(error);
@@ -148,7 +148,7 @@ class UdpMessageWorker {
                         // ignore messages with incorrect type
                         if (LOGGER.isTraceEnabled()) {
                             LOGGER.trace("[Session {}] Received message with incorrect type " +
-                                    "from remote address: {}; expected: {}, actual: {}",
+                                            "from remote address: {}; expected: {}, actual: {}",
                                     session.getId(), remoteAddress, message.getMessageType(), messageType);
                         }
                         continue;
@@ -158,7 +158,7 @@ class UdpMessageWorker {
                     if (messageId != message.getId()) {
                         if (LOGGER.isTraceEnabled()) {
                             LOGGER.trace("[Session {}] Received message with incorrect message ID " +
-                                    "from remote address: {}; expected: {}, actual: {}",
+                                            "from remote address: {}; expected: {}, actual: {}",
                                     session.getId(), remoteAddress, message.getId(), messageId);
                         }
                         continue;
@@ -167,14 +167,14 @@ class UdpMessageWorker {
                     T result = responseHandler.onSuccess(Arrays.copyOfRange(data, DATA_OFFSET, response.getLength()));
                     if (LOGGER.isTraceEnabled()) {
                         LOGGER.trace("[Session {}] Received response " +
-                                "from remote address: {}; message ID: {}, messageType: {}, result: {}",
+                                        "from remote address: {}; message ID: {}, messageType: {}, result: {}",
                                 session.getId(), remoteAddress, messageId, messageType, result);
                     }
                     return result;
 
                 } else if (LOGGER.isTraceEnabled()) {
                     LOGGER.trace("[Session {}] Received message with incorrect size " +
-                            "from remote address: {}; expected: at least {} bytes, actual: {} bytes",
+                                    "from remote address: {}; expected: at least {} bytes, actual: {} bytes",
                             session.getId(), remoteAddress, MIN_MESSAGE_LENGTH, response.getLength());
                 }
             }

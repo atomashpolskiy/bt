@@ -18,10 +18,12 @@ package bt.torrent;
 
 import bt.data.IDataDescriptorFactory;
 import bt.data.Storage;
+import bt.event.EventSource;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.service.IRuntimeLifecycleBinder;
 import com.google.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -35,13 +37,14 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * Simple in-memory torrent registry, that creates new descriptors upon request.
  *
- *<p><b>Note that this class implements a service.
+ * <p><b>Note that this class implements a service.
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
 public class AdhocTorrentRegistry implements TorrentRegistry {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AdhocTorrentRegistry.class);
+
     private IDataDescriptorFactory dataDescriptorFactory;
-    private IRuntimeLifecycleBinder lifecycleBinder;
 
     private Set<TorrentId> torrentIds;
     private ConcurrentMap<TorrentId, Torrent> torrents;
@@ -49,14 +52,15 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
 
     @Inject
     public AdhocTorrentRegistry(IDataDescriptorFactory dataDescriptorFactory,
-                                IRuntimeLifecycleBinder lifecycleBinder) {
+                                EventSource eventSource) {
 
         this.dataDescriptorFactory = dataDescriptorFactory;
-        this.lifecycleBinder = lifecycleBinder;
 
         this.torrentIds = ConcurrentHashMap.newKeySet();
         this.torrents = new ConcurrentHashMap<>();
         this.descriptors = new ConcurrentHashMap<>();
+
+        eventSource.onTorrentStopped(null, e -> unregister(e.getTorrentId()));
     }
 
     @Override
@@ -112,7 +116,6 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
                 descriptor = existing;
             } else {
                 torrentIds.add(torrentId);
-                addShutdownHook(torrentId, descriptor);
             }
         }
 
@@ -130,7 +133,6 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
                 descriptor = existing;
             } else {
                 torrentIds.add(torrentId);
-                addShutdownHook(torrentId, descriptor);
             }
 
             return descriptor;
@@ -145,15 +147,17 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
                 && (!descriptor.isPresent() || descriptor.get().isActive());
     }
 
-    private void addShutdownHook(TorrentId torrentId, TorrentDescriptor descriptor) {
-        lifecycleBinder.onShutdown("Closing data descriptor for torrent ID: " + torrentId, () -> {
-            if (descriptor.getDataDescriptor() != null) {
-                try {
-                    descriptor.getDataDescriptor().close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+    public void unregister(TorrentId torrentId) {
+        torrentIds.remove(torrentId);
+        torrents.remove(torrentId);
+        DefaultTorrentDescriptor torrentDescriptor = descriptors.remove(torrentId);
+        if (torrentDescriptor != null) {
+            try {
+                torrentDescriptor.getDataDescriptor().close();
+            } catch (IOException e) {
+                LOGGER.error("closing DataDescriptor error, torrentId: {}", torrentId, e);
             }
-        });
+        }
     }
+
 }

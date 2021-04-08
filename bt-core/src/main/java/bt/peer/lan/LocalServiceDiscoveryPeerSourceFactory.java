@@ -84,7 +84,7 @@ public class LocalServiceDiscoveryPeerSourceFactory implements PeerSourceFactory
 
             SocketAddress remoteAddress = null;
             try {
-                 remoteAddress = channel.receive(receiveBuffer);
+                remoteAddress = channel.receive(receiveBuffer);
             } catch (Exception e) {
                 LOGGER.error("Failed to receive LSD announce", e);
             }

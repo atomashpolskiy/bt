@@ -89,17 +89,19 @@ public class BtRuntime {
     private ExecutorService clientExecutor;
     private AtomicBoolean started;
     private final Object lock;
+    private Thread hook;
 
     private boolean manualShutdownOnly;
 
     BtRuntime(Injector injector, Config config) {
         String threadName = String.format("%d.bt.runtime.shutdown-manager", config.getAcceptorPort());
-        Runtime.getRuntime().addShutdownHook(new Thread(threadName) {
+        this.hook = new Thread(threadName) {
             @Override
             public void run() {
                 shutdown();
             }
-        });
+        };
+        Runtime.getRuntime().addShutdownHook(hook);
 
         this.injector = injector;
         this.config = config;
@@ -229,6 +231,7 @@ public class BtRuntime {
                 clientExecutor.shutdownNow();
             }
         }
+        Runtime.getRuntime().removeShutdownHook(hook);
     }
 
     private void runHooks(LifecycleEvent event, Consumer<Throwable> errorConsumer) {

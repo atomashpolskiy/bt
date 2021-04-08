@@ -112,7 +112,7 @@ public class MldhtService implements DHTService {
         this.portMappers = portMappers;
         this.torrentRegistry = torrentRegistry;
 
-        eventSource.onTorrentStarted(e -> onTorrentStarted(e.getTorrentId()));
+        eventSource.onTorrentStarted(null, e -> onTorrentStarted(e.getTorrentId()));
 
         lifecycleBinder.onStartup(LifecycleBinding.bind(this::start).description("Initialize DHT facilities").async().build());
         lifecycleBinder.onShutdown("Shutdown DHT facilities", this::shutdown);

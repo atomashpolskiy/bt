@@ -100,23 +100,11 @@ public class TorrentWorker {
         this.assignmentsSupplier = assignmentsSupplier;
         this.statisticsSupplier = statisticsSupplier;
 
-        eventSource.onPeerDiscovered(e -> {
-            if (torrentId.equals(e.getTorrentId())) {
-                onPeerDiscovered(e.getPeer());
-            }
-        });
+        eventSource.onPeerDiscovered(torrentId, e -> onPeerDiscovered(e.getPeer()));
 
-        eventSource.onPeerConnected(e -> {
-            if (torrentId.equals(e.getTorrentId())) {
-                onPeerConnected(e.getConnectionKey());
-            }
-        });
+        eventSource.onPeerConnected(torrentId, e -> onPeerConnected(e.getConnectionKey()));
 
-        eventSource.onPeerDisconnected(e -> {
-            if (torrentId.equals(e.getTorrentId())) {
-                onPeerDisconnected(e.getConnectionKey());
-            }
-        });
+        eventSource.onPeerDisconnected(torrentId, e -> onPeerDisconnected(e.getConnectionKey()));
     }
 
     private Bitfield getBitfield() {
@@ -352,7 +340,8 @@ public class TorrentWorker {
 
         @Override
         public Message get() {
-            Message message = pieceAnnouncements.poll();;
+            Message message = pieceAnnouncements.poll();
+            ;
             if (message != null) {
                 return message;
             }
