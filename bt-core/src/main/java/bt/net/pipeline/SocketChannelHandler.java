@@ -139,6 +139,7 @@ public class SocketChannelHandler implements ChannelHandler {
             ByteBuffer buffer = outboundBuffer.lockAndGet();
             if (buffer == null) {
                 // buffer has been released
+                outboundBuffer.unlock();
                 return;
             }
             buffer.flip();
