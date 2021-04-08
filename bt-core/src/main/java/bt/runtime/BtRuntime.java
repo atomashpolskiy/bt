@@ -231,7 +231,11 @@ public class BtRuntime {
                 clientExecutor.shutdownNow();
             }
         }
-        Runtime.getRuntime().removeShutdownHook(hook);
+        if (Thread.currentThread() != hook) {
+            // When we are shutting down from outside of Runtime's hook, we need to remove the hook from Runtime.
+            // When we are shutting down inside Runtime's hook, Runtime already removed this hook, so we can't remove again.
+            Runtime.getRuntime().removeShutdownHook(hook);
+        }
     }
 
     private void runHooks(LifecycleEvent event, Consumer<Throwable> errorConsumer) {
