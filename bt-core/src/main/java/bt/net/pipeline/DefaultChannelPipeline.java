@@ -87,6 +87,30 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (buffer == null) {
             // buffer has been released
             // TODO: So what? Maybe throw an exception then?
+            // When remove peer closed connection(for duplicate connections), buffer is been released.
+            // 2021-04-08 13:25:09.654 ERROR [6881.bt.net.data-receiver] bt.net.pipeline.SocketChannelHandler.read:85 null
+            // java.io.EOFException: null
+            //      at bt.net.pipeline.SocketChannelHandler.processInboundData(SocketChannelHandler.java:125)
+            //      at bt.net.pipeline.SocketChannelHandler.read(SocketChannelHandler.java:82)
+            //      at bt.net.pipeline.DefaultChannelPipeline$DefaultChannelHandlerContext.readFromChannel(DefaultChannelPipeline.java:157)
+            //      at bt.net.DataReceivingLoop.processKey(DataReceivingLoop.java:187)
+            //      at bt.net.DataReceivingLoop.run(DataReceivingLoop.java:128)
+            //      at bt.net.DataReceivingLoop.lambda$null$1(DataReceivingLoop.java:65)
+            //      at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
+            //      at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+            //      at java.lang.Thread.run(Thread.java:748)
+            // 2021-04-08 13:25:09.653 INFO  [6881.bt.net.data-receiver] bt.net.pipeline.SocketChannelHandler.shutdown:180 shutdown
+            // java.lang.RuntimeException: null
+            //      at bt.net.pipeline.SocketChannelHandler.shutdown(SocketChannelHandler.java:180)
+            //      at bt.net.pipeline.SocketChannelHandler.read(SocketChannelHandler.java:84)
+            //      at bt.net.pipeline.DefaultChannelPipeline$DefaultChannelHandlerContext.readFromChannel(DefaultChannelPipeline.java:157)
+            //      at bt.net.DataReceivingLoop.processKey(DataReceivingLoop.java:187)
+            //      at bt.net.DataReceivingLoop.run(DataReceivingLoop.java:128)
+            //      at bt.net.DataReceivingLoop.lambda$null$1(DataReceivingLoop.java:65)
+            //      at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
+            //      at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+            //      at java.lang.Thread.run(Thread.java:748)
+            outboundBuffer.unlock();
             return false;
         }
 
