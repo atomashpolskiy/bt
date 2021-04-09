@@ -9,6 +9,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 ### Bug Fixes/Improvements:
 
 * Allow announce key to be missing in the torrent dictionary [#42](https://github.com/atomashpolskiy/bt/issues/42)
+* bt.data.digest.JavaSecurityDigester performance improvement [#133](https://github.com/atomashpolskiy/bt/issues/133)
 
 ## 1.9
 
