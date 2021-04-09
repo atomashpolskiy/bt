@@ -29,6 +29,11 @@ public class JavaSecurityDigester implements Digester {
 
     private final String algorithm;
     private final int step;
+    private final SoftThreadLocal<byte[]> bufferTL;
+    private final SoftThreadLocal<MessageDigest> digestTL = new SoftThreadLocal<>(() -> createDigest(), messageDigest -> {
+        messageDigest.reset();
+        return messageDigest;
+    });
 
     public JavaSecurityDigester(String algorithm, int step) {
         try {
@@ -39,6 +44,7 @@ public class JavaSecurityDigester implements Digester {
         }
         this.algorithm = algorithm;
         this.step = step;
+        bufferTL = new SoftThreadLocal<>(() -> new byte[step]);
     }
 
     public String getAlgorithm() {
@@ -47,31 +53,27 @@ public class JavaSecurityDigester implements Digester {
 
     @Override
     public byte[] digest(DataRange data) {
-        MessageDigest digest = createDigest();
+        MessageDigest digest = digestTL.getValue();
 
         data.visitUnits((unit, off, lim) -> {
             long remaining = lim - off;
             if (remaining > Integer.MAX_VALUE) {
                 throw new BtException("Too much data -- can't read to buffer");
             }
-            byte[] bytes = new byte[step];
+            byte[] bytes = bufferTL.getValue();
             do {
+                ByteBuffer wrap = ByteBuffer.wrap(bytes);
                 if (remaining < step) {
-                    bytes = new byte[(int) remaining];
+                    wrap.limit((int) remaining);
                 }
-                int read = unit.readBlock(bytes, off);
+                int read = unit.readBlock(wrap, off);
                 if (read == -1) {
                     // end of data, terminate
                     return false;
-                } else if (read < bytes.length) {
-                    digest.update(Arrays.copyOfRange(bytes, 0, read));
-                    remaining -= read;
-                    off += read;
-                } else {
-                    digest.update(bytes);
-                    remaining -= step;
-                    off += step;
                 }
+                digest.update(bytes, 0, read);
+                remaining -= read;
+                off += read;
             } while (remaining > 0);
 
             return true;
@@ -82,26 +84,24 @@ public class JavaSecurityDigester implements Digester {
 
     @Override
     public byte[] digestForced(DataRange data) {
-        MessageDigest digest = createDigest();
+        MessageDigest digest = digestTL.getValue();
 
         data.visitUnits((unit, off, lim) -> {
             long remaining = lim - off;
             if (remaining > Integer.MAX_VALUE) {
                 throw new BtException("Too much data -- can't read to buffer");
             }
-            byte[] bytes = new byte[step];
+            byte[] bytes = bufferTL.getValue();
             ByteBuffer buffer = ByteBuffer.wrap(bytes);
             do {
                 if (remaining < step) {
-                    bytes = new byte[(int) remaining];
-                    buffer = ByteBuffer.wrap(bytes);
+                    buffer.limit((int) remaining);
                 }
-                buffer.clear();
                 unit.readBlockFully(buffer, off);
                 if (buffer.hasRemaining()) {
                     throw new IllegalStateException("Failed to read data fully: " + buffer.remaining() + " bytes remaining");
                 }
-                digest.update(bytes);
+                digest.update(bytes,0, buffer.flip().limit());
                 remaining -= step;
                 off += step;
             } while (remaining > 0);
@@ -114,7 +114,7 @@ public class JavaSecurityDigester implements Digester {
 
     @Override
     public byte[] digest(Range<?> data) {
-        MessageDigest digest = createDigest();
+        MessageDigest digest = digestTL.getValue();
 
         long len = data.length();
         if (len <= step) {
