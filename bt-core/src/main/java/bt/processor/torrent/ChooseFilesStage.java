@@ -75,7 +75,7 @@ public class ChooseFilesStage<C extends TorrentContext> extends TerminateOnError
         }
 
         Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();
-        Set<Integer> validPieces = getValidPieces(descriptor.getDataDescriptor(), selectedFiles);
+        Bitfield validPieces = getValidPieces(descriptor.getDataDescriptor(), selectedFiles);
         PieceSelector selector = createSelector(context.getPieceSelector(), bitfield, validPieces);
         BitfieldBasedStatistics pieceStatistics = context.getPieceStatistics();
         Assignments assignments = new Assignments(bitfield, selector, pieceStatistics, config);
@@ -84,20 +84,20 @@ public class ChooseFilesStage<C extends TorrentContext> extends TerminateOnError
         context.setAssignments(assignments);
     }
 
-    private void updateSkippedPieces(Bitfield bitfield, Set<Integer> validPieces) {
+    private void updateSkippedPieces(Bitfield bitfield, Bitfield validPieces) {
         IntStream.range(0, bitfield.getPiecesTotal()).forEach(pieceIndex -> {
-            if (!validPieces.contains(pieceIndex)) {
+            if (!validPieces.isVerified(pieceIndex)) {
                 bitfield.skip(pieceIndex);
             }
         });
     }
 
-    private Set<Integer> getValidPieces(DataDescriptor dataDescriptor, Set<TorrentFile> selectedFiles) {
-        Set<Integer> validPieces = new HashSet<>();
+    private Bitfield getValidPieces(DataDescriptor dataDescriptor, Set<TorrentFile> selectedFiles) {
+        Bitfield validPieces = new Bitfield(dataDescriptor.getBitfield().getPiecesTotal());
         IntStream.range(0, dataDescriptor.getBitfield().getPiecesTotal()).forEach(pieceIndex -> {
             for (TorrentFile file : dataDescriptor.getFilesForPiece(pieceIndex)) {
                 if (selectedFiles.contains(file)) {
-                    validPieces.add(pieceIndex);
+                    validPieces.markVerified(pieceIndex);
                     break;
                 }
             }
@@ -107,9 +107,9 @@ public class ChooseFilesStage<C extends TorrentContext> extends TerminateOnError
 
     private PieceSelector createSelector(PieceSelector selector,
                                          Bitfield bitfield,
-                                         Set<Integer> selectedFilesPieces) {
+                                         Bitfield selectedFilesPieces) {
         IntPredicate incompletePiecesValidator = new IncompletePiecesValidator(bitfield);
-        IntPredicate selectedFilesValidator = selectedFilesPieces::contains;
+        IntPredicate selectedFilesValidator = selectedFilesPieces::isVerified;
         IntPredicate validator = (pieceIndex) ->
                 selectedFilesValidator.test(pieceIndex) && incompletePiecesValidator.test(pieceIndex);
         return new ValidatingSelector(validator, selector);
