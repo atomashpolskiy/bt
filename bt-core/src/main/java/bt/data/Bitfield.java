@@ -394,7 +394,7 @@ public class Bitfield {
         }
     }
 
-    private void validatePieceIndex(Integer pieceIndex) {
+    private void validatePieceIndex(int pieceIndex) {
         if (pieceIndex < 0 || pieceIndex >= getPiecesTotal()) {
             throw new BtException("Illegal piece index: " + pieceIndex +
                     ", expected 0.." + (getPiecesTotal() - 1));

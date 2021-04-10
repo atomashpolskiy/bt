@@ -16,6 +16,7 @@
 
 package bt.net.crypto;
 
+import bt.data.digest.SoftThreadLocal;
 import bt.net.buffer.BufferMutator;
 
 import javax.crypto.Cipher;
@@ -29,6 +30,7 @@ import java.nio.ByteBuffer;
 public class CipherBufferMutator implements BufferMutator {
 
     private final Cipher cipher;
+    private SoftThreadLocal<byte[]> bytesTL = new SoftThreadLocal<>(() -> new byte[16 * 1024]);
 
     /**
      * @since 1.6
@@ -41,15 +43,21 @@ public class CipherBufferMutator implements BufferMutator {
     public void mutate(ByteBuffer buffer) {
         if (buffer.hasRemaining()) {
             int position = buffer.position();
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
+            byte[] bytes = bytesTL.getValue();
+            int remaining = buffer.remaining();
+            if (bytes.length < remaining) {
+                bytes = new byte[remaining];
+                bytesTL.setValue(bytes);
+            }
+
+            buffer.get(bytes, 0, remaining);
             buffer.position(position);
             try {
-                bytes = cipher.update(bytes);
+                int l = cipher.update(bytes, 0, remaining, bytes);
+                buffer.put(bytes, 0, l);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            buffer.put(bytes);
         }
     }
 }

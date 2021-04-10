@@ -84,12 +84,12 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     @Override
     public PeerConnection getConnection(Peer peer, TorrentId torrentId) {
-        return connections.get(peer, peer.getPort(), torrentId).orElse(null);
+        return connections.get(peer, peer.getPort(), torrentId);
     }
 
     @Override
     public PeerConnection getConnection(ConnectionKey key) {
-        return connections.get(key).orElse(null);
+        return connections.get(key);
     }
 
     @Override
@@ -303,12 +303,12 @@ class Connections {
         return existing;
     }
 
-    Optional<PeerConnection> get(Peer peer, int remotePort, TorrentId torrentId) {
+    PeerConnection get(Peer peer, int remotePort, TorrentId torrentId) {
         return get(new ConnectionKey(peer, remotePort, torrentId));
     }
 
-    Optional<PeerConnection> get(ConnectionKey key) {
-        return Optional.ofNullable(connections.get(key));
+    PeerConnection get(ConnectionKey key) {
+        return connections.get(key);
     }
 
     void visitConnections(Consumer<PeerConnection> visitor) {

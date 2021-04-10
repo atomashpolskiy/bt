@@ -134,15 +134,16 @@ public class TorrentWorker {
     }
 
     private void consume(ConnectionKey connectionKey, Message message) {
-        getWorker(connectionKey).ifPresent(worker -> worker.accept(message));
+        PieceAnnouncingPeerWorker worker = getWorker(connectionKey);
+        if (worker != null)
+            worker.accept(message);
     }
 
     private Message produce(ConnectionKey connectionKey) {
         Message message = null;
 
-        Optional<PieceAnnouncingPeerWorker> workerOptional = getWorker(connectionKey);
-        if (workerOptional.isPresent()) {
-            PieceAnnouncingPeerWorker worker = workerOptional.get();
+        PieceAnnouncingPeerWorker worker = getWorker(connectionKey);
+        if (worker != null) {
             Bitfield bitfield = getBitfield();
             Assignments assignments = getAssignments();
 
@@ -163,8 +164,8 @@ public class TorrentWorker {
         return message;
     }
 
-    private Optional<PieceAnnouncingPeerWorker> getWorker(ConnectionKey connectionKey) {
-        return Optional.ofNullable(peerMap.get(connectionKey));
+    private PieceAnnouncingPeerWorker getWorker(ConnectionKey connectionKey) {
+        return peerMap.get(connectionKey);
     }
 
     private void inspectAssignment(ConnectionKey connectionKey, PeerWorker peerWorker, Assignments assignments) {
@@ -255,17 +256,19 @@ public class TorrentWorker {
         Set<ConnectionKey> interesting = assignments.update(ready, choking);
 
         ready.stream().filter(peer -> !interesting.contains(peer)).forEach(peer -> {
-            getWorker(peer).ifPresent(worker -> {
+            PieceAnnouncingPeerWorker worker = getWorker(peer);
+            if (worker != null) {
                 ConnectionState connectionState = worker.getConnectionState();
                 if (connectionState.isInterested()) {
                     interestUpdates.put(peer, NotInterested.instance());
                     connectionState.setInterested(false);
                 }
-            });
+            }
         });
 
         choking.forEach(peer -> {
-            getWorker(peer).ifPresent(worker -> {
+            PieceAnnouncingPeerWorker worker = getWorker(peer);
+            if (worker != null) {
                 ConnectionState connectionState = worker.getConnectionState();
                 if (interesting.contains(peer)) {
                     if (!connectionState.isInterested()) {
@@ -276,7 +279,7 @@ public class TorrentWorker {
                     interestUpdates.put(peer, NotInterested.instance());
                     connectionState.setInterested(false);
                 }
-            });
+            }
         });
 
         lastUpdatedAssignments = System.currentTimeMillis();

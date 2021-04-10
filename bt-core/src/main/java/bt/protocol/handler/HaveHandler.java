@@ -64,7 +64,7 @@ public final class HaveHandler extends UniqueMessageHandler<Have> {
         int length = Integer.BYTES;
 
         if (buffer.remaining() >= length) {
-            Integer pieceIndex = Objects.requireNonNull(readInt(buffer));
+            int pieceIndex = readInt(buffer);
             context.setMessage(new Have(pieceIndex));
             consumed = length;
         }

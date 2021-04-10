@@ -70,9 +70,9 @@ public final class RequestHandler extends UniqueMessageHandler<Request> {
 
         if (buffer.remaining() >= length) {
 
-            int pieceIndex = Objects.requireNonNull(readInt(buffer));
-            int blockOffset = Objects.requireNonNull(readInt(buffer));
-            int blockLength = Objects.requireNonNull(readInt(buffer));
+            int pieceIndex = readInt(buffer);
+            int blockOffset = readInt(buffer);
+            int blockLength = readInt(buffer);
 
             context.setMessage(new Request(pieceIndex, blockOffset, blockLength));
             consumed = length;
