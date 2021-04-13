@@ -35,6 +35,8 @@ class Choker {
     private static final Duration CHOKING_THRESHOLD = Duration.ofMillis(10000);
 
     private static final Choker instance = new Choker();
+    private static final Optional<Boolean> FALSE = Optional.of(Boolean.FALSE);
+    private static final Optional<Boolean> TRUE = Optional.of(Boolean.TRUE);
 
     /**
      * @return Choker instance
@@ -61,14 +63,15 @@ class Choker {
         if (!shouldChokeOptional.isPresent()) {
             if (peerInterested && choking) {
                 if (mightUnchoke(connectionState)) {
-                    shouldChokeOptional = Optional.of(Boolean.FALSE); // should unchoke
+                    shouldChokeOptional = FALSE; // should unchoke
                 }
             } else if (!peerInterested && !choking) {
-                shouldChokeOptional = Optional.of(Boolean.TRUE);
+                shouldChokeOptional = TRUE;
             }
         }
 
-        shouldChokeOptional.ifPresent(shouldChoke -> {
+        if (shouldChokeOptional.isPresent()) {
+            Boolean shouldChoke = shouldChokeOptional.get();
             if (shouldChoke != choking) {
                 if (shouldChoke) {
                     // choke immediately
@@ -80,7 +83,7 @@ class Choker {
                     messageConsumer.accept(Unchoke.instance());
                 }
             }
-        });
+        }
     }
 
     private boolean mightUnchoke(ConnectionState connectionState) {

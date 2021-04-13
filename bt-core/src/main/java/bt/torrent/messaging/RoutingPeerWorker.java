@@ -16,9 +16,7 @@
 
 package bt.torrent.messaging;
 
-import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
-import bt.net.Peer;
 import bt.protocol.Cancel;
 import bt.protocol.Choke;
 import bt.protocol.Interested;
@@ -28,8 +26,8 @@ import bt.protocol.Piece;
 import bt.protocol.Unchoke;
 
 import java.util.Deque;
-import java.util.Optional;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.function.Consumer;
 
 /**
  * Messaging interface, that encapsulates all messaging agents (consumers and producers)
@@ -48,6 +46,8 @@ class RoutingPeerWorker implements PeerWorker {
     private Deque<Message> outgoingMessages;
 
     private Choker choker;
+    private Consumer<Message> onUpdateConnection = this::postMessage;
+    private Consumer<Message> onGet = this::postMessage;
 
     public RoutingPeerWorker(ConnectionKey connectionKey, MessageRouter router) {
         this.connectionState = new ConnectionState();
@@ -93,7 +93,7 @@ class RoutingPeerWorker implements PeerWorker {
     @Override
     public Message get() {
         if (outgoingMessages.isEmpty()) {
-            router.produce(this::postMessage, context);
+            router.produce(onGet, context);
             updateConnection();
         }
         return postProcessOutgoingMessage(outgoingMessages.poll());
@@ -143,6 +143,6 @@ class RoutingPeerWorker implements PeerWorker {
     }
 
     private void updateConnection() {
-        choker.handleConnection(connectionState, this::postMessage);
+        choker.handleConnection(connectionState, onUpdateConnection);
     }
 }

@@ -129,9 +129,10 @@ public class DefaultMessageRouter implements MessageRouter {
     @Override
     public void produce(Consumer<Message> messageConsumer, MessageContext context) {
         mergeChanges();
-        producers.forEach(producer -> {
+        for (int i = 0; i < producers.size(); i++) {
+            MessageProducer producer = producers.get(i);
             producer.produce(messageConsumer, context);
-        });
+        }
     }
 
     private void mergeChanges() {

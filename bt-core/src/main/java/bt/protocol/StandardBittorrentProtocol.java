@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import static bt.protocol.Protocols.canReadInt;
 import static bt.protocol.Protocols.readInt;
 
 public class StandardBittorrentProtocol implements MessageHandler<Message> {
@@ -206,10 +207,11 @@ public class StandardBittorrentProtocol implements MessageHandler<Message> {
         }
         buffer.position(position);
 
-        Integer length = readInt(buffer);
-        if (length == null) {
+        if (!canReadInt(buffer))
             return null;
-        } else if (length == 0) {
+
+        int length = readInt(buffer);
+        if (length == 0) {
             return KeepAlive.class;
         }
 

@@ -39,6 +39,9 @@ class MessageDeserializer {
     }
 
     public Message deserialize(ByteBufferView buffer) {
+        if (buffer.remaining() == 0)
+            return null;
+
         int position = buffer.position();
         int limit = buffer.limit();
 

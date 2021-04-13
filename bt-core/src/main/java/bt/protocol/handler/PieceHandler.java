@@ -63,8 +63,8 @@ public final class PieceHandler extends UniqueMessageHandler<Piece> {
 
         if (buffer.remaining() >= length) {
 
-            int pieceIndex = Objects.requireNonNull(readInt(buffer));
-            int blockOffset = Objects.requireNonNull(readInt(buffer));
+            int pieceIndex = readInt(buffer);
+            int blockOffset = readInt(buffer);
             int blockLength = length - Integer.BYTES * 2;
             buffer.position(buffer.position() + blockLength);
 

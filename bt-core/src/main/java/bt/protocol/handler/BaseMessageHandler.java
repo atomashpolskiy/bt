@@ -88,7 +88,7 @@ public abstract class BaseMessageHandler<T extends Message> implements MessageHa
             return 0;
         }
 
-        Integer length = Objects.requireNonNull(readInt(buffer));
+        int length = readInt(buffer);
         if (buffer.remaining() < length) {
             return 0;
         }

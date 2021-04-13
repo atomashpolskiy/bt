@@ -72,6 +72,13 @@ class Assignment {
     private void claimPiecesIfNeeded() {
         if (pieces.size() < MAX_SIMULTANEOUSLY_ASSIGNED_PIECES) {
             Bitfield peerBitfield = pieceStatistics.getPeerBitfield(connectionKey).get();
+            if(!assignments.isEndgame()){
+                selector.getNextPieces(pieceStatistics)
+                        .filter(pieceIndex -> pieces.size() < 3 && peerBitfield.isVerified(pieceIndex) && assignments.claim(pieceIndex))
+                        .limit(3)
+                        .forEach(pieceIndex -> pieces.add(pieceIndex));
+                return;
+            }
 
             // randomize order of pieces to keep the number of pieces
             // requested from different peers at the same time to a minimum

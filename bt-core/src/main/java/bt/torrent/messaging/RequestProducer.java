@@ -110,11 +110,12 @@ public class RequestProducer {
     private void resetConnection(ConnectionState connectionState, Consumer<Message> messageConsumer) {
         connectionState.getRequestQueue().clear();
         connectionState.getEnqueuedPieces().clear();
-        connectionState.getPendingRequests().forEach(r -> {
-            Mapper.decodeKey(r).ifPresent(key -> {
-                messageConsumer.accept(new Cancel(key.getPieceIndex(), key.getOffset(), key.getLength()));
+        if (!connectionState.getPendingRequests().isEmpty())
+            connectionState.getPendingRequests().forEach(r -> {
+                Mapper.decodeKey(r).ifPresent(key -> {
+                    messageConsumer.accept(new Cancel(key.getPieceIndex(), key.getOffset(), key.getLength()));
+                });
             });
-        });
         connectionState.getPendingRequests().clear();
         connectionState.getPendingWrites().clear();
     }

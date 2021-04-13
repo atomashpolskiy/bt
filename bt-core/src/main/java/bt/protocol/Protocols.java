@@ -157,15 +157,27 @@ public class Protocols {
      *
      * @param buffer Buffer to read from.
      *               Decoding will be done starting with the index denoted by {@link Buffer#position()}
-     * @return Decoded value, or null if there are insufficient bytes in buffer
+     * @return Decoded value
+     * @throws IllegalStateException if there are insufficient bytes in buffer
      *         (i.e. <b>buffer.remaining()</b> &lt; 4)
      * @since 1.9
      */
-    public static Integer readInt(ByteBufferView buffer) {
+    public static int readInt(ByteBufferView buffer) {
         if (buffer.remaining() < Integer.BYTES) {
-            return null;
+            throw new IllegalStateException("Insufficient room to read an int");
         }
         return buffer.getInt();
+    }
+
+    /**
+     * Check that remaining bytes in buffer are enough to read an int
+     *
+     * @param buffer Buffer to read from.
+     * @return true if buffer has enough remaining length to read an int
+     * @since 1.10
+     */
+    public static boolean canReadInt(ByteBufferView buffer) {
+        return buffer.remaining() >= Integer.BYTES;
     }
 
     /**
