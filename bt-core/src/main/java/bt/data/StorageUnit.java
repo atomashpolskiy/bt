@@ -42,7 +42,6 @@ public interface StorageUnit extends Closeable {
      *               the maximum number of bytes to read.
      * @param offset Index to start reading from (0-based)
      * @return Actual number of bytes read
-     *
      * @since 1.0
      */
     int readBlock(ByteBuffer buffer, long offset);
@@ -50,7 +49,13 @@ public interface StorageUnit extends Closeable {
     /**
      * @since 1.9
      */
-    void readBlockFully(ByteBuffer buffer, long offset);
+    default void readBlockFully(ByteBuffer buffer, long offset) {
+        int read = 0, total = 0;
+        do {
+            total += read;
+            read = readBlock(buffer, offset + total);
+        } while (read >= 0 && buffer.hasRemaining());
+    }
 
     /**
      * Try to read a block of data into the provided array, starting with a given offset.
@@ -64,7 +69,6 @@ public interface StorageUnit extends Closeable {
      *               Array's length determines the maximum number of bytes to read.
      * @param offset Index to starting reading from (0-based)
      * @return Actual number of bytes read
-     *
      * @since 1.0
      */
     default int readBlock(byte[] buffer, long offset) {
@@ -84,7 +88,6 @@ public interface StorageUnit extends Closeable {
      *               the maximum number of bytes to write.
      * @param offset Offset in this storage's data to start writing to (0-based)
      * @return Actual number of bytes written
-     *
      * @since 1.0
      */
     int writeBlock(ByteBuffer buffer, long offset);
@@ -92,7 +95,13 @@ public interface StorageUnit extends Closeable {
     /**
      * @since 1.9
      */
-    void writeBlockFully(ByteBuffer buffer, long offset);
+    default void writeBlockFully(ByteBuffer buffer, long offset) {
+        int written = 0, total = 0;
+        do {
+            total += written;
+            written = writeBlock(buffer, offset + total);
+        } while (written >= 0 && buffer.hasRemaining());
+    }
 
     /**
      * Try to write a block of data from the provided buffer to this storage, starting with a given offset.
@@ -107,7 +116,6 @@ public interface StorageUnit extends Closeable {
      *               the maximum number of bytes to write.
      * @param offset Offset in this storage's data to start writing to (0-based)
      * @return Actual number of bytes written
-     *
      * @since 1.9
      */
     int writeBlock(ByteBufferView buffer, long offset);
@@ -115,7 +123,13 @@ public interface StorageUnit extends Closeable {
     /**
      * @since 1.9
      */
-    void writeBlockFully(ByteBufferView buffer, long offset);
+    default void writeBlockFully(ByteBufferView buffer, long offset) {
+        int written = 0, total = 0;
+        do {
+            total += written;
+            written = writeBlock(buffer, offset + total);
+        } while (written >= 0 && buffer.hasRemaining());
+    }
 
     /**
      * Try to write a block of data to this storage, starting with a given offset.
@@ -129,7 +143,6 @@ public interface StorageUnit extends Closeable {
      *              Block's length determines the maximum number of bytes to write.
      * @param offset Offset in this storage's data to start writing to (0-based)
      * @return Actual number of bytes written
-     *
      * @since 1.0
      */
     default int writeBlock(byte[] block, long offset) {

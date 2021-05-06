@@ -97,4 +97,9 @@ class TestFileSystemStorage extends ExternalResource implements Storage {
 
         Files.delete(file.toPath());
     }
+
+    @Override
+    public void flush() {
+        // do nothing
+    }
 }

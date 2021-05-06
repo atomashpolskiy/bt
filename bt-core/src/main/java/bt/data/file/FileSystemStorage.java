@@ -16,8 +16,8 @@
 
 package bt.data.file;
 
-import bt.data.StorageUnit;
 import bt.data.Storage;
+import bt.data.StorageUnit;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 
@@ -65,7 +65,8 @@ import java.nio.file.Path;
  * @since 1.0
  */
 public class FileSystemStorage implements Storage {
-
+    private static final int DEFAULT_MAX_OPEN_FILES = 256;
+    private final OpenFileCache cache;
     private final Path rootDirectory;
     private final PathNormalizer pathNormalizer;
 
@@ -80,13 +81,23 @@ public class FileSystemStorage implements Storage {
     }
 
     public FileSystemStorage(Path rootDirectory) {
+        this(rootDirectory, DEFAULT_MAX_OPEN_FILES);
+    }
+
+    /**
+     * Construct a new FileSystemStorage
+     *
+     * @param rootDirectory the root directory to store files
+     * @param maxOpenFiles  the max number of open files this storage can use for efficiency
+     */
+    public FileSystemStorage(Path rootDirectory, int maxOpenFiles) {
+        this.cache = new OpenFileCache(maxOpenFiles);
         this.rootDirectory = rootDirectory;
         this.pathNormalizer = new PathNormalizer(rootDirectory.getFileSystem());
     }
 
     @Override
     public StorageUnit getUnit(Torrent torrent, TorrentFile torrentFile) {
-
         Path torrentDirectory;
         if (torrent.getFiles().size() == 1) {
             torrentDirectory = rootDirectory;
@@ -95,6 +106,11 @@ public class FileSystemStorage implements Storage {
             torrentDirectory = rootDirectory.resolve(normalizedName);
         }
         String normalizedPath = pathNormalizer.normalize(torrentFile.getPathElements());
-        return new FileSystemStorageUnit(torrentDirectory, normalizedPath, torrentFile.getSize());
+        return new FileSystemStorageUnit(cache, torrentDirectory, normalizedPath, torrentFile.getSize());
+    }
+
+    @Override
+    public void flush() {
+        cache.flush();
     }
 }

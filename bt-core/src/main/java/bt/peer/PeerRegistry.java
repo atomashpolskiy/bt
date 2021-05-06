@@ -75,7 +75,7 @@ public class PeerRegistry implements IPeerRegistry {
                         Set<PeerSourceFactory> extraPeerSourceFactories,
                         Config config) {
 
-        this.localPeer = InetPeer.builder(config.getAcceptorAddress(), config.getAcceptorPort())
+        this.localPeer = InetPeer.builder(config.getPeerAddress().orElse(config.getAcceptorAddress()), config.getAcceptorPort())
                 .peerId(idService.getLocalPeerId())
                 .build();
 

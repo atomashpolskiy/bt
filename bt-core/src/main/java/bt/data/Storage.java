@@ -35,4 +35,9 @@ public interface Storage {
      * @since 1.0
      */
     StorageUnit getUnit(Torrent torrent, TorrentFile torrentFile);
+
+    /**
+     * Flushes any buffered data in this storage backend
+     */
+    void flush();
 }

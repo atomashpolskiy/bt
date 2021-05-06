@@ -18,6 +18,8 @@ package bt.data;
 
 import bt.net.buffer.ByteBufferView;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;

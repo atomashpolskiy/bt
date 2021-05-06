@@ -22,7 +22,7 @@ import com.google.common.base.MoreObjects;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.WritableByteChannel;
+import java.nio.channels.FileChannel;
 
 public class SplicedByteBufferView implements ByteBufferView {
 
@@ -200,13 +200,13 @@ public class SplicedByteBufferView implements ByteBufferView {
     }
 
     @Override
-    public int transferTo(WritableByteChannel sbc) throws IOException {
+    public int transferTo(FileChannel fc, long offset) throws IOException {
         if (position < leftCapacity) {
-            int written = sbc.write(left);
+            int written = fc.write(left, offset);
             position += written;
             return written;
         } else if (limit > leftCapacity) {
-            int written = sbc.write(right);
+            int written = fc.write(right, offset);
             position += written;
             return written;
         }
