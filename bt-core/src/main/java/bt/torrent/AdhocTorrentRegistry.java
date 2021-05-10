@@ -153,7 +153,9 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
         DefaultTorrentDescriptor torrentDescriptor = descriptors.remove(torrentId);
         if (torrentDescriptor != null) {
             try {
-                torrentDescriptor.getDataDescriptor().close();
+                if (torrentDescriptor.getDataDescriptor() != null) {
+                    torrentDescriptor.getDataDescriptor().close();
+                }
             } catch (IOException e) {
                 LOGGER.error("closing DataDescriptor error, torrentId: {}", torrentId, e);
             }
