@@ -27,158 +27,57 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 
 class FileSystemStorageUnit implements StorageUnit {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FileSystemStorageUnit.class);
 
+    private final OpenFileCache cache;
+    private final FileCacheKey key;
     private Path parent, file;
     private SeekableByteChannel sbc;
-    private long capacity;
+    private final long capacity;
 
-    private volatile boolean closed;
-
-    FileSystemStorageUnit(Path root, String path, long capacity) {
+    FileSystemStorageUnit(OpenFileCache cache, Path root, String path, long capacity) {
+        this.cache = cache;
         this.file = root.resolve(path);
         this.parent = file.getParent();
+        this.key = new FileCacheKey(file, capacity);
         this.capacity = capacity;
-        this.closed = true;
-    }
-
-    // TODO: this is temporary fix for verification upon app start
-    // should be re-done (probably need additional API to know if storage unit is "empty")
-    private boolean init(boolean create) {
-        if (closed) {
-            if (!Files.exists(file)) {
-                if (create) {
-                    if (!Files.exists(parent)) {
-                        try {
-                            Files.createDirectories(parent);
-                        } catch (IOException e) {
-                            throw new UncheckedIOException("Failed to create file storage -- can't create (some of the) directories", e);
-                        }
-                    }
-
-                    try {
-                        Files.createFile(file);
-                    } catch (IOException e) {
-                        throw new UncheckedIOException("Failed to create file storage -- " +
-                                "can't create new file: " + file.toAbsolutePath(), e);
-                    }
-                } else {
-                    return false;
-                }
-            }
-
-            try {
-                sbc = Files.newByteChannel(file, StandardOpenOption.READ, StandardOpenOption.WRITE, StandardOpenOption.DSYNC);
-            } catch (IOException e) {
-                throw new UncheckedIOException("Unexpected I/O error", e);
-            }
-
-            closed = false;
-        }
-        return true;
     }
 
     @Override
-    public synchronized int readBlock(ByteBuffer buffer, long offset) {
-        if (closed) {
-            if (!init(false)) {
-                return -1;
-            }
+    public int readBlock(ByteBuffer buffer, long offset) {
+        if (!cache.existsOnFileSystem(key)) {
+            return -1;
         }
 
-        if (offset < 0) {
-            throw new IllegalArgumentException("Negative offset: " + offset);
-        } else if (offset > capacity - buffer.remaining()) {
-            throw new IllegalArgumentException("Received a request to read past the end of file (offset: " + offset +
-                    ", requested block length: " + buffer.remaining() + ", file capacity: " + capacity);
-        }
-
-        try {
-            sbc.position(offset);
-            return sbc.read(buffer);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to read bytes (offset: " + offset +
-                    ", requested block length: " + buffer.remaining() + ", file capacity: " + capacity + ")", e);
-        }
+        return cache.readBlock(key, buffer, offset);
     }
 
     @Override
-    public synchronized void readBlockFully(ByteBuffer buffer, long offset) {
-        int read = 0, total = 0;
-        do {
-            total += read;
-            read = readBlock(buffer, offset + total);
-        } while (read >= 0 && buffer.hasRemaining());
+    public void readBlockFully(ByteBuffer buffer, long offset) {
+        cache.readBlockFully(key, buffer, offset);
     }
 
     @Override
-    public synchronized int writeBlock(ByteBuffer buffer, long offset) {
-        if (closed) {
-            if (!init(true)) {
-                return -1;
-            }
-        }
-
-        if (offset < 0) {
-            throw new IllegalArgumentException("Negative offset: " + offset);
-        } else if (offset > capacity - buffer.remaining()) {
-            throw new IllegalArgumentException("Received a request to write past the end of file (offset: " + offset +
-                    ", block length: " + buffer.remaining() + ", file capacity: " + capacity);
-        }
-
-        try {
-            sbc.position(offset);
-            return sbc.write(buffer);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to write bytes (offset: " + offset +
-                    ", block length: " + buffer.remaining() + ", file capacity: " + capacity + ")", e);
-        }
+    public int writeBlock(ByteBuffer buffer, long offset) {
+        return cache.writeBlock(key, buffer, offset);
     }
 
     @Override
-    public synchronized void writeBlockFully(ByteBuffer buffer, long offset) {
-        int written = 0, total = 0;
-        do {
-            total += written;
-            written = writeBlock(buffer, offset + total);
-        } while (written >= 0 && buffer.hasRemaining());
+    public void writeBlockFully(ByteBuffer buffer, long offset) {
+        cache.writeBlockFully(key, buffer, offset);
     }
 
     @Override
-    public synchronized int writeBlock(ByteBufferView buffer, long offset) {
-        if (closed) {
-            if (!init(true)) {
-                return -1;
-            }
-        }
-
-        if (offset < 0) {
-            throw new IllegalArgumentException("Negative offset: " + offset);
-        } else if (offset > capacity - buffer.remaining()) {
-            throw new IllegalArgumentException("Received a request to write past the end of file (offset: " + offset +
-                    ", block length: " + buffer.remaining() + ", file capacity: " + capacity);
-        }
-
-        try {
-            sbc.position(offset);
-            return buffer.transferTo(sbc);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to write bytes (offset: " + offset +
-                    ", block length: " + buffer.remaining() + ", file capacity: " + capacity + ")", e);
-        }
+    public int writeBlock(ByteBufferView buffer, long offset) {
+        return this.cache.writeBlock(key, buffer, offset);
     }
 
     @Override
-    public synchronized void writeBlockFully(ByteBufferView buffer, long offset) {
-        int written = 0, total = 0;
-        do {
-            total += written;
-            written = writeBlock(buffer, offset + total);
-        } while (written >= 0 && buffer.hasRemaining());
+    public void writeBlockFully(ByteBufferView buffer, long offset) {
+        this.cache.writeBlockFully(key, buffer, offset);
     }
 
     @Override
@@ -201,15 +100,7 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
-    public void close() {
-        if (!closed) {
-            try {
-                sbc.close();
-            } catch (IOException e) {
-                LOGGER.warn("Failed to close file: " + file, e);
-            } finally {
-                closed = true;
-            }
-        }
+    public void close() throws IOException{
+        cache.close(key);
     }
 }

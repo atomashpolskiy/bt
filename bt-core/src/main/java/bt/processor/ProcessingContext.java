@@ -16,6 +16,7 @@
 
 package bt.processor;
 
+import bt.data.Storage;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.torrent.TorrentSessionState;
@@ -47,4 +48,10 @@ public interface ProcessingContext {
      * @since 1.5
      */
     Optional<TorrentSessionState> getState();
+
+    /**
+     * @return Get the storage for this torrent
+     * @since 1.10
+     */
+    Storage getStorage();
 }

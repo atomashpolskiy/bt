@@ -18,7 +18,7 @@ package bt.net.buffer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.WritableByteChannel;
+import java.nio.channels.FileChannel;
 
 public interface ByteBufferView {
 
@@ -46,7 +46,15 @@ public interface ByteBufferView {
 
     void transferTo(ByteBuffer buffer);
 
-    int transferTo(WritableByteChannel sbc) throws IOException;
+    /**
+     * Transfer the contents of this byte buffer view to the file channel passed in. Does not change the position of the
+     * file channel
+     * @param fc the file channel
+     * @param offset the offset in the file channel
+     * @return the number of byte transferred to the filechannel
+     * @throws IOException on failure to write to the file channel
+     */
+    int transferTo(FileChannel fc, long offset) throws IOException;
 
     ByteBufferView duplicate();
 }

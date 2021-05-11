@@ -16,24 +16,28 @@
 
 package bt.net.buffer;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 public class SplicedByteBufferViewTest {
-
+    private Path tmpFile;
     private ByteBuffer left;
     private ByteBuffer right;
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         byte[] bytesLeft = "I am a little pony and I do funny tricks, when I am in the mood."
                 .getBytes(StandardCharsets.UTF_8);
         byte[] bytesRight = "...If you scratch my back, I'll scratch yours."
@@ -41,6 +45,14 @@ public class SplicedByteBufferViewTest {
 
         this.left = ByteBuffer.wrap(bytesLeft);
         this.right = ByteBuffer.wrap(bytesRight);
+        this.tmpFile = Files.createTempFile("buffer_view_test", ".txt");
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        if (tmpFile != null)
+            Files.deleteIfExists(tmpFile);
+        tmpFile = null;
     }
 
     @Test
@@ -65,10 +77,8 @@ public class SplicedByteBufferViewTest {
         ////////////////////////////////////////
 
         sb.position(0);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        while (sb.transferTo(Channels.newChannel(out)) > 0)
-            ;
-        String s2 = new String(out.toByteArray(), StandardCharsets.UTF_8);
+        byte[] fileBytes = writeToFileAndGetBytes(sb);
+        String s2 = new String(fileBytes, StandardCharsets.UTF_8);
         assertEquals("I do funny tricks, If you scratch my back", s2);
         assertFalse(sb.hasRemaining());
         assertEquals(sb.position(), sb.limit());
@@ -85,5 +95,18 @@ public class SplicedByteBufferViewTest {
         assertFalse(sb.hasRemaining());
         assertEquals(sb.position(), sb.limit());
         ////////////////////////////////////////
+    }
+
+    private byte[] writeToFileAndGetBytes(ByteBufferView sb) throws IOException {
+        try (FileChannel out = FileChannel.open(tmpFile, StandardOpenOption.READ, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            int offset = 0, read = 0;
+            do {
+                read = sb.transferTo(out, offset);
+                offset += read;
+            }
+            while (read > 0);
+        }
+        byte[] fileBytes = Files.readAllBytes(tmpFile);
+        return fileBytes;
     }
 }

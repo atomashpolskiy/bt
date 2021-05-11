@@ -268,6 +268,11 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
             listenerSource.addListener(ProcessingEvent.FILES_CHOSEN, listener);
         }
 
+        listenerSource.addListener(ProcessingEvent.DOWNLOAD_COMPLETE, (context, next) -> {
+            context.getStorage().flush();
+            return next;
+        });
+
         if (stopWhenDownloaded) {
             listenerSource.addListener(ProcessingEvent.DOWNLOAD_COMPLETE, (context, next) -> null);
         }

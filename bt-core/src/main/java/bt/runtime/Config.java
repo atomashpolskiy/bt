@@ -22,6 +22,7 @@ import bt.service.NetworkUtil;
 
 import java.net.InetAddress;
 import java.time.Duration;
+import java.util.Optional;
 
 /**
  * Provides runtime configuration parameters.
@@ -31,6 +32,7 @@ import java.time.Duration;
 public class Config {
 
     private InetAddress acceptorAddress;
+    private Optional<InetAddress> peerAddress;
     private int acceptorPort;
     private Duration peerDiscoveryInterval;
     private Duration peerHandshakeTimeout;
@@ -69,6 +71,7 @@ public class Config {
      */
     public Config() {
         this.acceptorAddress = NetworkUtil.getInetAddressFromNetworkInterfaces();
+        this.peerAddress = Optional.empty();
         this.acceptorPort = 6891;
         this.peerDiscoveryInterval = Duration.ofSeconds(5);
         this.peerConnectionRetryInterval = Duration.ofMinutes(5);
@@ -109,6 +112,7 @@ public class Config {
      */
     public Config(Config config) {
         this.acceptorAddress = config.getAcceptorAddress();
+        this.peerAddress = config.getPeerAddress();
         this.acceptorPort = config.getAcceptorPort();
         this.peerDiscoveryInterval = config.getPeerDiscoveryInterval();
         this.peerConnectionRetryInterval = config.getPeerConnectionRetryInterval();
@@ -154,6 +158,25 @@ public class Config {
      */
     public InetAddress getAcceptorAddress() {
         return acceptorAddress;
+    }
+
+    /**
+     * @return the address to send to the tracker
+     * @since 1.10
+     */
+    public Optional<InetAddress> getPeerAddress() {
+        return peerAddress;
+    }
+
+    /**
+     * Set the address to send to the tracker. Useful if the local address to accept new connections differs from the
+     * remote address a user should connect to this client with for example in the case of NAT. Only supported for http
+     * trackers currently. Defaults to {@link #getAcceptorAddress()}
+     * @param peerAddress the address to send to the tracker.
+     * @since 1.10
+     */
+    public void setPeerAddress(InetAddress peerAddress) {
+        this.peerAddress = Optional.ofNullable(peerAddress);
     }
 
     /**

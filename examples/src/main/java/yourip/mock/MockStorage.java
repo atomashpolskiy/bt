@@ -27,4 +27,9 @@ public class MockStorage implements Storage {
     public StorageUnit getUnit(Torrent torrent, TorrentFile torrentFile) {
         return new MockStorageUnit();
     }
+
+    @Override
+    public void flush() {
+        // do nothing
+    }
 }
