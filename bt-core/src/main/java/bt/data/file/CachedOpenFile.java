@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -37,7 +38,7 @@ class CachedOpenFile implements StorageUnit {
      */
     CachedOpenFile(Path file, long capacity) {
         try {
-            file.getParent().toFile().mkdirs(); // ensure parent directory exists
+            Files.createDirectories(file.getParent()); // ensure parent directory exists
             // open the file for reading and writing, create it if it isn't present
             fc = FileChannel.open(file, StandardOpenOption.READ, StandardOpenOption.WRITE, StandardOpenOption.CREATE);
         } catch (IOException ex) {
