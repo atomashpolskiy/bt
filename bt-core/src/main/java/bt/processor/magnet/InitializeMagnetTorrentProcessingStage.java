@@ -16,7 +16,7 @@
 
 package bt.processor.magnet;
 
-import bt.data.Bitfield;
+import bt.data.PeerBitfield;
 import bt.event.EventSink;
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
@@ -68,7 +68,7 @@ public class InitializeMagnetTorrentProcessingStage extends InitializeTorrentPro
             }
             try {
                 peersUpdated.add(peer);
-                statistics.addBitfield(peer, new Bitfield(bitfieldBytes, BitOrder.LITTLE_ENDIAN, statistics.getPiecesTotal()));
+                statistics.addBitfield(peer, new PeerBitfield(bitfieldBytes, BitOrder.LITTLE_ENDIAN, statistics.getPiecesTotal()));
             } catch (Exception e) {
                 LOGGER.warn("Error happened when processing peer's bitfield", e);
             }

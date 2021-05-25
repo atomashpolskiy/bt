@@ -18,13 +18,19 @@ package bt.processor.magnet;
 
 import bt.data.Storage;
 import bt.magnet.MagnetUri;
+import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
+import bt.processor.ProcessingContext;
 import bt.processor.torrent.TorrentContext;
+import bt.torrent.callbacks.FileDownloadCompleteCallback;
+import bt.torrent.fileselector.FilePrioritySelector;
+import bt.torrent.fileselector.FilePrioritySkipSelector;
 import bt.torrent.fileselector.TorrentFileSelector;
 import bt.torrent.messaging.BitfieldCollectingConsumer;
 import bt.torrent.selector.PieceSelector;
 
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
 public class MagnetContext extends TorrentContext {
 
@@ -33,10 +39,18 @@ public class MagnetContext extends TorrentContext {
 
     public MagnetContext(MagnetUri magnetUri,
                          PieceSelector pieceSelector,
-                         TorrentFileSelector fileSelector,
+                         FilePrioritySkipSelector fileSelector,
+                         FileDownloadCompleteCallback fileCompletionCallback,
                          Storage storage) {
-        super(pieceSelector, fileSelector, storage, null);
+        super(pieceSelector, fileSelector, fileCompletionCallback, storage, null);
         this.magnetUri = magnetUri;
+    }
+
+    public MagnetContext(MagnetUri magnetUri,
+                         PieceSelector pieceSelector,
+                         FilePrioritySkipSelector fileSelector,
+                         Storage storage) {
+        this(magnetUri, pieceSelector, fileSelector, null, storage);
     }
 
     public MagnetContext(MagnetUri magnetUri, PieceSelector pieceSelector, Storage storage) {

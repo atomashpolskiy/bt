@@ -108,12 +108,10 @@ class DefaultTorrent implements Torrent {
     public List<TorrentFile> getFiles() {
 
         if (files == null) {
-            DefaultTorrentFile file = new DefaultTorrentFile();
-            file.setSize(getSize());
             // TODO: Name can be missing according to the spec,
             // so need to make sure that it's present
             // (probably by setting it to a user-defined value after processing the torrent metainfo)
-            file.setPathElements(Collections.singletonList(getName()));
+            DefaultTorrentFile file = new DefaultTorrentFile(getSize(), Collections.singletonList(getName()));
             return Collections.singletonList(file);
         } else {
             return Collections.unmodifiableList(files);

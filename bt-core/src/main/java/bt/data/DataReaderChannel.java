@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DataReaderChannel implements ReadableByteChannel {
 
     private final DataDescriptor dataDescriptor;
-    private final Bitfield bitfield;
+    private final LocalBitfield bitfield;
     private final BitSet skipped;
     private final long chunkSize;
 

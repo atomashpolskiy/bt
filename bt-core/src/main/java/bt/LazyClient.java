@@ -18,6 +18,7 @@ package bt;
 
 import bt.runtime.BtClient;
 import bt.torrent.TorrentSessionState;
+import bt.torrent.fileselector.FilePrioritySelector;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -73,5 +74,13 @@ class LazyClient implements BtClient {
     @Override
     public boolean isStarted() {
         return delegate != null && delegate.isStarted();
+    }
+
+    @Override
+    public boolean updateFilePriorities(FilePrioritySelector torrentFilePrioritySelector) {
+        if (delegate == null) {
+            return false;
+        }
+        return delegate.updateFilePriorities(torrentFilePrioritySelector);
     }
 }

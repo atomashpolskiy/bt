@@ -17,6 +17,7 @@
 package bt.runtime;
 
 import bt.torrent.TorrentSessionState;
+import bt.torrent.fileselector.FilePrioritySelector;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -64,4 +65,13 @@ public interface BtClient {
      * @since 1.1
      */
     boolean isStarted();
+
+    /**
+     * Update the priorities of the files to downloaded with the specified file priority selector. This may
+     * fail if the torrent has not been downloaded and started yet
+     *
+     * @param torrentFilePrioritySelector the selector for file priority selections
+     * @return true if the selections were successfully updated, false otherwise
+     */
+    boolean updateFilePriorities(FilePrioritySelector torrentFilePrioritySelector);
 }

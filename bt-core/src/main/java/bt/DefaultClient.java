@@ -25,6 +25,7 @@ import bt.runtime.BtRuntime;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.TorrentSessionState;
+import bt.torrent.fileselector.FilePrioritySelector;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -147,5 +148,13 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
     @Override
     public synchronized boolean isStarted() {
         return futureOptional.isPresent();
+    }
+
+    public boolean updateFilePriorities(FilePrioritySelector torrentFilePrioritySelector) {
+        TorrentSessionState state = context.getState().orElse(null);
+        if (state != null) {
+            return state.updateFileDownloadPriority(context, torrentFilePrioritySelector);
+        }
+        return false;
     }
 }

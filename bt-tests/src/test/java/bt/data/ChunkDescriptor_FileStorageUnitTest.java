@@ -82,7 +82,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
                 },
                 mockTorrentFile(fileSize, fileName));
 
-        DataDescriptor descriptor = dataDescriptorFactory.createDescriptor(torrent, storage);
+        DataDescriptor descriptor = dataDescriptorFactory.createDescriptor(torrent, storage, null);
         assertEquals(4, descriptor.getChunkDescriptors().size());
 
         return descriptor;
@@ -135,7 +135,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
         Torrent torrent = mockTorrent(fileName, fileSize, chunkSize, chunkHashes,
                 mockTorrentFile(fileSize, fileName));
 
-        DataDescriptor descriptor = dataDescriptorFactory.createDescriptor(torrent, storage);
+        DataDescriptor descriptor = dataDescriptorFactory.createDescriptor(torrent, storage, null);
         assertEquals(0, descriptor.getChunkDescriptors().size());
 
         return descriptor;
@@ -262,7 +262,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
                 mockTorrentFile(fileSize3, fileName3), mockTorrentFile(fileSize4, fileName4),
                 mockTorrentFile(fileSize5, fileName5), mockTorrentFile(fileSize6, fileName6));
 
-        DataDescriptor descriptor = dataDescriptorFactory.createDescriptor(torrent, storage);
+        DataDescriptor descriptor = dataDescriptorFactory.createDescriptor(torrent, storage, null);
         assertEquals(6, descriptor.getChunkDescriptors().size());
 
         return descriptor;
@@ -364,7 +364,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
                 mockTorrentFile(fileSize3, fileName3), mockTorrentFile(fileSize4, fileName4),
                 mockTorrentFile(fileSize5, fileName5), mockTorrentFile(fileSize6, fileName6));
 
-        DataDescriptor descriptor = dataDescriptorFactory.createDescriptor(torrent, storage);
+        DataDescriptor descriptor = dataDescriptorFactory.createDescriptor(torrent, storage, null);
         assertEquals(0, descriptor.getChunkDescriptors().size());
 
         return descriptor;

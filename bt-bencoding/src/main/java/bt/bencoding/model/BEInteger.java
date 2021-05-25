@@ -31,10 +31,10 @@ import java.math.BigInteger;
  *
  * @since 1.0
  */
-public class BEInteger implements BEObject<BigInteger> {
+public class BEInteger implements BEObject<Number> {
 
     private byte[] content;
-    private BigInteger value;
+    private Number value;
     private BEEncoder encoder;
 
     /**
@@ -42,7 +42,7 @@ public class BEInteger implements BEObject<BigInteger> {
      * @param value Parsed value
      * @since 1.0
      */
-    public BEInteger(byte[] content, BigInteger value) {
+    public BEInteger(byte[] content, Number value) {
         this.content = content;
         this.value = value;
         encoder = BEEncoder.encoder();
@@ -59,8 +59,16 @@ public class BEInteger implements BEObject<BigInteger> {
     }
 
     @Override
-    public BigInteger getValue() {
+    public Number getValue() {
         return value;
+    }
+
+    public long longValueExact() {
+        if (value instanceof Integer || value instanceof Long)
+            return value.longValue();
+        if (value instanceof BigInteger)
+            return ((BigInteger) value).longValueExact();
+        throw new IllegalStateException("unknown type for value: " + (value == null ? "null" : value.getClass()));
     }
 
     @Override
@@ -89,6 +97,6 @@ public class BEInteger implements BEObject<BigInteger> {
 
     @Override
     public String toString() {
-        return value.toString(10);
+        return value.toString();
     }
 }

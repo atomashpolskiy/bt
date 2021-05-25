@@ -17,11 +17,15 @@
 package bt.torrent.messaging;
 
 import bt.data.Bitfield;
+import bt.data.LocalBitfield;
+import bt.data.PeerBitfield;
 import bt.net.ConnectionKey;
 import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.selector.PieceSelector;
+import bt.torrent.selector.ValidatingSelector;
 
+import java.time.Duration;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,20 +35,23 @@ import java.util.Set;
 
 public class Assignments {
 
-    private Config config;
+    private final int maxSimultaneouslyAssignedPieces;
+    private final Duration maxPieceReceivingTime;
 
-    private Bitfield bitfield;
-    private PieceSelector selector;
-    private BitfieldBasedStatistics pieceStatistics;
+    private final LocalBitfield bitfield;
+    private final ValidatingSelector selector;
+    private final BitfieldBasedStatistics pieceStatistics;
 
     private Set<Integer> assignedPieces;
     private Map<ConnectionKey, Assignment> assignments;
 
-    public Assignments(Bitfield bitfield, PieceSelector selector, BitfieldBasedStatistics pieceStatistics, Config config) {
+    public Assignments(LocalBitfield bitfield, ValidatingSelector selector,
+                       BitfieldBasedStatistics pieceStatistics, Config config) {
         this.bitfield = bitfield;
         this.selector = selector;
         this.pieceStatistics = pieceStatistics;
-        this.config = config;
+        this.maxPieceReceivingTime = config.getMaxPieceReceivingTime();
+        this.maxSimultaneouslyAssignedPieces = config.getMaxSimultaneouslyAssignedPieces();
 
         this.assignedPieces = new HashSet<>();
         this.assignments = new HashMap<>();
@@ -70,8 +77,8 @@ public class Assignments {
             return Optional.empty();
         }
 
-        Assignment assignment = new Assignment(connectionKey, config.getMaxPieceReceivingTime(),
-                selector, pieceStatistics, this);
+        Assignment assignment = new Assignment(connectionKey, maxSimultaneouslyAssignedPieces,
+                maxPieceReceivingTime, selector, bitfield, pieceStatistics, this);
         assignments.put(connectionKey, assignment);
         return Optional.of(assignment);
     }
@@ -114,7 +121,7 @@ public class Assignments {
     }
 
     private boolean hasInterestingPieces(ConnectionKey connectionKey) {
-        Optional<Bitfield> peerBitfieldOptional = pieceStatistics.getPeerBitfield(connectionKey);
+        Optional<PeerBitfield> peerBitfieldOptional = pieceStatistics.getPeerBitfield(connectionKey);
         if (!peerBitfieldOptional.isPresent()) {
             return false;
         }

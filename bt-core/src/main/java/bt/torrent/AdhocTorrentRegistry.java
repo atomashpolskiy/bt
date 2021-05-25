@@ -20,19 +20,19 @@ import bt.data.IDataDescriptorFactory;
 import bt.data.Storage;
 import bt.event.EventSource;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
+import bt.processor.ProcessingContext;
+import bt.torrent.callbacks.FileDownloadCompleteCallback;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiConsumer;
 
 /**
  * Simple in-memory torrent registry, that creates new descriptors upon request.
@@ -92,11 +92,12 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
 
     @Override
     public TorrentDescriptor getOrCreateDescriptor(Torrent torrent, Storage storage) {
-        return register(torrent, storage);
+        return register(torrent, storage, null);
     }
 
     @Override
-    public TorrentDescriptor register(Torrent torrent, Storage storage) {
+    public TorrentDescriptor register(Torrent torrent, Storage storage,
+                                      FileDownloadCompleteCallback completedFileCallbacks) {
         TorrentId torrentId = torrent.getTorrentId();
 
         DefaultTorrentDescriptor descriptor = descriptors.get(torrentId);
@@ -105,11 +106,11 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
                 throw new IllegalStateException(
                         "Torrent already registered and data descriptor created: " + torrent.getTorrentId());
             }
-            descriptor.setDataDescriptor(dataDescriptorFactory.createDescriptor(torrent, storage));
+            descriptor.setDataDescriptor(dataDescriptorFactory.createDescriptor(torrent, storage, completedFileCallbacks));
 
         } else {
             descriptor = new DefaultTorrentDescriptor();
-            descriptor.setDataDescriptor(dataDescriptorFactory.createDescriptor(torrent, storage));
+            descriptor.setDataDescriptor(dataDescriptorFactory.createDescriptor(torrent, storage, completedFileCallbacks));
 
             DefaultTorrentDescriptor existing = descriptors.putIfAbsent(torrentId, descriptor);
             if (existing != null) {

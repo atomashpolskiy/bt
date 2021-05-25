@@ -19,6 +19,7 @@ package bt.bencoding;
 import bt.bencoding.model.BEList;
 import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEString;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -34,7 +35,7 @@ import static org.junit.Assert.assertTrue;
 
 public class BEParserTest {
 
-    private Charset charset = StandardCharsets.UTF_8;
+    private final Charset charset = StandardCharsets.UTF_8;
 
     @Test
     public void testParse_String1() {
@@ -71,14 +72,14 @@ public class BEParserTest {
     public void testParse_Integer1() {
         BEParser parser = new BEParser("i1e".getBytes());
         assertEquals(BEType.INTEGER, parser.readType());
-        assertEquals(BigInteger.ONE, parser.readInteger().getValue());
+        assertEquals(BigInteger.ONE, BigInteger.valueOf(parser.readInteger().getValue().longValue()));
     }
 
     @Test
     public void testParse_Integer_Negative() {
         BEParser parser = new BEParser("i-1e".getBytes());
         assertEquals(BEType.INTEGER, parser.readType());
-        assertEquals(BigInteger.ONE.negate(), parser.readInteger().getValue());
+        assertEquals(-1, parser.readInteger().getValue());
     }
 
     @Test(expected = Exception.class)
@@ -88,13 +89,31 @@ public class BEParserTest {
         parser.readInteger();
     }
 
+    @Test
+    public void testParse_overflows_long() {
+        BigInteger longOverflow = BigInteger.valueOf(Long.MAX_VALUE);
+        longOverflow = longOverflow.multiply(BigInteger.valueOf(100));
+        BEParser parser = new BEParser(("i" + longOverflow + "e").getBytes());
+        assertEquals(BEType.INTEGER, parser.readType());
+        Assert.assertEquals(longOverflow, parser.readInteger().getValue());
+    }
+
+    @Test
+    public void testParse_negative_overflows_long() {
+        BigInteger longOverflow = BigInteger.valueOf(Long.MAX_VALUE);
+        longOverflow = longOverflow.multiply(BigInteger.valueOf(-100));
+        BEParser parser = new BEParser(("i" + longOverflow + "e").getBytes());
+        assertEquals(BEType.INTEGER, parser.readType());
+        Assert.assertEquals(longOverflow, parser.readInteger().getValue());
+    }
+
     @Test//(expected = Exception.class)
     public void testParse_Integer_Exception_NegativeZero() {
         // not sure why the protocol spec forbids negative zeroes,
         // so let it be for now
         BEParser parser = new BEParser("i-0e".getBytes());
         assertEquals(BEType.INTEGER, parser.readType());
-        assertEquals(BigInteger.ZERO.negate(), parser.readInteger().getValue());
+        assertEquals(0, parser.readInteger().getValue());
     }
 
     @Test(expected = Exception.class)
@@ -116,7 +135,7 @@ public class BEParserTest {
         BEParser parser = new BEParser("l4:spam4:eggsi1ee".getBytes());
         assertEquals(BEType.LIST, parser.readType());
         assertArrayEquals(
-                new Object[] {"spam".getBytes(charset), "eggs".getBytes(charset), BigInteger.ONE},
+                new Object[]{"spam".getBytes(charset), "eggs".getBytes(charset), 1},
                 parser.readList().getValue().stream()
                         .map(o -> ((BEObject) o).getValue())
                         .collect(Collectors.toList())

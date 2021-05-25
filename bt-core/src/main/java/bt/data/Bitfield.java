@@ -21,66 +21,30 @@ import bt.protocol.BitOrder;
 import bt.protocol.Protocols;
 
 import java.util.BitSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Status of torrent's data.
- *
+ * <p>
  * Instances of this class are thread-safe.
  *
  * @since 1.0
  */
-public class Bitfield {
-
-    // TODO: use EMPTY and PARTIAL instead of INCOMPLETE
-    /**
-     * Status of a particular piece.
-     *
-     * @since 1.0
-     */
-    public enum PieceStatus {
-        /*EMPTY, PARTIAL,*/INCOMPLETE, COMPLETE, COMPLETE_VERIFIED
-    }
-
+public abstract class Bitfield {
     /**
      * Bitmask indicating availability of pieces.
      * If the n-th bit is set, then the n-th piece is complete and verified.
      */
-    private final BitSet bitmask;
-
-    /**
-     * Bitmask indicating pieces that should be skipped.
-     * If the n-th bit is set, then the n-th piece should be skipped.
-     */
-    private volatile /*nullable*/ BitSet skipped;
+    protected final BitSet bitmask;
 
     /**
      * Total number of pieces in torrent.
      */
-    private final int piecesTotal;
+    protected final int piecesTotal;
 
-    /**
-     * List of torrent's chunk descriptors.
-     * Absent when this Bitfield instance is describing data that some peer has.
-     */
-    private final Optional<List<ChunkDescriptor>> chunks;
-
-    private final ReentrantLock lock;
-
-    /**
-     * Creates "local" bitfield from a list of chunk descriptors.
-     *
-     * @param chunks List of torrent's chunk descriptors.
-     * @since 1.0
-     */
-    public Bitfield(List<ChunkDescriptor> chunks) {
-        this.piecesTotal = chunks.size();
-        this.bitmask = new BitSet(chunks.size());
-        this.chunks = Optional.of(chunks);
-        this.lock = new ReentrantLock();
-    }
+    protected final ReadWriteLock lock;
 
     /**
      * Creates empty bitfield.
@@ -89,122 +53,59 @@ public class Bitfield {
      * @param piecesTotal Total number of pieces in torrent.
      * @since 1.0
      */
-    public Bitfield(int piecesTotal) {
-        this.piecesTotal = piecesTotal;
-        this.bitmask = new BitSet(piecesTotal);
-        this.chunks = Optional.empty();
-        this.lock = new ReentrantLock();
+    protected Bitfield(int piecesTotal) {
+        this(piecesTotal, new BitSet(piecesTotal));
     }
 
     /**
-     * Creates bitfield based on a bitmask.
-     * Used for creating peers' bitfields.
+     * Creates a bitfield for with the bitset initially set to the passed in BitSet
      *
-     * Bitmask must be in the format described in BEP-3 (little-endian order of bits).
-     *
-     * @param value Bitmask that describes status of all pieces.
-     *              If position i is set to 1, then piece with index i is complete and verified.
-     * @param piecesTotal Total number of pieces in torrent.
-     * @since 1.0
-     * @deprecated since 1.7 in favor of {@link #Bitfield(byte[], BitOrder, int)}
+     * @param piecesTotal Total number of pieces in torrent
+     * @param bitSet      the initial values of the bitfield
      */
-    @Deprecated
-    public Bitfield(byte[] value, int piecesTotal) {
-        this(value, BitOrder.LITTLE_ENDIAN, piecesTotal);
-    }
-
-    /**
-     * Creates bitfield based on a bitmask.
-     * Used for creating peers' bitfields.
-     *
-     * @param value Bitmask that describes status of all pieces.
-     *              If position i is set to 1, then piece with index i is complete and verified.
-     * @param piecesTotal Total number of pieces in torrent.
-     * @since 1.7
-     */
-    public Bitfield(byte[] value, BitOrder bitOrder, int piecesTotal) {
+    protected Bitfield(int piecesTotal, BitSet bitSet) {
         this.piecesTotal = piecesTotal;
-        this.bitmask = createBitmask(value, bitOrder, piecesTotal);
-        this.chunks = Optional.empty();
-        this.lock = new ReentrantLock();
+        this.bitmask = bitSet;
+        this.lock = new ReentrantReadWriteLock();
     }
 
-    private static BitSet createBitmask(byte[] bytes, BitOrder bitOrder, int piecesTotal) {
-        int expectedBitmaskLength = getBitmaskLength(piecesTotal);
-        if (bytes.length != expectedBitmaskLength) {
-            throw new IllegalArgumentException("Invalid bitfield: total (" + piecesTotal +
-                    "), bitmask length (" + bytes.length + "). Expected bitmask length: " + expectedBitmaskLength);
-        }
 
-        if (bitOrder == BitOrder.LITTLE_ENDIAN) {
-            bytes = Protocols.reverseBits(bytes);
-        }
-
-        BitSet bitmask = new BitSet(piecesTotal);
-        for (int i = 0; i < piecesTotal; i++) {
-            if (Protocols.isSet(bytes, BitOrder.BIG_ENDIAN, i)) {
-                bitmask.set(i);
-            }
-        }
-        return bitmask;
-    }
-
-    private static int getBitmaskLength(int piecesTotal) {
-        return (int) Math.ceil(piecesTotal / 8d);
+    static int getBitmaskLength(int piecesTotal) {
+        return (piecesTotal + 7) / 8;
     }
 
     /**
      * @return Bitmask that describes status of all pieces.
-     *         If the n-th bit is set, then the n-th piece
-     *         is in {@link PieceStatus#COMPLETE_VERIFIED} status.
+     * If the n-th bit is set, then the n-th piece
+     * is complete and verified.
      * @since 1.7
      */
     public BitSet getBitmask() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return Protocols.copyOf(bitmask);
         } finally {
-            lock.unlock();
-        }
-    }
-
-    /**
-     *
-     * @return Bitmask of skipped pieces.
-     *         If the n-th bit is set, then the n-th piece
-     *         should be skipped.
-     * @since 1.8
-     */
-    public BitSet getSkippedBitmask() {
-        if (skipped == null) {
-            return new BitSet(getPiecesTotal());
-        }
-
-        lock.lock();
-        try {
-            return Protocols.copyOf(skipped);
-        } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     /**
      * @param bitOrder Order of bits to use to create the byte array
      * @return Bitmask that describes status of all pieces.
-     *         If the n-th bit is set, then the n-th piece
-     *         is in {@link PieceStatus#COMPLETE_VERIFIED} status.
+     * If the n-th bit is set, then the n-th piece
+     * is complete and verified.
      * @since 1.7
      */
     public byte[] toByteArray(BitOrder bitOrder) {
         byte[] bytes;
         boolean truncated = false;
 
-        lock.lock();
+        lock.readLock().lock();
         try {
             bytes = bitmask.toByteArray();
             truncated = (bitmask.length() < piecesTotal);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
 
         if (bitOrder == BitOrder.LITTLE_ENDIAN) {
@@ -228,118 +129,64 @@ public class Bitfield {
     }
 
     /**
-     * @return Number of pieces that have status {@link PieceStatus#COMPLETE_VERIFIED}.
+     * @return Number of pieces that are complete and verified
      * @since 1.0
      */
     public int getPiecesComplete() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return bitmask.cardinality();
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     /**
-     * @return Number of pieces that have status different {@link PieceStatus#COMPLETE_VERIFIED}.
+     * @return Number of pieces that are not both completed and verified
      * @since 1.7
      */
     public int getPiecesIncomplete() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return getPiecesTotal() - bitmask.cardinality();
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
-    /**
-     * @return Number of pieces that have status different from {@link PieceStatus#COMPLETE_VERIFIED}
-     *         and should NOT be skipped.
-     * @since 1.0
-     */
-    public int getPiecesRemaining() {
-        lock.lock();
-        try {
-            if (skipped == null) {
-                return getPiecesTotal() - getPiecesComplete();
-            } else {
-                BitSet bitmask = getBitmask();
-                bitmask.or(skipped);
-                return getPiecesTotal() - bitmask.cardinality();
-            }
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    /**
-     * @return Number of pieces that should be skipped
-     * @since 1.7
-     */
-    public int getPiecesSkipped() {
-        if (skipped == null) {
-            return 0;
-        }
-
-        lock.lock();
-        try {
-            return skipped.cardinality();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    /**
-     * @return Number of pieces that should NOT be skipped
-     * @since 1.7
-     */
-    public int getPiecesNotSkipped() {
-        if (skipped == null) {
-            return piecesTotal;
-        }
-
-        lock.lock();
-        try {
-            return piecesTotal - skipped.cardinality();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    /**
-     * @param pieceIndex Piece index (0-based)
-     * @return Status of the corresponding piece.
-     * @see DataDescriptor#getChunkDescriptors()
-     * @since 1.0
-     */
-    public PieceStatus getPieceStatus(int pieceIndex) {
+    protected boolean isPieceVerified(int pieceIndex) {
         validatePieceIndex(pieceIndex);
 
-        PieceStatus status;
-
         boolean verified;
-        lock.lock();
+        lock.readLock().lock();
         try {
             verified = this.bitmask.get(pieceIndex);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
+        return verified;
+    }
 
-        if (verified) {
-            status = PieceStatus.COMPLETE_VERIFIED;
-        } else if (chunks.isPresent()) {
-            ChunkDescriptor chunk = chunks.get().get(pieceIndex);
-            if (chunk.isComplete()) {
-                status = PieceStatus.COMPLETE;
+    /**
+     * Marks the piece as verified and returns whether it was verified before it was marked as verified. Thread safe.
+     *
+     * @param pieceIndex the index of the piece to check and mark verified
+     * @return true iff the piece was marked verified for the first time
+     */
+    protected boolean checkAndMarkVerified(int pieceIndex) {
+        // write lock is required because this may modify the bitset and upgrading from read to write lock
+        // is not supported
+        lock.writeLock().lock();
+        try {
+            if (isVerified(pieceIndex)) {
+                return false;
             } else {
-                status = PieceStatus.INCOMPLETE;
+                markVerified(pieceIndex);
+                return true;
             }
-        } else {
-            status = PieceStatus.INCOMPLETE;
+        } finally {
+            lock.writeLock().unlock();
         }
-
-        return status;
     }
 
     /**
@@ -350,8 +197,7 @@ public class Bitfield {
      * @since 1.1
      */
     public boolean isComplete(int pieceIndex) {
-        PieceStatus pieceStatus = getPieceStatus(pieceIndex);
-        return (pieceStatus == PieceStatus.COMPLETE || pieceStatus == PieceStatus.COMPLETE_VERIFIED);
+        return isPieceVerified(pieceIndex);
     }
 
     /**
@@ -362,8 +208,7 @@ public class Bitfield {
      * @since 1.1
      */
     public boolean isVerified(int pieceIndex) {
-        PieceStatus pieceStatus = getPieceStatus(pieceIndex);
-        return pieceStatus == PieceStatus.COMPLETE_VERIFIED;
+        return isPieceVerified(pieceIndex);
     }
 
     /**
@@ -373,68 +218,21 @@ public class Bitfield {
      * @see DataDescriptor#getChunkDescriptors()
      * @since 1.0
      */
-    public void markVerified(int pieceIndex) {
-        assertChunkComplete(pieceIndex);
+    protected void markVerified(int pieceIndex) {
+        validatePieceIndex(pieceIndex);
 
-        lock.lock();
+        lock.writeLock().lock();
         try {
             bitmask.set(pieceIndex);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
-    private void assertChunkComplete(int pieceIndex) {
-        validatePieceIndex(pieceIndex);
-
-        if (chunks.isPresent()) {
-            if (!chunks.get().get(pieceIndex).isComplete()) {
-                throw new IllegalStateException("Chunk is not complete: " + pieceIndex);
-            }
-        }
-    }
-
-    private void validatePieceIndex(int pieceIndex) {
+    protected void validatePieceIndex(int pieceIndex) {
         if (pieceIndex < 0 || pieceIndex >= getPiecesTotal()) {
             throw new BtException("Illegal piece index: " + pieceIndex +
                     ", expected 0.." + (getPiecesTotal() - 1));
-        }
-    }
-
-    /**
-     * Mark a piece as skipped
-     *
-     * @since 1.7
-     */
-    public void skip(int pieceIndex) {
-        validatePieceIndex(pieceIndex);
-
-        lock.lock();
-        try {
-            if (skipped == null) {
-                skipped = new BitSet(getPiecesTotal());
-            }
-            skipped.set(pieceIndex);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    /**
-     * Mark a piece as not skipped
-     *
-     * @since 1.7
-     */
-    public void unskip(int pieceIndex) {
-        validatePieceIndex(pieceIndex);
-
-        if (skipped != null) {
-            lock.lock();
-            try {
-                skipped.clear(pieceIndex);
-            } finally {
-                lock.unlock();
-            }
         }
     }
 }

@@ -19,6 +19,7 @@ package bt.metainfo;
 import bt.BtException;
 import bt.bencoding.BEParser;
 import bt.bencoding.BEType;
+import bt.bencoding.model.BEInteger;
 import bt.bencoding.model.BEList;
 import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
@@ -33,7 +34,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigInteger;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -172,54 +172,54 @@ public class MetadataService implements IMetadataService {
                 torrent.setName(new String(name, defaultCharset));
             }
 
-            BigInteger chunkSize = (BigInteger) infoMap.get(CHUNK_SIZE_KEY).getValue();
+            BEInteger chunkSize = (BEInteger) infoMap.get(CHUNK_SIZE_KEY);
             torrent.setChunkSize(chunkSize.longValueExact());
 
             byte[] chunkHashes = (byte[]) infoMap.get(CHUNK_HASHES_KEY).getValue();
             torrent.setChunkHashes(chunkHashes);
 
             if (infoMap.get(TORRENT_SIZE_KEY) != null) {
-                BigInteger torrentSize = (BigInteger) infoMap.get(TORRENT_SIZE_KEY).getValue();
+                BEInteger torrentSize = (BEInteger) infoMap.get(TORRENT_SIZE_KEY);
                 torrent.setSize(torrentSize.longValueExact());
 
             } else {
                 List<BEMap> files = (List<BEMap>) infoMap.get(FILES_KEY).getValue();
                 List<TorrentFile> torrentFiles = new ArrayList<>(files.size() + 1);
-                BigInteger torrentSize = BigInteger.ZERO;
+                long torrentSize = 0;
                 for (BEMap file : files) {
-
                     Map<String, BEObject<?>> fileMap = file.getValue();
-                    DefaultTorrentFile torrentFile = new DefaultTorrentFile();
 
-                    BigInteger fileSize = (BigInteger) fileMap.get(FILE_SIZE_KEY).getValue();
-                    torrentFile.setSize(fileSize.longValueExact());
-                    torrentSize = torrentSize.add(fileSize);
+                    Number fileSize = (Number) fileMap.get(FILE_SIZE_KEY).getValue();
 
                     List<BEString> pathElements = (List<BEString>) fileMap.get(FILE_PATH_ELEMENTS_KEY).getValue();
 
-                    torrentFile.setPathElements(pathElements.stream()
+                    List<String> elementsList = pathElements.stream()
                             .map(bytes -> bytes.getValue(defaultCharset))
-                            .collect(Collectors.toList()));
+                            .collect(Collectors.toList());
+
+                    DefaultTorrentFile torrentFile = new DefaultTorrentFile(fileSize.longValue(), elementsList);
+                    torrentSize = Math.addExact(torrentSize, torrentFile.getSize());
 
                     torrentFiles.add(torrentFile);
                 }
 
                 torrent.setFiles(torrentFiles);
-                torrent.setSize(torrentSize.longValueExact());
+                torrent.setSize(torrentSize);
             }
 
             boolean isPrivate = false;
-            if (infoMap.get(PRIVATE_KEY) != null) {
-                if (BigInteger.ONE.equals(infoMap.get(PRIVATE_KEY).getValue())) {
+            final BEInteger privateFlag = (BEInteger) infoMap.get(PRIVATE_KEY);
+            if (privateFlag != null) {
+                if (1L == privateFlag.longValueExact()) {
                     torrent.setPrivate(true);
                     isPrivate = true;
                 }
             }
 
             if (root.get(CREATION_DATE_KEY) != null) {
-                BigInteger epochMilli = (BigInteger) root.get(CREATION_DATE_KEY).getValue();
+                BEInteger epochSecond = (BEInteger) root.get(CREATION_DATE_KEY);
                 // TODO: some torrents contain bogus values here (like 101010101010), which causes an exception
-                torrent.setCreationDate(Instant.ofEpochMilli(epochMilli.intValueExact() * 1000L));
+                torrent.setCreationDate(Instant.ofEpochSecond(epochSecond.longValueExact()));
             }
 
             if (root.get(CREATED_BY_KEY) != null) {

@@ -94,7 +94,7 @@ public class PeerStats {
     public void onPeerBitfieldUpdated(PeerBitfieldUpdatedEvent event) {
         Counter counter = getCounter(event.getPeer());
         counter.setPiecesCompleted(event.getBitfield().getPiecesComplete());
-        counter.setPiecesRemaining(event.getBitfield().getPiecesRemaining());
+        counter.setPiecesRemaining(event.getBitfield().getPiecesIncomplete());
     }
 
     private Counter getCounter(Peer peer) {
