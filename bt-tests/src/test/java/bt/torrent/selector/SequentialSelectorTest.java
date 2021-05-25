@@ -17,24 +17,36 @@
 package bt.torrent.selector;
 
 import bt.test.torrent.selector.UpdatablePieceStatistics;
+import org.junit.Before;
 import org.junit.Test;
+
+import java.util.BitSet;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 public class SequentialSelectorTest {
+    private static final int NUM_CHUNKS = 8;
 
+    @Before
+    public void setUp() throws Exception {
+    }
+
+    /**
+     * Runs some simple tests against the sequential selector
+     */
     @Test
-    public void testSelector() {
-        UpdatablePieceStatistics statistics = new UpdatablePieceStatistics(8);
+    public void simpleTestSelector() {
+        UpdatablePieceStatistics statistics = new UpdatablePieceStatistics(NUM_CHUNKS);
 
-        statistics.setPiecesCount(0, 0, 0, 0, 0, 0, 0, 0);
-        assertEquals(0, SequentialSelector.sequential().getNextPieces(statistics).toArray().length);
+        BitSet peerPieces = new BitSet();
+        assertEquals(0, SequentialSelector.sequential().getNextPieces(peerPieces, statistics).toArray().length);
 
-        statistics.setPiecesCount(2, 0, 0, 0, 1, 0, 0, 0);
-        assertArrayEquals(new int[] {0, 4}, SequentialSelector.sequential().getNextPieces(statistics).toArray());
+        peerPieces.set(0);
+        peerPieces.set(4);
+        assertArrayEquals(new int[]{0, 4}, SequentialSelector.sequential().getNextPieces(peerPieces, statistics).toArray());
 
-        statistics.setPieceCount(1, 1);
-        assertArrayEquals(new int[] {0, 1, 4}, SequentialSelector.sequential().getNextPieces(statistics).toArray());
+        peerPieces.set(1);
+        assertArrayEquals(new int[]{0, 1, 4}, SequentialSelector.sequential().getNextPieces(peerPieces, statistics).toArray());
     }
 }

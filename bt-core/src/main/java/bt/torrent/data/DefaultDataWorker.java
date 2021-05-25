@@ -137,7 +137,7 @@ public class DefaultDataWorker implements DataWorker {
                     verificationFuture = CompletableFuture.supplyAsync(() -> {
                         boolean verified = verifier.verify(chunk);
                         if (verified) {
-                            data.getBitfield().markVerified(pieceIndex);
+                            data.getBitfield().markLocalPieceVerified(pieceIndex);
                         } else {
                             // reset data
                             chunk.clear();

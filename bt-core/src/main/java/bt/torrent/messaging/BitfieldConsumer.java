@@ -48,7 +48,7 @@ public class BitfieldConsumer {
     @Consumes
     public void consume(Bitfield bitfieldMessage, MessageContext context) {
         ConnectionKey peer = context.getConnectionKey();
-        bt.data.Bitfield peerBitfield = new bt.data.Bitfield(bitfieldMessage.getBitfield(), BitOrder.LITTLE_ENDIAN, bitfield.getPiecesTotal());
+        bt.data.PeerBitfield peerBitfield = new bt.data.PeerBitfield(bitfieldMessage.getBitfield(), BitOrder.LITTLE_ENDIAN, bitfield.getPiecesTotal());
         pieceStatistics.addBitfield(peer, peerBitfield);
         eventSink.firePeerBitfieldUpdated(context.getTorrentId(), peer, peerBitfield);
     }

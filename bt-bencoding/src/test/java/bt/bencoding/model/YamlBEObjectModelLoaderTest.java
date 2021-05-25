@@ -69,7 +69,7 @@ public class YamlBEObjectModelLoaderTest {
     public void testValidateTorrent_InvalidType() {
 
         Object torrentObject = readTorrent("single_file_invalid_type.torrent");
-        assertValidationFailure(model.validate(torrentObject), "Wrong type -- expected java.math.BigInteger");
+        assertValidationFailure(model.validate(torrentObject), "Wrong type -- expected java.lang.Number");
     }
 
     @Test

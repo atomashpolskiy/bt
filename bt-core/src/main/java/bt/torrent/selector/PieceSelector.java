@@ -18,21 +18,31 @@ package bt.torrent.selector;
 
 import bt.torrent.PieceStatistics;
 
+import java.util.BitSet;
 import java.util.stream.IntStream;
 
 /**
- * Implements a continuous piece selection algorithm.
+ * An interface for piece selection
  *
- * @see BaseStreamSelector
  * @since 1.1
  */
 public interface PieceSelector {
+    /**
+     * Init any structures to iterate through numPieces pieces in some iteration order
+     *
+     * @param numPieces the number of pieces total
+     */
+    default void initSelector(int numPieces) {
+        //do nothing
+    }
 
     /**
-     * Select pieces based on the provided statistics.
+     * Select pieces based on the chunks which are relevant. Relevant means that the peer we are selecting pieces for
+     * has this chunk and we do not have this chunk locally
      *
-     * @return Stream of selected piece indices
-     * @since 1.1
+     * @param relevantChunks  the relevant chunks to chose (in the peer's completed list,
+     * @param pieceStatistics the piece statistics
+     * @return the stream of the next pieces to get
      */
-    IntStream getNextPieces(PieceStatistics pieceStatistics);
+    IntStream getNextPieces(BitSet relevantChunks, PieceStatistics pieceStatistics);
 }

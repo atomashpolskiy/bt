@@ -16,10 +16,8 @@
 
 package bt.processor.torrent;
 
-import bt.data.Bitfield;
-import bt.data.DataDescriptor;
+import bt.data.LocalBitfield;
 import bt.metainfo.Torrent;
-import bt.metainfo.TorrentFile;
 import bt.processor.ProcessingStage;
 import bt.processor.TerminateOnErrorProcessingStage;
 import bt.processor.listener.ProcessingEvent;
@@ -27,18 +25,9 @@ import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
-import bt.torrent.fileselector.SelectionResult;
-import bt.torrent.fileselector.TorrentFileSelector;
 import bt.torrent.messaging.Assignments;
-import bt.torrent.selector.IncompletePiecesValidator;
-import bt.torrent.selector.PieceSelector;
+import bt.torrent.selector.PrioritizedPieceSelector;
 import bt.torrent.selector.ValidatingSelector;
-
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.function.IntPredicate;
-import java.util.stream.IntStream;
 
 public class ChooseFilesStage<C extends TorrentContext> extends TerminateOnErrorProcessingStage<C> {
     private TorrentRegistry torrentRegistry;
@@ -57,62 +46,27 @@ public class ChooseFilesStage<C extends TorrentContext> extends TerminateOnError
         Torrent torrent = context.getTorrent().get();
         TorrentDescriptor descriptor = torrentRegistry.getDescriptor(torrent.getTorrentId()).get();
 
-        Set<TorrentFile> selectedFiles = new HashSet<>();
-        if (context.getFileSelector().isPresent()) {
-            TorrentFileSelector selector = context.getFileSelector().get();
-            List<TorrentFile> files = torrent.getFiles();
-            List<SelectionResult> selectionResults = selector.selectFiles(files);
-            if (selectionResults.size() != files.size()) {
-                throw new IllegalStateException("Invalid number of selection results");
-            }
-            for (int i = 0; i < files.size(); i++) {
-                if (!selectionResults.get(i).shouldSkip()) {
-                    selectedFiles.add(files.get(i));
-                }
-            }
-        } else {
-            selectedFiles = new HashSet<>(torrent.getFiles());
-        }
+        FilePiecePriorityMapper piecePriorityMapper = FilePiecePriorityMapper.createPiecePriorityMapper(
+                descriptor.getDataDescriptor(), torrent.getFiles(), context.getFileSelector().orElse(null));
 
-        Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();
-        Bitfield validPieces = getValidPieces(descriptor.getDataDescriptor(), selectedFiles);
-        PieceSelector selector = createSelector(context.getPieceSelector(), bitfield, validPieces);
+        LocalBitfield bitfield = descriptor.getDataDescriptor().getBitfield();
+        ValidatingSelector selector = wrapAndInitSelector(context.getPieceSelector(), bitfield, piecePriorityMapper);
         BitfieldBasedStatistics pieceStatistics = context.getPieceStatistics();
         Assignments assignments = new Assignments(bitfield, selector, pieceStatistics, config);
 
-        updateSkippedPieces(bitfield, validPieces);
+        bitfield.setSkippedPieces(piecePriorityMapper.getSkippedPieces());
+        context.setAllNonSkippedFiles(piecePriorityMapper.getAllFilesToDownload());
         context.setAssignments(assignments);
     }
 
-    private void updateSkippedPieces(Bitfield bitfield, Bitfield validPieces) {
-        IntStream.range(0, bitfield.getPiecesTotal()).forEach(pieceIndex -> {
-            if (!validPieces.isVerified(pieceIndex)) {
-                bitfield.skip(pieceIndex);
-            }
-        });
-    }
-
-    private Bitfield getValidPieces(DataDescriptor dataDescriptor, Set<TorrentFile> selectedFiles) {
-        Bitfield validPieces = new Bitfield(dataDescriptor.getBitfield().getPiecesTotal());
-        IntStream.range(0, dataDescriptor.getBitfield().getPiecesTotal()).forEach(pieceIndex -> {
-            for (TorrentFile file : dataDescriptor.getFilesForPiece(pieceIndex)) {
-                if (selectedFiles.contains(file)) {
-                    validPieces.markVerified(pieceIndex);
-                    break;
-                }
-            }
-        });
-        return validPieces;
-    }
-
-    private PieceSelector createSelector(PieceSelector selector,
-                                         Bitfield bitfield,
-                                         Bitfield selectedFilesPieces) {
-        IntPredicate incompletePiecesValidator = new IncompletePiecesValidator(bitfield);
-        IntPredicate selectedFilesValidator = selectedFilesPieces::isVerified;
-        IntPredicate validator = (pieceIndex) ->
-                selectedFilesValidator.test(pieceIndex) && incompletePiecesValidator.test(pieceIndex);
-        return new ValidatingSelector(validator, selector);
+    private ValidatingSelector wrapAndInitSelector(PrioritizedPieceSelector selector,
+                                                   LocalBitfield localBitfield,
+                                                   FilePiecePriorityMapper piecePriorityMapper) {
+        selector.initSelector(localBitfield.getPiecesTotal());
+        // only set the priority of the pieces if they were not yet set. If they have been set it means
+        // that something externally updated pieces priority and we shouldn't overwrite it at this stage.
+        selector.setHighPriorityPiecesIfNull(piecePriorityMapper.getHighPriorityPieces());
+        return new ValidatingSelector(localBitfield, piecePriorityMapper.getSkippedPieces(), selector);
     }
 
     @Override

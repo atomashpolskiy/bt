@@ -40,13 +40,10 @@ public class DataReaderFactory {
     }
 
     public DataReader createReader(Torrent torrent, DataDescriptor dataDescriptor) {
-        return new DataReader() {
-            @Override
-            public ReadableByteChannel createChannel() {
-                DataReaderChannel channel = new DataReaderChannel(dataDescriptor, torrent.getChunkSize());
-                register(torrent.getTorrentId(), channel);
-                return channel;
-            }
+        return () -> {
+            DataReaderChannel channel = new DataReaderChannel(dataDescriptor, torrent.getChunkSize());
+            register(torrent.getTorrentId(), channel);
+            return channel;
         };
     }
 

@@ -14,45 +14,34 @@
  * limitations under the License.
  */
 
-package bt.torrent;
+package bt.data;
 
-import bt.data.Bitfield;
-import bt.data.ChunkDescriptor;
+import bt.metainfo.TorrentFile;
 import bt.protocol.BitOrder;
 import bt.protocol.Protocols;
+import bt.torrent.BaseBitfieldTest;
+import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
+import java.util.Random;
 
-import static bt.TestUtil.assertExceptionWithMessage;
-import static bt.data.Bitfield.PieceStatus.COMPLETE;
-import static bt.data.Bitfield.PieceStatus.COMPLETE_VERIFIED;
-import static bt.data.Bitfield.PieceStatus.INCOMPLETE;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class BitfieldTest extends BaseBitfieldTest {
+    private static final int TEST_BITFIELD_LEN = 2931;
 
     @Test
     public void testBitfield() {
-        List<ChunkDescriptor> chunks = Arrays.asList(
-                completeChunk,
-                emptyChunk,
-                completeChunk,
-                emptyChunk,
-                emptyChunk,
-                emptyChunk,
-                completeChunk, // piece #6 is not verified
-                completeChunk);
-
-        Bitfield bitfield = new Bitfield(chunks);
-        bitfield.markVerified(0);
-        bitfield.markVerified(2);
-        bitfield.markVerified(7);
+        final int numChunks = 8;
+        LocalBitfield bitfield = new TestLocalBitfield(numChunks, null);
+        bitfield.markLocalPieceVerified(0);
+        bitfield.markLocalPieceVerified(2);
+        bitfield.markLocalPieceVerified(7);
 
         byte expectedBitfieldLE = (byte) 0b10100001;
         byte expectedBitfieldBE = (byte) 0b10000101;
@@ -77,7 +66,7 @@ public class BitfieldTest extends BaseBitfieldTest {
         assertFalse(bitfield.isComplete(3));
         assertFalse(bitfield.isComplete(4));
         assertFalse(bitfield.isComplete(5));
-        assertTrue(bitfield.isComplete(6));
+        assertFalse(bitfield.isComplete(6));
         assertTrue(bitfield.isComplete(7));
 
         assertTrue(bitfield.isVerified(0));
@@ -88,38 +77,17 @@ public class BitfieldTest extends BaseBitfieldTest {
         assertFalse(bitfield.isVerified(5));
         assertFalse(bitfield.isVerified(6));
         assertTrue(bitfield.isVerified(7));
-
-        assertEquals(COMPLETE_VERIFIED, bitfield.getPieceStatus(0));
-        assertEquals(INCOMPLETE, bitfield.getPieceStatus(1));
-        assertEquals(COMPLETE_VERIFIED, bitfield.getPieceStatus(2));
-        assertEquals(INCOMPLETE, bitfield.getPieceStatus(3));
-        assertEquals(INCOMPLETE, bitfield.getPieceStatus(4));
-        assertEquals(INCOMPLETE, bitfield.getPieceStatus(5));
-        assertEquals(COMPLETE, bitfield.getPieceStatus(6));
-        assertEquals(COMPLETE_VERIFIED, bitfield.getPieceStatus(7));
     }
 
     @Test
     public void testBitfield_NumberOfPiecesNotDivisibleBy8() {
-        List<ChunkDescriptor> chunks = Arrays.asList(
-                completeChunk,
-                emptyChunk,
-                completeChunk,
-                emptyChunk,
-                emptyChunk,
-                emptyChunk,
-                emptyChunk,
-                completeChunk,
+        final int numChunks = 11;
 
-                completeChunk, // piece #8 is not verified
-                emptyChunk,
-                completeChunk);
-
-        Bitfield bitfield = new Bitfield(chunks);
-        bitfield.markVerified(0);
-        bitfield.markVerified(2);
-        bitfield.markVerified(7);
-        bitfield.markVerified(10);
+        LocalBitfield bitfield = new TestLocalBitfield(numChunks, null);
+        bitfield.markLocalPieceVerified(0);
+        bitfield.markLocalPieceVerified(2);
+        bitfield.markLocalPieceVerified(7);
+        bitfield.markLocalPieceVerified(10);
 
         short expectedBitfieldLE = (short) 0b10100001_00100000;
         short expectedBitfieldBE = (short) 0b10000101_00000100;
@@ -146,7 +114,7 @@ public class BitfieldTest extends BaseBitfieldTest {
         assertFalse(bitfield.isComplete(5));
         assertFalse(bitfield.isComplete(6));
         assertTrue(bitfield.isComplete(7));
-        assertTrue(bitfield.isComplete(8));
+        assertFalse(bitfield.isComplete(8));
         assertFalse(bitfield.isComplete(9));
         assertTrue(bitfield.isComplete(10));
 
@@ -161,47 +129,32 @@ public class BitfieldTest extends BaseBitfieldTest {
         assertFalse(bitfield.isVerified(8));
         assertFalse(bitfield.isVerified(9));
         assertTrue(bitfield.isVerified(10));
-
-        assertEquals(COMPLETE_VERIFIED, bitfield.getPieceStatus(0));
-        assertEquals(INCOMPLETE, bitfield.getPieceStatus(1));
-        assertEquals(COMPLETE_VERIFIED, bitfield.getPieceStatus(2));
-        assertEquals(INCOMPLETE, bitfield.getPieceStatus(3));
-        assertEquals(INCOMPLETE, bitfield.getPieceStatus(4));
-        assertEquals(INCOMPLETE, bitfield.getPieceStatus(5));
-        assertEquals(INCOMPLETE, bitfield.getPieceStatus(6));
-        assertEquals(COMPLETE_VERIFIED, bitfield.getPieceStatus(7));
-        assertEquals(COMPLETE, bitfield.getPieceStatus(8));
-        assertEquals(INCOMPLETE, bitfield.getPieceStatus(9));
-        assertEquals(COMPLETE_VERIFIED, bitfield.getPieceStatus(10));
     }
 
     @Test
     public void testBitfield_Skipped() {
-        List<ChunkDescriptor> chunks = Arrays.asList(
-                completeChunk,
-                emptyChunk,
-                completeChunk,
-                emptyChunk,
-                emptyChunk,
-                emptyChunk,
-                completeChunk,
-                completeChunk);
+        final int numChunks = 8;
 
-        Bitfield bitfield = new Bitfield(chunks);
-        bitfield.markVerified(0);
-        bitfield.markVerified(2);
-        bitfield.markVerified(6);
-        bitfield.markVerified(7);
+        LocalBitfield bitfield = new TestLocalBitfield(numChunks, null);
+        bitfield.markLocalPieceVerified(0);
+        bitfield.markLocalPieceVerified(2);
+        bitfield.markLocalPieceVerified(6);
+        bitfield.markLocalPieceVerified(7);
 
         assertEquals(0, bitfield.getPiecesSkipped());
 
-        bitfield.skip(0);
+        BitSet piecesToSkip = new BitSet();
+
+        piecesToSkip.set(0);
+        bitfield.setSkippedPieces(piecesToSkip);
 
         assertEquals(1, bitfield.getPiecesSkipped());
         assertEquals(7, bitfield.getPiecesNotSkipped());
         assertEquals(4, bitfield.getPiecesRemaining());
 
-        bitfield.skip(1);
+        piecesToSkip.set(1);// ensure that this is copied
+        assertEquals(1, bitfield.getPiecesSkipped());
+        bitfield.setSkippedPieces(piecesToSkip);
 
         assertEquals(2, bitfield.getPiecesSkipped());
         assertEquals(6, bitfield.getPiecesNotSkipped());
@@ -214,13 +167,34 @@ public class BitfieldTest extends BaseBitfieldTest {
         assertEquals(3, bitfield.getPiecesRemaining());
     }
 
+    /**
+     * Tests to make sure that peer bitfields are correctly decoded with little endian
+     */
     @Test
-    public void testBitfield_Exceptional_markVerified_NotComplete() {
-        List<ChunkDescriptor> chunks = Arrays.asList(completeChunk, emptyChunk);
-        Bitfield bitfield = new Bitfield(chunks);
-        assertExceptionWithMessage(it -> {
-            bitfield.markVerified(1);
-            return null;
-        }, "Chunk is not complete: 1");
+    public void testReadPeerBitField() {
+        final BitOrder endian = BitOrder.LITTLE_ENDIAN;
+        final int testBitfieldLen = TEST_BITFIELD_LEN;
+        runPeerBitfieldTest(endian, testBitfieldLen);
+    }
+
+    private void runPeerBitfieldTest(BitOrder endian, int testBitfieldLen) {
+        Random random = new Random(1);
+        byte[] testBytes = new byte[(testBitfieldLen + 7) / 8];
+        random.nextBytes(testBytes);
+        Bitfield bitfield = new PeerBitfield(testBytes, endian, testBitfieldLen);
+        for (int i = 0; i < testBitfieldLen; i++) {
+            Assert.assertEquals(Protocols.isSet(testBytes, endian, i), bitfield.isVerified(i));
+        }
+    }
+
+    static class TestLocalBitfield extends LocalBitfield {
+        public TestLocalBitfield(int piecesTotal, List<List<CompletableTorrentFile>> countdownFiles) {
+            super(piecesTotal, countdownFiles);
+        }
+
+        @Override
+        protected void fileFinishedCallback(TorrentFile tf) {
+            // do nothing
+        }
     }
 }

@@ -17,6 +17,12 @@
 package bt.data;
 
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentFile;
+import bt.processor.ProcessingContext;
+import bt.torrent.callbacks.FileDownloadCompleteCallback;
+
+import java.util.Optional;
+import java.util.function.BiConsumer;
 
 /**
  * Factory of torrent data descriptors.
@@ -34,8 +40,13 @@ public interface IDataDescriptorFactory {
      * upon creation of data descriptor or delayed
      * until data access is requested.
      *
+     *
+     * @param torrent                the torrent to create the descriptor for
+     * @param storage                the storage for the descriptor
+     * @param fileCompletionCallback the callback to call when a file download completes. nullable
      * @return Data descriptor
-     * @since 1.0
+     * @since 1.10
      */
-    DataDescriptor createDescriptor(Torrent torrent, Storage storage);
+    DataDescriptor createDescriptor(Torrent torrent, Storage storage,
+                                    FileDownloadCompleteCallback fileCompletionCallback);
 }

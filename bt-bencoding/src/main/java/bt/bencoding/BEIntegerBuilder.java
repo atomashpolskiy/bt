@@ -17,6 +17,8 @@
 package bt.bencoding;
 
 import bt.bencoding.model.BEInteger;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 
 import java.math.BigInteger;
 
@@ -51,6 +53,13 @@ class BEIntegerBuilder extends BEPrefixedTypeBuilder<BEInteger> {
 
     @Override
     protected BEInteger doBuild(byte[] content) {
-        return new BEInteger(content, new BigInteger(buf.toString()));
+        final String val = buf.toString();
+
+        Number num = Ints.tryParse(val);
+        if (num == null)
+            num = Longs.tryParse(val);
+        if (num == null)
+            num = new BigInteger(val);
+        return new BEInteger(content, num);
     }
 }

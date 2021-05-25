@@ -14,26 +14,15 @@
  * limitations under the License.
  */
 
-package bt.torrent.selector;
+package bt.torrent.fileselector;
 
-import bt.data.Bitfield;
-
-import java.util.function.IntPredicate;
-
-public class IncompletePiecesValidator implements IntPredicate {
-
-    private final Bitfield bitfield;
-
-    public IncompletePiecesValidator(Bitfield bitfield) {
-        this.bitfield = bitfield;
-    }
-
-    @Override
-    public boolean test(int pieceIndex) {
-        return !isComplete(pieceIndex);
-    }
-
-    private boolean isComplete(int pieceIndex) {
-        return bitfield.isComplete(pieceIndex);
-    }
+/**
+ * An enum which specifies the priority of a file for downloading
+ *
+ * @since 1.10
+ */
+public enum FilePriority {
+    SKIP, // skip this file
+    NORMAL_PRIORITY, // download this file with normal priority
+    HIGH_PRIORITY; // download this file with high priority
 }

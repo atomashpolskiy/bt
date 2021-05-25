@@ -18,12 +18,30 @@ package bt.metainfo;
 
 import bt.BtException;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 class DefaultTorrentFile implements TorrentFile {
 
-    private long size;
-    private List<String> pathElements;
+    private final long size;
+    private final List<String> pathElements;
+
+    public DefaultTorrentFile(long size, List<String> pathElements) {
+        this.size = size;
+        this.pathElements = Collections.unmodifiableList(new ArrayList<>(pathElements));
+        validateInternals();
+    }
+
+    private void validateInternals() {
+        if (size < 0) {
+            throw new BtException("Invalid torrent file size: " + size);
+        }
+
+        if (pathElements == null || pathElements.isEmpty()) {
+            throw new BtException("Can't create torrent file without path");
+        }
+    }
 
     @Override
     public long getSize() {
@@ -33,20 +51,6 @@ class DefaultTorrentFile implements TorrentFile {
     @Override
     public List<String> getPathElements() {
         return pathElements;
-    }
-
-    public void setSize(long size) {
-        if (size < 0) {
-            throw new BtException("Invalid torrent file size: " + size);
-        }
-        this.size = size;
-    }
-
-    public void setPathElements(List<String> pathElements) {
-        if (pathElements == null || pathElements.isEmpty()) {
-            throw new BtException("Can't create torrent file without path");
-        }
-        this.pathElements = pathElements;
     }
 
     @Override

@@ -18,14 +18,16 @@ package bt.torrent.selector;
 
 import bt.torrent.PieceStatistics;
 
+import java.util.BitSet;
 import java.util.PrimitiveIterator;
+import java.util.stream.IntStream;
 
 /**
  * Selects pieces sequentially in the order of their availability.
  *
  * @since 1.1
  **/
-public class SequentialSelector extends BaseStreamSelector {
+public class SequentialSelector implements PieceSelector {
 
     /**
      * @since 1.1
@@ -35,22 +37,7 @@ public class SequentialSelector extends BaseStreamSelector {
     }
 
     @Override
-    protected PrimitiveIterator.OfInt createIterator(PieceStatistics pieceStatistics) {
-        return new PrimitiveIterator.OfInt() {
-            int i = 0;
-
-            @Override
-            public int nextInt() {
-                return i++;
-            }
-
-            @Override
-            public boolean hasNext() {
-                while (i < pieceStatistics.getPiecesTotal() && pieceStatistics.getCount(i) == 0) {
-                    i++;
-                }
-                return i < pieceStatistics.getPiecesTotal();
-            }
-        };
+    public IntStream getNextPieces(BitSet relevantChunks, PieceStatistics pieceStatistics) {
+        return relevantChunks.stream();
     }
 }

@@ -150,6 +150,15 @@ public interface StorageUnit extends Closeable {
     }
 
     /**
+     * Creates this empty unit in the file system
+     *
+     * @return true if the creation was successful
+     */
+    default boolean createEmpty() {
+        return 0 <= writeBlock(ByteBuffer.allocate(0), 0);
+    }
+
+    /**
      * Get total maximum capacity of this storage.
      *
      * @return Total maximum capacity of this storage

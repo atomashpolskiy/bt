@@ -57,7 +57,7 @@ public class BEEncoderTest {
 
         BEParser parser = encodeAndCreateParser(new BEInteger(null, i));
         assertEquals(BEType.INTEGER, parser.readType());
-        assertEquals(i, parser.readInteger().getValue());
+        assertEquals(i.intValueExact(), parser.readInteger().getValue());
     }
 
     @Test
@@ -65,7 +65,9 @@ public class BEEncoderTest {
 
         List<BEObject<?>> l = new ArrayList<>();
         l.add(new BEString("some string1:2#3".getBytes(defaultCharset)));
-        l.add(new BEInteger(null, BigInteger.valueOf(1234567890)));
+        l.add(new BEInteger(null, 1234567890));
+        l.add(new BEInteger(null, Long.MAX_VALUE));
+        l.add(new BEInteger(null, BigInteger.valueOf(Long.MAX_VALUE).multiply(BigInteger.TEN)));
         l.add(new BEMap(null, new HashMap<>()));
 
         BEParser parser = encodeAndCreateParser(new BEList(null, l));
@@ -77,10 +79,12 @@ public class BEEncoderTest {
     public void testEncode_Map() {
 
         BEString s = new BEString("some string1:2#3".getBytes(defaultCharset));
-        BEInteger i = new BEInteger(null, BigInteger.valueOf(1234567890));
+        BEInteger intValue = new BEInteger(null, 1234567890);
+        BEInteger longValue = new BEInteger(null, Long.MIN_VALUE);
+        BEInteger bigIntVal = new BEInteger(null, BigInteger.valueOf(Long.MAX_VALUE).multiply(BigInteger.TEN));
         BEMap emptyMap = new BEMap(null, new HashMap<>());
 
-        BEList l = new BEList(null, Arrays.asList(s, i, emptyMap));
+        BEList l = new BEList(null, Arrays.asList(s, intValue, longValue, bigIntVal, emptyMap));
 
         Map<String, BEObject<?>> m = new HashMap<>();
         m.put("4:list", l);

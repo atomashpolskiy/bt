@@ -21,6 +21,7 @@ import bt.magnet.MagnetUri;
 import bt.magnet.MagnetUriParser;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentFile;
 import bt.processor.ProcessingContext;
 import bt.processor.ProcessingStage;
 import bt.processor.listener.ListenerSource;
@@ -28,6 +29,8 @@ import bt.processor.listener.ProcessingEvent;
 import bt.processor.magnet.MagnetContext;
 import bt.processor.torrent.TorrentContext;
 import bt.runtime.BtRuntime;
+import bt.torrent.callbacks.FileDownloadCompleteCallback;
+import bt.torrent.fileselector.FilePrioritySkipSelector;
 import bt.torrent.fileselector.TorrentFileSelector;
 import bt.torrent.selector.PieceSelector;
 import bt.torrent.selector.RarestFirstSelector;
@@ -35,8 +38,11 @@ import bt.torrent.selector.SequentialSelector;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -49,11 +55,13 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
     private Supplier<Torrent> torrentSupplier;
     private MagnetUri magnetUri;
 
-    private TorrentFileSelector fileSelector;
+    private FilePrioritySkipSelector fileSelector;
     private PieceSelector pieceSelector;
 
     private List<Consumer<Torrent>> torrentConsumers;
     private List<Runnable> fileSelectionListeners;
+    private List<FileDownloadCompleteCallback> fileCompletionHandlers;
+    private List<Consumer<Torrent>> downloadCompleteListeners;
 
     private boolean stopWhenDownloaded;
 
@@ -152,7 +160,7 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
      * @since 1.4
      */
     public B sequentialSelector() {
-       return selector(SequentialSelector.sequential());
+        return selector(SequentialSelector.sequential());
     }
 
     /**
@@ -161,7 +169,7 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
      * @since 1.4
      */
     public B rarestSelector() {
-       return selector(RarestFirstSelector.rarest());
+        return selector(RarestFirstSelector.rarest());
     }
 
     /**
@@ -170,7 +178,7 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
      * @since 1.4
      */
     public B randomizedRarestSelector() {
-       return selector(RarestFirstSelector.randomizedRarest());
+        return selector(RarestFirstSelector.randomizedRarest());
     }
 
     /**
@@ -206,9 +214,8 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
      * @since 1.7
      */
     @SuppressWarnings("unchecked")
-    public B fileSelector(TorrentFileSelector fileSelector) {
-        Objects.requireNonNull(fileSelector, "Missing file selector");
-        this.fileSelector = fileSelector;
+    public B fileSelector(FilePrioritySkipSelector fileSelector) {
+        this.fileSelector = Objects.requireNonNull(fileSelector, "Missing file selector");
         return (B) this;
     }
 
@@ -228,17 +235,50 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
         return (B) this;
     }
 
+    /**
+     * Provide a callback to invoke when an individual file in the torrent has completed and verified
+     *
+     * @param callback The callback to invoke when an individual file in the torrent has fully downloaded
+     * @since 1.10
+     */
+    @SuppressWarnings("unchecked")
+    public B afterFileDownloaded(FileDownloadCompleteCallback callback) {
+        Objects.requireNonNull(callback, "Missing callback");
+        if (fileCompletionHandlers == null) {
+            fileCompletionHandlers = new ArrayList<>();
+        }
+        fileCompletionHandlers.add(callback);
+        return (B) this;
+    }
+
+    /**
+     * Provide a callback to invoke when downloading has completed
+     *
+     * @param runnable Callback to invoke when downloading has completed
+     * @since 1.10
+     */
+    @SuppressWarnings("unchecked")
+    public B afterDownloaded(Consumer<Torrent> runnable) {
+        Objects.requireNonNull(runnable, "Missing callback");
+        if (downloadCompleteListeners == null) {
+            downloadCompleteListeners = new ArrayList<>();
+        }
+        downloadCompleteListeners.add(runnable);
+        return (B) this;
+    }
+
     @Override
     protected ProcessingContext buildProcessingContext(BtRuntime runtime) {
         Objects.requireNonNull(storage, "Missing data storage");
 
         ProcessingContext context;
         if (torrentUrl != null) {
-            context = new TorrentContext(pieceSelector, fileSelector, storage, () -> fetchTorrentFromUrl(runtime, torrentUrl));
+            context = new TorrentContext(pieceSelector, fileSelector, getCompletionCallback(),
+                    storage, () -> fetchTorrentFromUrl(runtime, torrentUrl));
         } else if (torrentSupplier != null) {
-            context = new TorrentContext(pieceSelector, fileSelector, storage, torrentSupplier);
+            context = new TorrentContext(pieceSelector, fileSelector, getCompletionCallback(), storage, torrentSupplier);
         } else if (this.magnetUri != null) {
-            context = new MagnetContext(magnetUri, pieceSelector, fileSelector, storage);
+            context = new MagnetContext(magnetUri, pieceSelector, fileSelector, getCompletionCallback(), storage);
         } else {
             throw new IllegalStateException("Missing torrent supplier, torrent URL or magnet URI");
         }
@@ -246,9 +286,22 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
         return context;
     }
 
+    private FileDownloadCompleteCallback getCompletionCallback() {
+        if (fileCompletionHandlers == null || fileCompletionHandlers.isEmpty()) {
+            return null;
+        }
+
+        final List<FileDownloadCompleteCallback> callbacks = Collections.unmodifiableList(new ArrayList<>(fileCompletionHandlers));
+        return (torrent, tf, s) -> {
+            for (FileDownloadCompleteCallback callback : callbacks) {
+                callback.fileDownloadCompleted(torrent, tf, s);
+            }
+        };
+    }
+
     @Override
     protected <C extends ProcessingContext> void collectStageListeners(ListenerSource<C> listenerSource) {
-        if (torrentConsumers != null && torrentConsumers.size() > 0) {
+        if (torrentConsumers != null && !torrentConsumers.isEmpty()) {
             BiFunction<C, ProcessingStage<C>, ProcessingStage<C>> listener = (context, next) -> {
                 context.getTorrent().ifPresent(torrent -> {
                     for (Consumer<Torrent> torrentConsumer : torrentConsumers) {
@@ -260,7 +313,7 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
             listenerSource.addListener(ProcessingEvent.TORRENT_FETCHED, listener);
         }
 
-        if (fileSelectionListeners != null && fileSelectionListeners.size() > 0) {
+        if (fileSelectionListeners != null && !fileSelectionListeners.isEmpty()) {
             BiFunction<C, ProcessingStage<C>, ProcessingStage<C>> listener = (context, next) -> {
                 fileSelectionListeners.forEach(Runnable::run);
                 return next;
@@ -268,10 +321,19 @@ public class TorrentClientBuilder<B extends TorrentClientBuilder> extends BaseCl
             listenerSource.addListener(ProcessingEvent.FILES_CHOSEN, listener);
         }
 
+        // flush to disk when download completes so external applications can read the downloaded files
         listenerSource.addListener(ProcessingEvent.DOWNLOAD_COMPLETE, (context, next) -> {
             context.getStorage().flush();
             return next;
         });
+
+        if (downloadCompleteListeners != null && !downloadCompleteListeners.isEmpty()) {
+            BiFunction<C, ProcessingStage<C>, ProcessingStage<C>> listener = (context, next) -> {
+                downloadCompleteListeners.forEach(handler -> handler.accept(context.getTorrent().get()));
+                return next;
+            };
+            listenerSource.addListener(ProcessingEvent.DOWNLOAD_COMPLETE, listener);
+        }
 
         if (stopWhenDownloaded) {
             listenerSource.addListener(ProcessingEvent.DOWNLOAD_COMPLETE, (context, next) -> null);

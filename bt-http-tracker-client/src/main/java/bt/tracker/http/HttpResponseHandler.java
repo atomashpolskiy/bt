@@ -24,12 +24,11 @@ import bt.bencoding.model.BEObjectModel;
 import bt.bencoding.model.ValidationResult;
 import bt.bencoding.model.YamlBEObjectModelLoader;
 import bt.tracker.CompactPeerInfo;
-import bt.tracker.TrackerResponse;
 import bt.tracker.CompactPeerInfo.AddressType;
+import bt.tracker.TrackerResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Map;
@@ -134,11 +133,11 @@ class HttpResponseHandler {
             }
 
             // possible truncation of integer values is not a problem
-            BigInteger interval = cast(BigInteger.class, INTERVAL_KEY, responseMap.get(INTERVAL_KEY).getValue());
+            Number interval = cast(Number.class, INTERVAL_KEY, responseMap.get(INTERVAL_KEY).getValue());
             response.setInterval(interval.intValue());
 
             if (responseMap.get(MIN_INTERVAL_KEY) != null) {
-                BigInteger minInterval = cast(BigInteger.class, MIN_INTERVAL_KEY, responseMap.get(MIN_INTERVAL_KEY).getValue());
+                Number minInterval = cast(Number.class, MIN_INTERVAL_KEY, responseMap.get(MIN_INTERVAL_KEY).getValue());
                 response.setMinInterval(minInterval.intValue());
             }
 
@@ -148,12 +147,12 @@ class HttpResponseHandler {
             }
 
             if (responseMap.get(COMPLETE_KEY) != null) {
-                BigInteger complete = cast(BigInteger.class, COMPLETE_KEY, responseMap.get(COMPLETE_KEY).getValue());
+                Number complete = cast(Number.class, COMPLETE_KEY, responseMap.get(COMPLETE_KEY).getValue());
                 response.setSeederCount(complete.intValue());
             }
 
             if (responseMap.get(INCOMPLETE_KEY) != null) {
-                BigInteger incomplete = cast(BigInteger.class, INCOMPLETE_KEY, responseMap.get(INCOMPLETE_KEY).getValue());
+                Number incomplete = cast(Number.class, INCOMPLETE_KEY, responseMap.get(INCOMPLETE_KEY).getValue());
                 response.setLeecherCount(incomplete.intValue());
             }
 

@@ -16,7 +16,6 @@
 
 package bt.net;
 
-import bt.net.BigIntegers;
 import org.junit.Test;
 
 import java.math.BigInteger;

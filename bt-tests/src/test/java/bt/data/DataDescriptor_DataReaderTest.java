@@ -81,7 +81,7 @@ public class DataDescriptor_DataReaderTest {
 
         IDataDescriptorFactory dataDescriptorFactory = new DataDescriptorFactory(
                 new DataReaderFactory(eventBus), verifier, transferBlockSize);
-        this.descriptor = dataDescriptorFactory.createDescriptor(torrent, storage);
+        this.descriptor = dataDescriptorFactory.createDescriptor(torrent, storage, null);
     }
 
     @Test
