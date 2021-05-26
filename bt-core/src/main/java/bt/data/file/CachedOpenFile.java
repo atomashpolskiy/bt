@@ -38,7 +38,10 @@ class CachedOpenFile implements StorageUnit {
      */
     CachedOpenFile(Path file, long capacity) {
         try {
-            Files.createDirectories(file.getParent()); // ensure parent directory exists
+            Path parent = file.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent); // ensure parent directory exists
+            }
             // open the file for reading and writing, create it if it isn't present
             fc = FileChannel.open(file, StandardOpenOption.READ, StandardOpenOption.WRITE, StandardOpenOption.CREATE);
         } catch (IOException ex) {
