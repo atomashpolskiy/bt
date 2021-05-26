@@ -280,7 +280,7 @@ public class DHT implements DHTBase {
 		if(v4 > 0) {
 			getSiblingByType(DHTtype.IPV4_DHT).filter(DHT::isRunning).ifPresent(sib -> {
 				KClosestNodesSearch kns = new KClosestNodesSearch(target, v4, sib);
-				kns.fill(DHTtype.IPV4_DHT == type);
+				kns.fill(DHTtype.IPV4_DHT != type);
 				rsp.setNodes(kns.asNodeList());
 			});
 		}
@@ -288,7 +288,7 @@ public class DHT implements DHTBase {
 		if(v6 > 0) {
 			getSiblingByType(DHTtype.IPV6_DHT).filter(DHT::isRunning).ifPresent(sib -> {
 				KClosestNodesSearch kns = new KClosestNodesSearch(target, v6, sib);
-				kns.fill(DHTtype.IPV6_DHT == type);
+				kns.fill(DHTtype.IPV6_DHT != type);
 				rsp.setNodes(kns.asNodeList());
 			});
 		}
@@ -467,7 +467,7 @@ public class DHT implements DHTBase {
 		// everything OK, so store the value
 		PeerAddressDBItem item = PeerAddressDBItem.createFromAddress(r.getOrigin().getAddress(), r.getPort(), r.isSeed());
 		r.getVersion().ifPresent(item::setVersion);
-		if(config.noRouterBootstrap() || !AddressUtils.isBogon(item))
+		if(!AddressUtils.isBogon(item))
 			db.store(r.getInfoHash(), item);
 
 		// send a proper response to indicate everything is OK
@@ -520,7 +520,7 @@ public class DHT implements DHTBase {
 		}
 		InetSocketAddress addr = new InetSocketAddress(host, hport);
 
-		if (!addr.isUnresolved() && (config.noRouterBootstrap() || !AddressUtils.isBogon(addr))) {
+		if (!addr.isUnresolved() && !AddressUtils.isBogon(addr)) {
 			if(!type.PREFERRED_ADDRESS_TYPE.isInstance(addr.getAddress()) || node.getNumEntriesInRoutingTable() > DHTConstants.BOOTSTRAP_IF_LESS_THAN_X_PEERS)
 				return;
 			RPCServer srv = serverManager.getRandomActiveServer(true);
@@ -708,9 +708,12 @@ public class DHT implements DHTBase {
 		node.loadTable(table_file);
 		
 
-		// these checks are fairly expensive on large servers (network interface enumeration)
+		// these checks query the available network interfaces, which can be expensive on some platforms
 		// schedule them separately
-		scheduledActions.add(scheduler.scheduleWithFixedDelay(serverManager::doBindChecks, 10, 10, TimeUnit.SECONDS));
+		scheduledActions.add(scheduler.scheduleWithFixedDelay(() -> {
+			serverManager.doBindChecks();
+			serverManager.startNewServers();
+		}, 10, 10, TimeUnit.SECONDS));
 		
 		scheduledActions.add(scheduler.scheduleWithFixedDelay(() -> {
 			// maintenance that should run all the time, before the first queries
@@ -721,13 +724,13 @@ public class DHT implements DHTBase {
 		}, 5000, DHTConstants.DHT_UPDATE_INTERVAL, TimeUnit.MILLISECONDS));
 
 		// initialize as many RPC servers as we need
-		serverManager.refresh(System.currentTimeMillis());
+		serverManager.startNewServers();
 		
 		if(serverManager.getServerCount() == 0) {
 			logError("No network interfaces eligible for DHT sockets found during startup."
 					+ "\nAddress family: " + this.getType()
 					+ "\nmultihoming [requires public IP addresses if enabled]: " + config.allowMultiHoming()
-					+ "\nPublic IP addresses: " + AddressUtils.getAvailableGloballyRoutableAddrs(getType().PREFERRED_ADDRESS_TYPE)
+					+ "\nPublic IP addresses: " + AddressUtils.availableGloballyRoutableAddrs(AddressUtils.allAddresses(), getType().PREFERRED_ADDRESS_TYPE).map(InetAddress::toString).collect(Collectors.joining(", "))
 					+ "\nDefault route: " + AddressUtils.getDefaultRoute(getType().PREFERRED_ADDRESS_TYPE));
 		}
 		
@@ -926,7 +929,7 @@ public class DHT implements DHTBase {
 		
 		long now = System.currentTimeMillis();
 		
-		serverManager.refresh(now);
+		serverManager.updateReachableEndpoints(now);
 		
 		if (!isRunning()) {
 			return;

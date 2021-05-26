@@ -164,7 +164,8 @@ public class DHTLifeCycleTest {
 		assertEquals(1, srv.getNumReceived());
 		
 		CompletableFuture<RPCServer> cf = dhtInstance.getServerManager().awaitActiveServer().toCompletableFuture();
-		dhtInstance.getServerManager().refresh(System.currentTimeMillis());
+		dhtInstance.getServerManager().startNewServers();
+		dhtInstance.getServerManager().updateReachableEndpoints(System.currentTimeMillis());
 		assertEquals(srv, cf.get(500, TimeUnit.MILLISECONDS));
 
 		
@@ -243,7 +244,7 @@ public class DHTLifeCycleTest {
 		
 		predicate.set((unused) -> true);
 		RPCServerManager srvman = dht.getServerManager();
-		srvman.refresh(System.currentTimeMillis());
+		srvman.startNewServers();
 		assertNotEquals(0, srvman.getServerCount());
 		
 		predicate.set((unused) -> false);
@@ -252,14 +253,14 @@ public class DHTLifeCycleTest {
 		
 		// wildcard addr same as allowing all addresses of that family
 		predicate.set((addr) -> addr instanceof Inet4Address && addr.isAnyLocalAddress());
-		srvman.refresh(System.currentTimeMillis());
+		srvman.startNewServers();
 		assertNotEquals(0, srvman.getServerCount());
 		
 		// select a specific address
 		InetAddress localAddr = AddressUtils.nonlocalAddresses().filter(Inet4Address.class::isInstance).findAny().get();
 		predicate.set((addr) -> addr.equals(localAddr));
 		srvman.doBindChecks();
-		srvman.refresh(System.currentTimeMillis());
+		srvman.startNewServers();
 		assertEquals(localAddr, srvman.getAllServers().get(0).getBindAddress());
 		
 		

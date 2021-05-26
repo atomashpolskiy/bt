@@ -12,7 +12,6 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.ProtocolFamily;
 import java.net.SocketException;
@@ -21,7 +20,6 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -79,7 +77,7 @@ public class AddressUtils {
 			return false;
 		if(addr instanceof Inet6Address && (addr.getAddress()[0] & 0xfe) == 0xfc) // fc00::/7
 			return false;
-		if(addr instanceof Inet6Address && (V4_MAPPED.contains(addr) || V4_COMPAT.contains(addr)))
+		if(addr instanceof Inet6Address && (V4_MAPPED.contains(addr) || ((Inet6Address) addr).isIPv4CompatibleAddress()))
 			return false;
 		return !(addr.isAnyLocalAddress() || addr.isLinkLocalAddress() || addr.isLoopbackAddress() || addr.isMulticastAddress() || addr.isSiteLocalAddress());
 	}
@@ -153,7 +151,7 @@ public class AddressUtils {
 	}
 	
 	
-	static Stream<InetAddress> allAddresses() {
+	public static Stream<InetAddress> allAddresses() {
 		try {
 			return Collections.list(NetworkInterface.getNetworkInterfaces()).stream().filter(iface -> {
 				try {
@@ -176,47 +174,8 @@ public class AddressUtils {
 		});
 	}
 
-	public static List<InetAddress> getAvailableGloballyRoutableAddrs(Class<? extends InetAddress> type) {
-		
-		LinkedList<InetAddress> addrs = new LinkedList<>();
-
-		try {
-			for (NetworkInterface iface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-				if (!iface.isUp() || iface.isLoopback())
-					continue;
-				for (InterfaceAddress ifaceAddr : iface.getInterfaceAddresses()) {
-					if (type == Inet6Address.class && ifaceAddr.getAddress() instanceof Inet6Address) {
-						Inet6Address addr = (Inet6Address) ifaceAddr.getAddress();
-						// only accept globally reachable IPv6 unicast addresses
-						if (addr.isIPv4CompatibleAddress() || !isGlobalUnicast(addr))
-							continue;
-
-						// prefer other addresses over teredo
-						if (isTeredo(addr))
-							addrs.addLast(addr);
-						else
-							addrs.addFirst(addr);
-					}
-
-					if (type == Inet4Address.class && ifaceAddr.getAddress() instanceof Inet4Address) {
-						Inet4Address addr = (Inet4Address) ifaceAddr.getAddress();
-
-						if (!isGlobalUnicast(addr))
-							continue;
-
-						addrs.add(addr);
-					}
-				}
-			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		Collections.sort(addrs, (a, b) -> Arrays.compareUnsigned(a.getAddress(), b.getAddress()));
-		
-		
-		return addrs;
+	public static Stream<InetAddress> availableGloballyRoutableAddrs(Stream<InetAddress> toFilter, Class<? extends InetAddress> type) {
+		return toFilter.filter(type::isInstance).filter(AddressUtils::isGlobalUnicast).sorted((a, b) -> Arrays.compareUnsigned(a.getAddress(), b.getAddress()));
 	}
 	
 	public static boolean isValidBindAddress(InetAddress addr) {

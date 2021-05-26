@@ -7,8 +7,6 @@ package lbms.plugins.mldht.kad;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,11 +42,9 @@ public class RPCServerManager {
 	private volatile RPCServer[] activeServers = new RPCServer[0];
 	private SpamThrottle outgoingThrottle = new SpamThrottle();
 	
-	public void refresh(long now) {
+	public void updateReachableEndpoints(long now) {
 		if(destroyed)
 			return;
-		
-		startNewServers();
 		
 		List<RPCServer> reachableServers = new ArrayList<>(interfacesInUse.values().size());
 		for(Iterator<RPCServer> it = interfacesInUse.values().iterator();it.hasNext();)
@@ -70,32 +66,23 @@ public class RPCServerManager {
 	}
 	
 	private void updateBindAddrs() {
-		try {
-			Class<? extends InetAddress> type = dht.getType().PREFERRED_ADDRESS_TYPE;
-			
-			List<InetAddress> oldBindAddresses = validBindAddresses;
-			
-			List<InetAddress> newBindAddrs = Collections.list(NetworkInterface.getNetworkInterfaces()).stream()
-					.flatMap(iface -> iface.getInterfaceAddresses().stream())
-					.map(ifa -> ifa.getAddress())
-					.filter(addr -> type.isInstance(addr))
-					.distinct()
-					.collect(Collectors.toCollection(() -> new ArrayList<>()));
-			
-			newBindAddrs.add(AddressUtils.getAnyLocalAddress(type));
-			
-			newBindAddrs.removeIf(normalizedAddressPredicate().negate());
-			
-			if(!oldBindAddresses.equals(newBindAddrs)) {
-				DHT.logInfo("updating set of valid bind addresses\n old: " + oldBindAddresses + "\n new: " + newBindAddrs);
-			}
-			
-			validBindAddresses = newBindAddrs;
-			
-		} catch (SocketException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		Class<? extends InetAddress> type = dht.getType().PREFERRED_ADDRESS_TYPE;
+		
+		List<InetAddress> oldBindAddresses = validBindAddresses;
+		
+		List<InetAddress> newBindAddrs = AddressUtils.allAddresses().filter(type::isInstance)
+				.distinct()
+				.collect(Collectors.toCollection(() -> new ArrayList<>()));
+		
+		newBindAddrs.add(AddressUtils.getAnyLocalAddress(type));
+		
+		newBindAddrs.removeIf(normalizedAddressPredicate().negate());
+		
+		if(!oldBindAddresses.equals(newBindAddrs)) {
+			DHT.logInfo("updating set of valid bind addresses\n old: " + oldBindAddresses + "\n new: " + newBindAddrs);
 		}
+		
+		validBindAddresses = newBindAddrs;
 	}
 	
 	public void doBindChecks() {
@@ -122,7 +109,10 @@ public class RPCServerManager {
 	}
 	
 	
-	private void startNewServers() {
+	public void startNewServers() {
+		if(destroyed) {
+			return;
+		}
 		boolean multihome = dht.config.allowMultiHoming();
 		Class<? extends InetAddress> addressType = dht.getType().PREFERRED_ADDRESS_TYPE;
 		
@@ -132,8 +122,7 @@ public class RPCServerManager {
 		if(multihome) {
 			// we only consider global unicast addresses in multihoming mode
 			// this is mostly meant for server configurations
-			List<InetAddress> addrs = AddressUtils.getAvailableGloballyRoutableAddrs(addressType)
-				.stream()
+			List<InetAddress> addrs = AddressUtils.availableGloballyRoutableAddrs(validBindAddresses.stream(), addressType)
 				.filter(addressFilter)
 				.collect(Collectors.toCollection(ArrayList::new));
 			addrs.removeAll(interfacesInUse.keySet());
@@ -179,9 +168,7 @@ public class RPCServerManager {
 		
 		// last resort for v6, try a random global unicast address, otherwise anylocal
 		if(addressType.isAssignableFrom(Inet6Address.class)) {
-			InetAddress addr = AddressUtils.getAvailableGloballyRoutableAddrs(addressType)
-				.stream()
-				.filter(addressFilter)
+			InetAddress addr = AddressUtils.availableGloballyRoutableAddrs(validBindAddresses.stream(), addressType).filter(addressFilter)
 				.findAny()
 				.orElse(Optional.of(AddressUtils.getAnyLocalAddress(addressType))
 					.filter(addressFilter)

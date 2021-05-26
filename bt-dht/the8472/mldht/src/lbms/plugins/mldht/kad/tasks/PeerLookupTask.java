@@ -140,12 +140,7 @@ public class PeerLookupTask extends IteratingTask {
 		
 		if (nodes != null)
 		{
-			nodes.entries().filter(e -> {
-				if (node.isLocalId(e.getID())) {
-					return false;
-				}
-				return rpc.getDHT().getConfig().noRouterBootstrap() || !AddressUtils.isBogon(e.getAddress());
-			}).forEach(e -> {
+			nodes.entries().filter(e -> !AddressUtils.isBogon(e.getAddress()) && !node.isLocalId(e.getID())).forEach(e -> {
 				returnedNodes.add(e);
 			});
 		}
@@ -161,7 +156,7 @@ public class PeerLookupTask extends IteratingTask {
 				continue;
 			PeerAddressDBItem it = (PeerAddressDBItem) item;
 			// also add the items to the returned_items list
-			if(rpc.getDHT().getConfig().noRouterBootstrap() || !AddressUtils.isBogon(it)) {
+			if(!AddressUtils.isBogon(it)) {
 				resultHandler.accept(match, it);
 				returnedItems.add(it);
 			}
