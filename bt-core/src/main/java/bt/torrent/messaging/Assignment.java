@@ -16,29 +16,33 @@
 
 package bt.torrent.messaging;
 
+import bt.data.LocalBitfield;
+import bt.data.PeerBitfield;
 import bt.net.ConnectionKey;
-import bt.data.Bitfield;
 import bt.torrent.BitfieldBasedStatistics;
-import bt.torrent.selector.PieceSelector;
+import bt.torrent.selector.ShuffleUtils;
+import bt.torrent.selector.ValidatingSelector;
 import com.google.common.base.MoreObjects;
 
 import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.ArrayDeque;
+import java.util.BitSet;
+import java.util.Queue;
 
 class Assignment {
+    private final int maxSimultaneouslyAssignedPieces;
 
-    // TODO: change this to a configurable setting?
-    private static final int MAX_SIMULTANEOUSLY_ASSIGNED_PIECES = 3;
+    enum Status {ACTIVE, TIMEOUT}
 
-    enum Status { ACTIVE, TIMEOUT };
+    ;
 
-    private ConnectionKey connectionKey;
-    private PieceSelector selector;
-    private BitfieldBasedStatistics pieceStatistics;
-    private Assignments assignments;
+    private final LocalBitfield localBitfield;
+    private final ConnectionKey connectionKey;
+    private final ValidatingSelector selector;
+    private final BitfieldBasedStatistics pieceStatistics;
+    private final Assignments assignments;
 
-    private Queue<Integer> pieces;
+    private final Queue<Integer> pieces;
     private ConnectionState connectionState;
 
     private final Duration limit;
@@ -48,13 +52,16 @@ class Assignment {
 
     private boolean aborted;
 
-    Assignment(ConnectionKey connectionKey, Duration limit, PieceSelector selector,
+    Assignment(ConnectionKey connectionKey, int maxSimultaneouslyAssignedPieces, Duration limit,
+               ValidatingSelector selector, LocalBitfield localBitfield,
                BitfieldBasedStatistics pieceStatistics, Assignments assignments) {
+        this.localBitfield = localBitfield;
         this.connectionKey = connectionKey;
         this.selector = selector;
         this.pieceStatistics = pieceStatistics;
         this.assignments = assignments;
 
+        this.maxSimultaneouslyAssignedPieces = maxSimultaneouslyAssignedPieces;
         this.limit = limit;
         this.pieces = new ArrayDeque<>();
 
@@ -70,39 +77,29 @@ class Assignment {
     }
 
     private void claimPiecesIfNeeded() {
-        if (pieces.size() < MAX_SIMULTANEOUSLY_ASSIGNED_PIECES) {
-            Bitfield peerBitfield = pieceStatistics.getPeerBitfield(connectionKey).get();
-            if(!assignments.isEndgame()){
-                selector.getNextPieces(pieceStatistics)
-                        .filter(pieceIndex -> pieces.size() < 3 && peerBitfield.isVerified(pieceIndex) && assignments.claim(pieceIndex))
-                        .limit(3)
+        if (pieces.size() < maxSimultaneouslyAssignedPieces) {
+            final int numPiecesToAdd = maxSimultaneouslyAssignedPieces - pieces.size();
+            PeerBitfield peerBitfield = pieceStatistics.getPeerBitfield(connectionKey).get();
+            if (!assignments.isEndgame()) {
+                BitSet relevantPieces = peerBitfield.getBitmask(); //returns a copy
+                localBitfield.removeVerifiedPiecesFromBitset(relevantPieces);
+                selector.getNextPieces(peerBitfield, pieceStatistics)
+                        .filter(pieceIndex -> assignments.claim(pieceIndex))
+                        .limit(numPiecesToAdd)
                         .forEach(pieceIndex -> pieces.add(pieceIndex));
-                return;
-            }
+            } else {
+                // randomize order of pieces to keep the number of pieces
+                // requested from different peers at the same time to a minimum
+                int[] requiredPieces = selector.getNextPieces(peerBitfield, pieceStatistics).toArray();
+                ShuffleUtils.shuffle(requiredPieces);
 
-            // randomize order of pieces to keep the number of pieces
-            // requested from different peers at the same time to a minimum
-            int[] requiredPieces = selector.getNextPieces(pieceStatistics).toArray();
-            if (assignments.isEndgame()) {
-                shuffle(requiredPieces);
-            }
-
-            for (int i = 0; i < requiredPieces.length && pieces.size() < 3; i++) {
-                int pieceIndex = requiredPieces[i];
-                if (peerBitfield.isVerified(pieceIndex) && assignments.claim(pieceIndex)) {
-                    pieces.add(pieceIndex);
+                for (int i = 0; i < Math.min(numPiecesToAdd, requiredPieces.length); i++) {
+                    int pieceIndex = requiredPieces[i];
+                    if (peerBitfield.isVerified(pieceIndex) && assignments.claim(pieceIndex)) {
+                        pieces.add(pieceIndex);
+                    }
                 }
             }
-        }
-    }
-
-    private static void shuffle(int[] arr) {
-        Random rnd = ThreadLocalRandom.current();
-        for (int k = arr.length - 1; k > 0; k--) {
-            int i = rnd.nextInt(k + 1);
-            int a = arr[i];
-            arr[i] = arr[k];
-            arr[k] = a;
         }
     }
 

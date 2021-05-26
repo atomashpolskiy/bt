@@ -274,12 +274,12 @@ public class Protocols {
      * @since 1.7
      */
     public static int getBit(byte[] bytes, BitOrder bitOrder, int i) {
-        int byteIndex = (int) (i / 8d);
+        int byteIndex = i >> 3; // divide by 8
         if (byteIndex >= bytes.length) {
             throw new BtException("bit index is too large: " + i);
         }
 
-        int bitIndex = i % 8;
+        int bitIndex = i & 0b111;
         int shift = (bitOrder == BitOrder.BIG_ENDIAN) ? bitIndex : (7 - bitIndex);
         int bitMask = 0b1 << shift ;
         return (bytes[byteIndex] & bitMask) >> shift;

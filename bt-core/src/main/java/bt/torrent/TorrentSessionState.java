@@ -17,6 +17,8 @@
 package bt.torrent;
 
 import bt.net.ConnectionKey;
+import bt.processor.ProcessingContext;
+import bt.torrent.fileselector.FilePrioritySelector;
 
 import java.util.Set;
 
@@ -76,8 +78,24 @@ public interface TorrentSessionState {
     long getUploaded();
 
     /**
+     * Waits for all of this torrent's chunks to be downloaded
+     *
+     * @throws InterruptedException if the torrent download is interrupted
+     */
+    void waitForAllPieces() throws InterruptedException;
+
+    /**
      * @return Collection of peers, that this session is connected to
      * @since 1.9
      */
     Set<ConnectionKey> getConnectedPeers();
+
+    /**
+     * Update the priority of downloading specified files
+     *
+     * @param c                The processing context of the torrent
+     * @param prioritySelector the files to update the priority for
+     * @return whether the update was successful
+     */
+    boolean updateFileDownloadPriority(ProcessingContext c, FilePrioritySelector prioritySelector);
 }

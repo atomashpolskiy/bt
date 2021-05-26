@@ -17,6 +17,7 @@
 package bt.torrent.messaging;
 
 import bt.data.Bitfield;
+import bt.data.LocalBitfield;
 import bt.event.EventSource;
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
@@ -35,7 +36,6 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -69,8 +69,9 @@ public class TorrentWorker {
     private Queue<ConnectionKey> disconnectedPeers;
     private Map<ConnectionKey, Message> interestUpdates;
     private long lastUpdatedAssignments;
+    private long lastNumInterestingPeers;
 
-    private Supplier<Bitfield> bitfieldSupplier;
+    private Supplier<LocalBitfield> bitfieldSupplier;
     private Supplier<Assignments> assignmentsSupplier;
     private Supplier<BitfieldBasedStatistics> statisticsSupplier;
 
@@ -78,7 +79,7 @@ public class TorrentWorker {
                          IMessageDispatcher dispatcher,
                          IConnectionSource connectionSource,
                          IPeerWorkerFactory peerWorkerFactory,
-                         Supplier<Bitfield> bitfieldSupplier,
+                         Supplier<LocalBitfield> bitfieldSupplier,
                          Supplier<Assignments> assignmentsSupplier,
                          Supplier<BitfieldBasedStatistics> statisticsSupplier,
                          EventSource eventSource,
@@ -107,7 +108,7 @@ public class TorrentWorker {
         eventSource.onPeerDisconnected(torrentId, e -> onPeerDisconnected(e.getConnectionKey()));
     }
 
-    private Bitfield getBitfield() {
+    private LocalBitfield getBitfield() {
         return bitfieldSupplier.get();
     }
 
@@ -144,7 +145,7 @@ public class TorrentWorker {
 
         PieceAnnouncingPeerWorker worker = getWorker(connectionKey);
         if (worker != null) {
-            Bitfield bitfield = getBitfield();
+            LocalBitfield bitfield = getBitfield();
             Assignments assignments = getAssignments();
 
             if (bitfield != null && assignments != null && (bitfield.getPiecesRemaining() > 0 || assignments.count() > 0)) {
@@ -193,9 +194,10 @@ public class TorrentWorker {
     }
 
     private boolean shouldUpdateAssignments(Assignments assignments) {
-        return (timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_OPTIONAL_INTERVAL.toMillis()
-                    && mightUseMoreAssignees(assignments))
-            || timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_MANDATORY_INTERVAL.toMillis();
+        return lastNumInterestingPeers == 0 || // Immediately update assigment if we previously had no interesting peers
+                (timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_OPTIONAL_INTERVAL.toMillis()
+                        && mightUseMoreAssignees(assignments))
+                || timeSinceLastUpdated() > UPDATE_ASSIGNMENTS_MANDATORY_INTERVAL.toMillis();
     }
 
     private boolean mightUseMoreAssignees(Assignments assignments) {
@@ -283,6 +285,7 @@ public class TorrentWorker {
         });
 
         lastUpdatedAssignments = System.currentTimeMillis();
+        lastNumInterestingPeers = interesting.size();
     }
 
     private PieceAnnouncingPeerWorker createPeerWorker(ConnectionKey connectionKey) {

@@ -18,17 +18,19 @@ package bt.torrent.fileselector;
 
 import bt.metainfo.TorrentFile;
 
+import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
  * Provides API for file selection (aka partial downloads).
- *
+ * <p>
  * Currently there's a limitation that empty files will always be created (even if they weren't selected).
  *
  * @since 1.7
+ * @deprecated use {@link FilePrioritySkipSelector}
  */
-public abstract class TorrentFileSelector {
+public abstract class TorrentFileSelector implements FilePrioritySkipSelector {
 
     /**
      * Returns a list of decisions on whether to download or skip each of the given files, in the same order.
@@ -45,4 +47,9 @@ public abstract class TorrentFileSelector {
      * @since 1.7
      */
     protected abstract SelectionResult select(TorrentFile file);
+
+    @Override
+    public FilePriority prioritize(TorrentFile file) {
+        return select(file).shouldSkip() ? FilePriority.SKIP : FilePriority.NORMAL_PRIORITY;
+    }
 }

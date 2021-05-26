@@ -66,16 +66,11 @@ public class ProcessTorrentStage<C extends TorrentContext> extends TerminateOnEr
 
         eventSink.fireTorrentStarted(torrentId);
 
-        while (descriptor.isActive()) {
-            try {
-                Thread.sleep(1000);
-                if (context.getState().get().getPiecesRemaining() == 0) {
-                    complete(context);
-                    break;
-                }
-            } catch (InterruptedException e) {
-                throw new RuntimeException("Unexpectedly interrupted", e);
-            }
+        try {
+            context.getState().get().waitForAllPieces();
+            complete(context);
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Unexpectedly interrupted", e);
         }
     }
 

@@ -16,9 +16,11 @@
 
 package bt.torrent.selector;
 
+import bt.data.LocalBitfield;
+import bt.data.PeerBitfield;
 import bt.torrent.PieceStatistics;
 
-import java.util.function.IntPredicate;
+import java.util.BitSet;
 import java.util.stream.IntStream;
 
 /**
@@ -26,26 +28,32 @@ import java.util.stream.IntStream;
  *
  * @since 1.1
  */
-public class ValidatingSelector implements PieceSelector {
+public class ValidatingSelector {
 
-    private IntPredicate validator;
-    private PieceSelector delegate;
+    private final LocalBitfield localBitfield;
+    private final BitSet piecesToSkip; // nullable
+    private final PieceSelector delegate;
 
     /**
      * Creates a filtering selector.
      *
-     * @param validator Filter
-     * @param delegate Delegate selector
+     * @param piecesToSkip The relevant pieces to download
+     * @param delegate     Delegate selector
      * @since 1.1
      */
-    public ValidatingSelector(IntPredicate validator, PieceSelector delegate) {
-        this.validator = validator;
+    public ValidatingSelector(LocalBitfield localBitfield, BitSet piecesToSkip, PieceSelector delegate) {
+        this.localBitfield = localBitfield;
+        this.piecesToSkip = piecesToSkip.isEmpty() ? null : piecesToSkip;
         this.delegate = delegate;
     }
 
-    @Override
-    public IntStream getNextPieces(PieceStatistics pieceStatistics) {
-        return delegate.getNextPieces(pieceStatistics)
-                .filter(validator);
+    public IntStream getNextPieces(PeerBitfield peerBitfield, PieceStatistics pieceStatistics) {
+        BitSet relevantChunks = peerBitfield.getBitmask();
+
+        if (piecesToSkip != null)
+            relevantChunks.andNot(this.piecesToSkip);
+
+        localBitfield.removeVerifiedPiecesFromBitset(relevantChunks);
+        return delegate.getNextPieces(relevantChunks, pieceStatistics);
     }
 }

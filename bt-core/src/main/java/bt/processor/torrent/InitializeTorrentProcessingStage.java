@@ -17,6 +17,7 @@
 package bt.processor.torrent;
 
 import bt.data.Bitfield;
+import bt.data.LocalBitfield;
 import bt.event.EventSink;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
@@ -66,10 +67,11 @@ public class InitializeTorrentProcessingStage<C extends TorrentContext> extends 
     @Override
     protected void doExecute(C context) {
         Torrent torrent = context.getTorrent().get();
-        TorrentDescriptor descriptor = torrentRegistry.register(torrent, context.getStorage());
+        TorrentDescriptor descriptor = torrentRegistry.register(torrent, context.getStorage(),
+                context.getFileCompletionCallback().orElse(null));
 
         TorrentId torrentId = torrent.getTorrentId();
-        Bitfield bitfield = descriptor.getDataDescriptor().getBitfield();
+        LocalBitfield bitfield = descriptor.getDataDescriptor().getBitfield();
         BitfieldBasedStatistics pieceStatistics = createPieceStatistics(bitfield);
 
         context.getRouter().registerMessagingAgent(GenericConsumer.consumer());

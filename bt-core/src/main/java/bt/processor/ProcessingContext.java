@@ -18,9 +18,11 @@ package bt.processor;
 
 import bt.data.Storage;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
 import bt.torrent.TorrentSessionState;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -54,4 +56,12 @@ public interface ProcessingContext {
      * @since 1.10
      */
     Storage getStorage();
+
+    /**
+     * Returns a list of all of the files that will be downloaded in this torrent, or empty if not known
+     *
+     * @return list of all of the files that will be downloaded in this torrent
+     * @since 1.10
+     */
+    Optional<List<TorrentFile>> getAllNonSkippedFiles();
 }

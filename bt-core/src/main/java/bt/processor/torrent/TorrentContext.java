@@ -16,20 +16,27 @@
 
 package bt.processor.torrent;
 
-import bt.data.Bitfield;
+import bt.data.LocalBitfield;
 import bt.data.Storage;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
 import bt.processor.ProcessingContext;
 import bt.torrent.BitfieldBasedStatistics;
 import bt.torrent.TorrentSessionState;
 import bt.torrent.TrackerAnnouncer;
+import bt.torrent.callbacks.FileDownloadCompleteCallback;
+import bt.torrent.fileselector.FilePrioritySkipSelector;
 import bt.torrent.fileselector.TorrentFileSelector;
 import bt.torrent.messaging.Assignments;
 import bt.torrent.messaging.MessageRouter;
 import bt.torrent.selector.PieceSelector;
+import bt.torrent.selector.PrioritizedPieceSelector;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 /**
@@ -39,43 +46,55 @@ import java.util.function.Supplier;
  */
 public class TorrentContext implements ProcessingContext {
 
-    private final PieceSelector pieceSelector;
-    private final Optional<TorrentFileSelector> fileSelector;
+    private final PrioritizedPieceSelector pieceSelector;
+    private final FilePrioritySkipSelector fileSelector; // nullable
+    private final FileDownloadCompleteCallback fileCompletionCallback; // nullable
     private final Storage storage;
     private final Supplier<Torrent> torrentSupplier;
+    private final CompletableFuture<?> torrentDownloadedFuture = new CompletableFuture<>(); // set when download completed
 
     /* all of these can be missing, depending on which stage is currently being executed */
     private volatile TorrentId torrentId;
     private volatile Torrent torrent;
     private volatile TorrentSessionState state;
     private volatile MessageRouter router;
-    private volatile Bitfield bitfield;
+    private volatile LocalBitfield bitfield;
     private volatile Assignments assignments;
+    private volatile List<TorrentFile> allNonSkippedFiles;
     private volatile BitfieldBasedStatistics pieceStatistics;
     private volatile TrackerAnnouncer announcer;
 
     public TorrentContext(PieceSelector pieceSelector,
-                          TorrentFileSelector fileSelector,
+                          FilePrioritySkipSelector fileSelector,
+                          FileDownloadCompleteCallback fileCompletionCallback,
                           Storage storage,
                           Supplier<Torrent> torrentSupplier) {
-        this.pieceSelector = pieceSelector;
-        this.fileSelector = Optional.ofNullable(fileSelector);
+        this.pieceSelector = new PrioritizedPieceSelector(pieceSelector);
+        this.fileSelector = fileSelector;
+        this.fileCompletionCallback = fileCompletionCallback;
         this.storage = storage;
         this.torrentSupplier = torrentSupplier;
     }
 
     public TorrentContext(PieceSelector pieceSelector,
+                          FilePrioritySkipSelector fileSelector,
                           Storage storage,
                           Supplier<Torrent> torrentSupplier) {
-        this(pieceSelector, null, storage, torrentSupplier);
+        this(pieceSelector, fileSelector, null, storage, torrentSupplier);
     }
 
-    public PieceSelector getPieceSelector() {
+    public TorrentContext(PieceSelector pieceSelector,
+                          Storage storage,
+                          Supplier<Torrent> torrentSupplier) {
+        this(pieceSelector, null, null, storage, torrentSupplier);
+    }
+
+    public PrioritizedPieceSelector getPieceSelector() {
         return pieceSelector;
     }
 
-    public Optional<TorrentFileSelector> getFileSelector() {
-        return fileSelector;
+    public Optional<FilePrioritySkipSelector> getFileSelector() {
+        return Optional.ofNullable(fileSelector);
     }
 
     public Storage getStorage() {
@@ -84,6 +103,10 @@ public class TorrentContext implements ProcessingContext {
 
     public Supplier<Torrent> getTorrentSupplier() {
         return torrentSupplier;
+    }
+
+    public Optional<FileDownloadCompleteCallback> getFileCompletionCallback() {
+        return Optional.ofNullable(fileCompletionCallback);
     }
 
     ///////////////////////////////////////////////
@@ -123,11 +146,11 @@ public class TorrentContext implements ProcessingContext {
         this.router = router;
     }
 
-    public Bitfield getBitfield() {
+    public LocalBitfield getBitfield() {
         return bitfield;
     }
 
-    public void setBitfield(Bitfield bitfield) {
+    public void setBitfield(LocalBitfield bitfield) {
         this.bitfield = bitfield;
     }
 
@@ -137,6 +160,14 @@ public class TorrentContext implements ProcessingContext {
 
     public void setAssignments(Assignments assignments) {
         this.assignments = assignments;
+    }
+
+    public Optional<List<TorrentFile>> getAllNonSkippedFiles() {
+        return Optional.ofNullable(allNonSkippedFiles);
+    }
+
+    public void setAllNonSkippedFiles(List<TorrentFile> allNonSkippedFiles) {
+        this.allNonSkippedFiles = allNonSkippedFiles;
     }
 
     public BitfieldBasedStatistics getPieceStatistics() {

@@ -18,7 +18,9 @@ package bt.torrent.fileselector;
 
 /**
  * @since 1.7
+ * @deprecated use {@link FilePriority} instead
  */
+@Deprecated
 public class SelectionResult {
 
     /**

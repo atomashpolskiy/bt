@@ -18,10 +18,14 @@ package bt.torrent;
 
 import bt.data.Storage;
 import bt.metainfo.Torrent;
+import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
+import bt.processor.ProcessingContext;
+import bt.torrent.callbacks.FileDownloadCompleteCallback;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
 /**
  * Registry of all torrents known to the current runtime.
@@ -92,7 +96,8 @@ public interface TorrentRegistry {
      * @return Torrent descriptor
      * @since 1.3
      */
-    TorrentDescriptor register(Torrent torrent, Storage storage);
+    TorrentDescriptor register(Torrent torrent, Storage storage,
+                               FileDownloadCompleteCallback fileCompletionCallback);
 
     /**
      * Get an existing torrent descriptor for a given torrent ID

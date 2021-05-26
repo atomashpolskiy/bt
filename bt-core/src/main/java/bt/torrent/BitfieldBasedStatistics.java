@@ -17,12 +17,13 @@
 package bt.torrent;
 
 import bt.data.Bitfield;
-import bt.data.Bitfield.PieceStatus;
+import bt.data.PeerBitfield;
 import bt.net.ConnectionKey;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 
 /**
  * Acts as a storage for peers' bitfields and provides aggregate piece statistics.
@@ -33,8 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class BitfieldBasedStatistics implements PieceStatistics {
 
     private final Bitfield localBitfield;
-    private final Map<ConnectionKey, Bitfield> peerBitfields;
-    private final int[] pieceTotals;
+    private final ConcurrentMap<ConnectionKey, PeerBitfield> peerBitfields;
+    private final AtomicIntegerArray pieceTotals;
 
     /**
      * Create statistics, based on the local peer's bitfield.
@@ -44,7 +45,7 @@ public class BitfieldBasedStatistics implements PieceStatistics {
     public BitfieldBasedStatistics(Bitfield localBitfield) {
         this.localBitfield = localBitfield;
         this.peerBitfields = new ConcurrentHashMap<>();
-        this.pieceTotals = new int[localBitfield.getPiecesTotal()];
+        this.pieceTotals = new AtomicIntegerArray(localBitfield.getPiecesTotal());
     }
 
     /**
@@ -53,19 +54,10 @@ public class BitfieldBasedStatistics implements PieceStatistics {
      *
      * @since 1.0
      */
-    public void addBitfield(ConnectionKey connectionKey, Bitfield bitfield) {
+    public void addBitfield(ConnectionKey connectionKey, PeerBitfield bitfield) {
         validateBitfieldLength(bitfield);
         peerBitfields.put(connectionKey, bitfield);
-
-        for (int i = 0; i < pieceTotals.length; i++) {
-            if (bitfield.getPieceStatus(i) == PieceStatus.COMPLETE_VERIFIED) {
-                incrementPieceTotal(i);
-            }
-        }
-    }
-
-    private synchronized void incrementPieceTotal(int i) {
-        pieceTotals[i]++;
+        bitfield.forEachVerifiedPiece(pieceTotals::incrementAndGet);
     }
 
     /**
@@ -75,26 +67,18 @@ public class BitfieldBasedStatistics implements PieceStatistics {
      * @since 1.0
      */
     public void removeBitfield(ConnectionKey connectionKey) {
-        Bitfield bitfield = peerBitfields.remove(connectionKey);
+        PeerBitfield bitfield = peerBitfields.remove(connectionKey);
         if (bitfield == null) {
             return;
         }
 
-        for (int i = 0; i < pieceTotals.length; i++) {
-            if (bitfield.getPieceStatus(i) == PieceStatus.COMPLETE_VERIFIED) {
-                decrementPieceTotal(i);
-            }
-        }
-    }
-
-    private synchronized void decrementPieceTotal(int i) {
-        pieceTotals[i]--;
+        bitfield.forEachVerifiedPiece(pieceTotals::decrementAndGet);
     }
 
     private void validateBitfieldLength(Bitfield bitfield) {
-        if (bitfield.getPiecesTotal() != pieceTotals.length) {
+        if (bitfield.getPiecesTotal() != pieceTotals.length()) {
             throw new IllegalArgumentException("Bitfield has invalid length (" + bitfield.getPiecesTotal() +
-                    "). Expected number of pieces: " + pieceTotals.length);
+                    "). Expected number of pieces: " + pieceTotals.length());
         }
     }
 
@@ -105,22 +89,13 @@ public class BitfieldBasedStatistics implements PieceStatistics {
      * @since 1.0
      */
     public void addPiece(ConnectionKey connectionKey, Integer pieceIndex) {
-        Bitfield bitfield = peerBitfields.get(connectionKey);
-        if (bitfield == null) {
-            bitfield = new Bitfield(localBitfield.getPiecesTotal());
-            Bitfield existing = peerBitfields.putIfAbsent(connectionKey, bitfield);
-            if (existing != null) {
-                bitfield = existing;
-            }
-        }
-
+        PeerBitfield bitfield = peerBitfields.computeIfAbsent(connectionKey, key -> new PeerBitfield(localBitfield.getPiecesTotal()));
         markPieceVerified(bitfield, pieceIndex);
     }
 
-    private synchronized void markPieceVerified(Bitfield bitfield, Integer pieceIndex) {
-        if (!bitfield.isVerified(pieceIndex)) {
-            bitfield.markVerified(pieceIndex);
-            incrementPieceTotal(pieceIndex);
+    private void markPieceVerified(PeerBitfield bitfield, Integer pieceIndex) {
+        if (bitfield.markPeerPieceVerified(pieceIndex)) {
+            pieceTotals.getAndIncrement(pieceIndex);
         }
     }
 
@@ -129,17 +104,18 @@ public class BitfieldBasedStatistics implements PieceStatistics {
      *
      * @since 1.0
      */
-    public Optional<Bitfield> getPeerBitfield(ConnectionKey connectionKey) {
+    public Optional<PeerBitfield> getPeerBitfield(ConnectionKey connectionKey) {
         return Optional.ofNullable(peerBitfields.get(connectionKey));
     }
 
     @Override
-    public synchronized int getCount(int pieceIndex) {
-        return pieceTotals[pieceIndex];
+    public int getCount(int pieceIndex) {
+        // in Java 9+, this can be changed to getOpaque()
+        return pieceTotals.get(pieceIndex);
     }
 
     @Override
     public int getPiecesTotal() {
-        return pieceTotals.length;
+        return pieceTotals.length();
     }
 }

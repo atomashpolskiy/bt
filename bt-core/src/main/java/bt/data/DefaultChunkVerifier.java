@@ -23,14 +23,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.IntStream;
 
 public class DefaultChunkVerifier implements ChunkVerifier {
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultChunkVerifier.class);
@@ -44,20 +41,13 @@ public class DefaultChunkVerifier implements ChunkVerifier {
     }
 
     @Override
-    public boolean verify(List<ChunkDescriptor> chunks, Bitfield bitfield) {
+    public boolean verify(List<ChunkDescriptor> chunks, LocalBitfield bitfield) {
         if (chunks.size() != bitfield.getPiecesTotal()) {
             throw new IllegalArgumentException("Bitfield has different size than the list of chunks. Bitfield size: " +
                     bitfield.getPiecesTotal() + ", number of chunks: " + chunks.size());
         }
 
-        ChunkDescriptor[] arr = chunks.toArray(new ChunkDescriptor[chunks.size()]);
-        if (numOfHashingThreads > 1) {
-            collectParallel(arr, bitfield);
-        } else {
-            createWorker(arr, 0, arr.length, bitfield).run();
-        }
-        // try to purge all data that was loaded by the verifiers
-        System.gc();
+        collectParallel(chunks, bitfield);
 
         return bitfield.getPiecesRemaining() == 0;
     }
@@ -76,84 +66,61 @@ public class DefaultChunkVerifier implements ChunkVerifier {
         return Arrays.equals(expected, actual);
     }
 
-    private List<ChunkDescriptor> collectParallel(ChunkDescriptor[] chunks, Bitfield bitfield) {
+    private void collectParallel(List<ChunkDescriptor> chunks, LocalBitfield bitfield) {
         int n = numOfHashingThreads;
-        ExecutorService workers = Executors.newFixedThreadPool(n);
-
-        List<Future<?>> futures = new ArrayList<>();
-
-        int batchSize = chunks.length / n;
-        int i, limit = 0;
-        while ((i = limit) < chunks.length) {
-            if (futures.size() == n - 1) {
-                // assign the remaining bits to the last worker
-                limit = chunks.length;
-            } else {
-                limit = i + batchSize;
-            }
-            futures.add(workers.submit(createWorker(chunks, i, Math.min(chunks.length, limit), bitfield)));
-        }
 
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Verifying torrent data with {} workers", futures.size());
+            LOGGER.debug("Verifying torrent data with {} workers", n);
         }
 
-        Set<Throwable> errors = ConcurrentHashMap.newKeySet();
-        futures.forEach(f -> {
+        if(n > 1) {
+            ForkJoinPool pool = new ForkJoinPool(n);
             try {
-                f.get();
-            } catch (Exception e) {
-                LOGGER.error("Unexpected error during verification of torrent data", e);
-                errors.add(e);
+                pool.submit(() -> verifyChunks(chunks, bitfield, true)).get();
+            } catch (Exception ex) {
+                throw new BtException("Failed to verify torrent data:" +
+                        errorToString(ex));
+            } finally {
+                pool.shutdownNow();
             }
-        });
-
-        workers.shutdown();
-        while (!workers.isTerminated()) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                throw new BtException("Unexpectedly interrupted");
-            }
+        } else {
+            verifyChunks(chunks, bitfield, n < 1);
         }
-
-        if (!errors.isEmpty()) {
-            throw new BtException("Failed to verify torrent data:" +
-                    errors.stream().map(this::errorToString).reduce(String::concat).get());
-        }
-
-        return Arrays.asList(chunks);
     }
 
-    private Runnable createWorker(ChunkDescriptor[] chunks,
-                                  int from,
-                                  int to,
-                                  Bitfield bitfield) {
-        return () -> {
-            int i = from;
-            while (i < to) {
-                // optimization to speedup the initial verification of torrent's data
-                int[] emptyUnits = new int[]{0};
-                chunks[i].getData().visitUnits((u, off, lim) -> {
-                    // limit of 0 means an empty file,
-                    // and we don't want to account for those
-                    if (u.size() == 0 && lim != 0) {
-                        emptyUnits[0]++;
-                    }
-                    return true;
-                });
+    /**
+     * Returns the integer indices of chunks that are verified
+     * @param chunks the chunks to verify
+     * @param bitfield the bitfield to mark a chunk as verified
+     * @param parallel whether to use a parallel stream
+     */
+    private void verifyChunks(List<ChunkDescriptor> chunks, LocalBitfield bitfield, boolean parallel) {
+        IntStream stream = IntStream.range(0, chunks.size()).unordered();
+        if (parallel)
+            stream = stream.parallel();
+        stream.filter(i -> this.checkIfChunkVerified(chunks.get(i)))
+                .forEach(bitfield::markLocalPieceVerified);
+    }
 
-                // if any of this chunk's storage units is empty,
-                // then the chunk is neither complete nor verified
-                if (emptyUnits[0] == 0) {
-                    boolean verified = verifyIfPresent(chunks[i]);
-                    if (verified) {
-                        bitfield.markVerified(i);
-                    }
-                }
-                i++;
+    private boolean checkIfChunkVerified(ChunkDescriptor chunk) {
+        // optimization to speedup the initial verification of torrent's data
+        AtomicBoolean containsEmptyFile = new AtomicBoolean(false);
+        chunk.getData().visitUnits((u, off, lim) -> {
+            // limit of 0 means an empty file,
+            // and we don't want to account for those
+            if (u.size() == 0 && lim != 0) {
+                containsEmptyFile.set(true);
+                return false; // no need to continue
             }
-        };
+            return true;
+        });
+
+        // if any of this chunk's storage units is empty,
+        // then the chunk is neither complete nor verified
+        if (!containsEmptyFile.get()) {
+            return verifyIfPresent(chunk);
+        }
+        return false;
     }
 
     private String errorToString(Throwable e) {

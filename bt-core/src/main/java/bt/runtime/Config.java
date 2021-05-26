@@ -49,6 +49,7 @@ public class Config {
     private Duration shutdownHookTimeout;
     private int numOfHashingThreads;
     private int maxConcurrentlyActivePeerConnectionsPerTorrent;
+    private int maxSimultaneouslyAssignedPieces;
     private Duration maxPieceReceivingTime;
     private Duration maxMessageProcessingInterval;
     private Duration unreachablePeerBanDuration;
@@ -88,6 +89,7 @@ public class Config {
         this.shutdownHookTimeout = Duration.ofSeconds(30);
         this.numOfHashingThreads = 1; // do not parallelize by default
         this.maxConcurrentlyActivePeerConnectionsPerTorrent = 10;
+        this.maxSimultaneouslyAssignedPieces = 3;
         this.maxPieceReceivingTime = Duration.ofSeconds(5);
         this.maxMessageProcessingInterval = Duration.ofMillis(100);
         this.unreachablePeerBanDuration = Duration.ofMinutes(30);
@@ -129,6 +131,7 @@ public class Config {
         this.shutdownHookTimeout = config.getShutdownHookTimeout();
         this.numOfHashingThreads = config.getNumOfHashingThreads();
         this.maxConcurrentlyActivePeerConnectionsPerTorrent = config.getMaxConcurrentlyActivePeerConnectionsPerTorrent();
+        this.maxSimultaneouslyAssignedPieces = config.getMaxSimultaneouslyAssignedPieces();
         this.maxPieceReceivingTime = config.getMaxPieceReceivingTime();
         this.maxMessageProcessingInterval = config.getMaxMessageProcessingInterval();
         this.unreachablePeerBanDuration = config.getUnreachablePeerBanDuration();
@@ -435,6 +438,23 @@ public class Config {
      */
     public int getMaxConcurrentlyActivePeerConnectionsPerTorrent() {
         return maxConcurrentlyActivePeerConnectionsPerTorrent;
+    }
+
+
+    /**
+     * Set the number of pieces that are assigned to a single peer
+     * @param maxSimultaneouslyAssignedPieces the max number of pieces assigned to a single peer
+     * @since 1.10
+     */
+    public void setMaxSimultaneouslyAssignedPieces(int maxSimultaneouslyAssignedPieces) {
+        this.maxSimultaneouslyAssignedPieces = maxSimultaneouslyAssignedPieces;
+    }
+
+    /**
+     * @since 1.10
+     */
+    public int getMaxSimultaneouslyAssignedPieces() {
+        return maxSimultaneouslyAssignedPieces;
     }
 
     /**

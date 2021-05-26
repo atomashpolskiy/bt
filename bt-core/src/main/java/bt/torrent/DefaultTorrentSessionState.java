@@ -16,14 +16,22 @@
 
 package bt.torrent;
 
+import bt.metainfo.TorrentFile;
 import bt.net.ConnectionKey;
+import bt.processor.ProcessingContext;
+import bt.processor.torrent.FilePiecePriorityMapper;
+import bt.torrent.fileselector.FilePrioritySelector;
 import bt.torrent.messaging.ConnectionState;
 import bt.torrent.messaging.TorrentWorker;
+import bt.torrent.selector.PrioritizedPieceSelector;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -48,13 +56,16 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
 
     private final TorrentDescriptor descriptor;
     private final TorrentWorker worker;
+    private final PrioritizedPieceSelector pieceSelector;
 
-    public DefaultTorrentSessionState(TorrentDescriptor descriptor, TorrentWorker worker) {
+    public DefaultTorrentSessionState(TorrentDescriptor descriptor, TorrentWorker worker,
+                                      PrioritizedPieceSelector pieceSelector) {
         this.recentAmountsForConnectedPeers = new HashMap<>();
         this.downloadedFromDisconnected = new AtomicLong();
         this.uploadedToDisconnected = new AtomicLong();
         this.descriptor = descriptor;
         this.worker = worker;
+        this.pieceSelector = pieceSelector;
     }
 
     @Override
@@ -91,6 +102,11 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
         } else {
             return 1;
         }
+    }
+
+    @Override
+    public void waitForAllPieces() throws InterruptedException {
+        descriptor.getDataDescriptor().waitForAllPieces();
     }
 
     @Override
@@ -160,6 +176,18 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
     @Override
     public Set<ConnectionKey> getConnectedPeers() {
         return Collections.unmodifiableSet(worker.getPeers());
+    }
+
+    @Override
+    public boolean updateFileDownloadPriority(ProcessingContext c, FilePrioritySelector prioritySelector) {
+        final Optional<List<TorrentFile>> allNonSkippedFiles = c.getAllNonSkippedFiles();
+        if (allNonSkippedFiles.isPresent()) {
+            FilePiecePriorityMapper piecePriorityMapper = FilePiecePriorityMapper.createPiecePriorityMapper(
+                    descriptor.getDataDescriptor(), allNonSkippedFiles.get(), Objects.requireNonNull(prioritySelector));
+            pieceSelector.setHighPriorityPieces(piecePriorityMapper.getHighPriorityPieces());
+            return true;
+        }
+        return false;
     }
 
     private static class TransferAmounts {

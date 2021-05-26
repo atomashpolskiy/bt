@@ -24,7 +24,6 @@ import bt.bencoding.model.BEString;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -81,9 +80,9 @@ public class BEEncoder {
 
         Objects.requireNonNull(integer);
 
-        BigInteger value = integer.getValue();
+        Number value = integer.getValue();
         write(out, BEParser.INTEGER_PREFIX);
-        write(out, Integer.toString(value.intValueExact()).getBytes(defaultCharset));
+        write(out, value.toString().getBytes(defaultCharset));
         write(out, BEParser.EOF);
     }
 

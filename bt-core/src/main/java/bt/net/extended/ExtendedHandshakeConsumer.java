@@ -39,7 +39,7 @@ public class ExtendedHandshakeConsumer {
         BEInteger peerListeningPort = message.getPort();
         if (peerListeningPort != null) {
             InetPeer peer = (InetPeer) messageContext.getConnectionKey().getPeer();
-            int listeningPort = peerListeningPort.getValue().intValueExact();
+            int listeningPort = (Integer) peerListeningPort.getValue();
             peer.setPort(listeningPort);
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Updating listening port for peer {}:{} to {}",
