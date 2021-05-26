@@ -115,6 +115,7 @@ public class BtRuntimeBuilderTest {
     public void testRuntimeBuilder_DisableStandardExtensions() {
         BtRuntime runtime = new BtRuntimeBuilder().disableStandardExtensions().build();
         assertExceptionWithMessage(it -> runtime.service(ILocalServiceDiscoveryService.class),
-                "No implementation for bt.peer.lan.ILocalServiceDiscoveryService was bound");
+                "Guice configuration errors:\n\n" +
+                        "1) [Guice/MissingImplementation]: No implementation for ILocalServiceDiscoveryService was bound.");
     }
 }
