@@ -31,11 +31,6 @@
             <artifactId>guice</artifactId>
             <scope>compile</scope>
         </dependency>
-        <dependency>
-            <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-multibindings</artifactId>
-            <scope>compile</scope>
-        </dependency>
     </dependencies>
 
 </project>
