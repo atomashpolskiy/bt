@@ -609,13 +609,6 @@ public class Config {
     }
 
     /**
-     * @since 1.3
-     */
-    public boolean isMseDisabled() {
-        return mseDisabled;
-    }
-
-    /**
      * @param mseDisabled set true to disable mse, see {@link MSEHandshakeProcessor}
      * @since 1.10
      */
@@ -623,17 +616,27 @@ public class Config {
         this.mseDisabled = mseDisabled;
     }
 
-    public Duration getMseWaitBetweenReads() {
-        return mseWaitBetweenReads;
+    /**
+     * @since 1.10
+     */
+    public boolean isMseDisabled() {
+        return mseDisabled;
     }
 
     /**
-     * @param mseWaitBetweenReads read timeout when doing mse handshake.
-     *                            in good network environment, turn down this value may decrease mse handshake time cost.
+     * @param mseWaitBetweenReads Read timeout when doing mse handshake.
+     *                            In good network environment, turning down this value may decrease mse handshake time cost.
      * @since 1.10
      */
     public void setMseWaitBetweenReads(Duration mseWaitBetweenReads) {
         this.mseWaitBetweenReads = mseWaitBetweenReads;
+    }
+
+    /**
+     * @since 1.10
+     */
+    public Duration getMseWaitBetweenReads() {
+        return mseWaitBetweenReads;
     }
 
     /**

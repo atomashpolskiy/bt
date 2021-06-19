@@ -6,10 +6,49 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 #### Date:
 
+### New Features:
+
+* Update Guice to 5.0.1 for Java 9 support
+* Support callback functions for when
+    - Torrent files complete downloading
+    - The entire torrent completes downloading
+* ChooseFilesStage now allows SKIPPED, NORMAL_PRIORITY, and HIGH_PRIORITY for downloading
+    - File download priority can be mutated while the torrent is downloaded. Skipping or unskipping files while the torrent is downloading is not supported.
+* Add config switch to completely disable MSE negotiation
+* Add config parameter for the time interval between reads in MSE negotiation
+* Add config parameter for the max number of simultaneously assigned pieces for a single peer
+* Add config parameter for the IP address to send to the tracker (for remote peers to use). Useful when behind a NAT. Only supported for http trackers currently.
+* Add runtime builder methods for disabling PEX and LSD extensions
+
 ### Bug Fixes/Improvements:
 
 * Allow announce key to be missing in the torrent dictionary [#42](https://github.com/atomashpolskiy/bt/issues/42)
 * bt.data.digest.JavaSecurityDigester performance improvement [#133](https://github.com/atomashpolskiy/bt/issues/133)
+* Fix NullPointerException in SocketChannelHandler.flush()
+* Do not throw "Unexpectedly interrupted" exception when message loop is shutdown
+* Fix missing breaks in MetadataFetchStage which could led to hang-ups
+* Indicate the listening TCP port in thread names
+* Fix ConcurrentModificationException in LocalServiceDiscoveryService
+* Fix memory leak in BtRuntime by making sure that shutdown hook is removed after shutdown is complete
+* Fix memory leak in event bus mechanism by making sure that torrent listeners are removed when torrent is stopped
+* Ensure that torrent descriptor is inactivated when BtClient.stop() is invoked
+* Multiple minor improvements to reduce memory allocations
+* More descriptive error message when there's insufficient room in buffer to read an integer
+* Implement LRU cache for open file handles (fixes issues with torrents with many files)
+* Fix NullPointerException in AdhocTorrentRegistry.unregister(TorrentId)
+* Updated the file I/O APIs to use FileChannel read/write so that multiple threads can concurrently read/write to different sections of an open file
+* Add API to forcefully flush torrent data to persistent storage 
+* BTInteger uses Integer, Long, or BigInteger depending upon the number for space/performance savings
+* Download stage now uses a latch, rather than sleeping, to determine when the download is finished to go onto the seeding stage
+* Eliminate a 1 second wait for the initial torrent download by updating interested peers immediately if there are currently zero peers that the client is interested in
+* Torrent chunk verification now uses Stream APIs with a custom ForkJoinPool (if a desired amount of parallelism is requested) rather than an executor
+* DefaultDataDescriptor.filesForPieces now uses a List for indices rather than a map
+* LocalBitfield now uses a Copy On Write (COW) strategy for skipped pieces rathen than locking
+* PeerBitfields are read with BitSet.valueOf() rather than setting each Bit individually
+* Irrelevant pieces are filtered out of a bitset before they reach the piece selectors
+* The rarest piece selector now uses bucket sort based on max peer count rather than a MinHeap
+* The randomized rarest piece selector uses a precomputed random shuffle order to reduce the overhead of random piece shuffling
+* Fix double release issue in DefaultBorrowedBuffer, which eliminates the harmless exception "Buffer is locked and can't be released" that occured sometimes
 
 ## 1.9
 
