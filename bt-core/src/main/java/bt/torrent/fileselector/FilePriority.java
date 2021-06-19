@@ -17,12 +17,27 @@
 package bt.torrent.fileselector;
 
 /**
- * An enum which specifies the priority of a file for downloading
+ * An enum which specifies the priority of a file for downloading.
  *
  * @since 1.10
  */
 public enum FilePriority {
-    SKIP, // skip this file
-    NORMAL_PRIORITY, // download this file with normal priority
-    HIGH_PRIORITY; // download this file with high priority
+    /**
+     * Skip this file.
+     *
+     * @since 1.10
+     */
+    SKIP,
+    /**
+     * Download this file with normal priority.
+     *
+     * @since 1.10
+     */
+    NORMAL_PRIORITY,
+    /**
+     * Download this file with high priority.
+     *
+     * @since 1.10
+     */
+    HIGH_PRIORITY
 }

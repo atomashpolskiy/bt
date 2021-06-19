@@ -18,7 +18,6 @@ package bt.torrent.fileselector;
 
 import bt.metainfo.TorrentFile;
 
-import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -48,6 +47,9 @@ public abstract class TorrentFileSelector implements FilePrioritySkipSelector {
      */
     protected abstract SelectionResult select(TorrentFile file);
 
+    /**
+     * @since 1.10
+     */
     @Override
     public FilePriority prioritize(TorrentFile file) {
         return select(file).shouldSkip() ? FilePriority.SKIP : FilePriority.NORMAL_PRIORITY;
