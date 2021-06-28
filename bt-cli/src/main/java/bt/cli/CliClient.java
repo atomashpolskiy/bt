@@ -39,6 +39,7 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,6 +60,9 @@ public class CliClient  {
 
     static {
         registerLog4jShutdownHook();
+        // install JUL-to-SLF4J bridge
+        java.util.logging.LogManager.getLogManager().reset();
+        SLF4JBridgeHandler.install();
     }
 
     public static void main(String[] args) throws IOException {
