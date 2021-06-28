@@ -54,6 +54,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -99,6 +100,8 @@ public class MldhtService implements DHTService {
     private final Set<PortMapper> portMappers;
     private final TorrentRegistry torrentRegistry;
 
+    private final AtomicBoolean started;
+
     @Inject
     public MldhtService(IRuntimeLifecycleBinder lifecycleBinder, Config config, DHTConfig dhtConfig,
                         Set<PortMapper> portMappers, TorrentRegistry torrentRegistry, EventSource eventSource) {
@@ -111,6 +114,7 @@ public class MldhtService implements DHTService {
         this.bootstrapNodes = dhtConfig.getBootstrapNodes();
         this.portMappers = portMappers;
         this.torrentRegistry = torrentRegistry;
+        this.started = new AtomicBoolean(false);
 
         eventSource.onTorrentStarted(null, e -> onTorrentStarted(e.getTorrentId()));
 
@@ -166,8 +170,8 @@ public class MldhtService implements DHTService {
         };
     }
 
-    private void start() {
-        if (!dht.isRunning()) {
+    private synchronized void start() {
+        if (started.compareAndSet(false, true)) {
             try {
                 dht.start(dhtConfig);
                 if (useRouterBootstrap) {
@@ -196,17 +200,21 @@ public class MldhtService implements DHTService {
                 }));
     }
 
-    private void onTorrentStarted(TorrentId torrentId) {
-        torrentRegistry.getDescriptor(torrentId).ifPresent(td -> {
-            DataDescriptor dd = td.getDataDescriptor();
-            boolean seed = (dd != null) && (dd.getBitfield().getPiecesIncomplete() == 0);
-            dht.getDatabase().store(new Key(torrentId.getBytes()),
-                    PeerAddressDBItem.createFromAddress(config.getAcceptorAddress(), config.getAcceptorPort(), seed));
-        });
+    private synchronized void onTorrentStarted(TorrentId torrentId) {
+        if (started.get()) {
+            torrentRegistry.getDescriptor(torrentId).ifPresent(td -> {
+                DataDescriptor dd = td.getDataDescriptor();
+                boolean seed = (dd != null) && (dd.getBitfield().getPiecesIncomplete() == 0);
+                dht.getDatabase().store(new Key(torrentId.getBytes()),
+                        PeerAddressDBItem.createFromAddress(config.getAcceptorAddress(), config.getAcceptorPort(), seed));
+            });
+        }
     }
 
-    private void shutdown() {
-        dht.stop();
+    private synchronized void shutdown() {
+        if (started.compareAndSet(true, false)) {
+            dht.stop();
+        }
     }
 
     @Override
