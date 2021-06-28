@@ -94,15 +94,6 @@ public class BtRuntime {
     private boolean manualShutdownOnly;
 
     BtRuntime(Injector injector, Config config) {
-        String threadName = String.format("%d.bt.runtime.shutdown-manager", config.getAcceptorPort());
-        this.hook = new Thread(threadName) {
-            @Override
-            public void run() {
-                shutdown();
-            }
-        };
-        Runtime.getRuntime().addShutdownHook(hook);
-
         this.injector = injector;
         this.config = config;
         this.knownClients = ConcurrentHashMap.newKeySet();
@@ -164,6 +155,15 @@ public class BtRuntime {
         if (started.compareAndSet(false, true)) {
             synchronized (lock) {
                 runHooks(LifecycleEvent.STARTUP, e -> LOGGER.error("Error on runtime startup", e));
+                // add JVM shutdown hook
+                String threadName = String.format("%d.bt.runtime.shutdown-manager", config.getAcceptorPort());
+                this.hook = new Thread(threadName) {
+                    @Override
+                    public void run() {
+                        shutdown();
+                    }
+                };
+                Runtime.getRuntime().addShutdownHook(hook);
             }
         }
     }
@@ -227,14 +227,17 @@ public class BtRuntime {
                     }
                 });
 
-                runHooks(LifecycleEvent.SHUTDOWN, this::onShutdownHookError);
-                clientExecutor.shutdownNow();
+                try {
+                    runHooks(LifecycleEvent.SHUTDOWN, this::onShutdownHookError);
+                    clientExecutor.shutdownNow();
+                } finally {
+                    try {
+                        Runtime.getRuntime().removeShutdownHook(hook);
+                    } catch (IllegalStateException e) {
+                        // ISE means that the JVM is shutting down, no need to re-throw
+                    }
+                }
             }
-        }
-        try {
-            Runtime.getRuntime().removeShutdownHook(hook);
-        } catch (IllegalStateException e) {
-            // ISE means that the JVM is shutting down, no need to re-throw
         }
     }
 
