@@ -231,7 +231,11 @@ public class BtRuntime {
                 clientExecutor.shutdownNow();
             }
         }
-        Runtime.getRuntime().removeShutdownHook(hook);
+        try {
+            Runtime.getRuntime().removeShutdownHook(hook);
+        } catch (IllegalStateException e) {
+            // ISE means that the JVM is shutting down, no need to re-throw
+        }
     }
 
     private void runHooks(LifecycleEvent event, Consumer<Throwable> errorConsumer) {
