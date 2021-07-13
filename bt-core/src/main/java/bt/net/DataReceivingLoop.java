@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectableChannel;
@@ -123,6 +124,9 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
                         } catch (ClosedSelectorException e) {
                             // selector has been closed, there's no point to continue processing
                             throw e;
+                        } catch (EOFException e) {
+                            LOGGER.debug("Channel disconnected", e);
+                            selectedKeys.remove();
                         } catch (Exception e) {
                             LOGGER.error("Failed to process key", e);
                             selectedKeys.remove();
@@ -169,7 +173,7 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
     /**
      * @return true, if the key has been processed and can be removed
      */
-    private boolean processKey(final SelectionKey key) {
+    private boolean processKey(final SelectionKey key) throws IOException {
         ChannelHandlerContext handler = getHandlerContext(key);
         if (!key.isValid() || !key.isReadable()) {
             return true;

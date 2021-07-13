@@ -77,12 +77,12 @@ public class SocketChannelHandler implements ChannelHandler {
     }
 
     @Override
-    public boolean read() {
+    public boolean read() throws IOException {
         try {
             return processInboundData();
-        } catch (Exception e) {
+        } catch (RuntimeException | IOException e) {
             shutdown();
-            throw new RuntimeException("Unexpected error", e);
+            throw e;
         }
     }
 
