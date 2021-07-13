@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-package bt.bencoding;
+package bt.bencoding.serializers;
 
-import bt.bencoding.model.BEList;
+import bt.bencoding.BEType;
+import bt.bencoding.types.BEList;
 import bt.bencoding.model.BEObject;
 
 import java.util.ArrayList;
 import java.util.List;
 
-class BEListBuilder extends BEPrefixedTypeBuilder<BEList> {
+class BEListDecoder extends BEPrefixedTypeDecoder<BEList> {
 
     private final List<BEObject<?>> objects;
-    private BEObjectBuilder<? extends BEObject<?>> builder;
+    private BEObjectDecoder<? extends BEObject<?>> builder;
 
-    BEListBuilder() {
+    BEListDecoder() {
         objects = new ArrayList<>();
     }
 

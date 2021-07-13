@@ -17,14 +17,14 @@
 package bt.metainfo;
 
 import bt.BtException;
-import bt.bencoding.BEParser;
+import bt.bencoding.serializers.BEParser;
 import bt.bencoding.BEType;
-import bt.bencoding.model.BEInteger;
-import bt.bencoding.model.BEList;
-import bt.bencoding.model.BEMap;
+import bt.bencoding.types.BEInteger;
+import bt.bencoding.types.BEList;
+import bt.bencoding.types.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEObjectModel;
-import bt.bencoding.model.BEString;
+import bt.bencoding.types.BEString;
 import bt.bencoding.model.ValidationResult;
 import bt.bencoding.model.YamlBEObjectModelLoader;
 import bt.service.CryptoUtil;
@@ -35,8 +35,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,33 +46,16 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- *<p><b>Note that this class implements a service.
+ * <p><b>Note that this class implements a service.
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
 public class MetadataService implements IMetadataService {
     private static final Logger LOGGER = LoggerFactory.getLogger(MetadataService.class);
 
-    private static final String ANNOUNCE_KEY = "announce";
-    private static final String ANNOUNCE_LIST_KEY = "announce-list";
-    private static final String INFOMAP_KEY = "info";
-    private static final String TORRENT_NAME_KEY = "name";
-    private static final String CHUNK_SIZE_KEY = "piece length";
-    private static final String CHUNK_HASHES_KEY = "pieces";
-    private static final String TORRENT_SIZE_KEY = "length";
-    private static final String FILES_KEY = "files";
-    private static final String FILE_SIZE_KEY = "length";
-    private static final String FILE_PATH_ELEMENTS_KEY = "path";
-    private static final String PRIVATE_KEY = "private";
-    private static final String CREATION_DATE_KEY = "creation date";
-    private static final String CREATED_BY_KEY = "created by";
-
     private BEObjectModel torrentModel;
     private BEObjectModel infodictModel;
-    private Charset defaultCharset;
 
     public MetadataService() {
-        this.defaultCharset = StandardCharsets.UTF_8;
-
         try {
             try (InputStream in = MetadataService.class.getResourceAsStream("/metainfo.yml")) {
                 this.torrentModel = new YamlBEObjectModelLoader().load(in);
@@ -116,13 +99,15 @@ public class MetadataService implements IMetadataService {
 
         BEMap metadata = parser.readMap();
 
-        ValidationResult validationResult = torrentModel.validate(metadata);;
+        ValidationResult validationResult = torrentModel.validate(metadata);
+        ;
         if (!validationResult.isSuccess()) {
             ValidationResult infodictValidationResult = infodictModel.validate(metadata);
             if (!infodictValidationResult.isSuccess()) {
                 throw new BtException("Validation failed for torrent metainfo:\n1. Standard torrent model: "
-                    + Arrays.toString(validationResult.getMessages().toArray())
-                        + "\n2. Standalone info dictionary model: " + Arrays.toString(infodictValidationResult.getMessages().toArray()));
+                        + Arrays.toString(validationResult.getMessages().toArray())
+                        + "\n2. Standalone info dictionary model: " +
+                        Arrays.toString(infodictValidationResult.getMessages().toArray()));
             }
         }
 
@@ -130,9 +115,9 @@ public class MetadataService implements IMetadataService {
         TorrentSource source;
 
         Map<String, BEObject<?>> root = metadata.getValue();
-        if (root.containsKey(INFOMAP_KEY)) {
+        if (root.containsKey(MetadataConstants.INFOMAP_KEY)) {
             // standard BEP-3 format
-            infoDictionary = (BEMap) root.get(INFOMAP_KEY);
+            infoDictionary = (BEMap) root.get(MetadataConstants.INFOMAP_KEY);
             source = new TorrentSource() {
                 @Override
                 public Optional<byte[]> getMetadata() {
@@ -167,34 +152,35 @@ public class MetadataService implements IMetadataService {
 
             Map<String, BEObject<?>> infoMap = infoDictionary.getValue();
 
-            if (infoMap.get(TORRENT_NAME_KEY) != null) {
-                byte[] name = (byte[]) infoMap.get(TORRENT_NAME_KEY).getValue();
-                torrent.setName(new String(name, defaultCharset));
+            if (infoMap.get(MetadataConstants.TORRENT_NAME_KEY) != null) {
+                byte[] name = (byte[]) infoMap.get(MetadataConstants.TORRENT_NAME_KEY).getValue();
+                torrent.setName(new String(name, StandardCharsets.UTF_8));
             }
 
-            BEInteger chunkSize = (BEInteger) infoMap.get(CHUNK_SIZE_KEY);
+            BEInteger chunkSize = (BEInteger) infoMap.get(MetadataConstants.CHUNK_SIZE_KEY);
             torrent.setChunkSize(chunkSize.longValueExact());
 
-            byte[] chunkHashes = (byte[]) infoMap.get(CHUNK_HASHES_KEY).getValue();
+            byte[] chunkHashes = (byte[]) infoMap.get(MetadataConstants.CHUNK_HASHES_KEY).getValue();
             torrent.setChunkHashes(chunkHashes);
 
-            if (infoMap.get(TORRENT_SIZE_KEY) != null) {
-                BEInteger torrentSize = (BEInteger) infoMap.get(TORRENT_SIZE_KEY);
+            if (infoMap.get(MetadataConstants.TORRENT_SIZE_KEY) != null) {
+                BEInteger torrentSize = (BEInteger) infoMap.get(MetadataConstants.TORRENT_SIZE_KEY);
                 torrent.setSize(torrentSize.longValueExact());
 
             } else {
-                List<BEMap> files = (List<BEMap>) infoMap.get(FILES_KEY).getValue();
+                List<BEMap> files = (List<BEMap>) infoMap.get(MetadataConstants.FILES_KEY).getValue();
                 List<TorrentFile> torrentFiles = new ArrayList<>(files.size() + 1);
                 long torrentSize = 0;
                 for (BEMap file : files) {
                     Map<String, BEObject<?>> fileMap = file.getValue();
 
-                    Number fileSize = (Number) fileMap.get(FILE_SIZE_KEY).getValue();
+                    Number fileSize = (Number) fileMap.get(MetadataConstants.FILE_SIZE_KEY).getValue();
 
-                    List<BEString> pathElements = (List<BEString>) fileMap.get(FILE_PATH_ELEMENTS_KEY).getValue();
+                    List<BEString> pathElements =
+                            (List<BEString>) fileMap.get(MetadataConstants.FILE_PATH_ELEMENTS_KEY).getValue();
 
                     List<String> elementsList = pathElements.stream()
-                            .map(bytes -> bytes.getValue(defaultCharset))
+                            .map(BEString::getValueAsString)
                             .collect(Collectors.toList());
 
                     DefaultTorrentFile torrentFile = new DefaultTorrentFile(fileSize.longValue(), elementsList);
@@ -208,7 +194,7 @@ public class MetadataService implements IMetadataService {
             }
 
             boolean isPrivate = false;
-            final BEInteger privateFlag = (BEInteger) infoMap.get(PRIVATE_KEY);
+            final BEInteger privateFlag = (BEInteger) infoMap.get(MetadataConstants.PRIVATE_KEY);
             if (privateFlag != null) {
                 if (1L == privateFlag.longValueExact()) {
                     torrent.setPrivate(true);
@@ -216,43 +202,47 @@ public class MetadataService implements IMetadataService {
                 }
             }
 
-            if (root.get(CREATION_DATE_KEY) != null) {
-                BEInteger epochSecond = (BEInteger) root.get(CREATION_DATE_KEY);
+            if (root.get(MetadataConstants.CREATION_DATE_KEY) != null) {
+                BEInteger epochSecond = (BEInteger) root.get(MetadataConstants.CREATION_DATE_KEY);
                 // TODO: some torrents contain bogus values here (like 101010101010), which causes an exception
-                torrent.setCreationDate(Instant.ofEpochSecond(epochSecond.longValueExact()));
+                try {
+                    torrent.setCreationDate(Instant.ofEpochSecond(epochSecond.getValue().longValue()));
+                } catch (DateTimeException ex) {
+                    System.out.println("Warning: could not set invalid creation date: " + epochSecond);
+                }
             }
 
-            if (root.get(CREATED_BY_KEY) != null) {
-                byte[] createdBy = (byte[]) root.get(CREATED_BY_KEY).getValue();
-                torrent.setCreatedBy(new String(createdBy, defaultCharset));
+            if (root.get(MetadataConstants.CREATED_BY_KEY) != null) {
+                byte[] createdBy = (byte[]) root.get(MetadataConstants.CREATED_BY_KEY).getValue();
+                torrent.setCreatedBy(new String(createdBy, StandardCharsets.UTF_8));
             }
 
             AnnounceKey announceKey = null;
             // TODO: support for private torrents with multiple trackers
-            if (!isPrivate && root.containsKey(ANNOUNCE_LIST_KEY)) {
+            if (!isPrivate && root.containsKey(MetadataConstants.ANNOUNCE_LIST_KEY)) {
 
                 List<List<String>> trackerUrls;
 
-                BEList announceList = (BEList) root.get(ANNOUNCE_LIST_KEY);
+                BEList announceList = (BEList) root.get(MetadataConstants.ANNOUNCE_LIST_KEY);
                 List<BEList> tierList = (List<BEList>) announceList.getValue();
                 trackerUrls = new ArrayList<>(tierList.size() + 1);
                 for (BEList tierElement : tierList) {
 
-                    List<String> tierTackerUrls;
+                    List<String> tierTrackerUrls;
 
                     List<BEString> trackerUrlList = (List<BEString>) tierElement.getValue();
-                    tierTackerUrls = new ArrayList<>(trackerUrlList.size() + 1);
+                    tierTrackerUrls = new ArrayList<>(trackerUrlList.size() + 1);
                     for (BEString trackerUrlElement : trackerUrlList) {
-                        tierTackerUrls.add(trackerUrlElement.getValue(defaultCharset));
+                        tierTrackerUrls.add(trackerUrlElement.getValueAsString());
                     }
-                    trackerUrls.add(tierTackerUrls);
+                    trackerUrls.add(tierTrackerUrls);
                 }
 
                 announceKey = new AnnounceKey(trackerUrls);
 
-            } else if (root.containsKey(ANNOUNCE_KEY)) {
-                byte[] trackerUrl = (byte[]) root.get(ANNOUNCE_KEY).getValue();
-                announceKey = new AnnounceKey(new String(trackerUrl, defaultCharset));
+            } else if (root.containsKey(MetadataConstants.ANNOUNCE_KEY)) {
+                byte[] trackerUrl = (byte[]) root.get(MetadataConstants.ANNOUNCE_KEY).getValue();
+                announceKey = new AnnounceKey(new String(trackerUrl, StandardCharsets.UTF_8));
             }
 
             if (announceKey != null) {

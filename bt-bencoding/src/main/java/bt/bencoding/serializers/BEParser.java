@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-package bt.bencoding;
+package bt.bencoding.serializers;
 
-import bt.bencoding.model.BEInteger;
-import bt.bencoding.model.BEList;
-import bt.bencoding.model.BEMap;
+import bt.bencoding.BEType;
+import bt.bencoding.types.BEInteger;
+import bt.bencoding.types.BEList;
+import bt.bencoding.types.BEMap;
 import bt.bencoding.model.BEObject;
-import bt.bencoding.model.BEString;
+import bt.bencoding.types.BEString;
+import com.google.common.base.CharMatcher;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,6 +35,7 @@ import java.util.Objects;
  * @since 1.0
  */
 public class BEParser implements AutoCloseable {
+    public static final CharMatcher IS_DIGIT = CharMatcher.inRange('0', '9');
 
     static final char EOF = 'e';
 
@@ -115,7 +118,7 @@ public class BEParser implements AutoCloseable {
     }
 
     static BEType getTypeForPrefix(char c) {
-        if (Character.isDigit(c)) {
+        if (IS_DIGIT.matches(c)) {
             return BEType.STRING;
         }
         switch (c) {
@@ -134,19 +137,19 @@ public class BEParser implements AutoCloseable {
         }
     }
 
-    static BEObjectBuilder<? extends BEObject<?>> builderForType(BEType type) {
+    static BEObjectDecoder<? extends BEObject<?>> builderForType(BEType type) {
         switch (type) {
             case STRING: {
-                return new BEStringBuilder();
+                return new BEStringDecoder();
             }
             case INTEGER: {
-                return new BEIntegerBuilder();
+                return new BEIntegerDecoder();
             }
             case LIST: {
-                return new BEListBuilder();
+                return new BEListDecoder();
             }
             case MAP: {
-                return new BEMapBuilder();
+                return new BEMapDecoder();
             }
             default: {
                 throw new IllegalStateException("Unknown type: " + type.name().toLowerCase());
@@ -161,7 +164,7 @@ public class BEParser implements AutoCloseable {
      * @since 1.0
      */
     public BEString readString() {
-        return readObject(BEType.STRING, BEStringBuilder.class);
+        return readObject(BEType.STRING, BEStringDecoder.class);
     }
 
     /**
@@ -171,7 +174,7 @@ public class BEParser implements AutoCloseable {
      * @since 1.0
      */
     public BEInteger readInteger() {
-        return readObject(BEType.INTEGER, BEIntegerBuilder.class);
+        return readObject(BEType.INTEGER, BEIntegerDecoder.class);
     }
 
     /**
@@ -181,7 +184,7 @@ public class BEParser implements AutoCloseable {
      * @since 1.0
      */
     public BEList readList() {
-        return readObject(BEType.LIST, BEListBuilder.class);
+        return readObject(BEType.LIST, BEListDecoder.class);
     }
 
     /**
@@ -191,10 +194,10 @@ public class BEParser implements AutoCloseable {
      * @since 1.0
      */
     public BEMap readMap() {
-        return readObject(BEType.MAP, BEMapBuilder.class);
+        return readObject(BEType.MAP, BEMapDecoder.class);
     }
 
-    private <T extends BEObject> T readObject(BEType type, Class<? extends BEObjectBuilder<T>> builderClass) {
+    private <T extends BEObject> T readObject(BEType type, Class<? extends BEObjectDecoder<T>> builderClass) {
 
         assertType(type);
 
@@ -203,7 +206,7 @@ public class BEParser implements AutoCloseable {
         if (result == null) {
             try {
                 // relying on the default constructor being present
-                parsedObject = result = scanner.readObject(builderClass.newInstance());
+                parsedObject = result = scanner.readObject(builderClass.getDeclaredConstructor().newInstance());
             } catch (Exception e) {
                 throw new BtParseException("Failed to read from encoded data", scanner.getScannedContents(), e);
             }

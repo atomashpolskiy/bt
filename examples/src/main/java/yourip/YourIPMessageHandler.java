@@ -16,8 +16,8 @@
 
 package yourip;
 
-import bt.bencoding.BEParser;
-import bt.bencoding.model.BEMap;
+import bt.bencoding.serializers.BEParser;
+import bt.bencoding.types.BEMap;
 import bt.net.buffer.ByteBufferView;
 import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;

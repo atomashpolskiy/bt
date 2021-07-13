@@ -16,7 +16,7 @@
 
 package bt.bencoding.model;
 
-import bt.bencoding.BEParser;
+import bt.bencoding.serializers.BEParser;
 import org.junit.Before;
 import org.junit.Test;
 

@@ -17,12 +17,7 @@
 package bt.data;
 
 import bt.metainfo.Torrent;
-import bt.metainfo.TorrentFile;
-import bt.processor.ProcessingContext;
 import bt.torrent.callbacks.FileDownloadCompleteCallback;
-
-import java.util.Optional;
-import java.util.function.BiConsumer;
 
 /**
  * Factory of torrent data descriptors.

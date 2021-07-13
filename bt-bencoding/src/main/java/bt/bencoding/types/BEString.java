@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
-package bt.bencoding.model;
+package bt.bencoding.types;
 
-import bt.bencoding.BEEncoder;
+import bt.bencoding.model.BEObject;
+import bt.bencoding.serializers.BEEncoder;
 import bt.bencoding.BEType;
+import com.google.common.base.Suppliers;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.function.Supplier;
 
 /**
  * BEncoded string.
@@ -31,12 +34,10 @@ import java.util.Arrays;
  * @since 1.0
  */
 public class BEString implements BEObject<byte[]> {
+    private static final BEEncoder ENCODER = BEEncoder.encoder();
+    private final byte[] content;
 
-    private byte[] content;
-    private BEEncoder encoder;
-
-    private volatile String stringValue;
-    private final Object lock;
+    private final Supplier<String> stringValue;
 
     /**
      * @param content Binary representation of this string, as read from source.
@@ -45,8 +46,12 @@ public class BEString implements BEObject<byte[]> {
      */
     public BEString(byte[] content) {
         this.content = content;
-        this.encoder = BEEncoder.encoder();
-        this.lock = new Object();
+        stringValue = Suppliers.memoize(() -> new String(content, StandardCharsets.UTF_8));
+    }
+
+    public BEString(String content) {
+        this.content = content.getBytes(StandardCharsets.UTF_8);
+        this.stringValue = () -> content;
     }
 
     @Override
@@ -66,11 +71,11 @@ public class BEString implements BEObject<byte[]> {
 
     @Override
     public void writeTo(OutputStream out) throws IOException {
-        encoder.encode(this, out);
+        ENCODER.encode(this, out);
     }
 
-    public String getValue(Charset charset) {
-        return new String(content, charset);
+    public String getValueAsString() {
+        return new String(content, StandardCharsets.UTF_8);
     }
 
     @Override
@@ -80,8 +85,7 @@ public class BEString implements BEObject<byte[]> {
 
     @Override
     public boolean equals(Object obj) {
-
-        if (obj == null || !(obj instanceof BEString)) {
+        if (!(obj instanceof BEString)) {
             return false;
         }
 
@@ -94,13 +98,6 @@ public class BEString implements BEObject<byte[]> {
 
     @Override
     public String toString() {
-        if (stringValue == null) {
-            synchronized (lock) {
-                if (stringValue == null) {
-                    stringValue = new String(content, StandardCharsets.UTF_8);
-                }
-            }
-        }
-        return stringValue;
+        return stringValue.get();
     }
 }

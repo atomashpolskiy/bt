@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-package bt.bencoding;
+package bt.bencoding.serializers;
 
+import bt.bencoding.BEType;
 import bt.bencoding.model.BEObject;
 
 import java.io.ByteArrayOutputStream;
 
-abstract class BEPrefixedTypeBuilder<T extends BEObject> implements BEObjectBuilder<T> {
+abstract class BEPrefixedTypeDecoder<T extends BEObject> implements BEObjectDecoder<T> {
 
-    private ByteArrayOutputStream buf;
+    private final ByteArrayOutputStream buf;
     private boolean receivedPrefix;
     private boolean receivedEOF;
 
-    BEPrefixedTypeBuilder() {
+    BEPrefixedTypeDecoder() {
         buf = new ByteArrayOutputStream();
     }
 

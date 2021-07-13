@@ -26,9 +26,12 @@ import bt.service.CryptoUtil;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import static bt.data.ChunkDescriptorTestUtil.assertFileHasContents;
@@ -40,18 +43,40 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * Tests for ChunkDescriptor digests
+ */
+@RunWith(Parameterized.class)
 public class ChunkDescriptor_FileStorageUnitTest {
 
     @Rule
     public TestFileSystemStorage storage = new TestFileSystemStorage();
 
+    // vary the digest buffer size to check potential corner cases
+    private final int digestBufferSize;
     private ChunkVerifier verifier;
     private IDataDescriptorFactory dataDescriptorFactory;
 
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(
+                new Object[]{1},
+                new Object[]{2},
+                new Object[]{4},
+                new Object[]{8},
+                new Object[]{9},
+                new Object[]{32},
+                new Object[]{1 << 14}
+        );
+    }
+
+    public ChunkDescriptor_FileStorageUnitTest(int digestBufferSize) {
+        this.digestBufferSize = digestBufferSize;
+    }
+
     @Before
     public void before() {
-        int step = 8;
-        Digester digester = SHA1Digester.rolling(step);
+        Digester digester = SHA1Digester.rolling(digestBufferSize);
         int numOfHashingThreads = 4;
         this.verifier = new DefaultChunkVerifier(digester, numOfHashingThreads);
         int transferBlockSize = 4;
@@ -74,7 +99,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
         long fileSize = chunkSize * 4;
 
         Torrent torrent = mockTorrent(fileName, fileSize, chunkSize,
-                new byte[][] {
+                new byte[][]{
                         CryptoUtil.getSha1Digest(Arrays.copyOfRange(SINGLE_FILE, 0, 16)),
                         CryptoUtil.getSha1Digest(Arrays.copyOfRange(SINGLE_FILE, 16, 32)),
                         CryptoUtil.getSha1Digest(Arrays.copyOfRange(SINGLE_FILE, 32, 48)),

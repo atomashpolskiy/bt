@@ -14,48 +14,53 @@
  * limitations under the License.
  */
 
-package bt.bencoding;
+package bt.bencoding.serializers;
 
-import bt.bencoding.model.BEString;
+import bt.bencoding.BEType;
+import bt.bencoding.types.BEString;
 
-import java.io.ByteArrayOutputStream;
-
-class BEStringBuilder implements BEObjectBuilder<BEString> {
-
+class BEStringDecoder implements BEObjectDecoder<BEString> {
     static final char DELIMITER = ':';
 
-    private ByteArrayOutputStream buf;
-    private int length;
+    private byte[] buf;
+    private long length;
     private int bytesAcceptedCount;
     private boolean shouldReadBody;
 
-    BEStringBuilder() {
-        buf = new ByteArrayOutputStream();
+    BEStringDecoder() {
     }
 
     @Override
     public boolean accept(int b) {
-
-        char c = (char) b;
         if (shouldReadBody) {
             if (bytesAcceptedCount + 1 > length) {
                 return false;
             }
+            buf[bytesAcceptedCount] = (byte) b;
         } else {
-            if (bytesAcceptedCount == 0 && !Character.isDigit(c)) {
-                throw new IllegalArgumentException(
-                        "Unexpected token while reading string's length (as ASCII char): " + c);
-            }
-            if (c == DELIMITER) {
+            if (b == DELIMITER) {
+                if (bytesAcceptedCount == 0) {
+                    throw new IllegalArgumentException(
+                            "Unexpected delimiter found before string's length (as ASCII char): " + (char) b);
+                }
+
                 shouldReadBody = true;
                 bytesAcceptedCount = 0;
-                length = Integer.parseInt(buf.toString());
-                buf = new ByteArrayOutputStream(length);
+                buf = new byte[(int) length];
                 return true;
+            } else {
+                if (!BEParser.IS_DIGIT.matches((char) b) || (bytesAcceptedCount > 0 && length == 0)) {
+                    throw new IllegalArgumentException(
+                            "Unexpected token while reading string's length (as ASCII char): " + (char) b);
+                }
+                length = 10 * length + (b - '0');
+                if (length > Integer.MAX_VALUE) {
+                    throw new IllegalArgumentException(
+                            "Cannot read string longer than " + Integer.MAX_VALUE + " characters.");
+                }
             }
         }
 
-        buf.write(b);
         bytesAcceptedCount++;
         return true;
     }
@@ -68,7 +73,7 @@ class BEStringBuilder implements BEObjectBuilder<BEString> {
         if (bytesAcceptedCount < length) {
             throw new IllegalStateException("Can't build string: insufficient content");
         }
-        return new BEString(buf.toByteArray());
+        return new BEString(buf);
     }
 
     @Override

@@ -16,9 +16,9 @@
 
 package yourip;
 
-import bt.bencoding.model.BEMap;
+import bt.bencoding.types.BEMap;
 import bt.bencoding.model.BEObject;
-import bt.bencoding.model.BEString;
+import bt.bencoding.types.BEString;
 import bt.protocol.extended.ExtendedMessage;
 
 import java.io.IOException;

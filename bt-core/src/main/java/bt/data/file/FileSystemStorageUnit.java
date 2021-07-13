@@ -28,20 +28,27 @@ import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-class FileSystemStorageUnit implements StorageUnit {
+public class FileSystemStorageUnit implements StorageUnit {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FileSystemStorageUnit.class);
 
     private final OpenFileCache cache;
     private final FileCacheKey key;
-    private Path parent, file;
+    private final Path file;
     private SeekableByteChannel sbc;
     private final long capacity;
 
     FileSystemStorageUnit(OpenFileCache cache, Path root, String path, long capacity) {
+        this(cache, root.resolve(path), capacity);
+    }
+
+    public FileSystemStorageUnit(OpenFileCache cache, Path file) {
+        this(cache, file, getSize(file));
+    }
+
+    private FileSystemStorageUnit(OpenFileCache cache, Path file, long capacity) {
         this.cache = cache;
-        this.file = root.resolve(path);
-        this.parent = file.getParent();
+        this.file = file;
         this.key = new FileCacheKey(file, capacity);
         this.capacity = capacity;
     }
@@ -87,6 +94,16 @@ class FileSystemStorageUnit implements StorageUnit {
 
     @Override
     public long size() {
+        return getSize(file);
+    }
+
+    /**
+     * Reads the size of the passed in file
+     *
+     * @param file the file to read the size of
+     * @return the file size
+     */
+    private static long getSize(Path file) {
         try {
             return Files.exists(file) ? Files.size(file) : 0;
         } catch (IOException e) {
@@ -100,7 +117,7 @@ class FileSystemStorageUnit implements StorageUnit {
     }
 
     @Override
-    public void close() throws IOException{
+    public void close() throws IOException {
         cache.close(key);
     }
 }

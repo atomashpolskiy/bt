@@ -25,15 +25,15 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
+/**
+ * A class to produce arbitrary digests for {@link DataRange} or {@link Range}. Uses java security libraries to produce the digests
+ */
 public class JavaSecurityDigester implements Digester {
 
     private final String algorithm;
     private final int step;
-    private final SoftThreadLocal<byte[]> bufferTL;
-    private final SoftThreadLocal<MessageDigest> digestTL = new SoftThreadLocal<>(() -> createDigest(), messageDigest -> {
-        messageDigest.reset();
-        return messageDigest;
-    });
+    private final ThreadLocal<byte[]> bufferTL;
+    private final ThreadLocal<MessageDigest> digestTL = ThreadLocal.withInitial(this::createDigest);
 
     public JavaSecurityDigester(String algorithm, int step) {
         try {
@@ -44,7 +44,7 @@ public class JavaSecurityDigester implements Digester {
         }
         this.algorithm = algorithm;
         this.step = step;
-        bufferTL = new SoftThreadLocal<>(() -> new byte[step]);
+        bufferTL = ThreadLocal.withInitial(() -> new byte[step]);
     }
 
     public String getAlgorithm() {
@@ -53,16 +53,17 @@ public class JavaSecurityDigester implements Digester {
 
     @Override
     public byte[] digest(DataRange data) {
-        MessageDigest digest = digestTL.getValue();
+        final MessageDigest digest = getThreadLocalDigest();
+        final byte[] bytes = bufferTL.get();
+        final ByteBuffer wrap = ByteBuffer.wrap(bytes);
 
         data.visitUnits((unit, off, lim) -> {
             long remaining = lim - off;
             if (remaining > Integer.MAX_VALUE) {
                 throw new BtException("Too much data -- can't read to buffer");
             }
-            byte[] bytes = bufferTL.getValue();
             do {
-                ByteBuffer wrap = ByteBuffer.wrap(bytes);
+                wrap.clear();
                 if (remaining < step) {
                     wrap.limit((int) remaining);
                 }
@@ -84,16 +85,19 @@ public class JavaSecurityDigester implements Digester {
 
     @Override
     public byte[] digestForced(DataRange data) {
-        MessageDigest digest = digestTL.getValue();
+        final MessageDigest digest = getThreadLocalDigest();
+
+        final byte[] bytes = bufferTL.get();
+        final ByteBuffer buffer = ByteBuffer.wrap(bytes);
 
         data.visitUnits((unit, off, lim) -> {
             long remaining = lim - off;
+            // todo: is this check necessary? Why can't this be read to the buffer in chunks
             if (remaining > Integer.MAX_VALUE) {
                 throw new BtException("Too much data -- can't read to buffer");
             }
-            byte[] bytes = bufferTL.getValue();
-            ByteBuffer buffer = ByteBuffer.wrap(bytes);
             do {
+                buffer.clear();
                 if (remaining < step) {
                     buffer.limit((int) remaining);
                 }
@@ -101,7 +105,7 @@ public class JavaSecurityDigester implements Digester {
                 if (buffer.hasRemaining()) {
                     throw new IllegalStateException("Failed to read data fully: " + buffer.remaining() + " bytes remaining");
                 }
-                digest.update(bytes,0, buffer.flip().limit());
+                digest.update(bytes,0, buffer.position());
                 remaining -= step;
                 off += step;
             } while (remaining > 0);
@@ -114,7 +118,7 @@ public class JavaSecurityDigester implements Digester {
 
     @Override
     public byte[] digest(Range<?> data) {
-        MessageDigest digest = digestTL.getValue();
+        MessageDigest digest = getThreadLocalDigest();
 
         long len = data.length();
         if (len <= step) {
@@ -127,6 +131,12 @@ public class JavaSecurityDigester implements Digester {
         return digest.digest();
     }
 
+    private MessageDigest getThreadLocalDigest() {
+        MessageDigest digest = digestTL.get();
+        digest.reset();
+        return digest;
+    }
+
     private MessageDigest createDigest() {
         try {
             return MessageDigest.getInstance(algorithm);
@@ -134,5 +144,10 @@ public class JavaSecurityDigester implements Digester {
             // not going to happen
             throw new BtException("Unexpected error", e);
         }
+    }
+
+    @Override
+    public int length() {
+        return digestTL.get().getDigestLength();
     }
 }

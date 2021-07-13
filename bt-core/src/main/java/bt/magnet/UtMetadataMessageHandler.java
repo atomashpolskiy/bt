@@ -16,9 +16,9 @@
 
 package bt.magnet;
 
-import bt.bencoding.BEParser;
-import bt.bencoding.model.BEInteger;
-import bt.bencoding.model.BEMap;
+import bt.bencoding.serializers.BEParser;
+import bt.bencoding.types.BEInteger;
+import bt.bencoding.types.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.net.buffer.ByteBufferView;
 import bt.protocol.DecodingContext;

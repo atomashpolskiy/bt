@@ -17,9 +17,9 @@
 package bt.peerexchange;
 
 import bt.BtException;
-import bt.bencoding.model.BEMap;
+import bt.bencoding.types.BEMap;
 import bt.bencoding.model.BEObject;
-import bt.bencoding.model.BEString;
+import bt.bencoding.types.BEString;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.crypto.EncryptionPolicy;

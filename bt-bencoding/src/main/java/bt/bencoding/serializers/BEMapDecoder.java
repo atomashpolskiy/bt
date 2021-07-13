@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package bt.bencoding;
+package bt.bencoding.serializers;
 
-import bt.bencoding.model.BEMap;
+import bt.bencoding.BEType;
+import bt.bencoding.types.BEMap;
 import bt.bencoding.model.BEObject;
 
 import java.nio.charset.Charset;
@@ -24,24 +25,20 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-class BEMapBuilder extends BEPrefixedTypeBuilder<BEMap> {
-
+class BEMapDecoder extends BEPrefixedTypeDecoder<BEMap> {
     private final Map<String, BEObject<?>> map;
-    private BEStringBuilder keyBuilder;
-    private BEObjectBuilder<? extends BEObject<?>> valueBuilder;
+    private BEStringDecoder keyBuilder;
+    private BEObjectDecoder<? extends BEObject<?>> valueBuilder;
 
-    private Charset keyCharset;
-
-    BEMapBuilder() {
+    BEMapDecoder() {
         map = new HashMap<>();
-        keyCharset = StandardCharsets.UTF_8;
     }
 
     @Override
     protected boolean doAccept(int b) {
 
         if (keyBuilder == null) {
-            keyBuilder = new BEStringBuilder();
+            keyBuilder = new BEStringDecoder();
         }
         if (valueBuilder == null) {
             if (!keyBuilder.accept(b)) {
@@ -51,7 +48,7 @@ class BEMapBuilder extends BEPrefixedTypeBuilder<BEMap> {
             }
         } else {
             if (!valueBuilder.accept(b)) {
-                map.put(keyBuilder.build().getValue(keyCharset), valueBuilder.build());
+                map.put(keyBuilder.build().getValueAsString(), valueBuilder.build());
                 keyBuilder = null;
                 valueBuilder = null;
                 return accept(b, false);

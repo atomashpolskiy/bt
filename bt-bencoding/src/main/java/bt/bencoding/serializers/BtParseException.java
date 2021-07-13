@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package bt.bencoding;
+package bt.bencoding.serializers;
 
 /**
  * BEncoded document parse exception.

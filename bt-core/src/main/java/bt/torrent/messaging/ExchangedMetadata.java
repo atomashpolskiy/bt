@@ -75,7 +75,7 @@ class ExchangedMetadata {
         if (digest == null) {
             synchronized (digestLock) {
                 if (digest == null) {
-                    digest = SHA1Digester.rolling(1000000).digest(metadata);
+                    digest = SHA1Digester.newDigester().digest(metadata);
                 }
             }
         }

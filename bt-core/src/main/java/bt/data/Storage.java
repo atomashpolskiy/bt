@@ -29,7 +29,7 @@ public interface Storage {
     /**
      * Get a storage unit for a particular torrent file.
      *
-     * @param torrent Torrent metainfo
+     * @param torrent     Torrent metainfo
      * @param torrentFile Torrent file metainfo
      * @return Storage unit for a single torrent file
      * @since 1.0

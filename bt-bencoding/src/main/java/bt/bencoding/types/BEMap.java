@@ -14,42 +14,45 @@
  * limitations under the License.
  */
 
-package bt.bencoding.model;
+package bt.bencoding.types;
 
-import bt.bencoding.BEEncoder;
 import bt.bencoding.BEType;
+import bt.bencoding.model.BEObject;
+import bt.bencoding.serializers.BEEncoder;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 /**
- * BEncoded list. May contain objects of different types.
+ * BEncoded dictionary.
  *
  * @since 1.0
  */
-public class BEList implements BEObject<List<? extends BEObject<?>>> {
+public class BEMap implements BEObject<Map<String, BEObject<?>>> {
+    private static final BEEncoder ENCODER = BEEncoder.encoder();
+    private final byte[] content;
+    private final Map<String, BEObject<?>> value;
 
-    private byte[] content;
-    private List<? extends BEObject<?>> value;
-    private BEEncoder encoder;
+    public BEMap(Map<String, BEObject<?>> value) {
+        this(null, value);
+    }
 
     /**
-     * @param content Binary representation of this list, as read from source.
-     * @param value Parsed value
+     * @param content Binary representation of this dictionary, as read from source.
+     * @param value   Parsed value
      * @since 1.0
      */
-    public BEList(byte[] content, List<? extends BEObject<?>> value) {
+    public BEMap(byte[] content, Map<String, BEObject<?>> value) {
         this.content = content;
-        this.value = Collections.unmodifiableList(value);
-        encoder = BEEncoder.encoder();
+        this.value = Collections.unmodifiableMap(Objects.requireNonNull(value));
     }
 
     @Override
     public BEType getType() {
-        return BEType.LIST;
+        return BEType.MAP;
     }
 
     @Override
@@ -58,13 +61,13 @@ public class BEList implements BEObject<List<? extends BEObject<?>>> {
     }
 
     @Override
-    public List<? extends BEObject<?>> getValue() {
+    public Map<String, BEObject<?>> getValue() {
         return value;
     }
 
     @Override
     public void writeTo(OutputStream out) throws IOException {
-        encoder.encode(this, out);
+        ENCODER.encode(this, out);
     }
 
     @Override
@@ -75,7 +78,7 @@ public class BEList implements BEObject<List<? extends BEObject<?>>> {
     @Override
     public boolean equals(Object obj) {
 
-        if (obj == null || !(obj instanceof BEList)) {
+        if (!(obj instanceof BEMap)) {
             return false;
         }
 
@@ -83,11 +86,11 @@ public class BEList implements BEObject<List<? extends BEObject<?>>> {
             return true;
         }
 
-        return value.equals(((BEList) obj).getValue());
+        return value.equals(((BEMap) obj).getValue());
     }
 
     @Override
     public String toString() {
-        return Arrays.toString(value.toArray());
+        return value.toString();
     }
 }

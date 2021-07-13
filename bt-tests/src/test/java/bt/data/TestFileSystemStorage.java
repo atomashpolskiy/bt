@@ -24,6 +24,7 @@ import org.junit.rules.ExternalResource;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -50,6 +51,10 @@ class TestFileSystemStorage extends ExternalResource implements Storage {
     @Override
     public StorageUnit getUnit(Torrent torrent, TorrentFile torrentFile) {
         StorageUnit unit = getDelegate().getUnit(torrent, torrentFile);
+        return trackStorageUnit(unit);
+    }
+
+    private StorageUnit trackStorageUnit(StorageUnit unit) {
         units.add(unit);
         return unit;
     }

@@ -16,7 +16,7 @@
 
 package bt.net.extended;
 
-import bt.bencoding.model.BEInteger;
+import bt.bencoding.types.BEInteger;
 import bt.net.IPeerConnectionPool;
 import bt.net.InetPeer;
 import bt.protocol.extended.ExtendedHandshake;

@@ -16,8 +16,8 @@
 
 package bt.protocol.extended;
 
-import bt.bencoding.model.BEInteger;
-import bt.bencoding.model.BEString;
+import bt.bencoding.types.BEInteger;
+import bt.bencoding.types.BEString;
 import bt.metainfo.TorrentId;
 import bt.protocol.IExtendedHandshakeFactory;
 import bt.protocol.crypto.EncryptionPolicy;
