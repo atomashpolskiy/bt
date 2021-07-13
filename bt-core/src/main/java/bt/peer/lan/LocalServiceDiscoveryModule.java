@@ -22,6 +22,7 @@ import bt.net.PeerConnectionAcceptor;
 import bt.net.SharedSelector;
 import bt.net.SocketChannelConnectionAcceptor;
 import bt.service.IRuntimeLifecycleBinder;
+import bt.service.LifecycleBinding;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -94,9 +95,7 @@ public class LocalServiceDiscoveryModule implements Module {
                 .map(g -> new AnnounceGroupChannel(g, selector, info.getNetworkInterfaces()))
                 .collect(Collectors.toList());
 
-        lifecycleBinder.onShutdown(() -> {
-            groupChannels.forEach(AnnounceGroupChannel::closeQuietly);
-        });
+        lifecycleBinder.onShutdown(LifecycleBinding.bind(() -> groupChannels.forEach(AnnounceGroupChannel::closeQuietly)).description("Shutdown LSD group channels").build());
 
         return groupChannels;
     }

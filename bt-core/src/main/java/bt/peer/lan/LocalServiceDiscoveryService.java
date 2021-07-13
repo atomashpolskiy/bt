@@ -22,6 +22,7 @@ import bt.event.TorrentStartedEvent;
 import bt.event.TorrentStoppedEvent;
 import bt.metainfo.TorrentId;
 import bt.service.IRuntimeLifecycleBinder;
+import bt.service.LifecycleBinding;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,7 +95,7 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "lsd-announcer"));
         long intervalMillis = config.getLocalServiceDiscoveryAnnounceInterval().toMillis();
         executor.scheduleWithFixedDelay(this::announce, 0, intervalMillis, TimeUnit.MILLISECONDS);
-        lifecycleBinder.onShutdown(executor::shutdownNow);
+        lifecycleBinder.onShutdown(LifecycleBinding.bind(executor::shutdownNow).description("Shutdown LSD announcer").build());
     }
 
     // TODO: using synchronized for now, because this method is available from the public API
