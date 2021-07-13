@@ -19,6 +19,7 @@ package bt.module;
 import bt.data.*;
 import bt.data.digest.Digester;
 import bt.data.digest.JavaSecurityDigester;
+import bt.data.digest.SHA1Digester;
 import bt.event.EventBus;
 import bt.event.EventSink;
 import bt.event.EventSource;
@@ -169,8 +170,7 @@ public class ServiceModule implements Module {
     @Provides
     @Singleton
     public Digester provideDigester() {
-        int step = 2 << 22; // 8 MB
-        return new JavaSecurityDigester("SHA-1", step);
+        return SHA1Digester.newDigester();
     }
 
     @Provides

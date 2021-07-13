@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package bt.bencoding.model;
+package bt.bencoding.types;
 
-import bt.bencoding.BEEncoder;
 import bt.bencoding.BEType;
+import bt.bencoding.model.BEObject;
+import bt.bencoding.serializers.BEEncoder;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.util.Objects;
 
 /**
  * BEncoded integer.
@@ -32,20 +34,22 @@ import java.math.BigInteger;
  * @since 1.0
  */
 public class BEInteger implements BEObject<Number> {
+    private static final BEEncoder ENCODER = BEEncoder.encoder();
+    private final byte[] content;
+    private final Number value;
 
-    private byte[] content;
-    private Number value;
-    private BEEncoder encoder;
+    public BEInteger(Number value) {
+        this(null, value);
+    }
 
     /**
      * @param content Binary representation of this integer, as read from source.
-     * @param value Parsed value
+     * @param value   Parsed value
      * @since 1.0
      */
     public BEInteger(byte[] content, Number value) {
         this.content = content;
-        this.value = value;
-        encoder = BEEncoder.encoder();
+        this.value = Objects.requireNonNull(value);
     }
 
     @Override
@@ -64,27 +68,29 @@ public class BEInteger implements BEObject<Number> {
     }
 
     public long longValueExact() {
-        if (value instanceof Integer || value instanceof Long)
+        if (value instanceof Integer || value instanceof Long) {
             return value.longValue();
-        if (value instanceof BigInteger)
+        }
+        if (value instanceof BigInteger) {
             return ((BigInteger) value).longValueExact();
+        }
         throw new IllegalStateException("unknown type for value: " + (value == null ? "null" : value.getClass()));
     }
 
     @Override
     public void writeTo(OutputStream out) throws IOException {
-        encoder.encode(this, out);
+        ENCODER.encode(this, out);
     }
 
     @Override
     public int hashCode() {
-        return value.hashCode();
+        // for integers greater than Long.MAX_VALUE, collisions may occur. However, this shouldn't be a use case.
+        return Long.hashCode(value.longValue());
     }
 
     @Override
     public boolean equals(Object obj) {
-
-        if (obj == null || !(obj instanceof BEInteger)) {
+        if (!(obj instanceof BEInteger)) {
             return false;
         }
 
@@ -92,7 +98,15 @@ public class BEInteger implements BEObject<Number> {
             return true;
         }
 
-        return value.equals(((BEInteger) obj).getValue());
+        if (isLongOrInteger() && ((BEInteger) obj).isLongOrInteger()) {
+            return longValueExact() == ((BEInteger) obj).longValueExact();
+        }
+
+        return value.toString().equals(((BEInteger) obj).getValue().toString());
+    }
+
+    private boolean isLongOrInteger() {
+        return value instanceof Long || value instanceof Integer;
     }
 
     @Override

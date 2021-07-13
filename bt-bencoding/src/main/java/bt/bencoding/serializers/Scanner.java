@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package bt.bencoding;
+package bt.bencoding.serializers;
 
 import bt.bencoding.model.BEObject;
 
@@ -36,7 +36,7 @@ class Scanner {
         source = new MemoizingPushbackInputStream(in);
     }
 
-    <T extends BEObject> T readObject(BEObjectBuilder<T> builder) throws Exception {
+    <T extends BEObject> T readObject(BEObjectDecoder<T> builder) throws Exception {
 
         source.resetContents();
 

@@ -16,30 +16,22 @@
 
 package bt.data;
 
-import bt.BtException;
-import bt.data.range.BlockRange;
-import bt.data.range.Ranges;
-import bt.data.range.SynchronizedBlockSet;
-import bt.data.range.SynchronizedDataRange;
-import bt.data.range.SynchronizedRange;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
-import bt.metainfo.TorrentId;
-import bt.processor.ProcessingContext;
-import bt.torrent.TorrentSessionState;
 import bt.torrent.callbacks.FileDownloadCompleteCallback;
 import com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.Iterator;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -62,7 +54,7 @@ class DefaultDataDescriptor implements DataDescriptor {
     private LocalBitfield bitfield;
 
     private List<List<TorrentFile>> filesForPieces;
-    private Set<StorageUnit> storageUnits;
+    private Collection<StorageUnit> storageUnits;
 
     public DefaultDataDescriptor(Storage storage,
                                  Torrent torrent,
@@ -88,53 +80,33 @@ class DefaultDataDescriptor implements DataDescriptor {
 
         transferBlockSize = Math.min(transferBlockSize, chunkSize);
 
-        int chunksTotal = (int) ((totalSize + chunkSize - 1) / chunkSize);
+        int chunksTotal = PieceUtils.calculateNumberOfChunks(totalSize, chunkSize);
         List<List<TorrentFile>> pieceNumToFile = new ArrayList<>(chunksTotal);
-        List<ChunkDescriptor> chunks = new ArrayList<>(chunksTotal);
 
-        Iterator<byte[]> chunkHashes = torrent.getChunkHashes().iterator();
-
-        Map<StorageUnit, TorrentFile> storageUnitsToFilesMap = Maps.newLinkedHashMapWithExpectedSize(files.size());
-        files.forEach(f -> storageUnitsToFilesMap.put(storage.getUnit(torrent, f), f));
+        final Map<StorageUnit, TorrentFile> storageUnitsToFilesMap = buildStorageUnitToFilesMap(files);
 
         // filter out empty files (and create them at once)
         List<StorageUnit> nonEmptyStorageUnits = handleEmptyStorageUnits(storageUnitsToFilesMap);
 
-        if (nonEmptyStorageUnits.size() > 0) {
-            long limitInLastUnit = nonEmptyStorageUnits.get(nonEmptyStorageUnits.size() - 1).capacity();
-            DataRange data = new ReadWriteDataRange(nonEmptyStorageUnits, 0, limitInLastUnit);
+        List<ChunkDescriptor> chunks = PieceUtils
+                .buildChunkDescriptors(torrent, transferBlockSize, totalSize, chunkSize, chunksTotal, pieceNumToFile,
+                        storageUnitsToFilesMap, nonEmptyStorageUnits);
 
-            long off, lim;
-            long remaining = totalSize;
-            while (remaining > 0) {
-                off = chunks.size() * chunkSize;
-                lim = Math.min(chunkSize, remaining);
+        List<List<CompletableTorrentFile>> countdownTorrentFiles =
+                createListOfCountdownFiles(torrent.getFiles(), pieceNumToFile);
 
-                DataRange subrange = data.getSubrange(off, lim);
-
-                if (!chunkHashes.hasNext()) {
-                    throw new BtException("Wrong number of chunk hashes in the torrent: too few");
-                }
-
-                List<TorrentFile> chunkFiles = new ArrayList<>();
-                subrange.visitUnits((unit, off1, lim1) -> chunkFiles.add(storageUnitsToFilesMap.get(unit)));
-                pieceNumToFile.add(chunkFiles);
-
-                chunks.add(buildChunkDescriptor(subrange, transferBlockSize, chunkHashes.next()));
-
-                remaining -= chunkSize;
-            }
-        }
-        List<List<CompletableTorrentFile>> countdownTorrentFiles = createListOfCountdownFiles(torrent.getFiles(), pieceNumToFile);
-
-        if (chunkHashes.hasNext()) {
-            throw new BtException("Wrong number of chunk hashes in the torrent: too many");
-        }
 
         this.bitfield = buildBitfield(chunks, countdownTorrentFiles);
         this.chunkDescriptors = chunks;
-        this.storageUnits = storageUnitsToFilesMap.keySet();
+        this.storageUnits = nonEmptyStorageUnits;
         this.filesForPieces = pieceNumToFile;
+    }
+
+    private Map<StorageUnit, TorrentFile> buildStorageUnitToFilesMap(List<TorrentFile> files) {
+        final Map<StorageUnit, TorrentFile> storageUnitsToFilesMap =
+                Maps.newLinkedHashMapWithExpectedSize(files.size());
+        files.forEach(f -> storageUnitsToFilesMap.put(storage.getUnit(torrent, f), f));
+        return Collections.unmodifiableMap(storageUnitsToFilesMap);
     }
 
     private List<List<CompletableTorrentFile>> createListOfCountdownFiles(List<TorrentFile> allFiles,
@@ -154,6 +126,12 @@ class DefaultDataDescriptor implements DataDescriptor {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Create empty files for each empty storage unit. Return the non-empty storage units in a list
+     *
+     * @param storageUnitsToFilesMap the storage units to process
+     * @return the list of non-empty storage units
+     */
     private List<StorageUnit> handleEmptyStorageUnits(Map<StorageUnit, TorrentFile> storageUnitsToFilesMap) {
         List<StorageUnit> nonEmptyStorageUnits = new ArrayList<>();
         for (StorageUnit unit : storageUnitsToFilesMap.keySet()) {
@@ -163,19 +141,15 @@ class DefaultDataDescriptor implements DataDescriptor {
                 if (!unit.createEmpty()) {
                     throw new IllegalStateException("Failed to initialize storage unit: " + unit);
                 }
+                // close these units after file creation - no reason to keep them open
+                try {
+                    unit.close();
+                } catch (IOException ex) {
+                    throw new UncheckedIOException("Failed to close storage unit after initialization: " + unit, ex);
+                }
             }
         }
-        return nonEmptyStorageUnits;
-    }
-
-    private ChunkDescriptor buildChunkDescriptor(DataRange data, long blockSize, byte[] checksum) {
-        BlockRange<DataRange> blockData = Ranges.blockRange(data, blockSize);
-        SynchronizedRange<BlockRange<DataRange>> synchronizedRange = new SynchronizedRange<>(blockData);
-        SynchronizedDataRange<BlockRange<DataRange>> synchronizedData =
-                new SynchronizedDataRange<>(synchronizedRange, BlockRange::getDelegate);
-        SynchronizedBlockSet synchronizedBlockSet = new SynchronizedBlockSet(blockData.getBlockSet(), synchronizedRange);
-
-        return new DefaultChunkDescriptor(synchronizedData, synchronizedBlockSet, checksum);
+        return Collections.unmodifiableList(nonEmptyStorageUnits);
     }
 
     private LocalBitfield buildBitfield(List<ChunkDescriptor> chunks,
@@ -183,8 +157,9 @@ class DefaultDataDescriptor implements DataDescriptor {
         LocalBitfield bitfield = new LocalBitfield(chunks.size(), chunkToCountdownFiles) {
             @Override
             protected void fileFinishedCallback(TorrentFile tf) {
-                if (fileCompletionCallback != null)
+                if (fileCompletionCallback != null) {
                     fileCompletionCallback.fileDownloadCompleted(torrent, tf, storage);
+                }
             }
         };
 

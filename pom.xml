@@ -260,9 +260,9 @@
                     <version>3.3.0.603</version>
                 </plugin>
                 <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>findbugs-maven-plugin</artifactId>
-                    <version>3.0.5</version>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>4.3.0</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -348,8 +348,8 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>findbugs-maven-plugin</artifactId>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
                 <configuration>
                     <includeFilterFile>${maven.multiModuleProjectDirectory}/findbugs.xml</includeFilterFile>
                     <effort>Max</effort>

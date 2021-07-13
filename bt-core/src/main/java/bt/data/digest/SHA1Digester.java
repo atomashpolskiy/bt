@@ -17,6 +17,16 @@
 package bt.data.digest;
 
 public class SHA1Digester extends JavaSecurityDigester {
+    private static final int DEFAULT_STEP_SIZE = 1 << 15; // 32KiB
+
+    /**
+     * Creates a new Digester with a default step size
+     *
+     * @return a new Digester with a reasonable default step size
+     */
+    public static Digester newDigester() {
+        return rolling(DEFAULT_STEP_SIZE);
+    }
 
     public static Digester rolling(int step) {
         if (step <= 0) {

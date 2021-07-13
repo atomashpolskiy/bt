@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package bt.bencoding;
+package bt.bencoding.serializers;
 
+import bt.bencoding.BEType;
 import bt.bencoding.model.BEObject;
 
-interface BEObjectBuilder<T extends BEObject> {
+interface BEObjectDecoder<T extends BEObject> {
 
     boolean accept(int b);
 
