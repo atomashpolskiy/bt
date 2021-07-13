@@ -132,7 +132,12 @@ public class MessageDispatcher implements IMessageDispatcher {
                     }
                 }
 
-                loopControl.iterationFinished();
+                try {
+                    loopControl.iterationFinished();
+                } catch (InterruptedException e) {
+                    LOGGER.info("Wait interrupted, shutting down...");
+                    return;
+                }
             }
         }
 
@@ -259,15 +264,11 @@ public class MessageDispatcher implements IMessageDispatcher {
             messagesProcessed++;
         }
 
-        synchronized void iterationFinished() {
+        synchronized void iterationFinished() throws InterruptedException {
             if (messagesProcessed > 0) {
                 reset();
             } else {
-                try {
-                    wait(timeToSleep);
-                } catch (InterruptedException e) {
-                    LOGGER.info("Wait interrupted");
-                }
+                wait(timeToSleep);
 
                 if (timeToSleep < maxTimeToSleep) {
                     timeToSleep = Math.min(timeToSleep << 1, maxTimeToSleep);
