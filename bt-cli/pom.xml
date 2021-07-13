@@ -16,7 +16,7 @@
     <properties>
         <main.class>bt.cli.CliClient</main.class>
         <jopts-version>5.0.2</jopts-version>
-        <lanterna-version>3.0.0-beta3</lanterna-version>
+        <lanterna-version>3.1.1</lanterna-version>
     </properties>
 
     <build>

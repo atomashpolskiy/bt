@@ -25,6 +25,7 @@ import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import com.googlecode.lanterna.terminal.Terminal;
+import com.googlecode.lanterna.terminal.ansi.UnixLikeTerminal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,8 +114,9 @@ public class SessionStatePrinter {
 
     public SessionStatePrinter() {
         try {
-            Terminal terminal = new DefaultTerminalFactory(System.out, System.in,
-                    StandardCharsets.UTF_8).createTerminal();
+            Terminal terminal = new DefaultTerminalFactory(System.out, System.in, StandardCharsets.UTF_8)
+                    .setUnixTerminalCtrlCBehaviour(UnixLikeTerminal.CtrlCBehaviour.TRAP)
+                    .createTerminal();
             terminal.setCursorVisible(false);
 
             screen = new TerminalScreen(terminal);
