@@ -18,6 +18,8 @@ package bt.net.pipeline;
 
 import bt.protocol.Message;
 
+import java.io.IOException;
+
 /**
  * Provides API for direct messaging via a channel (usually non-blocking).
  *
@@ -42,7 +44,7 @@ public interface ChannelHandler {
      * @return true, if all data has been read
      * @since 1.9
      */
-    boolean read();
+    boolean read() throws IOException;
 
     /**
      * @since 1.6

@@ -22,6 +22,7 @@ import bt.net.buffer.BufferMutator;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -153,7 +154,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public boolean readFromChannel() {
+        public boolean readFromChannel() throws IOException {
             return handler.read();
         }
 

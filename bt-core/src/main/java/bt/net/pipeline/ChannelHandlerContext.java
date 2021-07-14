@@ -16,6 +16,8 @@
 
 package bt.net.pipeline;
 
+import java.io.IOException;
+
 /**
  * Provides the means to notify the messaging pipeline about certain events.
  *
@@ -34,7 +36,7 @@ public interface ChannelHandlerContext {
      * @return true, if all data has been read
      * @since 1.9
      */
-    boolean readFromChannel();
+    boolean readFromChannel() throws IOException;
 
     /**
      * @since 1.6
