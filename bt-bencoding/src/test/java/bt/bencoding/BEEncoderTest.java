@@ -16,11 +16,12 @@
 
 package bt.bencoding;
 
-import bt.bencoding.model.BEInteger;
-import bt.bencoding.model.BEList;
-import bt.bencoding.model.BEMap;
+import bt.bencoding.types.BEInteger;
+import bt.bencoding.types.BEList;
+import bt.bencoding.types.BEMap;
 import bt.bencoding.model.BEObject;
-import bt.bencoding.model.BEString;
+import bt.bencoding.types.BEString;
+import bt.bencoding.serializers.BEParser;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -38,16 +39,15 @@ import static org.junit.Assert.assertEquals;
 
 public class BEEncoderTest {
 
-    private static final Charset defaultCharset = StandardCharsets.UTF_8;
 
     @Test
     public void testEncoder_String() {
 
         String s = "some string";
 
-        BEParser parser = encodeAndCreateParser(new BEString(s.getBytes(defaultCharset)));
+        BEParser parser = encodeAndCreateParser(new BEString(s.getBytes(StandardCharsets.UTF_8)));
         assertEquals(BEType.STRING, parser.readType());
-        assertEquals(s, parser.readString().getValue(defaultCharset));
+        assertEquals(s, parser.readString().getValueAsString());
     }
 
     @Test
@@ -64,7 +64,7 @@ public class BEEncoderTest {
     public void testEncode_List() {
 
         List<BEObject<?>> l = new ArrayList<>();
-        l.add(new BEString("some string1:2#3".getBytes(defaultCharset)));
+        l.add(new BEString("some string1:2#3".getBytes(StandardCharsets.UTF_8)));
         l.add(new BEInteger(null, 1234567890));
         l.add(new BEInteger(null, Long.MAX_VALUE));
         l.add(new BEInteger(null, BigInteger.valueOf(Long.MAX_VALUE).multiply(BigInteger.TEN)));
@@ -78,7 +78,7 @@ public class BEEncoderTest {
     @Test
     public void testEncode_Map() {
 
-        BEString s = new BEString("some string1:2#3".getBytes(defaultCharset));
+        BEString s = new BEString("some string1:2#3".getBytes(StandardCharsets.UTF_8));
         BEInteger intValue = new BEInteger(null, 1234567890);
         BEInteger longValue = new BEInteger(null, Long.MIN_VALUE);
         BEInteger bigIntVal = new BEInteger(null, BigInteger.valueOf(Long.MAX_VALUE).multiply(BigInteger.TEN));

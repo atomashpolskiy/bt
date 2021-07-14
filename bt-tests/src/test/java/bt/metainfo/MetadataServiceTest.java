@@ -16,7 +16,7 @@
 
 package bt.metainfo;
 
-import bt.bencoding.BtParseException;
+import bt.bencoding.serializers.BtParseException;
 import bt.tracker.AnnounceKey;
 import org.junit.Before;
 import org.junit.Test;

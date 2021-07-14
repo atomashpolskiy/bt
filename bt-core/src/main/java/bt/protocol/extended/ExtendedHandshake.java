@@ -17,8 +17,8 @@
 package bt.protocol.extended;
 
 import bt.BtException;
-import bt.bencoding.model.BEInteger;
-import bt.bencoding.model.BEMap;
+import bt.bencoding.types.BEInteger;
+import bt.bencoding.types.BEMap;
 import bt.bencoding.model.BEObject;
 
 import java.math.BigInteger;

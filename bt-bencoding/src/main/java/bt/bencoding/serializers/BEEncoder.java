@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package bt.bencoding;
+package bt.bencoding.serializers;
 
-import bt.bencoding.model.BEInteger;
-import bt.bencoding.model.BEList;
-import bt.bencoding.model.BEMap;
 import bt.bencoding.model.BEObject;
-import bt.bencoding.model.BEString;
+import bt.bencoding.types.BEInteger;
+import bt.bencoding.types.BEList;
+import bt.bencoding.types.BEMap;
+import bt.bencoding.types.BEString;
+import com.google.common.primitives.UnsignedBytes;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -30,8 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.function.BinaryOperator;
-import java.util.stream.Collectors;
 
 /**
  * BEncoding encoder.
@@ -115,14 +114,10 @@ public class BEEncoder {
 
         write(out, BEParser.MAP_PREFIX);
 
-        TreeMap<byte[], BEObject<?>> values = map.getValue().entrySet().stream()
-                .collect(Collectors.toMap(
-                        e -> e.getKey().getBytes(defaultCharset),
-                        Map.Entry::getValue,
-                        (BinaryOperator<BEObject<?>>) (u, u2) -> {
-                            throw new IllegalStateException();
-                        },
-                        () -> new TreeMap<>(ByteStringComparator.comparator())));
+        TreeMap<byte[], BEObject<?>> values = new TreeMap<>(UnsignedBytes.lexicographicalComparator());
+        for (Map.Entry<String, BEObject<?>> entry : map.getValue().entrySet()) {
+            values.put(entry.getKey().getBytes(StandardCharsets.UTF_8), entry.getValue());
+        }
 
         for (Map.Entry<byte[], BEObject<?>> e : values.entrySet()) {
             encodeString(e.getKey(), out);

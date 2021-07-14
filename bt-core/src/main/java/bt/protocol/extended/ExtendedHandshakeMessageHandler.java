@@ -17,10 +17,10 @@
 package bt.protocol.extended;
 
 import bt.BtException;
-import bt.bencoding.BEParser;
+import bt.bencoding.serializers.BEParser;
 import bt.bencoding.BEType;
-import bt.bencoding.model.BEInteger;
-import bt.bencoding.model.BEMap;
+import bt.bencoding.types.BEInteger;
+import bt.bencoding.types.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.net.Peer;
 import bt.net.buffer.ByteBufferView;

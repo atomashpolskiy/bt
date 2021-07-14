@@ -16,9 +16,11 @@
 
 package bt.bencoding;
 
-import bt.bencoding.model.BEList;
+import bt.bencoding.serializers.BtParseException;
+import bt.bencoding.types.BEList;
 import bt.bencoding.model.BEObject;
-import bt.bencoding.model.BEString;
+import bt.bencoding.types.BEString;
+import bt.bencoding.serializers.BEParser;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,6 +35,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * Tests to make sure that BEncoding parsers work as intended.
+ */
 public class BEParserTest {
 
     private final Charset charset = StandardCharsets.UTF_8;
@@ -41,14 +46,14 @@ public class BEParserTest {
     public void testParse_String1() {
         BEParser parser = new BEParser("1:s".getBytes());
         assertEquals(BEType.STRING, parser.readType());
-        assertEquals("s", parser.readString().getValue(charset));
+        assertEquals("s", parser.readString().getValueAsString());
     }
 
     @Test
     public void testParse_String2() {
         BEParser parser = new BEParser("11:!@#$%^&*()_".getBytes());
         assertEquals(BEType.STRING, parser.readType());
-        assertEquals("!@#$%^&*()_", parser.readString().getValue(charset));
+        assertEquals("!@#$%^&*()_", parser.readString().getValueAsString());
     }
 
     @Test(expected = Exception.class)
@@ -64,15 +69,63 @@ public class BEParserTest {
     }
 
     @Test(expected = Exception.class)
+    public void testParse_String_LengthStartsWithTwoZeros() {
+        new BEParser("00:".getBytes()).readString();
+    }
+
+    @Test(expected = Exception.class)
+    public void testParse_String_LengthLeadingZero() {
+        new BEParser("01:t".getBytes()).readString();
+    }
+
+    @Test(expected = Exception.class)
+    public void testParse_StringOnlyDelimiter() {
+        new BEParser(":".getBytes()).readString();
+    }
+
+    @Test(expected = Exception.class)
+    public void testStringLengthOverflow() {
+        new BEParser((Long.toString(100_000_000_000L) + ":").getBytes()).readString();
+    }
+
+    @Test(expected = Exception.class)
     public void testParse_String_Exception_InsufficientContent() {
         new BEParser("7:abcdef".getBytes()).readString();
+    }
+
+    @Test(expected = Exception.class)
+    public void testParse_String_Exception_NoContent() {
+        new BEParser("1:".getBytes()).readString();
+    }
+
+    @Test(expected = Exception.class)
+    public void testParse_String_Exception_NoDelimiter() {
+        new BEParser("0".getBytes()).readString();
+    }
+
+    /**
+     * Tests that parsing a utf8 BEncoded string works properly
+     */
+    @Test
+    public void testParse_Utf8String() {
+        byte[] utf8CharBytes = new byte[]{(byte) 0xE2, (byte) 0x84, (byte) 0xB5};
+        byte[] bytes = new byte[2 + utf8CharBytes.length];
+        bytes[0] = (byte) ('0' + utf8CharBytes.length);
+        bytes[1] = ':';
+        System.arraycopy(utf8CharBytes, 0, bytes, 2, utf8CharBytes.length);
+        BEString s = new BEParser(bytes).readString();
+        String utf16Str = new String(utf8CharBytes, StandardCharsets.UTF_8);
+        Assert.assertEquals(1, utf16Str.toCharArray().length);
+        Assert.assertEquals(1, utf16Str.length());
+        Assert.assertEquals(utf16Str, s.toString());
+        Assert.assertArrayEquals(s.getValue(), utf8CharBytes);
     }
 
     @Test
     public void testParse_Integer1() {
         BEParser parser = new BEParser("i1e".getBytes());
         assertEquals(BEType.INTEGER, parser.readType());
-        assertEquals(BigInteger.ONE, BigInteger.valueOf(parser.readInteger().getValue().longValue()));
+        assertEquals(1L, parser.readInteger().getValue().longValue());
     }
 
     @Test
@@ -107,13 +160,25 @@ public class BEParserTest {
         Assert.assertEquals(longOverflow, parser.readInteger().getValue());
     }
 
-    @Test//(expected = Exception.class)
+    @Test(expected = BtParseException.class)
     public void testParse_Integer_Exception_NegativeZero() {
-        // not sure why the protocol spec forbids negative zeroes,
-        // so let it be for now
         BEParser parser = new BEParser("i-0e".getBytes());
         assertEquals(BEType.INTEGER, parser.readType());
-        assertEquals(0, parser.readInteger().getValue());
+        parser.readInteger().getValue();
+    }
+
+    @Test(expected = BtParseException.class)
+    public void testParse_Integer_Exception_LeadingZeroWithNumber() {
+        BEParser parser = new BEParser("i-01e".getBytes());
+        assertEquals(BEType.INTEGER, parser.readType());
+        parser.readInteger().getValue();
+    }
+
+    @Test(expected = BtParseException.class)
+    public void testParse_Integer_Exception_OnlyMultipleZeros() {
+        BEParser parser = new BEParser("i00e".getBytes());
+        assertEquals(BEType.INTEGER, parser.readType());
+        parser.readInteger().getValue();
     }
 
     @Test(expected = Exception.class)
@@ -138,7 +203,6 @@ public class BEParserTest {
                 new Object[]{"spam".getBytes(charset), "eggs".getBytes(charset), 1},
                 parser.readList().getValue().stream()
                         .map(o -> ((BEObject) o).getValue())
-                        .collect(Collectors.toList())
                         .toArray()
         );
     }
@@ -148,7 +212,7 @@ public class BEParserTest {
         BEParser parser = new BEParser("d4:spaml1:a1:bee".getBytes());
         assertEquals(BEType.MAP, parser.readType());
 
-        byte[][] expected = new byte[][] {"a".getBytes(charset), "b".getBytes(charset)};
+        byte[][] expected = new byte[][]{"a".getBytes(charset), "b".getBytes(charset)};
 
         Map<String, BEObject<?>> map = parser.readMap().getValue();
 
@@ -160,7 +224,6 @@ public class BEParserTest {
         assertArrayEquals(expected,
                 actual.getValue().stream()
                         .map(s -> ((BEString) s).getValue())
-                        .collect(Collectors.toList())
                         .toArray());
     }
 }
