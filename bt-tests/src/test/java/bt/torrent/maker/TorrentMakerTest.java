@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -84,9 +85,10 @@ public class TorrentMakerTest {
             }
             torrentBuilder.addFile(testFile);
         }
-        torrentBuilder.setRootPath(rootDir);
+        torrentBuilder.rootPath(rootDir);
 
         torrentBuilder.createdBy(createdBy);
+
         return torrentBuilder;
     }
 
@@ -200,7 +202,7 @@ public class TorrentMakerTest {
         for (List<String> announceGroup : announceGroups) {
             torrentBuilder.addAnnounceGroup(announceGroup);
         }
-        torrentBuilder.setAnnounce(null);
+        torrentBuilder.announce(null);
 
         Torrent decodedTorrent = buildAndDecodeTorrent(torrentBuilder);
         AnnounceKey key = decodedTorrent.getAnnounceKey().get();
@@ -209,7 +211,7 @@ public class TorrentMakerTest {
         Assert.assertNull(key.getTrackerUrl());
 
         String explicitAnnounce = "http://explicitannounce.com";
-        torrentBuilder.setAnnounce(explicitAnnounce);
+        torrentBuilder.announce(explicitAnnounce);
         decodedTorrent = buildAndDecodeTorrent(torrentBuilder);
         key = decodedTorrent.getAnnounceKey().get();
         // ensure that announce list is still set

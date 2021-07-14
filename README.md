@@ -119,6 +119,7 @@ mvn clean install -DskipTests
 
 ## Code sample
 
+### Download a torrent from a magnet link
 ```java
 // enable multithreaded verification of torrent data
 Config config = new Config() {
@@ -154,6 +155,19 @@ BtClient client = Bt.client()
 
 // launch
 client.startAsync().join();
+```
+### Create a torrent
+```java
+Path torrentRoot = Paths.get("/home/torrents/mytorrent");
+Path file1 = Paths.get("/home/torrents/mytorrent/file1.bin");
+Path file2 = Paths.get("/home/torrents/mytorrent/file2.bin");
+Path dirToAdd = Paths.get("/home/torrents/mytorrent/dir_with_files");
+byte[] torrentBytes = new TorrentBuilder()
+        .rootPath(torrentRoot)
+        .addFiles(file1, file2, dirToAdd)
+        .announce("http://example.com/announce")
+        .build();
+Files.write(Paths.get("/home/torrents/mytorrent.torrent"), torrentBytes);
 ```
 
 ## What makes Bt stand out from the crowd

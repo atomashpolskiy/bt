@@ -90,7 +90,7 @@ public class TorrentBuilder {
         }
     }
 
-    public TorrentBuilder setAnnounce(String announce) {
+    public TorrentBuilder announce(String announce) {
         this.announce = announce;
         return this;
     }
@@ -101,7 +101,7 @@ public class TorrentBuilder {
      * @param rootPath the root path of the torrent
      * @return the torrent builder
      */
-    public TorrentBuilder setRootPath(Path rootPath) {
+    public TorrentBuilder rootPath(Path rootPath) {
         if (!Files.isReadable(rootPath)) {
             throw new IllegalArgumentException("root path is not readable " + rootPath);
         }
