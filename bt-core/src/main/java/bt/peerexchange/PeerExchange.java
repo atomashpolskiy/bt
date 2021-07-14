@@ -119,7 +119,7 @@ class PeerExchange extends ExtendedMessage {
     void writeTo(OutputStream out) throws IOException {
 
         if (message == null) {
-            message = new BEMap(null, new HashMap<String, BEObject<?>>() {{
+            message = new BEMap(new HashMap<String, BEObject<?>>() {{
                 Collection<Peer> inet4Peers = filterByAddressType(added, AddressType.IPV4);
                 Collection<Peer> inet6Peers = filterByAddressType(added, AddressType.IPV6);
 

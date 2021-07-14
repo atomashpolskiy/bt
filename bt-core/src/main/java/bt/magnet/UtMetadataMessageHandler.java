@@ -58,11 +58,11 @@ public class UtMetadataMessageHandler implements MessageHandler<UtMetadata> {
     }
 
     private void writeMessage(UtMetadata message, OutputStream out) throws IOException {
-        BEMap m = new BEMap(null, new HashMap<String, BEObject<?>>() {{
-            put(UtMetadata.messageTypeField(), new BEInteger(null, BigInteger.valueOf(message.getType().id())));
-            put(UtMetadata.pieceIndexField(), new BEInteger(null, BigInteger.valueOf(message.getPieceIndex())));
+        BEMap m = new BEMap(new HashMap<String, BEObject<?>>() {{
+            put(UtMetadata.messageTypeField(), new BEInteger(BigInteger.valueOf(message.getType().id())));
+            put(UtMetadata.pieceIndexField(), new BEInteger(BigInteger.valueOf(message.getPieceIndex())));
             if (message.getData().isPresent()) {
-                put(UtMetadata.totalSizeField(), new BEInteger(null, BigInteger.valueOf(message.getTotalSize().get())));
+                put(UtMetadata.totalSizeField(), new BEInteger(BigInteger.valueOf(message.getTotalSize().get())));
             }
         }});
         m.writeTo(out);

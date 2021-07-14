@@ -86,23 +86,23 @@ public class ExtendedHandshakeFactory implements IExtendedHandshakeFactory {
         switch (encryptionPolicy) {
             case REQUIRE_PLAINTEXT:
             case PREFER_PLAINTEXT: {
-                builder.property(ENCRYPTION_PROPERTY, new BEInteger(null, BigInteger.ZERO));
+                builder.property(ENCRYPTION_PROPERTY, new BEInteger(0));
             }
             case PREFER_ENCRYPTED:
             case REQUIRE_ENCRYPTED: {
-                builder.property(ENCRYPTION_PROPERTY, new BEInteger(null, BigInteger.ONE));
+                builder.property(ENCRYPTION_PROPERTY, new BEInteger(1));
             }
             default: {
                 // do nothing
             }
         }
 
-        builder.property(TCPPORT_PROPERTY, new BEInteger(null, BigInteger.valueOf(tcpAcceptorPort)));
+        builder.property(TCPPORT_PROPERTY, new BEInteger(tcpAcceptorPort));
 
         try {
             torrentRegistry.getTorrent(torrentId).ifPresent(torrent -> {
                 int metadataSize = torrent.getSource().getExchangedMetadata().length;
-                builder.property(UT_METADATA_SIZE_PROPERTY, new BEInteger(null, BigInteger.valueOf(metadataSize)));
+                builder.property(UT_METADATA_SIZE_PROPERTY, new BEInteger(metadataSize));
             });
         } catch (Exception e) {
             LOGGER.error("Failed to get metadata size for torrent ID: " + torrentId, e);

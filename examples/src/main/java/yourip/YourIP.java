@@ -50,7 +50,7 @@ public class YourIP extends ExtendedMessage {
     }
 
     void writeTo(OutputStream out) throws IOException {
-        BEMap message = new BEMap(null, new HashMap<String, BEObject<?>>() {{
+        BEMap message = new BEMap(new HashMap<String, BEObject<?>>() {{
             put(addressField, new BEString(address.getBytes(StandardCharsets.UTF_8)));
         }});
         message.writeTo(out);

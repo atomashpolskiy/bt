@@ -146,7 +146,7 @@ public final class ExtendedHandshake extends ExtendedMessage {
                 throw new BtException("Message type already defined: " + typeName);
             }
 
-            messageTypeMap.put(typeName, new BEInteger(null, BigInteger.valueOf((long) typeId)));
+            messageTypeMap.put(typeName, new BEInteger(typeId));
             return this;
         }
 
@@ -156,7 +156,7 @@ public final class ExtendedHandshake extends ExtendedMessage {
         public ExtendedHandshake build() {
 
             if (messageTypeMap != null) {
-                data.put(MESSAGE_TYPE_MAPPING_KEY, new BEMap(null, messageTypeMap));
+                data.put(MESSAGE_TYPE_MAPPING_KEY, new BEMap(messageTypeMap));
             }
             return new ExtendedHandshake(data);
         }

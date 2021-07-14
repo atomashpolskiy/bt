@@ -137,7 +137,7 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
-            new BEMap(null, message.getData()).writeTo(out);
+            new BEMap(message.getData()).writeTo(out);
         } catch (IOException e) {
             // can't happen
         }
