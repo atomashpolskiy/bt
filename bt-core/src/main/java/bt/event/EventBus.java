@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 
@@ -45,7 +46,7 @@ public class EventBus implements EventSink, EventSource {
 
     private final ReentrantReadWriteLock eventLock;
 
-    private long idSequence;
+    private final AtomicLong idSequence = new AtomicLong(0);
 
     public EventBus() {
         this.listeners = new ConcurrentHashMap<>();
@@ -54,7 +55,7 @@ public class EventBus implements EventSink, EventSource {
     }
 
     @Override
-    public synchronized void firePeerDiscovered(TorrentId torrentId, Peer peer) {
+    public void firePeerDiscovered(TorrentId torrentId, Peer peer) {
         long timestamp = System.currentTimeMillis();
         if (hasListeners(PeerDiscoveredEvent.class, torrentId)) {
             long id = nextId();
@@ -63,7 +64,7 @@ public class EventBus implements EventSink, EventSource {
     }
 
     @Override
-    public synchronized void firePeerConnected(ConnectionKey connectionKey) {
+    public void firePeerConnected(ConnectionKey connectionKey) {
         long timestamp = System.currentTimeMillis();
         if (hasListeners(PeerConnectedEvent.class, connectionKey.getTorrentId())) {
             long id = nextId();
@@ -72,7 +73,7 @@ public class EventBus implements EventSink, EventSource {
     }
 
     @Override
-    public synchronized void firePeerDisconnected(ConnectionKey connectionKey) {
+    public void firePeerDisconnected(ConnectionKey connectionKey) {
         long timestamp = System.currentTimeMillis();
         if (hasListeners(PeerDisconnectedEvent.class, connectionKey.getTorrentId())) {
             long id = nextId();
@@ -147,8 +148,8 @@ public class EventBus implements EventSink, EventSource {
         return listeners != null && !listeners.isEmpty();
     }
 
-    private synchronized long nextId() {
-        return ++idSequence;
+    private long nextId() {
+        return idSequence.incrementAndGet();
     }
 
     private <E extends BaseEvent> void fireEvent(E event, TorrentId torrentId) {

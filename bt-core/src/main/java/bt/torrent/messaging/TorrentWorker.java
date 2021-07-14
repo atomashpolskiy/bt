@@ -387,7 +387,7 @@ public class TorrentWorker {
         return getPeers().size() < MAX_TOTAL_CONNECTIONS;
     }
 
-    private synchronized void onPeerDisconnected(ConnectionKey connectionKey) {
+    private void onPeerDisconnected(ConnectionKey connectionKey) {
         removePeer(connectionKey);
     }
 }
