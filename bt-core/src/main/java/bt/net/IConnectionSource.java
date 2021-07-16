@@ -34,7 +34,9 @@ public interface IConnectionSource {
      *
      * @return Newly established or existing connection or, possibly, an error in the form of {@link ConnectionResult}
      * @since 1.6
+     * @deprecated This is no longer used
      */
+    @Deprecated
     ConnectionResult getConnection(Peer peer, TorrentId torrentId);
 
     /**

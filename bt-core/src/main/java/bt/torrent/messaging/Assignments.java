@@ -16,13 +16,11 @@
 
 package bt.torrent.messaging;
 
-import bt.data.Bitfield;
 import bt.data.LocalBitfield;
 import bt.data.PeerBitfield;
 import bt.net.ConnectionKey;
 import bt.runtime.Config;
 import bt.torrent.BitfieldBasedStatistics;
-import bt.torrent.selector.PieceSelector;
 import bt.torrent.selector.ValidatingSelector;
 
 import java.time.Duration;

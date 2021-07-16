@@ -175,7 +175,7 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
 
     @Override
     public Set<ConnectionKey> getConnectedPeers() {
-        return Collections.unmodifiableSet(worker.getPeers());
+        return worker.getPeers();
     }
 
     @Override

@@ -40,6 +40,7 @@ public class ConnectionSource implements IConnectionSource {
     private final IPeerConnectionPool connectionPool;
     private final ExecutorService connectionExecutor;
     private final Config config;
+    private final Object lock = new Object();
 
     private final Map<ConnectionKey, CompletableFuture<ConnectionResult>> pendingConnections;
     // TODO: weak map
@@ -86,12 +87,9 @@ public class ConnectionSource implements IConnectionSource {
     public CompletableFuture<ConnectionResult> getConnectionAsync(Peer peer, TorrentId torrentId) {
         ConnectionKey key = new ConnectionKey(peer, peer.getPort(), torrentId);
 
-        CompletableFuture<ConnectionResult> connection = getExistingOrPendingConnection(key);
-        if (connection != null) {
-            if (connection.isDone() && LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Returning existing connection for peer: {}. Torrent: {}", peer, torrentId);
-            }
-            return connection;
+        CompletableFuture<ConnectionResult> result = validateNewConnPossible(peer, torrentId, key);
+        if (result != null) {
+            return result;
         }
 
         Long bannedAt = unreachablePeers.get(peer);
@@ -110,70 +108,107 @@ public class ConnectionSource implements IConnectionSource {
             }
         }
 
+        synchronized (lock) {
+            // synchronized double checking.
+            result = validateNewConnPossible(peer, torrentId, key);
+            if (result != null) {
+                return result;
+            } else {
+                result = createPendingConnFuture(peer, torrentId, key);
+                pendingConnections.put(key, result);
+            }
+            return result;
+        }
+    }
+
+    private CompletableFuture<ConnectionResult> createPendingConnFuture(Peer peer, TorrentId torrentId, ConnectionKey key) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                ConnectionResult connectionResult =
+                        connectionFactory.createOutgoingConnection(peer, torrentId);
+                if (connectionResult.isSuccess()) {
+                    PeerConnection established = connectionResult.getConnection();
+                    PeerConnection added = connectionPool.addConnectionIfAbsent(established);
+                    if (added != established) {
+                        established.closeQuietly();
+                    }
+                    return ConnectionResult.success(added);
+                } else {
+                    return connectionResult;
+                }
+            } finally {
+                // It is crucial that the last step be to remove this from pending connections to avoid locking in
+                // getExistingOrPendingConnection. See comment in that method as to why.
+                pendingConnections.remove(key);
+            }
+        }, connectionExecutor).whenComplete((acquiredConnection, throwable) -> {
+            if (acquiredConnection == null || throwable != null) {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Peer is unreachable: {}. Will prevent further attempts to establish connection.",
+                            peer);
+                }
+                unreachablePeers.putIfAbsent(peer, System.currentTimeMillis());
+            }
+            if (throwable != null) {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Failed to establish outgoing connection to peer: " + peer, throwable);
+                }
+            }
+        });
+    }
+
+    /**
+     * Checks whether a connection to this peer on the specified torrent id is possible. Returns a result if a new
+     * connection is not possible. This can happen if there is an existing pending connection, or we have reached
+     * {@link Config#getMaxPeerConnections()}
+     *
+     * @param peer      the peer to connect to
+     * @param torrentId the torrent for the connection
+     * @param key       the connection key
+     * @return a result if a new connection is not possible, null otherwise
+     */
+    private CompletableFuture<ConnectionResult> validateNewConnPossible(Peer peer, TorrentId torrentId,
+                                                                        ConnectionKey key) {
+        CompletableFuture<ConnectionResult> connection = getExistingOrPendingConnection(key);
+        if (connection != null) {
+            if (connection.isDone() && LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Returning existing connection for peer: {}. Torrent: {}", peer, torrentId);
+            }
+            return connection;
+        }
+
+        if (checkPeerConnectionsLimit(peer, torrentId)) {
+            return CompletableFuture.completedFuture(ConnectionResult.failure("Connections limit exceeded"));
+        }
+        return null;
+    }
+
+    private boolean checkPeerConnectionsLimit(Peer peer, TorrentId torrentId) {
         if (connectionPool.size() >= config.getMaxPeerConnections()) {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Will not attempt to establish connection to peer: {}. " +
                         "Reason: connections limit exceeded. Torrent: {}", peer, torrentId);
             }
-            return CompletableFuture.completedFuture(ConnectionResult.failure("Connections limit exceeded"));
+            return true;
         }
-
-        synchronized (pendingConnections) {
-            connection = getExistingOrPendingConnection(key);
-            if (connection != null) {
-                if (connection.isDone() && LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Returning existing connection for peer: {}. Torrent: {}", peer, torrentId);
-                }
-                return connection;
-            }
-
-            connection = CompletableFuture.supplyAsync(() -> {
-                try {
-                    ConnectionResult connectionResult =
-                            connectionFactory.createOutgoingConnection(peer, torrentId);
-                    if (connectionResult.isSuccess()) {
-                        PeerConnection established = connectionResult.getConnection();
-                        PeerConnection added = connectionPool.addConnectionIfAbsent(established);
-                        if (added != established) {
-                            established.closeQuietly();
-                        }
-                        return ConnectionResult.success(added);
-                    } else {
-                        return connectionResult;
-                    }
-                } finally {
-                    synchronized (pendingConnections) {
-                        pendingConnections.remove(key);
-                    }
-                }
-            }, connectionExecutor).whenComplete((acquiredConnection, throwable) -> {
-                if (acquiredConnection == null || throwable != null) {
-                    if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Peer is unreachable: {}. Will prevent further attempts to establish connection.", peer);
-                    }
-                    unreachablePeers.putIfAbsent(peer, System.currentTimeMillis());
-                }
-                if (throwable != null) {
-                    if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Failed to establish outgoing connection to peer: " + peer, throwable);
-                    }
-                }
-            });
-
-            pendingConnections.put(key, connection);
-            return connection;
-        }
+        return false;
     }
 
     private CompletableFuture<ConnectionResult> getExistingOrPendingConnection(ConnectionKey key) {
-        PeerConnection existingConnection = connectionPool.getConnection(key);
-        if (existingConnection != null) {
-            return CompletableFuture.completedFuture(ConnectionResult.success(existingConnection));
-        }
+        // The order of checking these maps is crucial to avoid syncronization. Check pending connections, then
+        // existing connections. If the key is being moved from pendingConnections to existing connections, either
+        // We'll get it before it is removed from pendingConnections, or if it was removed, it must already be in
+        // existingConnections because ConcurrentMaps are guaranteed to have "happens-before" memory consistency
+        // effects.
 
         CompletableFuture<ConnectionResult> pendingConnection = pendingConnections.get(key);
         if (pendingConnection != null) {
             return pendingConnection;
+        }
+
+        PeerConnection existingConnection = connectionPool.getConnection(key);
+        if (existingConnection != null) {
+            return CompletableFuture.completedFuture(ConnectionResult.success(existingConnection));
         }
 
         return null;

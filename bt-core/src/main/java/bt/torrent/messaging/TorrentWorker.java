@@ -34,14 +34,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 /**
@@ -62,7 +65,12 @@ public class TorrentWorker {
 
     private final IConnectionSource connectionSource;
     private IPeerWorkerFactory peerWorkerFactory;
-    private ConcurrentMap<ConnectionKey, PieceAnnouncingPeerWorker> peerMap;
+
+    private final ConcurrentMap<ConnectionKey, PieceAnnouncingPeerWorker> peerMap;
+    // This is an atomic measure of the length of peerMap, to avoid synchronization which many result
+    // in deadlock. It is eventually consistent.
+    private final AtomicInteger peerCount;
+
     private final int MAX_CONCURRENT_ACTIVE_CONNECTIONS;
     private final int MAX_TOTAL_CONNECTIONS;
     private Map<ConnectionKey, Long> timeoutedPeers;
@@ -91,6 +99,7 @@ public class TorrentWorker {
         this.connectionSource = connectionSource;
         this.peerWorkerFactory = peerWorkerFactory;
         this.peerMap = new ConcurrentHashMap<>();
+        this.peerCount = new AtomicInteger(0);
         this.MAX_CONCURRENT_ACTIVE_CONNECTIONS = config.getMaxConcurrentlyActivePeerConnectionsPerTorrent();
         this.MAX_TOTAL_CONNECTIONS = config.getMaxPeerConnectionsPerTorrent();
         this.timeoutedPeers = new ConcurrentHashMap<>();
@@ -126,18 +135,38 @@ public class TorrentWorker {
      * @since 1.0
      */
     private void addPeer(ConnectionKey connectionKey) {
-        PieceAnnouncingPeerWorker worker = createPeerWorker(connectionKey);
-        PieceAnnouncingPeerWorker existing = peerMap.putIfAbsent(connectionKey, worker);
-        if (existing == null) {
-            dispatcher.addMessageConsumer(connectionKey, message -> consume(connectionKey, message));
-            dispatcher.addMessageSupplier(connectionKey, () -> produce(connectionKey));
+        if (tryAddPeerWithLimits()) {
+            PieceAnnouncingPeerWorker worker = Objects.requireNonNull(createPeerWorker(connectionKey));
+            PieceAnnouncingPeerWorker existing = peerMap.putIfAbsent(connectionKey, worker);
+            if (existing == null) {
+                dispatcher.addMessageConsumer(connectionKey, message -> consume(connectionKey, message));
+                dispatcher.addMessageSupplier(connectionKey, () -> produce(connectionKey));
+            } else {
+                // The peer was already present, so don't increment the count.
+                peerCount.decrementAndGet();
+            }
         }
+    }
+
+    private boolean tryAddPeerWithLimits() {
+        // Increase the peer count if we're under the limit. Otherwise, keep it the same.
+        int prevPeerCount = peerCount
+                .getAndUpdate(currPeerCount -> underPeerLimit(currPeerCount) ? currPeerCount + 1 : currPeerCount);
+
+        // if the count before the CAS was within the limit, we incremented the peer count and can add this peer.
+        // if it was not under the limit, we're full, didn't change the count and cannot add this peer.
+        return underPeerLimit(prevPeerCount);
+    }
+
+    private boolean underPeerLimit(int currPeerCount) {
+        return currPeerCount < MAX_TOTAL_CONNECTIONS;
     }
 
     private void consume(ConnectionKey connectionKey, Message message) {
         PieceAnnouncingPeerWorker worker = getWorker(connectionKey);
-        if (worker != null)
+        if (worker != null) {
             worker.accept(message);
+        }
     }
 
     private Message produce(ConnectionKey connectionKey) {
@@ -201,11 +230,15 @@ public class TorrentWorker {
     }
 
     private boolean mightUseMoreAssignees(Assignments assignments) {
+        return lessAssignmentsThanConnections(assignments);
+    }
+
+    private boolean lessAssignmentsThanConnections(Assignments assignments) {
         return assignments.count() < MAX_CONCURRENT_ACTIVE_CONNECTIONS;
     }
 
     private boolean mightCreateMoreAssignments(Assignments assignments) {
-        return assignments.count() < MAX_CONCURRENT_ACTIVE_CONNECTIONS;
+        return lessAssignmentsThanConnections(assignments);
     }
 
     private long timeSinceLastUpdated() {
@@ -220,7 +253,8 @@ public class TorrentWorker {
                 if (assignment != null) {
                     assignments.remove(assignment);
                     if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Peer assignment removed due to DISCONNECT: peer {}, assignment {}", disconnectedPeer, assignment);
+                        LOGGER.trace("Peer assignment removed due to DISCONNECT: peer {}, assignment {}",
+                                disconnectedPeer, assignment);
                     }
                 }
             }
@@ -301,6 +335,7 @@ public class TorrentWorker {
         PeerWorker removed = peerMap.remove(connectionKey);
         if (removed != null) {
             disconnectedPeers.add(connectionKey);
+            peerCount.decrementAndGet();
         }
     }
 
@@ -310,7 +345,7 @@ public class TorrentWorker {
      * @since 1.9
      */
     public Set<ConnectionKey> getPeers() {
-        return peerMap.keySet();
+        return Collections.unmodifiableSet(peerMap.keySet());
     }
 
     /**
@@ -369,25 +404,19 @@ public class TorrentWorker {
         }
     }
 
-    private synchronized void onPeerDiscovered(Peer peer) {
+    private void onPeerDiscovered(Peer peer) {
         // TODO: Store discovered peers to use them later,
         // when some of the currently connected peers disconnects
-        if (mightAddPeer()) {
+        if (underPeerLimit(peerCount.get())) {
             connectionSource.getConnectionAsync(peer, torrentId);
         }
     }
 
-    private synchronized void onPeerConnected(ConnectionKey connectionKey) {
-        if (mightAddPeer()) {
-            addPeer(connectionKey);
-        }
+    private void onPeerConnected(ConnectionKey connectionKey) {
+        addPeer(connectionKey);
     }
 
-    private boolean mightAddPeer() {
-        return getPeers().size() < MAX_TOTAL_CONNECTIONS;
-    }
-
-    private synchronized void onPeerDisconnected(ConnectionKey connectionKey) {
+    private void onPeerDisconnected(ConnectionKey connectionKey) {
         removePeer(connectionKey);
     }
 }
