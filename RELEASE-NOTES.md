@@ -49,6 +49,9 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * The rarest piece selector now uses bucket sort based on max peer count rather than a MinHeap
 * The randomized rarest piece selector uses a precomputed random shuffle order to reduce the overhead of random piece shuffling
 * Fix double release issue in DefaultBorrowedBuffer, which eliminates the harmless exception "Buffer is locked and can't be released" that occured sometimes
+* Fix intermittent NullPointerException in DHT shutdown hook
+* Lower logging level to debug on peer disconnects
+* Eliminate possibility of a dead lock in peer connection handling code [#170](https://github.com/atomashpolskiy/bt/issues/170)
 
 ## 1.9
 
