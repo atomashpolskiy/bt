@@ -16,7 +16,6 @@
 
 package bt.torrent.messaging;
 
-import bt.data.Bitfield;
 import bt.data.LocalBitfield;
 import bt.event.EventSource;
 import bt.metainfo.TorrentId;
@@ -37,7 +36,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,7 +65,7 @@ public class TorrentWorker {
     private IPeerWorkerFactory peerWorkerFactory;
 
     private final ConcurrentMap<ConnectionKey, PieceAnnouncingPeerWorker> peerMap;
-    // This is an atomic measure of the length of peerMap, to avoid synchronization which many result
+    // This is an atomic measure of the length of peerMap, to avoid synchronization which may result
     // in deadlock. It is eventually consistent.
     private final AtomicInteger peerCount;
 
@@ -136,7 +134,7 @@ public class TorrentWorker {
      */
     private void addPeer(ConnectionKey connectionKey) {
         if (tryAddPeerWithLimits()) {
-            PieceAnnouncingPeerWorker worker = Objects.requireNonNull(createPeerWorker(connectionKey));
+            PieceAnnouncingPeerWorker worker = createPeerWorker(connectionKey);
             PieceAnnouncingPeerWorker existing = peerMap.putIfAbsent(connectionKey, worker);
             if (existing == null) {
                 dispatcher.addMessageConsumer(connectionKey, message -> consume(connectionKey, message));
