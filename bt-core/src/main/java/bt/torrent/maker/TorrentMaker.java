@@ -200,7 +200,7 @@ public class TorrentMaker {
         return () -> chunkRange
                 .forEach(
                         i -> {
-                            final int startOffset = i * pieceSize;
+                            final long startOffset = i * (long) pieceSize;
                             DataRange subrange =
                                     dataRange.getSubrange(startOffset, Math.min(pieceSize, totalSize - startOffset));
                             byte[] hash = digester.digestForced(subrange);
