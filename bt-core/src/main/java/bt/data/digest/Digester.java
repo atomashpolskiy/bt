@@ -28,29 +28,34 @@ import bt.data.range.Range;
 public interface Digester {
 
     /**
-     * Calculates hash of a data range.
+     * Calculates a digest of a data range.
      * <p>
      * Important: If some of the data can't be read immediately
      * (e.g. due to idiosyncrasies of underlying storage),
      * then this method may return incorrect result.
      *
-     * @return Hash (depends on the algorithm being used)
+     * @return Digest (depends on the algorithm being used)
      * @since 1.2
      */
     byte[] digest(DataRange data);
 
     /**
-     * Calculates hash of a data range. Fails if any storage unit does not work as expected.
+     * Calculates a digest of a data range. Throws {@link IllegalStateException} if any {@link bt.data.StorageUnit} does
+     * not return enough data.
      *
-     * @return Hash (depends on the algorithm being used)
+     * @return Digest (depends on the algorithm being used)
+     * @throws IllegalStateException if the underlying StorageUnits in the DataRange return less than
+     *                               {@link bt.data.StorageUnit#size()} from
+     *                               {@link bt.data.StorageUnit#readBlockFully(java.nio.ByteBuffer, long)}. This can happen
+     *                               because the storage in the underlying storage units is lazily allocated.
      * @since 1.9
      */
     byte[] digestForced(DataRange data);
 
     /**
-     * Calculates hash of a binary range.
+     * Calculates Digest of a binary range.
      *
-     * @return Hash (depends on the algorithm being used)
+     * @return Digest (depends on the algorithm being used)
      * @since 1.3
      */
     byte[] digest(Range<?> data);

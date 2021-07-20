@@ -92,10 +92,6 @@ public class JavaSecurityDigester implements Digester {
 
         data.visitUnits((unit, off, lim) -> {
             long remaining = lim - off;
-            // todo: is this check necessary? Why can't this be read to the buffer in chunks
-            if (remaining > Integer.MAX_VALUE) {
-                throw new BtException("Too much data -- can't read to buffer");
-            }
             do {
                 buffer.clear();
                 if (remaining < step) {
