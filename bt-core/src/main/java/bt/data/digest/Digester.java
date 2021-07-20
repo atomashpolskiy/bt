@@ -67,4 +67,11 @@ public interface Digester {
      * @since 1.10
      */
     int length();
+
+    /**
+     * Clone the digester so any thread local variables will be cleaned up when the clone is GC'd
+     *
+     * @return the copy of the digester
+     */
+    Digester createCopy();
 }

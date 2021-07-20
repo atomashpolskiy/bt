@@ -32,8 +32,8 @@ import java.util.stream.IntStream;
 public class DefaultChunkVerifier implements ChunkVerifier {
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultChunkVerifier.class);
 
-    private Digester digester;
-    private int numOfHashingThreads;
+    private final Digester digester;
+    private final int numOfHashingThreads;
 
     public DefaultChunkVerifier(Digester digester, int numOfHashingThreads) {
         this.digester = digester;
@@ -61,8 +61,12 @@ public class DefaultChunkVerifier implements ChunkVerifier {
 
     @Override
     public boolean verifyIfPresent(ChunkDescriptor chunk) {
+        return verifyIfPresent(chunk, digester.createCopy());
+    }
+
+    private static boolean verifyIfPresent(ChunkDescriptor chunk, Digester localDigester) {
         byte[] expected = chunk.getChecksum();
-        byte[] actual = digester.digest(chunk.getData());
+        byte[] actual = localDigester.digest(chunk.getData());
         return Arrays.equals(expected, actual);
     }
 
@@ -98,11 +102,12 @@ public class DefaultChunkVerifier implements ChunkVerifier {
         IntStream stream = IntStream.range(0, chunks.size()).unordered();
         if (parallel)
             stream = stream.parallel();
-        stream.filter(i -> this.checkIfChunkVerified(chunks.get(i)))
+        final Digester localDigester = digester.createCopy();
+        stream.filter(i -> this.checkIfChunkVerified(chunks.get(i), localDigester))
                 .forEach(bitfield::markLocalPieceVerified);
     }
 
-    private boolean checkIfChunkVerified(ChunkDescriptor chunk) {
+    private static boolean checkIfChunkVerified(ChunkDescriptor chunk, Digester localDigester) {
         // optimization to speedup the initial verification of torrent's data
         AtomicBoolean containsEmptyFile = new AtomicBoolean(false);
         chunk.getData().visitUnits((u, off, lim) -> {
@@ -118,7 +123,7 @@ public class DefaultChunkVerifier implements ChunkVerifier {
         // if any of this chunk's storage units is empty,
         // then the chunk is neither complete nor verified
         if (!containsEmptyFile.get()) {
-            return verifyIfPresent(chunk);
+            return verifyIfPresent(chunk, localDigester);
         }
         return false;
     }

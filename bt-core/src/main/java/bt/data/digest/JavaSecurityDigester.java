@@ -96,9 +96,10 @@ public class JavaSecurityDigester implements Digester {
                 }
                 unit.readBlockFully(buffer, off);
                 if (buffer.hasRemaining()) {
-                    throw new IllegalStateException("Failed to read data fully: " + buffer.remaining() + " bytes remaining");
+                    throw new IllegalStateException(
+                            "Failed to read data fully: " + buffer.remaining() + " bytes remaining");
                 }
-                digest.update(bytes,0, buffer.position());
+                digest.update(bytes, 0, buffer.position());
                 remaining -= step;
                 off += step;
             } while (remaining > 0);
@@ -142,5 +143,10 @@ public class JavaSecurityDigester implements Digester {
     @Override
     public int length() {
         return digestTL.get().getDigestLength();
+    }
+
+    @Override
+    public Digester createCopy() {
+        return new JavaSecurityDigester(algorithm, step);
     }
 }
