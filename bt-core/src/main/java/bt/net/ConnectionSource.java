@@ -24,7 +24,6 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,7 +41,7 @@ public class ConnectionSource implements IConnectionSource {
     private final Config config;
     private final Object lock = new Object();
 
-    private final Map<ConnectionKey, CompletableFuture<ConnectionResult>> pendingConnections;
+    private final ConcurrentMap<ConnectionKey, CompletableFuture<ConnectionResult>> pendingConnections;
     // TODO: weak map
     private final ConcurrentMap<Peer, Long> unreachablePeers;
 
@@ -114,14 +113,22 @@ public class ConnectionSource implements IConnectionSource {
             if (result != null) {
                 return result;
             } else {
-                result = createPendingConnFuture(peer, torrentId, key);
-                pendingConnections.put(key, result);
+                CompletableFuture<Void> addedToPendingConnections = new CompletableFuture<>();
+                try {
+                    result = createPendingConnFuture(peer, torrentId, key, addedToPendingConnections);
+                    pendingConnections.put(key, result);
+                    return result;
+                } finally {
+                    // If an exception happens, make sure that a thread isn't deadlocked waiting for this to complete
+                    addedToPendingConnections.complete(null);
+                }
             }
-            return result;
         }
     }
 
-    private CompletableFuture<ConnectionResult> createPendingConnFuture(Peer peer, TorrentId torrentId, ConnectionKey key) {
+    private CompletableFuture<ConnectionResult> createPendingConnFuture(Peer peer, TorrentId torrentId,
+                                                                        ConnectionKey key,
+                                                                        CompletableFuture<Void> addedToPendingConnections) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 ConnectionResult connectionResult =
@@ -137,9 +144,17 @@ public class ConnectionSource implements IConnectionSource {
                     return connectionResult;
                 }
             } finally {
-                // It is crucial that the last step be to remove this from pending connections to avoid locking in
-                // getExistingOrPendingConnection. See comment in that method as to why.
-                pendingConnections.remove(key);
+                // ensure that we don't remove this key from the map before it is added.
+                addedToPendingConnections.join();
+
+                // The synchronize ensures a memory barrier that ensures the effects of connectionPool.addConnectionIfAbsent(established)
+                // are visible to any other thread that sees the removal.
+                // Unfortunately ConcurrentMap.remove() does not guarantee a happens before relationship. See:
+                // https://stackoverflow.com/questions/39341742/does-concurrentmap-remove-provide-a-happens-before-edge-before-get-returns-n
+                // When Java 11 features are enabled,  this synchronize can be replaced with VarHandle.storeStoreFence().
+                synchronized (pendingConnections) {
+                    pendingConnections.remove(key);
+                }
             }
         }, connectionExecutor).whenComplete((acquiredConnection, throwable) -> {
             if (acquiredConnection == null || throwable != null) {
@@ -195,15 +210,14 @@ public class ConnectionSource implements IConnectionSource {
     }
 
     private CompletableFuture<ConnectionResult> getExistingOrPendingConnection(ConnectionKey key) {
-        // The order of checking these maps is crucial to avoid syncronization. Check pending connections, then
-        // existing connections. If the key is being moved from pendingConnections to existing connections, either
-        // We'll get it before it is removed from pendingConnections, or if it was removed, it must already be in
-        // existingConnections because ConcurrentMaps are guaranteed to have "happens-before" memory consistency
-        // effects.
-
-        CompletableFuture<ConnectionResult> pendingConnection = pendingConnections.get(key);
-        if (pendingConnection != null) {
-            return pendingConnection;
+        // When Java 11 features are enabled, this synchronize can be replaced with VarHandle.loadLoadFence() below the
+        // end of the synchronized block.
+        // See comment in createPendingConnFuture()
+        synchronized (pendingConnections) {
+            CompletableFuture<ConnectionResult> pendingConnection = pendingConnections.get(key);
+            if (pendingConnection != null) {
+                return pendingConnection;
+            }
         }
 
         PeerConnection existingConnection = connectionPool.getConnection(key);
