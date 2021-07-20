@@ -36,6 +36,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -134,7 +135,10 @@ public class TorrentWorker {
      */
     private void addPeer(ConnectionKey connectionKey) {
         if (tryAddPeerWithLimits()) {
-            PieceAnnouncingPeerWorker worker = createPeerWorker(connectionKey);
+            // If worker was null, our peerCount could diverge from the size peerMap. In practice,
+            // worker is never null, and ConcurrentHashMap cannot hold null values, but we add requireNonNull
+            // to make this more clear.
+            PieceAnnouncingPeerWorker worker = Objects.requireNonNull(createPeerWorker(connectionKey));
             PieceAnnouncingPeerWorker existing = peerMap.putIfAbsent(connectionKey, worker);
             if (existing == null) {
                 dispatcher.addMessageConsumer(connectionKey, message -> consume(connectionKey, message));
