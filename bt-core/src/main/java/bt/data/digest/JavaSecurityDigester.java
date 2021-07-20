@@ -59,9 +59,6 @@ public class JavaSecurityDigester implements Digester {
 
         data.visitUnits((unit, off, lim) -> {
             long remaining = lim - off;
-            if (remaining > Integer.MAX_VALUE) {
-                throw new BtException("Too much data -- can't read to buffer");
-            }
             do {
                 wrap.clear();
                 if (remaining < step) {
