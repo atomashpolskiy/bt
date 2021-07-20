@@ -61,7 +61,7 @@ public class DataDescriptor_DataReaderTest {
     @Before
     public void before() {
         int step = 8;
-        Digester digester = SHA1Digester.rolling(step);
+        Digester digester = SHA1Digester.newDigester(step);
         int numOfHashingThreads = 4;
         int transferBlockSize = 4;
 

@@ -20,18 +20,23 @@ public class SHA1Digester {
     private static final int DEFAULT_STEP_SIZE = 16 * 1024;
 
     /**
+     * Creates a new Digester with a default buffer size
+     *
+     * @return a new Digester with a reasonable default buffer size
+     */
+    public static Digester newDigester() {
+        return newDigester(DEFAULT_STEP_SIZE);
+    }
+
+    /**
      * Creates a new Digester with a default step size
      *
      * @return a new Digester with a reasonable default step size
      */
-    public static Digester newDigester() {
-        return rolling(DEFAULT_STEP_SIZE);
-    }
-
-    public static Digester rolling(int step) {
-        if (step <= 0) {
-            throw new IllegalArgumentException("Invalid step: " + step);
+    public static Digester newDigester(int bufferSize) {
+        if (bufferSize <= 0) {
+            throw new IllegalArgumentException("Invalid bufferSize: " + bufferSize);
         }
-        return new JavaSecurityDigester("SHA-1", step);
+        return new JavaSecurityDigester("SHA-1", bufferSize);
     }
 }

@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 public class TorrentBuilder {
     private int numHashingThreads = 0;
     private int maxNumOpenFiles = 128;
+    private int digestBufferSize = 1 * 1024 * 1024;
 
     private Path rootPath;
     private Set<Path> files;
@@ -231,6 +232,26 @@ public class TorrentBuilder {
 
     public List<List<String>> getAnnounceGroups() {
         return announceGroups;
+    }
+
+
+    /**
+     * Get the digest buffer size
+     *
+     * @return the size of the digest buffer
+     */
+    public int getDigestBufferSize() {
+        return digestBufferSize;
+    }
+
+    /**
+     * Set the size of the io buffer used for reading from files to verify their digest.
+     *
+     * @param digestBufferSize the size of the digest buffer
+     */
+    public TorrentBuilder digestBufferSize(int digestBufferSize) {
+        this.digestBufferSize = digestBufferSize;
+        return this;
     }
 
     /**

@@ -64,6 +64,7 @@ public class Config {
     private int numberOfPeersToRequestFromTracker;
     private int maxOutstandingRequests;
     private int networkBufferSize;
+    private int digestBufferSize;
 
     /**
      * Create a config with default parameters.
@@ -104,6 +105,7 @@ public class Config {
         this.numberOfPeersToRequestFromTracker = 50;
         this.maxOutstandingRequests = 250;
         this.networkBufferSize = 1 * 1024 * 1024; // 1 MB
+        this.digestBufferSize = 1 * 1024 * 1024; // 1 MB
     }
 
     /**
@@ -146,6 +148,7 @@ public class Config {
         this.numberOfPeersToRequestFromTracker = config.getNumberOfPeersToRequestFromTracker();
         this.maxOutstandingRequests = config.getMaxOutstandingRequests();
         this.networkBufferSize = config.getNetworkBufferSize();
+        this.digestBufferSize = config.getDigestBufferSize();
     }
 
     /**
@@ -682,5 +685,25 @@ public class Config {
      */
     public int getNetworkBufferSize() {
         return networkBufferSize;
+    }
+
+    /**
+     * Get the digest buffer size
+     *
+     * @return the size of the digest buffer
+     * @since 1.10
+     */
+    public int getDigestBufferSize() {
+        return digestBufferSize;
+    }
+
+    /**
+     * Set the size of the io buffer used for reading from files to verify their digest.
+     *
+     * @param digestBufferSize the size of the digest buffer
+     * @since 1.10
+     */
+    public void setDigestBufferSize(int digestBufferSize) {
+        this.digestBufferSize = digestBufferSize;
     }
 }

@@ -76,7 +76,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
 
     @Before
     public void before() {
-        Digester digester = SHA1Digester.rolling(digestBufferSize);
+        Digester digester = SHA1Digester.newDigester(digestBufferSize);
         int numOfHashingThreads = 4;
         this.verifier = new DefaultChunkVerifier(digester, numOfHashingThreads);
         int transferBlockSize = 4;

@@ -169,8 +169,8 @@ public class ServiceModule implements Module {
 
     @Provides
     @Singleton
-    public Digester provideDigester() {
-        return SHA1Digester.newDigester();
+    public Digester provideDigester(Config config) {
+        return SHA1Digester.newDigester(config.getDigestBufferSize());
     }
 
     @Provides
