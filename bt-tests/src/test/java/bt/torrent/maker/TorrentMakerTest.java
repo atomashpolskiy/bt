@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -54,9 +53,10 @@ public class TorrentMakerTest {
      */
     @Test
     public void testSingleFileTorrent() throws IOException {
+        System.out.println(System.getProperty("os.name"));
         TorrentBuilder torrentBuilder = makeTorrentBuilder(CREATED_BY, Collections.singletonList(testfileName));
         torrentBuilder.pieceSize(1 << 10);
-        torrentBuilder.digestBufferSize(16);
+        torrentBuilder.hashingBufferSize(16);
         torrentBuilder.numHashingThreads(1);
 
         Torrent decodedTorrent = buildAndDecodeTorrent(torrentBuilder);
@@ -118,7 +118,7 @@ public class TorrentMakerTest {
     public void testMultiFileTorrent() throws IOException {
         TorrentBuilder torrentBuilder = makeTorrentBuilder(null, Arrays.asList(testfileName, testfile2Name));
         torrentBuilder.numHashingThreads(2);
-        torrentBuilder.digestBufferSize(1 << 20);
+        torrentBuilder.hashingBufferSize(1 << 20);
 
         Torrent decodedTorrent = buildAndDecodeTorrent(torrentBuilder);
         Assert.assertEquals(testfileName, decodedTorrent.getFiles().get(0).getPathElements().get(0));

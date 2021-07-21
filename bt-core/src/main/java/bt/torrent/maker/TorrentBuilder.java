@@ -1,5 +1,6 @@
 package bt.torrent.maker;
 
+import bt.data.digest.SHA1Digester;
 import com.google.common.collect.Sets;
 
 import java.io.IOException;
@@ -22,7 +23,7 @@ import java.util.stream.Stream;
 public class TorrentBuilder {
     private int numHashingThreads = 0;
     private int maxNumOpenFiles = 128;
-    private int digestBufferSize = 1 * 1024 * 1024;
+    private int hashingBufferSize = SHA1Digester.DEFAULT_BUFFER_SIZE;
 
     private Path rootPath;
     private Set<Path> files;
@@ -240,17 +241,17 @@ public class TorrentBuilder {
      *
      * @return the size of the digest buffer
      */
-    public int getDigestBufferSize() {
-        return digestBufferSize;
+    public int getHashingBufferSize() {
+        return hashingBufferSize;
     }
 
     /**
      * Set the size of the io buffer used for reading from files to verify their digest.
      *
-     * @param digestBufferSize the size of the digest buffer
+     * @param hashingBufferSize the size of the digest buffer
      */
-    public TorrentBuilder digestBufferSize(int digestBufferSize) {
-        this.digestBufferSize = digestBufferSize;
+    public TorrentBuilder hashingBufferSize(int hashingBufferSize) {
+        this.hashingBufferSize = hashingBufferSize;
         return this;
     }
 

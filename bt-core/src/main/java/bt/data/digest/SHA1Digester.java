@@ -17,7 +17,20 @@
 package bt.data.digest;
 
 public class SHA1Digester {
-    private static final int DEFAULT_STEP_SIZE = 16 * 1024;
+
+    // Linux readahead sequential access detection is smart, so we can use a small buffer. Mac OS seems less intelligent
+    // and a bigger buffer helps performance in cases where the file is not in the RAM Disk Cache. Windows has not been
+    // tested.
+    // In the future, a call to posix_fadvise on Linux and fcntl on Mac could eliminate the need for this. But there's
+    // no infrastructure for native OS calls at the moment.
+    // See:
+    // https://man7.org/linux/man-pages/man2/posix_fadvise.2.html
+    // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/fcntl.2.html
+    private static final int LINUX_DEFAULT_BUFFER_SIZE = 16 * 1024;
+    private static final int OTHER_OS_DEFAULT_BUFFER_SIZE = 1 * 1024 * 1024;
+
+    public static final int DEFAULT_BUFFER_SIZE =
+            System.getProperty("os.name").contains("Linux") ? LINUX_DEFAULT_BUFFER_SIZE : OTHER_OS_DEFAULT_BUFFER_SIZE;
 
     /**
      * Creates a new Digester with a default buffer size
@@ -25,7 +38,7 @@ public class SHA1Digester {
      * @return a new Digester with a reasonable default buffer size
      */
     public static Digester newDigester() {
-        return newDigester(DEFAULT_STEP_SIZE);
+        return newDigester(DEFAULT_BUFFER_SIZE);
     }
 
     /**

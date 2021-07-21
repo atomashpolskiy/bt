@@ -16,6 +16,7 @@
 
 package bt.runtime;
 
+import bt.data.digest.SHA1Digester;
 import bt.net.crypto.MSEHandshakeProcessor;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.service.NetworkUtil;
@@ -64,7 +65,7 @@ public class Config {
     private int numberOfPeersToRequestFromTracker;
     private int maxOutstandingRequests;
     private int networkBufferSize;
-    private int digestBufferSize;
+    private int hashingBufferSize;
 
     /**
      * Create a config with default parameters.
@@ -105,7 +106,7 @@ public class Config {
         this.numberOfPeersToRequestFromTracker = 50;
         this.maxOutstandingRequests = 250;
         this.networkBufferSize = 1 * 1024 * 1024; // 1 MB
-        this.digestBufferSize = 1 * 1024 * 1024; // 1 MB
+        this.hashingBufferSize = SHA1Digester.DEFAULT_BUFFER_SIZE;
     }
 
     /**
@@ -148,7 +149,7 @@ public class Config {
         this.numberOfPeersToRequestFromTracker = config.getNumberOfPeersToRequestFromTracker();
         this.maxOutstandingRequests = config.getMaxOutstandingRequests();
         this.networkBufferSize = config.getNetworkBufferSize();
-        this.digestBufferSize = config.getDigestBufferSize();
+        this.hashingBufferSize = config.getHashingBufferSize();
     }
 
     /**
@@ -693,17 +694,17 @@ public class Config {
      * @return the size of the digest buffer
      * @since 1.10
      */
-    public int getDigestBufferSize() {
-        return digestBufferSize;
+    public int getHashingBufferSize() {
+        return hashingBufferSize;
     }
 
     /**
      * Set the size of the io buffer used for reading from files to verify their digest.
      *
-     * @param digestBufferSize the size of the digest buffer
+     * @param hashingBufferSize the size of the digest buffer
      * @since 1.10
      */
-    public void setDigestBufferSize(int digestBufferSize) {
-        this.digestBufferSize = digestBufferSize;
+    public void setHashingBufferSize(int hashingBufferSize) {
+        this.hashingBufferSize = hashingBufferSize;
     }
 }

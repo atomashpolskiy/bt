@@ -182,7 +182,7 @@ public class TorrentMaker {
     }
 
     private byte[] computeSha1Hashes(long totalSize, DataRange dataRange) {
-        Digester digester = SHA1Digester.newDigester(torrentBuilder.getDigestBufferSize());
+        Digester digester = SHA1Digester.newDigester(torrentBuilder.getHashingBufferSize());
         final int pieceSize = torrentBuilder.getPieceSize();
         int numChunks = PieceUtils.calculateNumberOfChunks(totalSize, pieceSize);
         byte[] hashBuf = new byte[digester.length() * numChunks];
