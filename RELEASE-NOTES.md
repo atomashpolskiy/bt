@@ -8,6 +8,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 
 ### New Features:
 
+* API to create torrent metainfo (.torrent files)
 * Update Guice to 5.0.1 for Java 9 support
 * Support callback functions for when
     - Torrent files complete downloading
