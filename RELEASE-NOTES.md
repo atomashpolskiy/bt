@@ -53,6 +53,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * Fix intermittent NullPointerException in DHT shutdown hook
 * Lower logging level to debug on peer disconnects
 * Eliminate possibility of a dead lock in peer connection handling code [#170](https://github.com/atomashpolskiy/bt/issues/170)
+* New configuration option for adjusting the amount of memory used for hashing (verification) of data
 
 ## 1.9
 
