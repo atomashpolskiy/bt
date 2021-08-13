@@ -54,6 +54,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * Lower logging level to debug on peer disconnects
 * Eliminate possibility of a dead lock in peer connection handling code [#170](https://github.com/atomashpolskiy/bt/issues/170)
 * New configuration option for adjusting the amount of memory used for hashing (verification) of data
+* Fix a dead-lock in SocketChannelHandler [#183](https://github.com/atomashpolskiy/bt/issues/183)
 
 ## 1.9
 
