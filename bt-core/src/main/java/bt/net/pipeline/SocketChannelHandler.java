@@ -42,6 +42,8 @@ public class SocketChannelHandler implements ChannelHandler {
     private final Object outboundBufferLock;
     private final AtomicBoolean shutdown;
 
+    private volatile boolean closing = false;
+
     public SocketChannelHandler(
             SocketChannel channel,
             BorrowedBuffer<ByteBuffer> inboundBuffer,
@@ -143,7 +145,7 @@ public class SocketChannelHandler implements ChannelHandler {
             }
             buffer.flip();
             try {
-                while (buffer.hasRemaining()) {
+                while (buffer.hasRemaining() && !closing) {
                     channel.write(buffer);
                 }
                 buffer.compact();
@@ -158,6 +160,7 @@ public class SocketChannelHandler implements ChannelHandler {
 
     @Override
     public void close() {
+        closing = true;
         synchronized (inboundBufferLock) {
             synchronized (outboundBufferLock) {
                 shutdown();
