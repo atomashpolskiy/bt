@@ -26,17 +26,19 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 class TrackerPeerSource extends ScheduledPeerSource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TrackerPeerSource.class);
 
-    private Tracker tracker;
-    private TorrentId torrentId;
+    private static final long NEVER_ANNOUNCED = Long.MIN_VALUE;
+    private final Tracker tracker;
+    private final TorrentId torrentId;
     private Duration trackerQueryInterval;
 
-    private volatile long lastRefreshed;
+    private final AtomicLong lastRefreshed = new AtomicLong(NEVER_ANNOUNCED);
 
     TrackerPeerSource(ExecutorService executor, Tracker tracker, TorrentId torrentId, Duration trackerQueryInterval) {
         super(executor);
@@ -47,22 +49,38 @@ class TrackerPeerSource extends ScheduledPeerSource {
 
     @Override
     protected void collectPeers(Consumer<Peer> peerConsumer) {
-        if (System.currentTimeMillis() - lastRefreshed >= trackerQueryInterval.toMillis()) {
-            TrackerResponse response;
-            try {
-                // TODO: report stats
-                response = tracker.request(torrentId).query();
-            } finally {
-                lastRefreshed = System.currentTimeMillis();
-            }
-            if (response.isSuccess()) {
-                response.getPeers().forEach(peerConsumer::accept);
-            } else {
-                if (response.getError().isPresent()) {
-                    throw new BtException("Failed to get peers for torrent", response.getError().get());
+        final long now = System.currentTimeMillis();
+        final long lastRefreshTime = lastRefreshed.get();
+
+        if (lastRefreshTime == NEVER_ANNOUNCED || (now - lastRefreshTime) >= trackerQueryInterval.toMillis()) {
+
+            // use atomic CaS - avoid double announce.
+            if (lastRefreshed.compareAndSet(lastRefreshTime, now)) {
+                TrackerResponse response;
+                try {
+                    // TODO: report stats
+                    if (lastRefreshTime == NEVER_ANNOUNCED)
+                        response = tracker.request(torrentId).start();
+                    else
+                        response = tracker.request(torrentId).query();
+
+                    // ensure that min interval is respected
+                    if (response.isSuccess() && response.getMinInterval() > trackerQueryInterval.getSeconds()) {
+                        trackerQueryInterval = Duration.ofSeconds(response.getMinInterval());
+                    }
+                } finally {
+                    lastRefreshed.set(System.currentTimeMillis());
+                }
+
+                if (response.isSuccess()) {
+                    response.getPeers().forEach(peerConsumer::accept);
                 } else {
-                    LOGGER.error("Failed to get peers for torrent -- " +
-                            "unexpected error during interaction with the tracker; message: " + response.getErrorMessage());
+                    if (response.getError().isPresent()) {
+                        throw new BtException("Failed to get peers for torrent", response.getError().get());
+                    } else {
+                        LOGGER.error("Failed to get peers for torrent -- " +
+                                "unexpected error during interaction with the tracker; message: " + response.getErrorMessage());
+                    }
                 }
             }
         }

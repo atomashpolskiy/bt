@@ -90,28 +90,11 @@ class TrackerPeerSourceFactory implements PeerSourceFactory {
     }
 
     private TrackerPeerSource getOrCreateTrackerPeerSource(TorrentId torrentId, AnnounceKey announceKey) {
-        ConcurrentMap<AnnounceKey, TrackerPeerSource> map = getOrCreateTrackerPeerSourcesMap(torrentId);
-        TrackerPeerSource trackerPeerSource = map.get(announceKey);
-        if (trackerPeerSource == null) {
-            trackerPeerSource = createTrackerPeerSource(torrentId, announceKey);
-            TrackerPeerSource existing = map.putIfAbsent(announceKey, trackerPeerSource);
-            if (existing != null) {
-                trackerPeerSource = existing;
-            }
-        }
+        ConcurrentMap<AnnounceKey, TrackerPeerSource> torrentAnnouncerMap = peerSources.computeIfAbsent(torrentId,
+                k -> new ConcurrentHashMap<>());
+        TrackerPeerSource trackerPeerSource = torrentAnnouncerMap.computeIfAbsent(announceKey,
+                k -> createTrackerPeerSource(torrentId, announceKey));
         return trackerPeerSource;
-    }
-
-    private ConcurrentMap<AnnounceKey, TrackerPeerSource> getOrCreateTrackerPeerSourcesMap(TorrentId torrentId) {
-        ConcurrentMap<AnnounceKey, TrackerPeerSource> map = peerSources.get(torrentId);
-        if (map == null) {
-            map = new ConcurrentHashMap<>();
-            ConcurrentMap<AnnounceKey, TrackerPeerSource> existing = peerSources.putIfAbsent(torrentId, map);
-            if (existing != null) {
-                map = existing;
-            }
-        }
-        return map;
     }
 
     private TrackerPeerSource createTrackerPeerSource(TorrentId torrentId, AnnounceKey announceKey) {

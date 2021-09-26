@@ -72,16 +72,6 @@ public class TrackerAnnouncer {
         }
     }
 
-    public void start() {
-        trackerOptional.ifPresent(tracker -> {
-            try {
-                processResponse(Event.start, tracker, prepareAnnounce(tracker).start());
-            } catch (Exception e) {
-                logTrackerError(Event.start, tracker, Optional.of(e), Optional.empty());
-            }
-        });
-    }
-
     public void stop() {
         trackerOptional.ifPresent(tracker -> {
             try {
@@ -93,9 +83,13 @@ public class TrackerAnnouncer {
     }
 
     public void complete() {
+        // TODO: We should store the peers returned from the completed response. Really, this should be done in PeerSource
         trackerOptional.ifPresent(tracker -> {
             try {
-                processResponse(Event.complete, tracker, prepareAnnounce(tracker).complete());
+                // do not send completed if the torrent was fully downloaded before we started. This is
+                // as per BEP-0003: "No 'completed' is sent if the file was complete when started."
+                if (sessionState.getDownloaded() > 0)
+                    processResponse(Event.complete, tracker, prepareAnnounce(tracker).complete());
             } catch (Exception e) {
                 logTrackerError(Event.complete, tracker, Optional.of(e), Optional.empty());
             }

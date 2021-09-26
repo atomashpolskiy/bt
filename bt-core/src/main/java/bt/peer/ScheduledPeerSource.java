@@ -41,6 +41,7 @@ public abstract class ScheduledPeerSource implements PeerSource {
     private final ReentrantLock lock;
     private final AtomicReference<Future<?>> futureOptional;
     private final Queue<Peer> peers;
+    private boolean firstUpdate = true;
 
     public ScheduledPeerSource(ExecutorService executor) {
         this.executor = executor;
@@ -68,24 +69,34 @@ public abstract class ScheduledPeerSource implements PeerSource {
                 if (futureOptional.get() != null) {
                     Future<?> future = futureOptional.get();
                     if (future.isDone()) {
-                        try {
-                            future.get();
-                        } catch (InterruptedException | ExecutionException e) {
-                            // ignoring InterruptedException here is fine
-                            // because the peer source's executor will be terminated via a shutdown hook
-                            LOGGER.warn("Peer collection finished with exception in peer source: " + toString(), e);
-                        }
-                        futureOptional.set(null);
+                        waitForFutureAndLogExceptions(future);
                     }
                 }
 
                 if (futureOptional.get() == null) {
                     futureOptional.set(executor.submit(() -> collectPeers(peers::add)));
+
+                    // on the first announce, wait for the job to complete, otherwise it can be async
+                    if (firstUpdate) {
+                        waitForFutureAndLogExceptions(futureOptional.get());
+                        firstUpdate = false;
+                    }
                 }
             } finally {
                 lock.unlock();
             }
         }
+    }
+
+    private void waitForFutureAndLogExceptions(Future<?> future) {
+        try {
+            future.get();
+        } catch (InterruptedException | ExecutionException e) {
+            // ignoring InterruptedException here is fine
+            // because the peer source's executor will be terminated via a shutdown hook
+            LOGGER.warn("Peer collection finished with exception in peer source: " + toString(), e);
+        }
+        futureOptional.set(null);
     }
 
     /**

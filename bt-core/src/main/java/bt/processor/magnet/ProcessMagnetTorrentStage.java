@@ -30,9 +30,4 @@ public class ProcessMagnetTorrentStage extends ProcessTorrentStage<MagnetContext
                                      EventSink eventSink) {
         super(next, torrentRegistry, trackerService, eventSink);
     }
-
-    @Override
-    protected void onStarted(MagnetContext context) {
-        // do not announce start, as it should have been done already per FetchMetadataStage
-    }
 }

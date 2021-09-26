@@ -62,7 +62,6 @@ public class ProcessTorrentStage<C extends TorrentContext> extends TerminateOnEr
         }
 
         descriptor.start();
-        start(context);
 
         eventSink.fireTorrentStarted(torrentId);
 
@@ -72,18 +71,6 @@ public class ProcessTorrentStage<C extends TorrentContext> extends TerminateOnEr
         } catch (InterruptedException e) {
             throw new RuntimeException("Unexpectedly interrupted", e);
         }
-    }
-
-    private void start(C context) {
-        try {
-            onStarted(context);
-        } catch (Exception e) {
-            LOGGER.error("Unexpected error", e);
-        }
-    }
-
-    protected void onStarted(C context) {
-        context.getAnnouncer().ifPresent(TrackerAnnouncer::start);
     }
 
     private void complete(C context) {
