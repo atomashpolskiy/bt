@@ -21,12 +21,15 @@ import bt.torrent.fileselector.SelectionResult;
 import bt.torrent.fileselector.TorrentFileSelector;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Optional;
 
 public class CliFileSelector extends TorrentFileSelector {
     private static final String PROMPT_MESSAGE_FORMAT = "Download '%s'? (hit <Enter> to confirm or <Esc> to skip)";
     private static final String ILLEGAL_KEYPRESS_WARNING = "*** Invalid key pressed. Please, use only <Enter> or <Esc> ***";
+    private static final int EOF = -1;
+    private static final int ESC = 0x1B;
 
     private final Optional<SessionStatePrinter> printer;
     private volatile boolean shutdown;
@@ -62,13 +65,13 @@ public class CliFileSelector extends TorrentFileSelector {
 
             try {
                 switch (System.in.read()) {
-                    case -1: {
+                    case EOF: {
                         throw new IllegalStateException("EOF");
                     }
                     case '\n': { // <Enter>
                         return SelectionResult.select().build();
                     }
-                    case 0x1B: { // <Esc>
+                    case ESC: {
                         return SelectionResult.skip();
                     }
                     default: {
@@ -76,7 +79,7 @@ public class CliFileSelector extends TorrentFileSelector {
                     }
                 }
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new UncheckedIOException(e);
             }
         }
 

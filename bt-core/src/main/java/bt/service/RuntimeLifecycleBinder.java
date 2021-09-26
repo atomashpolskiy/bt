@@ -17,18 +17,23 @@
 package bt.service;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 
 /**
- *<p><b>Note that this class implements a service.
+ * <p><b>Note that this class implements a service.
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
 public class RuntimeLifecycleBinder implements IRuntimeLifecycleBinder {
 
-    private Map<LifecycleEvent, List<LifecycleBinding>> bindings;
+    private final Map<LifecycleEvent, List<LifecycleBinding>> bindings;
+    private final EnumSet<LifecycleEvent> eventsRun = EnumSet.noneOf(LifecycleEvent.class);
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     public RuntimeLifecycleBinder() {
         bindings = new HashMap<>();
@@ -39,42 +44,60 @@ public class RuntimeLifecycleBinder implements IRuntimeLifecycleBinder {
 
     @Override
     public void onStartup(Runnable r) {
-        bindings.get(LifecycleEvent.STARTUP).add(LifecycleBinding.bind(r).build());
+        addBinding(LifecycleEvent.STARTUP, LifecycleBinding.bind(r).build());
     }
 
     @Override
     public void onStartup(String description, Runnable r) {
-        bindings.get(LifecycleEvent.STARTUP).add(LifecycleBinding.bind(r).description(description).build());
+        addBinding(LifecycleEvent.STARTUP, LifecycleBinding.bind(r).description(description).build());
     }
 
     @Override
     public void onStartup(LifecycleBinding binding) {
-        bindings.get(LifecycleEvent.STARTUP).add(binding);
+        addBinding(LifecycleEvent.STARTUP, binding);
     }
 
     @Override
     public void onShutdown(Runnable r) {
-        bindings.get(LifecycleEvent.SHUTDOWN).add(LifecycleBinding.bind(r).async().build());
+        addBinding(LifecycleEvent.SHUTDOWN, LifecycleBinding.bind(r).async().build());
     }
 
     @Override
     public void onShutdown(String description, Runnable r) {
-        bindings.get(LifecycleEvent.SHUTDOWN).add(
+        addBinding(LifecycleEvent.SHUTDOWN,
                 LifecycleBinding.bind(r).description(description).async().build());
     }
 
     @Override
     public void onShutdown(LifecycleBinding binding) {
-        bindings.get(LifecycleEvent.SHUTDOWN).add(binding);
+        addBinding(LifecycleEvent.SHUTDOWN, binding);
     }
 
     @Override
     public void addBinding(LifecycleEvent event, LifecycleBinding binding) {
-        bindings.get(event).add(binding);
+        lock.readLock().lock();
+        try {
+            if (this.eventsRun.contains(event)) {
+                // we already ran this lifecycle event, so call the binding
+                binding.getRunnable().run();
+            } else {
+                bindings.get(event).add(binding);
+            }
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     @Override
     public void visitBindings(LifecycleEvent event, Consumer<LifecycleBinding> consumer) {
-        bindings.get(event).forEach(consumer::accept);
+        lock.writeLock().lock();
+        try {
+            if (!this.eventsRun.add(event)) {
+                throw new IllegalStateException("LifecycleEvent " + event + " has already been run.");
+            }
+            bindings.get(event).forEach(consumer::accept);
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 }
