@@ -16,6 +16,9 @@
 
 package bt.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -30,6 +33,7 @@ import java.util.function.Consumer;
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
 public class RuntimeLifecycleBinder implements IRuntimeLifecycleBinder {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RuntimeLifecycleBinder.class);
 
     private final Map<LifecycleEvent, List<LifecycleBinding>> bindings;
     private final EnumSet<LifecycleEvent> eventsRun = EnumSet.noneOf(LifecycleEvent.class);
@@ -93,7 +97,8 @@ public class RuntimeLifecycleBinder implements IRuntimeLifecycleBinder {
         lock.writeLock().lock();
         try {
             if (!this.eventsRun.add(event)) {
-                throw new IllegalStateException("LifecycleEvent " + event + " has already been run.");
+                LOGGER.error("LifecycleEvent " + event + " has already been run. Hooks will not called again.");
+                return;
             }
             bindings.get(event).forEach(consumer::accept);
         } finally {
