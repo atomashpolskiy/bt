@@ -190,9 +190,8 @@ public class PeerRegistry implements IPeerRegistry {
                 Iterator<Peer> iter = discoveredPeers.iterator();
                 while (iter.hasNext()) {
                     Peer peer = iter.next();
-                    if (!addedPeers.contains(peer)) {
+                    if (addedPeers.add(peer)) {
                         addPeer(torrentId, peer);
-                        addedPeers.add(peer);
                     }
                     iter.remove();
                 }

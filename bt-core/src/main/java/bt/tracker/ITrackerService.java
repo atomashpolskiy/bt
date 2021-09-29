@@ -42,7 +42,7 @@ public interface ITrackerService {
     Tracker getTracker(String trackerUrl);
 
     /**
-     * Get a tracker by its' announce key
+     * Get a tracker by its announce key
      *
      * @return Either a single-tracker or a multi-tracker,
      *         depending of the type of the announce key
