@@ -55,6 +55,12 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * Eliminate possibility of a dead lock in peer connection handling code [#170](https://github.com/atomashpolskiy/bt/issues/170)
 * New configuration option for adjusting the amount of memory used for hashing (verification) of data
 * Fix a dead-lock in SocketChannelHandler [#183](https://github.com/atomashpolskiy/bt/issues/183)
+* Runtime does not terminate when torrent has been downloaded [#167](https://github.com/atomashpolskiy/bt/issues/167)
+* Peers received from the initial tracker connection are now used rather than discarded
+* Bt no longer makes two calls to the tracker on startup - one to announce the startup and the other to get peers.
+* Bt now respects tracker minimum announce intervals
+* Bt now does not send a completed event to the tracker if the torrent was already completed before it connected to the tracker
+* The first tracker announce is synchronously waited for - this decreases the time to connect to the first peers returned from the tracker.
 
 ## 1.9
 
