@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -92,7 +94,11 @@ public class LocalServiceDiscoveryService implements ILocalServiceDiscoveryServi
     }
 
     private void schedulePeriodicAnnounce() {
-        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "lsd-announcer"));
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread ret = new Thread(r, "lsd-announcer");
+            ret.setDaemon(true);
+            return ret;
+        });
         long intervalMillis = config.getLocalServiceDiscoveryAnnounceInterval().toMillis();
         executor.scheduleWithFixedDelay(this::announce, 0, intervalMillis, TimeUnit.MILLISECONDS);
         lifecycleBinder.onShutdown(LifecycleBinding.bind(executor::shutdownNow).description("Shutdown LSD announcer").build());
