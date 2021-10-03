@@ -52,6 +52,7 @@ class DefaultDataDescriptor implements DataDescriptor {
 
     private List<ChunkDescriptor> chunkDescriptors;
     private LocalBitfield bitfield;
+    private boolean startedAsSeed;
 
     private List<List<TorrentFile>> filesForPieces;
     private Collection<StorageUnit> storageUnits;
@@ -94,7 +95,6 @@ class DefaultDataDescriptor implements DataDescriptor {
 
         List<List<CompletableTorrentFile>> countdownTorrentFiles =
                 createListOfCountdownFiles(torrent.getFiles(), pieceNumToFile);
-
 
         this.bitfield = buildBitfield(chunks, countdownTorrentFiles);
         this.chunkDescriptors = chunks;
@@ -163,7 +163,7 @@ class DefaultDataDescriptor implements DataDescriptor {
             }
         };
 
-        verifier.verify(chunks, bitfield);
+        this.startedAsSeed = verifier.verify(chunks, bitfield);
         return bitfield;
     }
 
@@ -214,6 +214,25 @@ class DefaultDataDescriptor implements DataDescriptor {
     @Override
     public void waitForAllPieces() throws InterruptedException {
         bitfield.waitForAllPieces();
+    }
+
+    @Override
+    public long getLeft() {
+        BitSet chunkStatus = this.bitfield.getBitmask();
+        int lastChunkIdx = chunkDescriptors.size() - 1;
+
+        // handle last piece which may be smaller than other pieces
+        final boolean lastBlockDone = chunkStatus.get(lastChunkIdx);
+        long dataCompleted = lastBlockDone ? chunkDescriptors.get(lastChunkIdx).length() : 0;
+
+        long numFullCompleteChunks = chunkStatus.cardinality() - (lastBlockDone ? 1 : 0);
+        dataCompleted += torrent.getChunkSize() * numFullCompleteChunks;
+        return torrent.getSize() - dataCompleted;
+    }
+
+    @Override
+    public boolean startedAsSeed() {
+        return this.startedAsSeed;
     }
 
     @Override

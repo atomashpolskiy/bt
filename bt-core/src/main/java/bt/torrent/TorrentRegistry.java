@@ -18,14 +18,11 @@ package bt.torrent;
 
 import bt.data.Storage;
 import bt.metainfo.Torrent;
-import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
-import bt.processor.ProcessingContext;
 import bt.torrent.callbacks.FileDownloadCompleteCallback;
 
 import java.util.Collection;
 import java.util.Optional;
-import java.util.function.BiConsumer;
 
 /**
  * Registry of all torrents known to the current runtime.
@@ -83,7 +80,7 @@ public interface TorrentRegistry {
      *                Will be used when creating a new torrent descriptor.
      * @return Torrent descriptor
      * @since 1.0
-     * @deprecated since 1.3 in favor of more clearly named {@link #register(Torrent, Storage)}
+     * @deprecated since 1.3 in favor of more clearly named {@link #register(Torrent, Storage, FileDownloadCompleteCallback)}
      */
     TorrentDescriptor getOrCreateDescriptor(Torrent torrent, Storage storage);
 
@@ -98,6 +95,15 @@ public interface TorrentRegistry {
      */
     TorrentDescriptor register(Torrent torrent, Storage storage,
                                FileDownloadCompleteCallback fileCompletionCallback);
+
+    /**
+     * Register a session state for the specified torrent
+     *
+     * @param torrentId the torrent id
+     * @param state     the session state of the torrent
+     * @since 1.10
+     */
+    void registerSessionState(TorrentId torrentId, TorrentSessionState state);
 
     /**
      * Get an existing torrent descriptor for a given torrent ID

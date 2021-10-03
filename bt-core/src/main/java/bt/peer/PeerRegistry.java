@@ -17,6 +17,7 @@
 package bt.peer;
 
 import bt.event.EventSink;
+import bt.event.EventSource;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
@@ -57,17 +58,19 @@ public class PeerRegistry implements IPeerRegistry {
 
     private final Peer localPeer;
 
-    private TorrentRegistry torrentRegistry;
-    private ITrackerService trackerService;
-    private EventSink eventSink;
-    private TrackerPeerSourceFactory trackerPeerSourceFactory;
-    private Set<PeerSourceFactory> extraPeerSourceFactories;
+    private final ScheduledExecutorService scheduledExecutorService;
+    private final TorrentRegistry torrentRegistry;
+    private final ITrackerService trackerService;
+    private final EventSink eventSink;
+    private final TrackerPeerSourceFactory trackerPeerSourceFactory;
+    private final Set<PeerSourceFactory> extraPeerSourceFactories;
 
-    private ConcurrentMap<TorrentId, Set<AnnounceKey>> extraAnnounceKeys;
-    private ReentrantLock extraAnnounceKeysLock;
+    private final ConcurrentMap<TorrentId, Set<AnnounceKey>> extraAnnounceKeys;
+    private final ReentrantLock extraAnnounceKeysLock;
 
     @Inject
     public PeerRegistry(IRuntimeLifecycleBinder lifecycleBinder,
+                        EventSource eventSource,
                         IdentityService idService,
                         TorrentRegistry torrentRegistry,
                         ITrackerService trackerService,
@@ -83,61 +86,70 @@ public class PeerRegistry implements IPeerRegistry {
         this.trackerService = trackerService;
         this.eventSink = eventSink;
         this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, torrentRegistry,
-                lifecycleBinder, config.getTrackerQueryInterval(), config.getAcceptorPort());
+                lifecycleBinder, eventSource, config.getTrackerQueryInterval(), config.getAcceptorPort());
         this.extraPeerSourceFactories = extraPeerSourceFactories;
 
         this.extraAnnounceKeys = new ConcurrentHashMap<>();
         this.extraAnnounceKeysLock = new ReentrantLock();
 
-        createExecutor(lifecycleBinder, config);
+        this.scheduledExecutorService = createExecutor(lifecycleBinder, config);
+        eventSource.onTorrentStopped(null, e -> this.extraAnnounceKeys.remove(e.getTorrentId()));
     }
 
-    private void createExecutor(IRuntimeLifecycleBinder lifecycleBinder, Config config) {
+    private ScheduledExecutorService createExecutor(IRuntimeLifecycleBinder lifecycleBinder, Config config) {
         String threadName = String.format("%d.bt.peer.peer-collector", config.getAcceptorPort());
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, threadName));
         lifecycleBinder.onStartup("Schedule periodic peer lookup", () -> executor.scheduleAtFixedRate(
                 this::collectAndVisitPeers, 1, config.getPeerDiscoveryInterval().toMillis(), TimeUnit.MILLISECONDS));
         lifecycleBinder.onShutdown("Shutdown peer lookup scheduler", executor::shutdownNow);
+        return executor;
+    }
+
+    @Override
+    public void triggerPeerCollection(TorrentId torrentId) {
+        scheduledExecutorService.execute(() -> collectPeersForTorrent(torrentId));
     }
 
     private void collectAndVisitPeers() {
-        torrentRegistry.getTorrentIds().forEach(torrentId -> {
-            Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrentId);
-            if (descriptor.isPresent() && descriptor.get().isActive()) {
-                Optional<Torrent> torrentOptional = torrentRegistry.getTorrent(torrentId);
+        torrentRegistry.getTorrentIds().forEach(this::collectPeersForTorrent);
+    }
 
-                Optional<AnnounceKey> torrentAnnounceKey = torrentOptional.isPresent() ?
-                        torrentOptional.get().getAnnounceKey() : Optional.empty();
+    private void collectPeersForTorrent(TorrentId torrentId) {
+        Optional<TorrentDescriptor> descriptor = torrentRegistry.getDescriptor(torrentId);
+        if (descriptor.isPresent() && descriptor.get().isActive()) {
+            Optional<Torrent> torrentOptional = torrentRegistry.getTorrent(torrentId);
 
-                Collection<AnnounceKey> extraTorrentAnnounceKeys = extraAnnounceKeys.get(torrentId);
-                if (extraTorrentAnnounceKeys == null) {
-                    queryTrackers(torrentId, torrentAnnounceKey, Collections.emptyList());
-                } else if (torrentOptional.isPresent() && torrentOptional.get().isPrivate()) {
-                    if (extraTorrentAnnounceKeys.size() > 0) {
-                        // prevent violating private torrents' rule of "only one tracker"
-                        LOGGER.warn("Will not query extra trackers for a private torrent, id: {}", torrentId);
-                    }
-                } else {
-                    // more announce keys might be added at the same time;
-                    // querying all trackers can be time-consuming, so we make a copy of the collection
-                    // to prevent blocking callers of addPeerSource(TorrentId, AnnounceKey) for too long
-                    Collection<AnnounceKey> extraTorrentAnnounceKeysCopy;
-                    extraAnnounceKeysLock.lock();
-                    try {
-                        extraTorrentAnnounceKeysCopy = new ArrayList<>(extraTorrentAnnounceKeys);
-                    } finally {
-                        extraAnnounceKeysLock.unlock();
-                    }
-                    queryTrackers(torrentId, torrentAnnounceKey, extraTorrentAnnounceKeysCopy);
+            Optional<AnnounceKey> torrentAnnounceKey = torrentOptional.isPresent() ?
+                    torrentOptional.get().getAnnounceKey() : Optional.empty();
+
+            Collection<AnnounceKey> extraTorrentAnnounceKeys = extraAnnounceKeys.get(torrentId);
+            if (extraTorrentAnnounceKeys == null) {
+                queryTrackers(torrentId, torrentAnnounceKey, Collections.emptyList());
+            } else if (torrentOptional.isPresent() && torrentOptional.get().isPrivate()) {
+                if (extraTorrentAnnounceKeys.size() > 0) {
+                    // prevent violating private torrents' rule of "only one tracker"
+                    LOGGER.warn("Will not query extra trackers for a private torrent, id: {}", torrentId);
                 }
-
-                // disallow querying peer sources other than the tracker for private torrents
-                if ((!torrentOptional.isPresent() || !torrentOptional.get().isPrivate()) && !extraPeerSourceFactories.isEmpty()) {
-                    extraPeerSourceFactories.forEach(factory ->
-                            queryPeerSource(torrentId, factory.getPeerSource(torrentId)));
+            } else {
+                // more announce keys might be added at the same time;
+                // querying all trackers can be time-consuming, so we make a copy of the collection
+                // to prevent blocking callers of addPeerSource(TorrentId, AnnounceKey) for too long
+                Collection<AnnounceKey> extraTorrentAnnounceKeysCopy;
+                extraAnnounceKeysLock.lock();
+                try {
+                    extraTorrentAnnounceKeysCopy = new ArrayList<>(extraTorrentAnnounceKeys);
+                } finally {
+                    extraAnnounceKeysLock.unlock();
                 }
+                queryTrackers(torrentId, torrentAnnounceKey, extraTorrentAnnounceKeysCopy);
             }
-        });
+
+            // disallow querying peer sources other than the tracker for private torrents
+            if ((!torrentOptional.isPresent() || !torrentOptional.get().isPrivate()) && !extraPeerSourceFactories.isEmpty()) {
+                extraPeerSourceFactories.forEach(factory ->
+                        queryPeerSource(torrentId, factory.getPeerSource(torrentId)));
+            }
+        }
     }
 
     private void queryTrackers(TorrentId torrentId, Optional<AnnounceKey> torrentAnnounceKey, Collection<AnnounceKey> extraAnnounceKeys) {
@@ -244,4 +256,5 @@ public class PeerRegistry implements IPeerRegistry {
     public Peer getLocalPeer() {
         return localPeer;
     }
+
 }

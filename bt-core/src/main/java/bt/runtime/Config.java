@@ -82,7 +82,7 @@ public class Config {
         this.peerConnectionTimeout = Duration.ofSeconds(30);
         this.peerHandshakeTimeout = Duration.ofSeconds(30);
         this.peerConnectionInactivityThreshold = Duration.ofMinutes(3);
-        this.trackerQueryInterval = Duration.ofMinutes(5);
+        this.trackerQueryInterval = null; // use interval returned in tracker response by default
         this.maxPeerConnections = 500;
         this.maxPeerConnectionsPerTorrent = maxPeerConnections; // assume single torrent per runtime by default; change this to (maxActive * 2) maybe?
         this.transferBlockSize = 16 * 1024; // 16 KB

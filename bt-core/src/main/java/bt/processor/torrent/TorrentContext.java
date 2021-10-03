@@ -51,7 +51,6 @@ public class TorrentContext implements ProcessingContext {
     private final FileDownloadCompleteCallback fileCompletionCallback; // nullable
     private final Storage storage;
     private final Supplier<Torrent> torrentSupplier;
-    private final CompletableFuture<?> torrentDownloadedFuture = new CompletableFuture<>(); // set when download completed
 
     /* all of these can be missing, depending on which stage is currently being executed */
     private volatile TorrentId torrentId;

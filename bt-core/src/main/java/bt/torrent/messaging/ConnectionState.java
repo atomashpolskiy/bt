@@ -20,8 +20,15 @@ import bt.protocol.Cancel;
 import bt.protocol.Request;
 import bt.torrent.data.BlockWrite;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Contains basic information about a connection's state.
@@ -35,8 +42,8 @@ public class ConnectionState {
     private volatile boolean choking;
     private volatile boolean peerChoking;
 
-    private volatile long downloaded;
-    private volatile long uploaded;
+    private final AtomicLong downloaded = new AtomicLong();
+    private final AtomicLong uploaded = new AtomicLong();
 
     private Optional<Boolean> shouldChoke;
     private long lastChoked;
@@ -167,7 +174,7 @@ public class ConnectionState {
      * @since 1.0
      */
     public long getDownloaded() {
-        return downloaded;
+        return downloaded.get();
     }
 
     /**
@@ -175,7 +182,7 @@ public class ConnectionState {
      * @since 1.0
      */
     public void incrementDownloaded(long downloaded) {
-        this.downloaded += downloaded;
+        this.downloaded.getAndAdd(downloaded);
     }
 
     /**
@@ -183,7 +190,7 @@ public class ConnectionState {
      * @since 1.0
      */
     public long getUploaded() {
-        return uploaded;
+        return uploaded.get();
     }
 
     /**
@@ -191,7 +198,7 @@ public class ConnectionState {
      * @since 1.0
      */
     public void incrementUploaded(long uploaded) {
-        this.uploaded += uploaded;
+        this.uploaded.getAndAdd(uploaded);
     }
 
     /**

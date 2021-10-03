@@ -78,11 +78,19 @@ public interface TorrentSessionState {
     long getUploaded();
 
     /**
-     * Waits for all of this torrent's chunks to be downloaded
+     * Get the number of bytes left to verify
      *
-     * @throws InterruptedException if the torrent download is interrupted
+     * @return the number of bytes left to verify
+     * @since 1.10
      */
-    void waitForAllPieces() throws InterruptedException;
+    long getLeft();
+
+    /**
+     * Check if the torrent was finished upon initial hashing
+     *
+     * @return true if the torrent file was complete upon initial hashing
+     */
+    boolean startedAsSeed();
 
     /**
      * @return Collection of peers, that this session is connected to

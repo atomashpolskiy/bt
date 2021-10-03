@@ -18,6 +18,8 @@ package bt.torrent;
 
 import bt.data.DataDescriptor;
 
+import java.util.Optional;
+
 /**
  * Provides an interface for controlling
  * the state of a torrent processing session.
@@ -58,4 +60,12 @@ public interface TorrentDescriptor {
      * @since 1.0
      */
     DataDescriptor getDataDescriptor();
+
+    /**
+     * Get the session state of this torrent. May be null depending upon the state of torrent processing
+     *
+     * @return the session state of this torrent
+     * @since 1.10
+     */
+    Optional<TorrentSessionState> getSessionState();
 }

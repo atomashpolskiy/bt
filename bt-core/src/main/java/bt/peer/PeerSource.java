@@ -21,6 +21,8 @@ import bt.net.Peer;
 import java.util.Collection;
 
 /**
+ * A source of peers for a torrent
+ *
  * @since 1.0
  */
 public interface PeerSource {

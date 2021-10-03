@@ -48,6 +48,7 @@ import static org.junit.Assert.assertTrue;
  */
 @RunWith(Parameterized.class)
 public class ChunkDescriptor_FileStorageUnitTest {
+    private static final int CHUNK_SIZE = 16;
 
     @Rule
     public TestFileSystemStorage storage = new TestFileSystemStorage();
@@ -57,7 +58,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
     private ChunkVerifier verifier;
     private IDataDescriptorFactory dataDescriptorFactory;
 
-    @Parameterized.Parameters
+    @Parameterized.Parameters(name = "DigestBufSize={0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(
                 new Object[]{1},
@@ -86,19 +87,18 @@ public class ChunkDescriptor_FileStorageUnitTest {
 
     /**************************************************************************************/
 
-    private byte[] SINGLE_FILE = new byte[] {
-            1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,
-            1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,
-            1,2,1,2,3,1,2,3,4,5,6,7,8,9,1,2,
-            1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4
+    private final byte[] SINGLE_FILE = new byte[]{
+            1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8,
+            1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4,
+            1, 2, 1, 2, 3, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2,
+            1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4
     };
 
     private DataDescriptor createDataDescriptor_SingleFile(String fileName) {
 
-        long chunkSize = 16;
-        long fileSize = chunkSize * 4;
+        long fileSize = CHUNK_SIZE * 4;
 
-        Torrent torrent = mockTorrent(fileName, fileSize, chunkSize,
+        Torrent torrent = mockTorrent(fileName, fileSize, CHUNK_SIZE,
                 new byte[][]{
                         CryptoUtil.getSha1Digest(Arrays.copyOfRange(SINGLE_FILE, 0, 16)),
                         CryptoUtil.getSha1Digest(Arrays.copyOfRange(SINGLE_FILE, 16, 32)),
@@ -118,6 +118,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
 
         String fileName = "1-single.bin";
         DataDescriptor descriptor = createDataDescriptor_SingleFile(fileName);
+        assertEquals(SINGLE_FILE.length, descriptor.getLeft());
         List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
         chunks.get(0).getData().putBytes(TestUtil.sequence(8));
@@ -191,6 +192,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
         writeBytesToFile(new File(storage.getRoot(), fileName), SINGLE_FILE);
 
         DataDescriptor descriptor = createDataDescriptor_SingleFile(fileName);
+        assertEquals(0L, descriptor.getLeft());
         List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
         byte[] block;
@@ -214,27 +216,27 @@ public class ChunkDescriptor_FileStorageUnitTest {
 
     /**************************************************************************************/
 
-    private byte[] MULTI_FILE_1 = new byte[] {
-            1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,
-            1,2,3,4,1,2,3,4,1
+    private final byte[] MULTI_FILE_1 = new byte[]{
+            1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8,
+            1, 2, 3, 4, 1, 2, 3, 4, 1
     };
-    private byte[] MULTI_FILE_2 = new byte[] {
-                              2,3,4,1,2,3,4,
-            1,2,1,2,3,1,2,3,4,5,6
+    private final byte[] MULTI_FILE_2 = new byte[]{
+            2, 3, 4, 1, 2, 3, 4,
+            1, 2, 1, 2, 3, 1, 2, 3, 4, 5, 6
     };
-    private byte[] MULTI_FILE_3 = new byte[] {
-                                  7,8,9,1,2
+    private final byte[] MULTI_FILE_3 = new byte[]{
+            7, 8, 9, 1, 2
     };
-    private byte[] MULTI_FILE_4 = new byte[] {
-            1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,
-            1,2,3,4,5,6,7,8,9,1,2,3,4,5,6
+    private final byte[] MULTI_FILE_4 = new byte[]{
+            1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4,
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6
     };
-    private byte[] MULTI_FILE_5 = new byte[] {
-                                          7,
-            1,1,2,3,4,5,6,7,8,9,1,2,3,4,5
+    private final byte[] MULTI_FILE_5 = new byte[]{
+            7,
+            1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5
     };
-    private byte[] MULTI_FILE_6 = new byte[] {
-                                          1
+    private final byte[] MULTI_FILE_6 = new byte[]{
+            1
     };
 
     private DataDescriptor createDataDescriptor_MultiFile(String fileName1, String fileName2, String fileName3,
@@ -245,12 +247,12 @@ public class ChunkDescriptor_FileStorageUnitTest {
 
         long chunkSize = 16;
         long torrentSize = chunkSize * 6;
-        long fileSize1 = 25,
-             fileSize2 = 18,
-             fileSize3 = 5,
-             fileSize4 = 31,
-             fileSize5 = 16,
-             fileSize6 = 1;
+        long fileSize1 = MULTI_FILE_1.length,
+                fileSize2 = MULTI_FILE_2.length,
+                fileSize3 = MULTI_FILE_3.length,
+                fileSize4 = MULTI_FILE_4.length,
+                fileSize5 = MULTI_FILE_5.length,
+                fileSize6 = MULTI_FILE_6.length;
 
         // sanity check
         assertEquals(torrentSize, fileSize1 + fileSize2 + fileSize3 + fileSize4 + fileSize5 + fileSize6);
@@ -282,7 +284,7 @@ public class ChunkDescriptor_FileStorageUnitTest {
         byte[] chunk5Hash = CryptoUtil.getSha1Digest(chunk5);
 
         Torrent torrent = mockTorrent(torrentName, torrentSize, chunkSize,
-                new byte[][] {chunk0Hash, chunk1Hash, chunk2Hash, chunk3Hash, chunk4Hash, chunk5Hash},
+                new byte[][]{chunk0Hash, chunk1Hash, chunk2Hash, chunk3Hash, chunk4Hash, chunk5Hash},
                 mockTorrentFile(fileSize1, fileName1), mockTorrentFile(fileSize2, fileName2),
                 mockTorrentFile(fileSize3, fileName3), mockTorrentFile(fileSize4, fileName4),
                 mockTorrentFile(fileSize5, fileName5), mockTorrentFile(fileSize6, fileName6));
@@ -301,58 +303,86 @@ public class ChunkDescriptor_FileStorageUnitTest {
         String extension = "-multi.bin";
 
         String fileName1 = 1 + extension,
-               fileName2 = 2 + extension,
-               fileName3 = 3 + extension,
-               fileName4 = 4 + extension,
-               fileName5 = 5 + extension,
-               fileName6 = 6 + extension;
+                fileName2 = 2 + extension,
+                fileName3 = 3 + extension,
+                fileName4 = 4 + extension,
+                fileName5 = 5 + extension,
+                fileName6 = 6 + extension;
 
         DataDescriptor descriptor = createDataDescriptor_MultiFile(fileName1, fileName2, fileName3, fileName4,
                 fileName5, fileName6, torrentDirectory);
         List<ChunkDescriptor> chunks = descriptor.getChunkDescriptors();
 
-        chunks.get(0).getData().putBytes(TestUtil.sequence(8));
-        chunks.get(0).getData().getSubrange(8).putBytes(TestUtil.sequence(8));
-        assertTrue(chunks.get(0).isComplete());
-        assertTrue(verifier.verify(chunks.get(0)));
+        long dataLeft = CHUNK_SIZE * 6;
+        assertEquals(96L, descriptor.getLeft());
+        
+        
+        int pieceIdx = 0;
+        chunks.get(pieceIdx).getData().putBytes(TestUtil.sequence(8));
+        chunks.get(pieceIdx).getData().getSubrange(8).putBytes(TestUtil.sequence(8));
+        assertTrue(chunks.get(pieceIdx).isComplete());
+        assertTrue(verifier.verify(chunks.get(pieceIdx)));
+        assertTrue(descriptor.getBitfield().checkAndMarkVerified(pieceIdx));
+        dataLeft -= CHUNK_SIZE;
+        assertEquals(dataLeft, descriptor.getLeft());
 
-        chunks.get(1).getData().putBytes(TestUtil.sequence(4));
-        chunks.get(1).getData().getSubrange(4).putBytes(TestUtil.sequence(4));
-        chunks.get(1).getData().getSubrange(8).putBytes(TestUtil.sequence(4));
-        chunks.get(1).getData().getSubrange(12).putBytes(TestUtil.sequence(4));
-        assertTrue(chunks.get(1).isComplete());
+        pieceIdx = 1;
+        chunks.get(pieceIdx).getData().putBytes(TestUtil.sequence(4));
+        chunks.get(pieceIdx).getData().getSubrange(4).putBytes(TestUtil.sequence(4));
+        chunks.get(pieceIdx).getData().getSubrange(8).putBytes(TestUtil.sequence(4));
+        chunks.get(pieceIdx).getData().getSubrange(12).putBytes(TestUtil.sequence(4));
+        assertTrue(chunks.get(pieceIdx).isComplete());
         assertTrue(verifier.verify(chunks.get(1)));
+        assertTrue(descriptor.getBitfield().checkAndMarkVerified(pieceIdx));
+        dataLeft -= CHUNK_SIZE;
+        assertEquals(dataLeft, descriptor.getLeft());
 
         // reverse order
-        chunks.get(2).getData().getSubrange(5).putBytes(TestUtil.sequence(11));
-        chunks.get(2).getData().getSubrange(2).putBytes(TestUtil.sequence(3));
-        chunks.get(2).getData().putBytes(TestUtil.sequence(2));
-        assertFalse(chunks.get(2).isComplete());
-        chunks.get(2).getData().putBytes(new byte[]{1,2,1,2,3,1,2,3});
-        assertTrue(chunks.get(2).isComplete());
-        assertTrue(verifier.verify(chunks.get(2)));
+        pieceIdx = 2;
+        chunks.get(pieceIdx).getData().getSubrange(5).putBytes(TestUtil.sequence(11));
+        chunks.get(pieceIdx).getData().getSubrange(2).putBytes(TestUtil.sequence(3));
+        chunks.get(pieceIdx).getData().putBytes(TestUtil.sequence(2));
+        assertFalse(chunks.get(pieceIdx).isComplete());
+        chunks.get(pieceIdx).getData().putBytes(new byte[]{1, 2, 1, 2, 3, 1, 2, 3});
+        assertTrue(chunks.get(pieceIdx).isComplete());
+        assertTrue(verifier.verify(chunks.get(pieceIdx)));
+        assertTrue(descriptor.getBitfield().checkAndMarkVerified(pieceIdx));
+        dataLeft -= CHUNK_SIZE;
+        assertEquals(dataLeft, descriptor.getLeft());
 
         // "random" order
-        chunks.get(3).getData().getSubrange(4).putBytes(TestUtil.sequence(4));
-        chunks.get(3).getData().putBytes(TestUtil.sequence(4));
-        chunks.get(3).getData().getSubrange(12).putBytes(TestUtil.sequence(4));
-        chunks.get(3).getData().getSubrange(8).putBytes(TestUtil.sequence(4));
-        assertTrue(chunks.get(3).isComplete());
-        assertTrue(verifier.verify(chunks.get(3)));
+        pieceIdx = 3;
+        chunks.get(pieceIdx).getData().getSubrange(4).putBytes(TestUtil.sequence(4));
+        chunks.get(pieceIdx).getData().putBytes(TestUtil.sequence(4));
+        chunks.get(pieceIdx).getData().getSubrange(12).putBytes(TestUtil.sequence(4));
+        chunks.get(pieceIdx).getData().getSubrange(8).putBytes(TestUtil.sequence(4));
+        assertTrue(chunks.get(pieceIdx).isComplete());
+        assertTrue(verifier.verify(chunks.get(pieceIdx)));
+        assertTrue(descriptor.getBitfield().checkAndMarkVerified(pieceIdx));
+        dataLeft -= CHUNK_SIZE;
+        assertEquals(dataLeft, descriptor.getLeft());
 
         // block size same as chunk size
-        chunks.get(4).getData().putBytes(TestUtil.sequence(16));
-        assertTrue(chunks.get(4).isComplete());
-        assertTrue(verifier.verify(chunks.get(4)));
+        pieceIdx = 4;
+        chunks.get(pieceIdx).getData().putBytes(TestUtil.sequence(16));
+        assertTrue(chunks.get(pieceIdx).isComplete());
+        assertTrue(verifier.verify(chunks.get(pieceIdx)));
+        assertTrue(descriptor.getBitfield().checkAndMarkVerified(pieceIdx));
+        dataLeft -= CHUNK_SIZE;
+        assertEquals(dataLeft, descriptor.getLeft());
 
         // 1-byte blocks
-        chunks.get(5).getData().putBytes(TestUtil.sequence(1));
-        chunks.get(5).getData().getSubrange(15).putBytes(TestUtil.sequence(1));
-        chunks.get(5).getData().getSubrange(1).putBytes(TestUtil.sequence(14));
-        assertFalse(chunks.get(5).isComplete());
-        chunks.get(5).getData().putBytes(new byte[]{1,1,2,3,4,5,6,7,8,9,1,2,3,4,5,1});
-        assertTrue(chunks.get(5).isComplete());
-        assertTrue(verifier.verify(chunks.get(5)));
+        pieceIdx = 5;
+        chunks.get(pieceIdx).getData().putBytes(TestUtil.sequence(1));
+        chunks.get(pieceIdx).getData().getSubrange(15).putBytes(TestUtil.sequence(1));
+        chunks.get(pieceIdx).getData().getSubrange(1).putBytes(TestUtil.sequence(14));
+        assertFalse(chunks.get(pieceIdx).isComplete());
+        chunks.get(pieceIdx).getData().putBytes(new byte[]{1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 1});
+        assertTrue(chunks.get(pieceIdx).isComplete());
+        assertTrue(verifier.verify(chunks.get(pieceIdx)));
+        assertTrue(descriptor.getBitfield().checkAndMarkVerified(pieceIdx));
+        dataLeft -= CHUNK_SIZE;
+        assertEquals(dataLeft, descriptor.getLeft());
 
         assertFileHasContents(new File(torrentDirectory, fileName1), MULTI_FILE_1);
         assertFileHasContents(new File(torrentDirectory, fileName2), MULTI_FILE_2);
@@ -373,11 +403,11 @@ public class ChunkDescriptor_FileStorageUnitTest {
         long chunkSize = 16;
         long torrentSize = 0;
         long fileSize1 = 0,
-             fileSize2 = 0,
-             fileSize3 = 0,
-             fileSize4 = 0,
-             fileSize5 = 0,
-             fileSize6 = 0;
+                fileSize2 = 0,
+                fileSize3 = 0,
+                fileSize4 = 0,
+                fileSize5 = 0,
+                fileSize6 = 0;
 
         // sanity check
         assertEquals(torrentSize, fileSize1 + fileSize2 + fileSize3 + fileSize4 + fileSize5 + fileSize6);
@@ -403,11 +433,11 @@ public class ChunkDescriptor_FileStorageUnitTest {
         String extension = "-multi.bin";
 
         String fileName1 = 1 + extension,
-               fileName2 = 2 + extension,
-               fileName3 = 3 + extension,
-               fileName4 = 4 + extension,
-               fileName5 = 5 + extension,
-               fileName6 = 6 + extension;
+                fileName2 = 2 + extension,
+                fileName3 = 3 + extension,
+                fileName4 = 4 + extension,
+                fileName5 = 5 + extension,
+                fileName6 = 6 + extension;
 
         DataDescriptor descriptor = createDataDescriptor_MultiEmptyFile(fileName1, fileName2, fileName3, fileName4,
                 fileName5, fileName6, torrentDirectory);
@@ -436,11 +466,11 @@ public class ChunkDescriptor_FileStorageUnitTest {
         String extension = "-multi.bin";
 
         String fileName1 = 1 + extension,
-               fileName2 = 2 + extension,
-               fileName3 = 3 + extension,
-               fileName4 = 4 + extension,
-               fileName5 = 5 + extension,
-               fileName6 = 6 + extension;
+                fileName2 = 2 + extension,
+                fileName3 = 3 + extension,
+                fileName4 = 4 + extension,
+                fileName5 = 5 + extension,
+                fileName6 = 6 + extension;
 
         writeBytesToFile(new File(torrentDirectory, fileName1), MULTI_FILE_1);
         writeBytesToFile(new File(torrentDirectory, fileName2), MULTI_FILE_2);

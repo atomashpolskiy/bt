@@ -41,12 +41,12 @@ import bt.torrent.messaging.RequestProducer;
 
 public class InitializeTorrentProcessingStage<C extends TorrentContext> extends TerminateOnErrorProcessingStage<C> {
 
-    private IPeerConnectionPool connectionPool;
-    private TorrentRegistry torrentRegistry;
-    private DataWorker dataWorker;
-    private IBufferedPieceRegistry bufferedPieceRegistry;
-    private EventSink eventSink;
-    private Config config;
+    private final IPeerConnectionPool connectionPool;
+    private final TorrentRegistry torrentRegistry;
+    private final DataWorker dataWorker;
+    private final IBufferedPieceRegistry bufferedPieceRegistry;
+    private final EventSink eventSink;
+    private final Config config;
 
     public InitializeTorrentProcessingStage(ProcessingStage<C> next,
                                             IPeerConnectionPool connectionPool,

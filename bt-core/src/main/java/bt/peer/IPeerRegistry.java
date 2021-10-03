@@ -49,4 +49,13 @@ public interface IPeerRegistry {
      * @since 1.3
      */
     void addPeerSource(TorrentId torrentId, AnnounceKey announceKey);
+
+    /**
+     * Trigger a collection of peers for the specified torrent. Should be called upon starting to download a torrent to
+     * improve startup time
+     *
+     * @param torrentId the torrent ID to Announce
+     * @since 1.10
+     */
+    void triggerPeerCollection(TorrentId torrentId);
 }

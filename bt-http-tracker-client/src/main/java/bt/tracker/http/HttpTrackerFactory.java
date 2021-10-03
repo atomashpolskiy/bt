@@ -20,6 +20,7 @@ import bt.peer.IPeerRegistry;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.runtime.Config;
 import bt.service.IdentityService;
+import bt.torrent.TorrentRegistry;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerFactory;
 import com.google.inject.Inject;
@@ -33,14 +34,19 @@ import java.net.InetAddress;
  */
 public class HttpTrackerFactory implements TrackerFactory {
 
-    private IdentityService idService;
-    private IPeerRegistry peerRegistry;
-    private EncryptionPolicy encryptionPolicy;
-    private InetAddress localAddress;
-    private int numberOfPeersToRequestFromTracker;
+    private final TorrentRegistry torrentRegistry;
+    private final IdentityService idService;
+    private final IPeerRegistry peerRegistry;
+    private final EncryptionPolicy encryptionPolicy;
+    private final InetAddress localAddress;
+    private final int numberOfPeersToRequestFromTracker;
 
     @Inject
-    public HttpTrackerFactory(IdentityService idService, IPeerRegistry peerRegistry, Config config) {
+    public HttpTrackerFactory(TorrentRegistry torrentRegistry,
+                              IdentityService idService,
+                              IPeerRegistry peerRegistry,
+                              Config config) {
+        this.torrentRegistry = torrentRegistry;
         this.idService = idService;
         this.peerRegistry = peerRegistry;
         this.encryptionPolicy = config.getEncryptionPolicy();
@@ -50,7 +56,7 @@ public class HttpTrackerFactory implements TrackerFactory {
 
     @Override
     public Tracker getTracker(String trackerUrl) {
-        return new HttpTracker(trackerUrl, idService, peerRegistry, encryptionPolicy, localAddress,
-                numberOfPeersToRequestFromTracker);
+        return new HttpTracker(trackerUrl, torrentRegistry, idService, peerRegistry, encryptionPolicy,
+                localAddress, numberOfPeersToRequestFromTracker);
     }
 }

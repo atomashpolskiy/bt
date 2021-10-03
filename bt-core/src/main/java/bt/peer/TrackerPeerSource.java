@@ -32,49 +32,72 @@ import java.util.function.Consumer;
 class TrackerPeerSource extends ScheduledPeerSource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TrackerPeerSource.class);
+    private static final Duration DEFAULT_WAIT_ON_FAILURE = Duration.ofMinutes(1);
+    private static final long NEVER_ANNOUNCED = 0;
 
-    private static final long NEVER_ANNOUNCED = Long.MIN_VALUE;
     private final Tracker tracker;
     private final TorrentId torrentId;
     private Duration trackerQueryInterval;
+    private final boolean useTrackerAnnounceInterval;
 
     private final AtomicLong lastRefreshed = new AtomicLong(NEVER_ANNOUNCED);
+    private boolean firstRequest = true;
 
-    TrackerPeerSource(ExecutorService executor, Tracker tracker, TorrentId torrentId, Duration trackerQueryInterval) {
+    TrackerPeerSource(ExecutorService executor, Tracker tracker, TorrentId torrentId, Duration defaultTrackerQueryInterval) {
         super(executor);
         this.tracker = tracker;
         this.torrentId = torrentId;
-        this.trackerQueryInterval = trackerQueryInterval;
+        this.useTrackerAnnounceInterval = defaultTrackerQueryInterval == null;
+        this.trackerQueryInterval = defaultTrackerQueryInterval == null ? DEFAULT_WAIT_ON_FAILURE : defaultTrackerQueryInterval;
     }
 
     @Override
     protected void collectPeers(Consumer<Peer> peerConsumer) {
-        final long now = System.currentTimeMillis();
+        final long reqStartTime = System.currentTimeMillis();
         final long lastRefreshTime = lastRefreshed.get();
 
-        if (lastRefreshTime == NEVER_ANNOUNCED || (now - lastRefreshTime) >= trackerQueryInterval.toMillis()) {
+        if ((reqStartTime - lastRefreshTime) >= trackerQueryInterval.toMillis()) {
 
             // use atomic CaS - avoid double announce.
-            if (lastRefreshed.compareAndSet(lastRefreshTime, now)) {
+            if (lastRefreshed.compareAndSet(lastRefreshTime, reqStartTime)) {
                 TrackerResponse response;
                 try {
-                    // TODO: report stats
-                    if (lastRefreshTime == NEVER_ANNOUNCED)
+                    if (firstRequest) {
                         response = tracker.request(torrentId).start();
-                    else
+                    } else {
                         response = tracker.request(torrentId).query();
-
-                    // ensure that min interval is respected
-                    if (response.isSuccess() && response.getMinInterval() > trackerQueryInterval.getSeconds()) {
-                        trackerQueryInterval = Duration.ofSeconds(response.getMinInterval());
                     }
                 } finally {
-                    lastRefreshed.set(System.currentTimeMillis());
+                    // set the last refreshed time to the current time
+                    lastRefreshed.compareAndSet(reqStartTime, System.currentTimeMillis());
                 }
 
                 if (response.isSuccess()) {
+                    firstRequest = false;
                     response.getPeers().forEach(peerConsumer::accept);
+
+                    // if interval was not specified in config, use what the tracker provides
+                    if (useTrackerAnnounceInterval) {
+                        if (response.getInterval() <= 0) {
+                            // this interval is a tracker bug. Use default of 5 minutes.
+                            trackerQueryInterval = Duration.ofMinutes(5);
+                        } else {
+                            trackerQueryInterval = Duration.ofSeconds(response.getInterval());
+                        }
+                    }
+
+                    // ensure that min interval is respected
+                    if (response.getMinInterval() > trackerQueryInterval.getSeconds()) {
+                        LOGGER.info("Tracker min interval {} is less than configured query interval {}. Using Tracker's min interval.",
+                                response.getMinInterval(), trackerQueryInterval);
+                        trackerQueryInterval = Duration.ofSeconds(response.getMinInterval());
+                    }
                 } else {
+                    // if the response failed, wait 1 minute before trying again, unless query interval was manually
+                    // configured, in which case we use it on failure too.
+                    if (useTrackerAnnounceInterval)
+                        trackerQueryInterval = DEFAULT_WAIT_ON_FAILURE;
+
                     if (response.getError().isPresent()) {
                         throw new BtException("Failed to get peers for torrent", response.getError().get());
                     } else {

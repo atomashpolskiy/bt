@@ -22,6 +22,8 @@ import bt.net.Peer;
 import bt.peer.IPeerRegistry;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.service.IdentityService;
+import bt.torrent.TorrentDescriptor;
+import bt.torrent.TorrentRegistry;
 import bt.tracker.SecretKey;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
@@ -56,15 +58,19 @@ public class HttpTracker implements Tracker {
         START, STOP, COMPLETE, QUERY
     }
 
-    private URI baseUri;
-    private IdentityService idService;
-    private IPeerRegistry peerRegistry;
-    private EncryptionPolicy encryptionPolicy;
-    private int numberOfPeersToRequestFromTracker;
-    private HttpClient httpClient;
-    private CommonsHttpResponseHandler httpResponseHandler;
+    private final URI baseUri;
+    private final TorrentRegistry torrentRegistry;
+    private final IdentityService idService;
+    private final IPeerRegistry peerRegistry;
+    private final EncryptionPolicy encryptionPolicy;
+    private final int numberOfPeersToRequestFromTracker;
+    private final HttpClient httpClient;
+    private final CommonsHttpResponseHandler httpResponseHandler;
 
-    private ConcurrentMap<URI, byte[]> trackerIds;
+    private final ConcurrentMap<URI, byte[]> trackerIds;
+
+    private long lastLeft = 0;
+    private long lastUploadedBytes = 0;
 
     /**
      * @param trackerUrl Tracker URL
@@ -72,6 +78,7 @@ public class HttpTracker implements Tracker {
      * @since 1.0
      */
     public HttpTracker(String trackerUrl,
+                       TorrentRegistry torrentRegistry,
                        IdentityService idService,
                        IPeerRegistry peerRegistry,
                        EncryptionPolicy encryptionPolicy,
@@ -83,6 +90,7 @@ public class HttpTracker implements Tracker {
             throw new BtException("Invalid URL: " + trackerUrl, e);
         }
 
+        this.torrentRegistry = torrentRegistry;
         this.idService = idService;
         this.peerRegistry = peerRegistry;
         this.encryptionPolicy = encryptionPolicy;
@@ -153,7 +161,7 @@ public class HttpTracker implements Tracker {
         }
     }
 
-    private String buildQuery(TrackerRequestType eventType, TrackerRequestBuilder requestBuilder) throws Exception {
+    private String buildQuery(TrackerRequestType eventType, TrackerRequestBuilder requestBuilder) {
         StringBuilder buf = new StringBuilder();
 
         buf.append("info_hash=");
@@ -174,18 +182,21 @@ public class HttpTracker implements Tracker {
 //        buf.append(encryptionPolicy == EncryptionPolicy.REQUIRE_ENCRYPTED ? 0 : peer.getPort());
         buf.append(peer.getPort());
 
-        buf.append("&uploaded=");
-        buf.append(requestBuilder.getUploaded());
-
-        buf.append("&downloaded=");
-        buf.append(requestBuilder.getDownloaded());
-
-        buf.append("&left=");
-        buf.append(requestBuilder.getLeft());
+        // set the torrent state if we can.
+        torrentRegistry.getDescriptor(requestBuilder.getTorrentId())
+                .flatMap(TorrentDescriptor::getSessionState)
+                .ifPresent(state -> {
+                    buf.append("&uploaded=");
+                    buf.append(state.getUploaded());
+                    buf.append("&downloaded=");
+                    buf.append(state.getDownloaded());
+                    buf.append("&left=");
+                    buf.append(state.getLeft());
+                });
 
         buf.append("&compact=1");
         buf.append("&numwant=");
-        buf.append(numberOfPeersToRequestFromTracker);
+        buf.append(requestBuilder.getNumWant() == null ? numberOfPeersToRequestFromTracker : requestBuilder.getNumWant());
 
         Optional<SecretKey> secretKey = idService.getSecretKey();
         if (secretKey.isPresent()) {

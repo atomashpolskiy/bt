@@ -17,16 +17,16 @@
 package bt.metainfo;
 
 import bt.BtException;
-import bt.bencoding.serializers.BEParser;
 import bt.bencoding.BEType;
+import bt.bencoding.model.BEObject;
+import bt.bencoding.model.BEObjectModel;
+import bt.bencoding.model.ValidationResult;
+import bt.bencoding.model.YamlBEObjectModelLoader;
+import bt.bencoding.serializers.BEParser;
 import bt.bencoding.types.BEInteger;
 import bt.bencoding.types.BEList;
 import bt.bencoding.types.BEMap;
-import bt.bencoding.model.BEObject;
-import bt.bencoding.model.BEObjectModel;
 import bt.bencoding.types.BEString;
-import bt.bencoding.model.ValidationResult;
-import bt.bencoding.model.YamlBEObjectModelLoader;
 import bt.service.CryptoUtil;
 import bt.tracker.AnnounceKey;
 import org.slf4j.Logger;

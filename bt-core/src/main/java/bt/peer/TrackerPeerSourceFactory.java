@@ -16,6 +16,7 @@
 
 package bt.peer;
 
+import bt.event.EventSource;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
@@ -47,6 +48,7 @@ class TrackerPeerSourceFactory implements PeerSourceFactory {
     public TrackerPeerSourceFactory(ITrackerService trackerService,
                                     TorrentRegistry torrentRegistry,
                                     IRuntimeLifecycleBinder lifecycleBinder,
+                                    EventSource eventSource,
                                     Duration trackerQueryInterval,
                                     int port) {
         this.trackerService = trackerService;
@@ -62,6 +64,7 @@ class TrackerPeerSourceFactory implements PeerSourceFactory {
                 return new Thread(r, String.format("%d.bt.peer.tracker-peer-source-%d", port, i.incrementAndGet()));
             }
         });
+        eventSource.onTorrentStopped(null, e -> peerSources.remove(e.getTorrentId()));
         lifecycleBinder.onShutdown("Shutdown tracker peer sources", executor::shutdownNow);
     }
 

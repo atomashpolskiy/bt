@@ -36,8 +36,8 @@ public class BlockRange<T extends Range<T>> implements Range<BlockRange<T>>, Del
      *
      * @since 1.2
      */
-    BlockRange(Range<T> delegate, long blockSize) {
-        this(delegate, 0, new MutableBlockSet(delegate.length(), blockSize));
+    BlockRange(Range<T> delegate, long transferBlockSize) {
+        this(delegate, 0, new MutableBlockSet(delegate.length(), transferBlockSize));
     }
 
     private BlockRange(Range<T> delegate,
