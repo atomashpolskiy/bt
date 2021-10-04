@@ -23,6 +23,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.time.Duration;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
@@ -58,7 +59,7 @@ public class UdpMessageWorkerTest {
     public void testAnnounce() throws Exception {
         AnnounceRequest request = createAnnounceRequest(EventType.START);
         client.execute(
-            () -> connection.getWorker().sendMessage(request, AnnounceResponseHandler.handler()),
+            () -> connection.getWorker().sendMessage(request, AnnounceResponseHandler.handler(), Duration.ofSeconds(5)),
             response -> {
                 assertFalse(response.getError().isPresent());
                 assertNull(response.getErrorMessage());

@@ -30,8 +30,8 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class TrackerService implements ITrackerService {
 
-    private Map<String, TrackerFactory> trackerFactories;
-    private ConcurrentMap<String, Tracker> knownTrackers;
+    private final Map<String, TrackerFactory> trackerFactories;
+    private final ConcurrentMap<String, Tracker> knownTrackers;
 
     @Inject
     public TrackerService(@TrackerFactories Map<String, TrackerFactory> trackerFactories) {

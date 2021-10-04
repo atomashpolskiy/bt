@@ -19,12 +19,15 @@ package bt.tracker;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 /**
  * Generic tracker interface.
  *
  * @since 1.0
  */
-public interface Tracker {
+public interface Tracker extends Closeable {
 
     /**
      * Build a tracker request for a given torrent.

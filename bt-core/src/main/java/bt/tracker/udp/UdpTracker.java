@@ -28,11 +28,13 @@ import bt.tracker.udp.AnnounceRequest.EventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.SocketAddress;
 import java.net.URL;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -51,6 +53,7 @@ class UdpTracker implements Tracker {
     private final int numberOfPeersToRequestFromTracker;
     private final URL trackerUrl;
     private final UdpMessageWorker worker;
+    private final Duration trackerTimeout;
 
     /**
      * @param trackerUrl String representation of the tracker's URL.
@@ -59,18 +62,19 @@ class UdpTracker implements Tracker {
      */
     public UdpTracker(IdentityService idService,
                       TorrentRegistry torrentRegistry,
-                      IRuntimeLifecycleBinder lifecycleBinder,
                       InetAddress localAddress,
                       int listeningPort,
                       int numberOfPeersToRequestFromTracker,
-                      String trackerUrl) {
+                      String trackerUrl,
+                      Duration trackerTimeout) {
         this.idService = idService;
         this.torrentRegistry = torrentRegistry;
         this.listeningPort = listeningPort;
         this.numberOfPeersToRequestFromTracker = numberOfPeersToRequestFromTracker;
         // TODO: one UDP socket for all outgoing tracker connections
         this.trackerUrl = toUrl(trackerUrl);
-        this.worker = new UdpMessageWorker(new InetSocketAddress(localAddress, 0), getSocketAddress(this.trackerUrl), lifecycleBinder, listeningPort);
+        this.worker = new UdpMessageWorker(new InetSocketAddress(localAddress, 0), getSocketAddress(this.trackerUrl), listeningPort);
+        this.trackerTimeout = trackerTimeout;
     }
 
     private URL toUrl(String s) {
@@ -149,7 +153,7 @@ class UdpTracker implements Tracker {
                     LOGGER.debug("Executing tracker UDP request of type {}: {}", eventType.name(), request);
                 }
                 try {
-                    return worker.sendMessage(request, AnnounceResponseHandler.handler());
+                    return worker.sendMessage(request, AnnounceResponseHandler.handler(), trackerTimeout);
                 } catch (Exception e) {
                     return TrackerResponse.exceptional(e);
                 }
@@ -170,5 +174,10 @@ class UdpTracker implements Tracker {
         return "UdpTracker{" +
                 "trackerUrl=" + trackerUrl +
                 '}';
+    }
+
+    @Override
+    public void close() throws IOException {
+        this.worker.shutdown();
     }
 }

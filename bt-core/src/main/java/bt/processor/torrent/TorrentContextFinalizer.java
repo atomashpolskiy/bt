@@ -34,10 +34,18 @@ public class TorrentContextFinalizer<C extends TorrentContext> implements Contex
 
     @Override
     public void finalizeContext(C context) {
+        // first stop the torrent descriptor to prevent future async announces
         context.getTorrentId().ifPresent(torrentId -> {
             torrentRegistry.getDescriptor(torrentId).ifPresent(TorrentDescriptor::stop);
-            eventSink.fireTorrentStopped(torrentId);
         });
+
+        // Send the tracker a stop event. Note: there is a possible race condition that a tracker query is in progress
+        // while the stop is sent, although only for UDP trackers - the HTTP tracker code currently only can have one
+        // connection to the tracker at a time..
         context.getAnnouncer().ifPresent(TrackerAnnouncer::stop);
+
+        // fire a stopped torrent event. This must be done after the tracker stop event is sent because this will
+        // shutdown the tracker communication.
+        context.getTorrentId().ifPresent(eventSink::fireTorrentStopped);
     }
 }

@@ -20,12 +20,15 @@ import bt.net.Peer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -41,10 +44,12 @@ public abstract class ScheduledPeerSource implements PeerSource {
     private final ReentrantLock lock;
     private final AtomicReference<Future<?>> futureOptional;
     private final Queue<Peer> peers;
+    private final Duration trackerTimeout;
     private boolean firstUpdate = true;
 
-    public ScheduledPeerSource(ExecutorService executor) {
+    public ScheduledPeerSource(ExecutorService executor, Duration trackerTimeout) {
         this.executor = executor;
+        this.trackerTimeout = trackerTimeout;
         this.lock = new ReentrantLock();
         this.futureOptional = new AtomicReference<>();
         this.peers = new LinkedBlockingQueue<>();
@@ -90,8 +95,9 @@ public abstract class ScheduledPeerSource implements PeerSource {
 
     private void waitForFutureAndLogExceptions(Future<?> future) {
         try {
-            future.get();
-        } catch (InterruptedException | ExecutionException e) {
+            long secondsToWait = trackerTimeout == null ? 10 : trackerTimeout.getSeconds();
+            future.get(secondsToWait, TimeUnit.SECONDS);
+        } catch (TimeoutException | InterruptedException | ExecutionException e) {
             // ignoring InterruptedException here is fine
             // because the peer source's executor will be terminated via a shutdown hook
             LOGGER.warn("Peer collection finished with exception in peer source: " + toString(), e);

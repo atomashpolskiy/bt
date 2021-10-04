@@ -85,8 +85,8 @@ public class PeerRegistry implements IPeerRegistry {
         this.torrentRegistry = torrentRegistry;
         this.trackerService = trackerService;
         this.eventSink = eventSink;
-        this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, torrentRegistry,
-                lifecycleBinder, eventSource, config.getTrackerQueryInterval(), config.getAcceptorPort());
+        this.trackerPeerSourceFactory = new TrackerPeerSourceFactory(trackerService, torrentRegistry, lifecycleBinder,
+                eventSource, config.getTrackerQueryInterval(), config.getTrackerTimeout(), config.getAcceptorPort());
         this.extraPeerSourceFactories = extraPeerSourceFactories;
 
         this.extraAnnounceKeys = new ConcurrentHashMap<>();

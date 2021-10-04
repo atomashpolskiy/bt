@@ -23,6 +23,7 @@ import bt.service.NetworkUtil;
 
 import java.net.InetAddress;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -42,6 +43,7 @@ public class Config {
     private Duration peerConnectionTimeout;
     private Duration peerConnectionInactivityThreshold;
     private Duration trackerQueryInterval;
+    private Duration trackerTimeout;
     private int maxPeerConnections;
     private int maxPeerConnectionsPerTorrent;
     private int transferBlockSize;
@@ -83,6 +85,7 @@ public class Config {
         this.peerHandshakeTimeout = Duration.ofSeconds(30);
         this.peerConnectionInactivityThreshold = Duration.ofMinutes(3);
         this.trackerQueryInterval = null; // use interval returned in tracker response by default
+        this.trackerTimeout = null;
         this.maxPeerConnections = 500;
         this.maxPeerConnectionsPerTorrent = maxPeerConnections; // assume single torrent per runtime by default; change this to (maxActive * 2) maybe?
         this.transferBlockSize = 16 * 1024; // 16 KB
@@ -126,6 +129,7 @@ public class Config {
         this.peerHandshakeTimeout = config.getPeerHandshakeTimeout();
         this.peerConnectionInactivityThreshold = config.getPeerConnectionInactivityThreshold();
         this.trackerQueryInterval = config.getTrackerQueryInterval();
+        this.trackerTimeout = config.getTrackerTimeout();
         this.maxPeerConnections = config.getMaxPeerConnections();
         this.maxPeerConnectionsPerTorrent = config.getMaxPeerConnectionsPerTorrent();
         this.transferBlockSize = config.getTransferBlockSize();
@@ -179,6 +183,7 @@ public class Config {
      * Set the address to send to the tracker. Useful if the local address to accept new connections differs from the
      * remote address a user should connect to this client with for example in the case of NAT. Only supported for http
      * trackers currently. Defaults to {@link #getAcceptorAddress()}
+     *
      * @param peerAddress the address to send to the tracker.
      * @since 1.10
      */
@@ -304,6 +309,24 @@ public class Config {
      */
     public Duration getTrackerQueryInterval() {
         return trackerQueryInterval;
+    }
+
+    /**
+     * Set the tracker timeout
+     *
+     * @param trackerTimeout the amount of time to wait for a response from the tracker
+     */
+    public void setTrackerTimeout(Duration trackerTimeout) {
+        this.trackerTimeout = trackerTimeout;
+    }
+
+    /**
+     * The amount of time to wait for a tracker to respond
+     *
+     * @since 1.10
+     */
+    public Duration getTrackerTimeout() {
+        return trackerTimeout;
     }
 
     /**
@@ -447,6 +470,7 @@ public class Config {
 
     /**
      * Set the number of pieces that are assigned to a single peer
+     *
      * @param maxSimultaneouslyAssignedPieces the max number of pieces assigned to a single peer
      * @since 1.10
      */

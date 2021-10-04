@@ -166,6 +166,11 @@ public class SharedTrackerModule implements Module {
                     public TrackerRequestBuilder request(TorrentId torrentId) {
                         return requestBuilder;
                     }
+
+                    @Override
+                    public void close() {
+                        // do nothing
+                    }
                 };
 
                 Tracker existing = trackers.putIfAbsent(trackerUrl, tracker);

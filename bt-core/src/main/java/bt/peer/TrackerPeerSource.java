@@ -43,8 +43,9 @@ class TrackerPeerSource extends ScheduledPeerSource {
     private final AtomicLong lastRefreshed = new AtomicLong(NEVER_ANNOUNCED);
     private boolean firstRequest = true;
 
-    TrackerPeerSource(ExecutorService executor, Tracker tracker, TorrentId torrentId, Duration defaultTrackerQueryInterval) {
-        super(executor);
+    TrackerPeerSource(ExecutorService executor, Tracker tracker, TorrentId torrentId,
+                      Duration defaultTrackerQueryInterval, Duration trackerTimeout) {
+        super(executor, trackerTimeout);
         this.tracker = tracker;
         this.torrentId = torrentId;
         this.useTrackerAnnounceInterval = defaultTrackerQueryInterval == null;

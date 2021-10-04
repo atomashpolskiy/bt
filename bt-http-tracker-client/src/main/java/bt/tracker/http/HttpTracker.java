@@ -28,10 +28,13 @@ import bt.tracker.SecretKey;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
 import bt.tracker.TrackerResponse;
-import org.apache.http.client.HttpClient;
+import bt.tracker.http.urlencoding.TrackerQueryBuilder;
+import org.apache.http.HttpClientConnection;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.conn.params.ConnRouteParams;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,9 +44,11 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Simple implementation of an HTTP tracker client.
@@ -51,27 +56,39 @@ import java.util.concurrent.ConcurrentMap;
  * @since 1.0
  */
 public class HttpTracker implements Tracker {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpTracker.class);
 
     private enum TrackerRequestType {
-        START, STOP, COMPLETE, QUERY
+        START("started"),
+        STOP("stopped"),
+        COMPLETE("completed"),
+        QUERY(null);
+        private final String eventVal;
+
+        TrackerRequestType(String eventVal) {
+            this.eventVal = eventVal;
+        }
+
+        public String getEventVal() {
+            return eventVal;
+        }
     }
 
     private final URI baseUri;
+    private final RequestConfig requestConfig;
     private final TorrentRegistry torrentRegistry;
     private final IdentityService idService;
     private final IPeerRegistry peerRegistry;
     private final EncryptionPolicy encryptionPolicy;
     private final int numberOfPeersToRequestFromTracker;
-    private final HttpClient httpClient;
+    private final CloseableHttpClient httpClient;
     private final CommonsHttpResponseHandler httpResponseHandler;
 
     private final ConcurrentMap<URI, byte[]> trackerIds;
 
     /**
      * @param trackerUrl Tracker URL
-     * @param idService Identity service
+     * @param idService  Identity service
      * @since 1.0
      */
     public HttpTracker(String trackerUrl,
@@ -80,7 +97,8 @@ public class HttpTracker implements Tracker {
                        IPeerRegistry peerRegistry,
                        EncryptionPolicy encryptionPolicy,
                        InetAddress localAddress,
-                       int numberOfPeersToRequestFromTracker) {
+                       int numberOfPeersToRequestFromTracker,
+                       Duration timeout) {
         try {
             this.baseUri = new URI(trackerUrl);
         } catch (URISyntaxException e) {
@@ -92,16 +110,32 @@ public class HttpTracker implements Tracker {
         this.peerRegistry = peerRegistry;
         this.encryptionPolicy = encryptionPolicy;
         this.numberOfPeersToRequestFromTracker = numberOfPeersToRequestFromTracker;
-        this.httpClient = buildClient(localAddress);
+        requestConfig = buildReqConfig(localAddress, timeout);
+        this.httpClient = HttpClients.createMinimal(new BasicHttpClientConnectionManager() {
+            @Override
+            public synchronized void releaseConnection(HttpClientConnection conn, Object state, long keepalive, TimeUnit timeUnit) {
+                try {
+                    // close the connection to the tracker. Maintaining a persistent HTTP 1.1 connection is a waste of
+                    // the tracker's resources, as well as ours.
+                    conn.close();
+                } catch (IOException ex) {
+                    LOGGER.debug("Error closing tracker connection.", ex);
+                }
+                super.releaseConnection(conn, state, keepalive, timeUnit);
+            }
+        });
         this.httpResponseHandler = new CommonsHttpResponseHandler(new bt.tracker.http.HttpResponseHandler());
 
         this.trackerIds = new ConcurrentHashMap<>();
     }
 
-    private static HttpClient buildClient(InetAddress localAddress) {
-        HttpClient client = HttpClients.createMinimal();
-        client.getParams().setParameter(ConnRouteParams.LOCAL_ADDRESS, localAddress);
-        return client;
+    private RequestConfig buildReqConfig(InetAddress localAddress, Duration timeout) {
+        Duration trackerTimeout = timeout == null ? Duration.ofSeconds(30) : timeout;
+        return RequestConfig.custom()
+                .setLocalAddress(localAddress)
+                .setConnectTimeout((int) trackerTimeout.getSeconds())
+                .setSocketTimeout((int) trackerTimeout.getSeconds())
+                .build();
     }
 
     @Override
@@ -130,23 +164,11 @@ public class HttpTracker implements Tracker {
     }
 
     private TrackerResponse sendEvent(TrackerRequestType eventType, TrackerRequestBuilder requestBuilder) {
-
-        String requestUri;
-        try {
-            String query = buildQuery(eventType, requestBuilder);
-
-            String baseUrl = baseUri.toASCIIString();
-            if (baseUrl.endsWith("/")) {
-                baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-            }
-            URL requestUrl = new URL(baseUrl + (baseUri.getRawQuery() == null? "?" : "&") + query);
-            requestUri = requestUrl.toURI().toString();
-
-        } catch (Exception e) {
-            throw new BtException("Failed to build tracker request", e);
-        }
+        String requestUri = buildQueryUri(eventType, requestBuilder);
 
         HttpGet request = new HttpGet(requestUri);
+        request.setHeader("Connection", "close");
+        request.setConfig(requestConfig);
         try {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Executing tracker HTTP request of type " + eventType.name() +
@@ -158,127 +180,106 @@ public class HttpTracker implements Tracker {
         }
     }
 
+    private String buildQueryUri(TrackerRequestType eventType, TrackerRequestBuilder requestBuilder) {
+        String requestUri;
+        try {
+            String query = buildQuery(eventType, requestBuilder);
+
+            String baseUrl = baseUri.toASCIIString();
+            if (baseUrl.endsWith("/")) {
+                baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+            }
+            URL requestUrl = new URL(baseUrl + (baseUri.getRawQuery() == null ? "?" : "&") + query);
+            requestUri = requestUrl.toURI().toString();
+
+        } catch (Exception e) {
+            throw new BtException("Failed to build tracker request", e);
+        }
+        return requestUri;
+    }
+
     private String buildQuery(TrackerRequestType eventType, TrackerRequestBuilder requestBuilder) {
-        StringBuilder buf = new StringBuilder();
+        TrackerQueryBuilder queryBuilder = buildTrackerQuery(eventType, requestBuilder);
+        return queryBuilder.toQuery();
+    }
 
-        buf.append("info_hash=");
-        buf.append(urlEncode(requestBuilder.getTorrentId().getBytes()));
+    /**
+     * Build the query to send to the tracker. This method is protected so that this class can easily be extended
+     * to support additional tracker parameters
+     *
+     * @param eventType      The event type to announce to the tracker
+     * @param requestBuilder the information to build the request
+     */
+    protected TrackerQueryBuilder buildTrackerQuery(TrackerRequestType eventType, TrackerRequestBuilder requestBuilder) {
+        TrackerQueryBuilder queryBuilder = new TrackerQueryBuilder();
 
-        buf.append("&peer_id=");
-        buf.append(urlEncode(idService.getLocalPeerId().getBytes()));
+        queryBuilder.add("info_hash", requestBuilder.getTorrentId().getBytes());
+        queryBuilder.add("peer_id", idService.getLocalPeerId().getBytes());
 
         Peer peer = peerRegistry.getLocalPeer();
         InetAddress inetAddress = peer.getInetAddress();
         if (inetAddress != null) {
-            buf.append("&ip=");
-            buf.append(urlEncode(inetAddress.getHostAddress().getBytes()));
+            queryBuilder.add("ip", inetAddress.getHostAddress());
         }
 
-        buf.append("&port=");
-        // this does not work with some trackers, resulting in a failure response: "missing port"
-//        buf.append(encryptionPolicy == EncryptionPolicy.REQUIRE_ENCRYPTED ? 0 : peer.getPort());
-        buf.append(peer.getPort());
+        queryBuilder.add("port", peer.getPort());
 
         // set the torrent state if we can.
         torrentRegistry.getDescriptor(requestBuilder.getTorrentId())
                 .flatMap(TorrentDescriptor::getSessionState)
                 .ifPresent(state -> {
-                    buf.append("&uploaded=");
-                    buf.append(state.getUploaded());
-                    buf.append("&downloaded=");
-                    buf.append(state.getDownloaded());
-                    buf.append("&left=");
-                    buf.append(state.getLeft());
+                    queryBuilder.add("uploaded", state.getUploaded());
+                    queryBuilder.add("downloaded", state.getDownloaded());
+                    queryBuilder.add("left", state.getLeft());
                 });
 
-        buf.append("&compact=1");
-        buf.append("&numwant=");
-        buf.append(requestBuilder.getNumWant() == null ? numberOfPeersToRequestFromTracker : requestBuilder.getNumWant());
+        queryBuilder.add("compact", 1);
+        int numWant = requestBuilder.getNumWant() == null ? numberOfPeersToRequestFromTracker : requestBuilder.getNumWant();
+        queryBuilder.add("numwant", numWant);
 
         Optional<SecretKey> secretKey = idService.getSecretKey();
         if (secretKey.isPresent()) {
-            buf.append("&key=");
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             secretKey.get().writeTo(bos);
-            buf.append(urlEncode(bos.toByteArray()));
+            queryBuilder.add("key", bos.toByteArray());
         }
 
         byte[] trackerId = trackerIds.get(baseUri);
         if (trackerId != null) {
-            buf.append("&trackerid=");
-            buf.append(urlEncode(trackerId));
+            queryBuilder.add("trackerid", trackerId);
         }
 
-        switch (eventType) {
-            case START: {
-                buf.append("&event=started");
-                break;
-            }
-            case STOP: {
-                buf.append("&event=stopped");
-                break;
-            }
-            case COMPLETE: {
-                buf.append("&event=completed");
-                break;
-            }
-            case QUERY: {
-                // do not specify event
-                break;
-            }
-            default: {
-                throw new BtException("Unexpected event type: " + eventType.name().toLowerCase());
-            }
+        if (null != eventType.getEventVal()) {
+            queryBuilder.add("event", eventType.getEventVal());
         }
 
         switch (encryptionPolicy) {
-            case PREFER_PLAINTEXT: {
-                buf.append("&supportcrypto=1");
-                break;
-            }
+            case PREFER_PLAINTEXT:
             case PREFER_ENCRYPTED:
+                queryBuilder.add("supportcrypto", 1);
+                break;
             case REQUIRE_ENCRYPTED: {
-                buf.append("&requirecrypto=1");
+                queryBuilder.add("requirecrypto", 1);
                 break;
             }
             default: {
                 // do nothing
             }
         }
-
-        return buf.toString();
-    }
-
-    private String urlEncode(byte[] bytes) {
-
-        StringBuilder buf = new StringBuilder();
-        for (byte b : bytes) {
-            char c = (char) b;
-            if   ( (c >= 48 && c <= 57) // 0-9
-                || (c >= 65 && c <= 90) // A-Z
-                || (c >= 97 && c <= 122) // a-z
-                ||  c == 45  // -
-                ||  c == 46  // .
-                ||  c == 95  // _
-                ||  c == 126 // ~
-            ) {
-                buf.append(c);
-            } else {
-                buf.append("%");
-                String hex = Integer.toHexString(b & 0xFF).toUpperCase();
-                if (hex.length() == 1) {
-                    buf.append("0");
-                }
-                buf.append(hex);
-            }
-        }
-        return buf.toString();
+        return queryBuilder;
     }
 
     @Override
     public String toString() {
-        return "HttpTracker{" +
-                "baseUri=" + baseUri +
-                '}';
+        return "HttpTracker{" + "baseUri=" + baseUri + '}';
+    }
+
+    @Override
+    public void close() {
+        try {
+            this.httpClient.close();
+        } catch (IOException ex) {
+            LOGGER.info("Error closing tracker http client", ex);
+        }
     }
 }

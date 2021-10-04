@@ -21,6 +21,8 @@ import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
 import bt.tracker.TrackerResponse;
 
+import java.io.IOException;
+
 public class MockTracker implements Tracker {
     private static final String url = MockTrackerFactory.schema() + "://mock";
 
@@ -51,5 +53,10 @@ public class MockTracker implements Tracker {
                 return MockTrackerResponse.instance();
             }
         };
+    }
+
+    @Override
+    public void close() throws IOException {
+
     }
 }

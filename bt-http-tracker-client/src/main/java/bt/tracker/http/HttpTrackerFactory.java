@@ -26,6 +26,7 @@ import bt.tracker.TrackerFactory;
 import com.google.inject.Inject;
 
 import java.net.InetAddress;
+import java.time.Duration;
 
 /**
  * Creates HTTP tracker clients.
@@ -40,6 +41,7 @@ public class HttpTrackerFactory implements TrackerFactory {
     private final EncryptionPolicy encryptionPolicy;
     private final InetAddress localAddress;
     private final int numberOfPeersToRequestFromTracker;
+    private final Duration trackerTimeout;
 
     @Inject
     public HttpTrackerFactory(TorrentRegistry torrentRegistry,
@@ -52,11 +54,12 @@ public class HttpTrackerFactory implements TrackerFactory {
         this.encryptionPolicy = config.getEncryptionPolicy();
         this.localAddress = config.getAcceptorAddress();
         this.numberOfPeersToRequestFromTracker = config.getNumberOfPeersToRequestFromTracker();
+        this.trackerTimeout = config.getTrackerTimeout();
     }
 
     @Override
     public Tracker getTracker(String trackerUrl) {
         return new HttpTracker(trackerUrl, torrentRegistry, idService, peerRegistry, encryptionPolicy,
-                localAddress, numberOfPeersToRequestFromTracker);
+                localAddress, numberOfPeersToRequestFromTracker, trackerTimeout);
     }
 }

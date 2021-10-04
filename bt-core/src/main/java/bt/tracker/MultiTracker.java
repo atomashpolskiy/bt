@@ -21,9 +21,11 @@ import bt.metainfo.TorrentId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -136,6 +138,22 @@ class MultiTracker implements Tracker {
         };
     }
 
+    @Override
+    public void close() throws IOException {
+        AtomicReference<IOException> closeException = new AtomicReference<>();
+        trackerTiers.stream().flatMap(List::stream).forEach(t -> {
+                    try {
+                        t.close();
+                    } catch (IOException ex) {
+                        closeException.compareAndSet(null, ex);
+                        LOGGER.info("Error closing nested tracker", ex);
+                    }
+                }
+        );
+        if (closeException.get() != null)
+            throw closeException.get();
+    }
+
     private static class LazyTracker implements Tracker {
 
         private volatile Tracker delegate;
@@ -162,6 +180,15 @@ class MultiTracker implements Tracker {
                 }
             }
             return delegate;
+        }
+
+        @Override
+        public void close() throws IOException {
+            synchronized (lock) {
+                if (null != delegate)
+                    delegate.close();
+                delegateSupplier = null;
+            }
         }
 
         @Override

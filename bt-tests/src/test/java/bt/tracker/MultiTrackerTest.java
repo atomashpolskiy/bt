@@ -181,7 +181,7 @@ public class MultiTrackerTest {
 
                 private TrackerResponse logAndResponse() {
                     accessLog.accept(instance);
-                    return shutdown? TrackerResponse.exceptional(new IOException("shutdown")) : TrackerResponse.ok();
+                    return shutdown ? TrackerResponse.exceptional(new IOException("shutdown")) : TrackerResponse.ok();
                 }
             };
         }
@@ -197,6 +197,11 @@ public class MultiTrackerTest {
 
         public void shutdown() {
             shutdown = true;
+        }
+
+        @Override
+        public void close() throws IOException {
+            shutdown();
         }
 
         @Override

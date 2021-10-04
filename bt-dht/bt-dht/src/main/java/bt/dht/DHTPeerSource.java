@@ -22,6 +22,7 @@ import bt.peer.ScheduledPeerSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -39,7 +40,7 @@ public class DHTPeerSource extends ScheduledPeerSource {
     private final DHTService dhtService;
 
     DHTPeerSource(TorrentId torrentId, DHTService dhtService, ExecutorService executor) {
-        super(executor);
+        super(executor, Duration.ofSeconds(10));
         this.torrentId = torrentId;
         this.dhtService = dhtService;
     }
