@@ -69,9 +69,6 @@ public class HttpTracker implements Tracker {
 
     private final ConcurrentMap<URI, byte[]> trackerIds;
 
-    private long lastLeft = 0;
-    private long lastUploadedBytes = 0;
-
     /**
      * @param trackerUrl Tracker URL
      * @param idService Identity service
