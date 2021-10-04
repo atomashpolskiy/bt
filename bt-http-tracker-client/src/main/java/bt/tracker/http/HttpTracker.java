@@ -58,7 +58,7 @@ import java.util.concurrent.TimeUnit;
 public class HttpTracker implements Tracker {
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpTracker.class);
 
-    private enum TrackerRequestType {
+    protected enum TrackerRequestType {
         START("started"),
         STOP("stopped"),
         COMPLETE("completed"),
