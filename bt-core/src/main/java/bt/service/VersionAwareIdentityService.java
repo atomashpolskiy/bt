@@ -60,7 +60,7 @@ public class VersionAwareIdentityService implements IdentityService {
         }
 
         byte[] tail = new byte[PeerId.length() - versionPrefix.length];
-        Random random = new Random(System.currentTimeMillis());
+        Random random = new Random(Long.reverse(System.nanoTime()) ^ System.currentTimeMillis());
         random.nextBytes(tail);
 
         byte[] peerId = new byte[PeerId.length()];
