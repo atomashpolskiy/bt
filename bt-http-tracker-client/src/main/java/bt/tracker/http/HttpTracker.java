@@ -134,8 +134,8 @@ public class HttpTracker implements Tracker {
         Duration trackerTimeout = timeout == null ? Duration.ofSeconds(30) : timeout;
         return RequestConfig.custom()
                 .setLocalAddress(localAddress)
-                .setConnectTimeout((int) trackerTimeout.getSeconds())
-                .setSocketTimeout((int) trackerTimeout.getSeconds())
+                .setConnectTimeout((int) trackerTimeout.toMillis())
+                .setSocketTimeout((int) trackerTimeout.toMillis())
                 .build();
     }
 
