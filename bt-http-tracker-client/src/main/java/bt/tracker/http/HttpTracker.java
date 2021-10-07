@@ -113,7 +113,8 @@ public class HttpTracker implements Tracker {
         requestConfig = buildReqConfig(localAddress, timeout);
         this.httpClient = HttpClients.createMinimal(new BasicHttpClientConnectionManager() {
             @Override
-            public synchronized void releaseConnection(HttpClientConnection conn, Object state, long keepalive, TimeUnit timeUnit) {
+            public synchronized void releaseConnection(HttpClientConnection conn, Object state, long keepalive,
+                                                       TimeUnit timeUnit) {
                 try {
                     // close the connection to the tracker. Maintaining a persistent HTTP 1.1 connection is a waste of
                     // the tracker's resources, as well as ours.
@@ -199,18 +200,20 @@ public class HttpTracker implements Tracker {
     }
 
     private String buildQuery(TrackerRequestType eventType, TrackerRequestBuilder requestBuilder) {
-        TrackerQueryBuilder queryBuilder = buildTrackerQuery(eventType, requestBuilder);
+        TrackerQueryBuilder queryBuilder = createTrackerQuery(eventType, requestBuilder);
         return queryBuilder.toQuery();
     }
 
     /**
      * Build the query to send to the tracker. This method is protected so that this class can easily be extended
-     * to support additional tracker parameters
+     * to support additional tracker parameters, for example
+     * <a href="https://wiki.theory.org/BitTorrent_Location-aware_Protocol_1.0_Specification">BitTorrent location aware protocol</a>
      *
      * @param eventType      The event type to announce to the tracker
      * @param requestBuilder the information to build the request
      */
-    protected TrackerQueryBuilder buildTrackerQuery(TrackerRequestType eventType, TrackerRequestBuilder requestBuilder) {
+    protected TrackerQueryBuilder createTrackerQuery(TrackerRequestType eventType,
+                                                     TrackerRequestBuilder requestBuilder) {
         TrackerQueryBuilder queryBuilder = new TrackerQueryBuilder();
 
         queryBuilder.add("info_hash", requestBuilder.getTorrentId().getBytes());
@@ -234,7 +237,8 @@ public class HttpTracker implements Tracker {
                 });
 
         queryBuilder.add("compact", 1);
-        int numWant = requestBuilder.getNumWant() == null ? numberOfPeersToRequestFromTracker : requestBuilder.getNumWant();
+        int numWant =
+                requestBuilder.getNumWant() == null ? numberOfPeersToRequestFromTracker : requestBuilder.getNumWant();
         queryBuilder.add("numwant", numWant);
 
         Optional<SecretKey> secretKey = idService.getSecretKey();
