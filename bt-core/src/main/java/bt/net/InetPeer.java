@@ -95,6 +95,21 @@ public class InetPeer implements Peer {
         return builder.toString();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        InetPeer inetPeer = (InetPeer) o;
+        return port == inetPeer.port
+                && addressSupplier.get().equals(inetPeer.addressSupplier.get())
+                && peerId.equals(inetPeer.peerId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(addressSupplier.get(), port, peerId);
+    }
+
     public static Builder builder(InetPeerAddress holder) {
         int port = holder.getPort();
         checkPort(port);
