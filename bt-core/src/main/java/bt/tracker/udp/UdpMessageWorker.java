@@ -18,7 +18,6 @@ package bt.tracker.udp;
 
 import bt.BtException;
 import bt.protocol.Protocols;
-import bt.service.IRuntimeLifecycleBinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +28,7 @@ import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -59,7 +59,6 @@ class UdpMessageWorker {
 
     public UdpMessageWorker(SocketAddress localAddress,
                             SocketAddress remoteAddress,
-                            IRuntimeLifecycleBinder lifecycleBinder,
                             int listeningPort) {
         this.localAddress = localAddress;
         this.remoteAddress = remoteAddress;
@@ -67,47 +66,50 @@ class UdpMessageWorker {
 
         String threadName = String.format("%d.bt.tracker.udp.message-worker", listeningPort);
         this.executor = Executors.newSingleThreadExecutor(r -> new Thread(r, threadName));
-        lifecycleBinder.onShutdown("Shutdown UDP message worker", () -> {
-            try {
-                this.shutdown();
-            } finally {
-                this.executor.shutdownNow();
-            }
-        });
     }
 
-    public synchronized <T> T sendMessage(UdpTrackerMessage message, UdpTrackerResponseHandler<T> responseHandler) {
-        return sendMessage(message, getSession(), responseHandler, false);
+    public synchronized <T> T sendMessage(UdpTrackerMessage message, UdpTrackerResponseHandler<T> responseHandler,
+                                          Duration trackerTimeout) {
+        return sendMessage(message, getSession(trackerTimeout), responseHandler, trackerTimeout);
     }
 
-    private Session getSession() {
+    private Session getSession(Duration trackerTimeout) {
         if (session == null || session.isExpired()) {
-            session = createSession();
+            session = createSession(trackerTimeout);
         }
         return session;
     }
 
-    private Session createSession() {
-        return sendMessage(new ConnectRequest(), Session.noSession(), ConnectResponseHandler.handler(), false);
+    private Session createSession(Duration trackerTimeout) {
+        return sendMessage(new ConnectRequest(), Session.noSession(), ConnectResponseHandler.handler(), trackerTimeout);
     }
 
     private <T> T sendMessage(UdpTrackerMessage message, Session session,
-                              UdpTrackerResponseHandler<T> responseHandler, boolean retry) {
-        int timeToWait = retry ? 5 : 10;
-        try {
-            return CompletableFuture.supplyAsync(() ->
-                    doSend(message, session, responseHandler), executor).get(timeToWait, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            throw new BtException("Unexpectedly interrupted while waiting for response from the tracker", e);
-        } catch (TimeoutException e) {
-            if (retry) {
+                              UdpTrackerResponseHandler<T> responseHandler,
+                              Duration maxTimeout) {
+        int lastRetry = 7;
+        for (int retryNum = 0; retryNum <= lastRetry; retryNum++) {
+            final int timeout = computeTimeout(retryNum);
+            try {
+                return CompletableFuture.supplyAsync(() ->
+                        doSend(message, session, responseHandler), executor).get(timeout, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                throw new BtException("Unexpectedly interrupted while waiting for response from the tracker", e);
+            } catch (TimeoutException e) {
+                if (retryNum == lastRetry || null != maxTimeout && timeout > maxTimeout.getSeconds()) {
+                    throw new BtException("Failed to receive response from the tracker", e);
+                }
+            } catch (Throwable e) {
                 throw new BtException("Failed to receive response from the tracker", e);
-            } else {
-                return sendMessage(message, session, responseHandler, true);
             }
-        } catch (Throwable e) {
-            throw new BtException("Failed to receive response from the tracker", e);
         }
+        // should not get here.
+        throw new BtException("Failed to receive response from the tracker");
+    }
+
+    private int computeTimeout(int retryNum) {
+        // as per BEP-0015, formula is 15 * 2^retryNum
+        return 15 << retryNum;
     }
 
     private <T> T doSend(UdpTrackerMessage message, Session session, UdpTrackerResponseHandler<T> responseHandler) {

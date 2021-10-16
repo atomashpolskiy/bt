@@ -70,8 +70,8 @@ public class PieceUtils {
         return new ReadWriteDataRange(nonEmptyStorageUnits, 0, limitInLastUnit);
     }
 
-    private static ChunkDescriptor buildChunkDescriptor(DataRange data, long blockSize, byte[] checksum) {
-        BlockRange<DataRange> blockData = Ranges.blockRange(data, blockSize);
+    private static ChunkDescriptor buildChunkDescriptor(DataRange data, long transferBlockSize, byte[] checksum) {
+        BlockRange<DataRange> blockData = Ranges.blockRange(data, transferBlockSize);
         SynchronizedRange<BlockRange<DataRange>> synchronizedRange = new SynchronizedRange<>(blockData);
         SynchronizedDataRange<BlockRange<DataRange>> synchronizedData =
                 new SynchronizedDataRange<>(synchronizedRange, BlockRange::getDelegate);

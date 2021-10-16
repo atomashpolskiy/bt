@@ -19,6 +19,7 @@ package bt.processor.torrent;
 import bt.event.EventSink;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
+import bt.peer.IPeerRegistry;
 import bt.processor.ProcessingStage;
 import bt.processor.TerminateOnErrorProcessingStage;
 import bt.processor.listener.ProcessingEvent;
@@ -34,23 +35,25 @@ import java.util.Optional;
 
 public class ProcessTorrentStage<C extends TorrentContext> extends TerminateOnErrorProcessingStage<C> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProcessTorrentStage.class);
-
     private TorrentRegistry torrentRegistry;
+    private final IPeerRegistry peerRegistry;
     private ITrackerService trackerService;
     private EventSink eventSink;
 
     public ProcessTorrentStage(ProcessingStage<C> next,
                                TorrentRegistry torrentRegistry,
+                               IPeerRegistry peerRegistry,
                                ITrackerService trackerService,
                                EventSink eventSink) {
         super(next);
         this.torrentRegistry = torrentRegistry;
+        this.peerRegistry = peerRegistry;
         this.trackerService = trackerService;
         this.eventSink = eventSink;
     }
 
     @Override
-    protected void doExecute(C context) {
+    protected void doExecute(C context) throws InterruptedException {
         TorrentId torrentId = context.getTorrentId().get();
         TorrentDescriptor descriptor = getDescriptor(torrentId);
 
@@ -65,12 +68,9 @@ public class ProcessTorrentStage<C extends TorrentContext> extends TerminateOnEr
 
         eventSink.fireTorrentStarted(torrentId);
 
-        try {
-            context.getState().get().waitForAllPieces();
-            complete(context);
-        } catch (InterruptedException e) {
-            throw new RuntimeException("Unexpectedly interrupted", e);
-        }
+        peerRegistry.triggerPeerCollection(torrentId);
+        descriptor.getDataDescriptor().waitForAllPieces();
+        complete(context);
     }
 
     private void complete(C context) {

@@ -78,7 +78,10 @@ public class CreateSessionStage<C extends TorrentContext> extends TerminateOnErr
         TorrentWorker torrentWorker = new TorrentWorker(torrentId, messageDispatcher, connectionSource, peerWorkerFactory,
                 bitfieldSupplier, assignmentsSupplier, statisticsSupplier, eventSource, config);
 
-        context.setState(new DefaultTorrentSessionState(descriptor, torrentWorker, context.getPieceSelector()));
+        final DefaultTorrentSessionState sessionState = new DefaultTorrentSessionState(descriptor::getDataDescriptor,
+                torrentWorker, context.getPieceSelector());
+        torrentRegistry.registerSessionState(torrentId, sessionState);
+        context.setState(sessionState);
         context.setRouter(router);
     }
 

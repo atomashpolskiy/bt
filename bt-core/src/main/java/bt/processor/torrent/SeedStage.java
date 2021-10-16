@@ -34,15 +34,11 @@ public class SeedStage<C extends TorrentContext> extends TerminateOnErrorProcess
     }
 
     @Override
-    protected void doExecute(C context) {
+    protected void doExecute(C context) throws InterruptedException {
         TorrentDescriptor descriptor = getDescriptor(context.getTorrentId().get());
 
         while (descriptor.isActive()) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException("Unexpectedly interrupted", e);
-            }
+            Thread.sleep(1_000);
         }
     }
 

@@ -16,6 +16,7 @@
 
 package bt.peer;
 
+import bt.event.EventSource;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
@@ -37,31 +38,36 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 class TrackerPeerSourceFactory implements PeerSourceFactory {
 
-    private ITrackerService trackerService;
-    private TorrentRegistry torrentRegistry;
-    private Duration trackerQueryInterval;
-    private ConcurrentMap<TorrentId, ConcurrentMap<AnnounceKey, TrackerPeerSource>> peerSources;
+    private final ITrackerService trackerService;
+    private final TorrentRegistry torrentRegistry;
+    private final Duration trackerQueryInterval;
+    private final Duration trackerTimeout;
+    private final ConcurrentMap<TorrentId, ConcurrentMap<AnnounceKey, TrackerPeerSource>> peerSources;
 
-    private ExecutorService executor;
+    private final ExecutorService executor;
 
     public TrackerPeerSourceFactory(ITrackerService trackerService,
                                     TorrentRegistry torrentRegistry,
                                     IRuntimeLifecycleBinder lifecycleBinder,
+                                    EventSource eventSource,
                                     Duration trackerQueryInterval,
+                                    Duration trackerTimeout,
                                     int port) {
         this.trackerService = trackerService;
         this.torrentRegistry = torrentRegistry;
         this.trackerQueryInterval = trackerQueryInterval;
+        this.trackerTimeout = trackerTimeout;
         this.peerSources = new ConcurrentHashMap<>();
 
         this.executor = Executors.newCachedThreadPool(new ThreadFactory() {
-            AtomicInteger i = new AtomicInteger();
+            final AtomicInteger i = new AtomicInteger();
 
             @Override
             public Thread newThread(Runnable r) {
                 return new Thread(r, String.format("%d.bt.peer.tracker-peer-source-%d", port, i.incrementAndGet()));
             }
         });
+        eventSource.onTorrentStopped(null, e -> peerSources.remove(e.getTorrentId()));
         lifecycleBinder.onShutdown("Shutdown tracker peer sources", executor::shutdownNow);
     }
 
@@ -98,7 +104,8 @@ class TrackerPeerSourceFactory implements PeerSourceFactory {
     }
 
     private TrackerPeerSource createTrackerPeerSource(TorrentId torrentId, AnnounceKey announceKey) {
-        return new TrackerPeerSource(executor, trackerService.getTracker(announceKey), torrentId, trackerQueryInterval);
+        return new TrackerPeerSource(executor, trackerService.getTracker(announceKey), torrentId,
+                trackerQueryInterval, trackerTimeout);
     }
 
     private static final PeerSource noopSource = new PeerSource() {

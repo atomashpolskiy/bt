@@ -17,8 +17,8 @@
 package bt.tracker.udp;
 
 import bt.runtime.Config;
-import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdentityService;
+import bt.torrent.TorrentRegistry;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerFactory;
 import com.google.inject.Inject;
@@ -30,20 +30,20 @@ import com.google.inject.Inject;
  */
 public class UdpTrackerFactory implements TrackerFactory {
 
-    private IdentityService idService;
-    private IRuntimeLifecycleBinder lifecycleBinder;
-    private Config config;
+    private final IdentityService idService;
+    private final TorrentRegistry torrentRegistry;
+    private final Config config;
 
     @Inject
-    public UdpTrackerFactory(IdentityService idService, IRuntimeLifecycleBinder lifecycleBinder, Config config) {
+    public UdpTrackerFactory(IdentityService idService, TorrentRegistry torrentRegistry, Config config) {
         this.idService = idService;
-        this.lifecycleBinder = lifecycleBinder;
+        this.torrentRegistry = torrentRegistry;
         this.config = config;
     }
 
     @Override
     public Tracker getTracker(String trackerUrl) {
-        return new UdpTracker(idService, lifecycleBinder, config.getAcceptorAddress(), config.getAcceptorPort(),
-                config.getNumberOfPeersToRequestFromTracker(), trackerUrl);
+        return new UdpTracker(idService, torrentRegistry, config.getAcceptorAddress(),
+                config.getAcceptorPort(), config.getNumberOfPeersToRequestFromTracker(), trackerUrl, config.getTrackerTimeout());
     }
 }

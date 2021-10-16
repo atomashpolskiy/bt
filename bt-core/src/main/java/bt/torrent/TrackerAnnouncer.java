@@ -88,7 +88,7 @@ public class TrackerAnnouncer {
             try {
                 // do not send completed if the torrent was fully downloaded before we started. This is
                 // as per BEP-0003: "No 'completed' is sent if the file was complete when started."
-                if (sessionState.getDownloaded() > 0)
+                if (!sessionState.startedAsSeed())
                     processResponse(Event.complete, tracker, prepareAnnounce(tracker).complete());
             } catch (Exception e) {
                 logTrackerError(Event.complete, tracker, Optional.of(e), Optional.empty());
@@ -98,9 +98,7 @@ public class TrackerAnnouncer {
 
     private TrackerRequestBuilder prepareAnnounce(Tracker tracker) {
         return tracker.request(torrent.getTorrentId())
-                .downloaded(sessionState.getDownloaded())
-                .uploaded(sessionState.getUploaded())
-                .left(sessionState.getPiecesRemaining() * torrent.getChunkSize());
+                .numWant(0);
     }
 
     private void processResponse(Event event, Tracker tracker, TrackerResponse response) {

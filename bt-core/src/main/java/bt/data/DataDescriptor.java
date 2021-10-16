@@ -86,4 +86,19 @@ public interface DataDescriptor extends Closeable {
      * Wait for all of the pieces of the torrent to download
      */
     void waitForAllPieces() throws InterruptedException;
+
+    /**
+     * Check if the torrent was finished upon initial hashing
+     *
+     * @return true if the torrent file was complete upon initial hashing
+     */
+    boolean startedAsSeed();
+
+    /**
+     * Get the amount of data left to verify
+     *
+     * @return the amount of data left to verify
+     * @since 1.10
+     */
+    long getLeft();
 }

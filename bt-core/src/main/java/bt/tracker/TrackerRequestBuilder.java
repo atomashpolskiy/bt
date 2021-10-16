@@ -28,11 +28,8 @@ import java.util.Objects;
  */
 public abstract class TrackerRequestBuilder {
 
-    private TorrentId torrentId;
-
-    private long uploaded;
-    private long downloaded;
-    private long left;
+    private final TorrentId torrentId;
+    private Integer numWant;
 
     /**
      * Create a tracker request builder for a given torrent ID
@@ -76,47 +73,17 @@ public abstract class TrackerRequestBuilder {
     public abstract TrackerResponse query();
 
     /**
-     * Optionally set the amount of data uploaded during the current session.
+     * Set the number of peers to request in this call to the tracker. Set to null to use the default value
      *
-     * @param uploaded Amount of data uploaded since the last announce, in bytes.
+     * @param numWant the number of peers to request from the tracker
      * @return Builder
-     * @since 1.0
+     * @since 1.10
      */
-    public TrackerRequestBuilder uploaded(long uploaded) {
-        if (uploaded < 0) {
-            throw new BtException("Invalid uploaded value: " + uploaded);
+    public TrackerRequestBuilder numWant(Integer numWant) {
+        if (numWant != null && numWant < 0) {
+            throw new BtException("Invalid numWant value: " + numWant);
         }
-        this.uploaded = uploaded;
-        return this;
-    }
-
-    /**
-     * Optionally set the amount of data downloaded during the current session.
-     *
-     * @param downloaded Amount of data downloaded since the last announce, in bytes.
-     * @return Builder
-     * @since 1.0
-     */
-    public TrackerRequestBuilder downloaded(long downloaded) {
-        if (downloaded < 0) {
-            throw new BtException("Invalid downloaded value: " + downloaded);
-        }
-        this.downloaded = downloaded;
-        return this;
-    }
-
-    /**
-     * Optionally set the amount of data left for the client to download.
-     *
-     * @param left Amount of data that is left for the client to complete the torrent download, in bytes.
-     * @return Builder
-     * @since 1.0
-     */
-    public TrackerRequestBuilder left(long left) {
-        if (left < 0) {
-            throw new BtException("Invalid left value: " + left);
-        }
-        this.left = left;
+        this.numWant = numWant;
         return this;
     }
 
@@ -128,23 +95,12 @@ public abstract class TrackerRequestBuilder {
     }
 
     /**
-     * @since 1.0
+     * Get the number of peers to request from the tracker, or null if the default value should be used
+     *
+     * @return the number of peers to request from the tracker
+     * @since 1.10
      */
-    public long getUploaded() {
-        return uploaded;
-    }
-
-    /**
-     * @since 1.0
-     */
-    public long getDownloaded() {
-        return downloaded;
-    }
-
-    /**
-     * @since 1.0
-     */
-    public long getLeft() {
-        return left;
+    public Integer getNumWant() {
+        return numWant;
     }
 }

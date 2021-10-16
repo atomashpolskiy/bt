@@ -20,19 +20,20 @@ import bt.data.IDataDescriptorFactory;
 import bt.data.Storage;
 import bt.event.EventSource;
 import bt.metainfo.Torrent;
-import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
-import bt.processor.ProcessingContext;
 import bt.torrent.callbacks.FileDownloadCompleteCallback;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.BiConsumer;
 
 /**
  * Simple in-memory torrent registry, that creates new descriptors upon request.
@@ -100,27 +101,16 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
                                       FileDownloadCompleteCallback completedFileCallbacks) {
         TorrentId torrentId = torrent.getTorrentId();
 
-        DefaultTorrentDescriptor descriptor = descriptors.get(torrentId);
-        if (descriptor != null) {
-            if (descriptor.getDataDescriptor() != null) {
-                throw new IllegalStateException(
-                        "Torrent already registered and data descriptor created: " + torrent.getTorrentId());
-            }
-            descriptor.setDataDescriptor(dataDescriptorFactory.createDescriptor(torrent, storage, completedFileCallbacks));
-
-        } else {
-            descriptor = new DefaultTorrentDescriptor();
-            descriptor.setDataDescriptor(dataDescriptorFactory.createDescriptor(torrent, storage, completedFileCallbacks));
-
-            DefaultTorrentDescriptor existing = descriptors.putIfAbsent(torrentId, descriptor);
-            if (existing != null) {
-                descriptor = existing;
-            } else {
-                torrentIds.add(torrentId);
-            }
+        DefaultTorrentDescriptor descriptor = descriptors.computeIfAbsent(torrentId, k -> new DefaultTorrentDescriptor());
+        if (descriptor.getDataDescriptor() != null) {
+            throw new IllegalStateException(
+                    "Torrent already registered and data descriptor created: " + torrent.getTorrentId());
         }
+        descriptor.setDataDescriptor(dataDescriptorFactory.createDescriptor(torrent, storage, completedFileCallbacks));
 
+        torrentIds.add(torrentId);
         torrents.putIfAbsent(torrentId, torrent);
+
         return descriptor;
     }
 
@@ -148,7 +138,7 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
                 && (!descriptor.isPresent() || descriptor.get().isActive());
     }
 
-    public void unregister(TorrentId torrentId) {
+    private void unregister(TorrentId torrentId) {
         torrentIds.remove(torrentId);
         torrents.remove(torrentId);
         DefaultTorrentDescriptor torrentDescriptor = descriptors.remove(torrentId);
@@ -163,4 +153,8 @@ public class AdhocTorrentRegistry implements TorrentRegistry {
         }
     }
 
+    @Override
+    public void registerSessionState(TorrentId torrentId, TorrentSessionState state) {
+        descriptors.get(torrentId).setSessionState(state);
+    }
 }

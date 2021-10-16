@@ -150,6 +150,7 @@ class DefaultClient<C extends ProcessingContext> implements BtClient {
         return futureOptional.isPresent();
     }
 
+    @Override
     public boolean updateFilePriorities(FilePrioritySelector torrentFilePrioritySelector) {
         TorrentSessionState state = context.getState().orElse(null);
         if (state != null) {

@@ -16,6 +16,7 @@
 
 package bt.torrent;
 
+import bt.data.DataDescriptor;
 import bt.metainfo.TorrentFile;
 import bt.net.ConnectionKey;
 import bt.processor.ProcessingContext;
@@ -25,7 +26,6 @@ import bt.torrent.messaging.ConnectionState;
 import bt.torrent.messaging.TorrentWorker;
 import bt.torrent.selector.PrioritizedPieceSelector;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +34,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.summingLong;
 
@@ -54,11 +55,11 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
      */
     private final AtomicLong uploadedToDisconnected;
 
-    private final TorrentDescriptor descriptor;
+    private final Supplier<DataDescriptor> descriptor;
     private final TorrentWorker worker;
     private final PrioritizedPieceSelector pieceSelector;
 
-    public DefaultTorrentSessionState(TorrentDescriptor descriptor, TorrentWorker worker,
+    public DefaultTorrentSessionState(Supplier<DataDescriptor> descriptor, TorrentWorker worker,
                                       PrioritizedPieceSelector pieceSelector) {
         this.recentAmountsForConnectedPeers = new HashMap<>();
         this.downloadedFromDisconnected = new AtomicLong();
@@ -70,8 +71,8 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
 
     @Override
     public int getPiecesTotal() {
-        if (descriptor.getDataDescriptor() != null) {
-            return descriptor.getDataDescriptor().getBitfield().getPiecesTotal();
+        if (descriptor.get() != null) {
+            return descriptor.get().getBitfield().getPiecesTotal();
         } else {
             return 1;
         }
@@ -79,8 +80,8 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
 
     @Override
     public int getPiecesComplete() {
-        if (descriptor.getDataDescriptor() != null) {
-            return descriptor.getDataDescriptor().getBitfield().getPiecesComplete();
+        if (descriptor.get() != null) {
+            return descriptor.get().getBitfield().getPiecesComplete();
         } else {
             return 0;
         }
@@ -88,8 +89,8 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
 
     @Override
     public int getPiecesIncomplete() {
-        if (descriptor.getDataDescriptor() != null) {
-            return descriptor.getDataDescriptor().getBitfield().getPiecesIncomplete();
+        if (descriptor.get() != null) {
+            return descriptor.get().getBitfield().getPiecesIncomplete();
         } else {
             return 1;
         }
@@ -97,22 +98,17 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
 
     @Override
     public int getPiecesRemaining() {
-        if (descriptor.getDataDescriptor() != null) {
-            return descriptor.getDataDescriptor().getBitfield().getPiecesRemaining();
+        if (descriptor.get() != null) {
+            return descriptor.get().getBitfield().getPiecesRemaining();
         } else {
             return 1;
         }
     }
 
     @Override
-    public void waitForAllPieces() throws InterruptedException {
-        descriptor.getDataDescriptor().waitForAllPieces();
-    }
-
-    @Override
     public int getPiecesSkipped() {
-        if (descriptor.getDataDescriptor() != null) {
-            return descriptor.getDataDescriptor().getBitfield().getPiecesSkipped();
+        if (descriptor.get() != null) {
+            return descriptor.get().getBitfield().getPiecesSkipped();
         } else {
             return 0;
         }
@@ -120,8 +116,8 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
 
     @Override
     public int getPiecesNotSkipped() {
-        if (descriptor.getDataDescriptor() != null) {
-            return descriptor.getDataDescriptor().getBitfield().getPiecesNotSkipped();
+        if (descriptor.get() != null) {
+            return descriptor.get().getBitfield().getPiecesNotSkipped();
         } else {
             return 1;
         }
@@ -139,6 +135,16 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
         long uploaded = getCurrentAmounts().values().stream().collect(summingLong(TransferAmounts::getUploaded));
         uploaded += uploadedToDisconnected.get();
         return uploaded;
+    }
+
+    @Override
+    public long getLeft() {
+        return descriptor.get().getLeft();
+    }
+
+    @Override
+    public boolean startedAsSeed() {
+        return descriptor.get().startedAsSeed();
     }
 
     private synchronized Map<ConnectionKey, TransferAmounts> getCurrentAmounts() {
@@ -183,7 +189,7 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
         final Optional<List<TorrentFile>> allNonSkippedFiles = c.getAllNonSkippedFiles();
         if (allNonSkippedFiles.isPresent()) {
             FilePiecePriorityMapper piecePriorityMapper = FilePiecePriorityMapper.createPiecePriorityMapper(
-                    descriptor.getDataDescriptor(), allNonSkippedFiles.get(), Objects.requireNonNull(prioritySelector));
+                    descriptor.get(), allNonSkippedFiles.get(), Objects.requireNonNull(prioritySelector));
             pieceSelector.setHighPriorityPieces(piecePriorityMapper.getHighPriorityPieces());
             return true;
         }

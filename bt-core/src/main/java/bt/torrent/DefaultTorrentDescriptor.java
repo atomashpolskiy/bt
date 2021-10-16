@@ -18,10 +18,14 @@ package bt.torrent;
 
 import bt.data.DataDescriptor;
 
+import java.util.Optional;
+
 class DefaultTorrentDescriptor implements TorrentDescriptor {
 
     // !! this can be null in case with magnets (and in the beginning of processing) !!
     private volatile DataDescriptor dataDescriptor;
+    // !! this can be null at the beginning of processing !!
+    private volatile TorrentSessionState sessionState;
 
     private volatile boolean active;
 
@@ -56,5 +60,14 @@ class DefaultTorrentDescriptor implements TorrentDescriptor {
 
     void setDataDescriptor(DataDescriptor dataDescriptor) {
         this.dataDescriptor = dataDescriptor;
+    }
+
+    @Override
+    public Optional<TorrentSessionState> getSessionState() {
+        return Optional.ofNullable(sessionState);
+    }
+
+    void setSessionState(TorrentSessionState sessionState) {
+        this.sessionState = sessionState;
     }
 }

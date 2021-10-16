@@ -36,6 +36,11 @@ public abstract class TerminateOnErrorProcessingStage<C extends ProcessingContex
     protected final ProcessingStage<C> doExecute(C context, ProcessingStage<C> next) {
         try {
             doExecute(context);
+        } catch (InterruptedException e) {
+            // when we stop the client, we get an interrupted exception. This is expected and should be logged on the
+            // debug level
+            LOGGER.debug("Thread was interrupted. will finalize context and terminate...", e);
+            next = null;
         } catch (Exception e) {
             LOGGER.error("Unexpected error during processing, will finalize context and terminate...", e);
             next = null; // terminate processing chain
@@ -49,5 +54,5 @@ public abstract class TerminateOnErrorProcessingStage<C extends ProcessingContex
      *
      * @since 1.5
      */
-    protected abstract void doExecute(C context);
+    protected abstract void doExecute(C context) throws InterruptedException;
 }
