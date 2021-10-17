@@ -18,6 +18,7 @@ package bt.torrent.messaging;
 
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
+import bt.net.InetPeer;
 import bt.net.Peer;
 
 /**
@@ -48,7 +49,7 @@ public class MessageContext {
      * @return Remote peer
      * @since 1.0
      */
-    public Peer getPeer() {
+    public InetPeer getPeer() {
         return connectionKey.getPeer();
     }
 

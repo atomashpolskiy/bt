@@ -1,76 +1,47 @@
-/*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package bt.net;
 
-import bt.peer.PeerOptions;
-import com.google.common.base.MoreObjects;
+import bt.peer.ImmutablePeer;
 
 import java.net.InetAddress;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Supplier;
 
 /**
- * @since 1.0
+ * This class represents a peer past the discovery stage, that we are in the process of establishing a connection with
+ * it, or have successfully connected to it.
+ * <p>
+ * The port field may be mutated for incoming connections, because on incoming connections, the remote listening port
+ * is not known, unless the peer shares it with an extended handshake (BEP-0010). This is imported for PEx (BEP-0011)
+ * because we cannot share a peer's IP/port if we do not know the remote port.
+ * <p>
+ * Because this class is mutated, it does not have a {@link #hashCode()} or {@link #equals(Object)} methods. For this
+ * reason, should not be put in map, except for when the {@link System#identityHashCode(Object)} provides the required
+ * behavior
  */
-public class InetPeer implements Peer {
-
+public class InetPeer {
     public static final int UNKNOWN_PORT = -1;
 
-    private final Supplier<InetAddress> addressSupplier;
+    private final InetAddress address;
+    // may be mutated
     private volatile int port;
-    private final Optional<PeerId> peerId;
 
-    private final PeerOptions options;
+    public InetPeer(Peer peer) {
+        this(peer.getInetAddress(), peer.getPort());
+    }
 
-    private InetPeer(Supplier<InetAddress> addressSupplier, int port, PeerId peerId, PeerOptions options) {
-        this.addressSupplier = addressSupplier;
+    public InetPeer(InetAddress address) {
+        this(address, UNKNOWN_PORT);
+    }
+
+    public InetPeer(InetAddress address, int port) {
+        this.address = address;
         this.port = port;
-        this.peerId = Optional.ofNullable(peerId);
-        this.options = options;
     }
 
-    @Override
     public InetAddress getInetAddress() {
-        return addressSupplier.get();
-    }
-
-    @Override
-    public boolean isPortUnknown() {
-        return (port == UNKNOWN_PORT);
-    }
-
-    @Override
-    public int getPort() {
-        return port;
-    }
-
-    @Override
-    public Optional<PeerId> getPeerId() {
-        return peerId;
-    }
-
-    @Override
-    public PeerOptions getOptions() {
-        return options;
+        return address;
     }
 
     public void setPort(int newPort) {
-        checkPort(newPort);
+        ImmutablePeer.checkPort(newPort);
         if (port != UNKNOWN_PORT && port != newPort) {
             throw new IllegalStateException("Port already set to: " + port + "." +
                     " Attempted to update to: " + newPort);
@@ -78,76 +49,22 @@ public class InetPeer implements Peer {
         port = newPort;
     }
 
-    private static void checkPort(int port) {
-        if (port < 0 || port > 65535) {
-            throw new IllegalArgumentException("Invalid port: " + port);
-        }
+    /**
+     * @return Peer's listening port or {@link InetPeer#UNKNOWN_PORT}, if it's not known yet
+     * (e.g. when the connection is incoming and the remote side hasn't
+     * yet communicated to us its' listening port via extended handshake)
+     * @since 1.0
+     */
+    public int getPort() {
+        return port;
     }
 
-    @Override
-    public String toString() {
-        MoreObjects.ToStringHelper builder = MoreObjects.toStringHelper(this)
-                .add("address", addressSupplier.get())
-                .add("port", port);
-
-        peerId.ifPresent(id -> builder.add("peerId", id));
-
-        return builder.toString();
-    }
-
-    public static Builder builder(InetPeerAddress holder) {
-        int port = holder.getPort();
-        checkPort(port);
-        return new Builder(holder::getAddress, port);
-    }
-
-    public static Builder builder(InetAddress address, int port) {
-        checkPort(port);
-        return new Builder(() -> address, port);
-    }
-
-    public static Builder builder(InetAddress address) {
-        return new Builder(() -> address, UNKNOWN_PORT);
-    }
-
-    public static InetPeer build(InetPeerAddress peerAddress) {
-        return builder(peerAddress).build();
-    }
-
-    public static InetPeer build(InetAddress address, int port) {
-        return builder(address, port).build();
-    }
-
-    public static InetPeer build(InetAddress address) {
-        return builder(address).build();
-    }
-
-    public static class Builder {
-
-        private final Supplier<InetAddress> addressSupplier;
-        private final int port;
-        private PeerId peerId;
-        private PeerOptions options;
-
-        private Builder(Supplier<InetAddress> addressSupplier, int port) {
-            this.addressSupplier = addressSupplier;
-            this.port = port;
-        }
-
-        public Builder peerId(PeerId peerId) {
-            this.peerId = Objects.requireNonNull(peerId);
-            return this;
-        }
-
-        public Builder options(PeerOptions options) {
-            this.options = Objects.requireNonNull(options);
-            return this;
-        }
-
-        public InetPeer build() {
-            PeerOptions options = (this.options == null) ?
-                    PeerOptions.defaultOptions() : this.options;
-            return new InetPeer(addressSupplier, port, peerId, options);
-        }
+    /**
+     * @return true, if the peer's listening port is not known yet
+     * @see #getPort()
+     * @since 1.9
+     */
+    public boolean isPortUnknown() {
+        return port == UNKNOWN_PORT;
     }
 }

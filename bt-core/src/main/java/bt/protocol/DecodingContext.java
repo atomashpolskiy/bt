@@ -16,7 +16,7 @@
 
 package bt.protocol;
 
-import bt.net.Peer;
+import bt.net.InetPeer;
 
 /**
  * Instances of this class contain all necessary information
@@ -28,7 +28,7 @@ import bt.net.Peer;
  */
 public class DecodingContext {
 
-    private Peer peer;
+    private InetPeer peer;
     private Message message;
 
     /**
@@ -36,14 +36,14 @@ public class DecodingContext {
      *
      * @since 1.0
      */
-    public DecodingContext(Peer peer) {
+    public DecodingContext(InetPeer peer) {
         this.peer = peer;
     }
 
     /**
      * @since 1.0
      */
-    public Peer getPeer() {
+    public InetPeer getPeer() {
         return peer;
     }
 

@@ -48,7 +48,7 @@ public class BitfieldConnectionHandler implements HandshakeHandler {
             Bitfield bitfield = descriptorOptional.get().getDataDescriptor().getBitfield();
 
             if (bitfield.getPiecesComplete() > 0) {
-                Peer peer = connection.getRemotePeer();
+                InetPeer peer = connection.getRemotePeer();
                 bt.protocol.Bitfield bitfieldMessage = new bt.protocol.Bitfield(bitfield.toByteArray(BitOrder.LITTLE_ENDIAN));
                 try {
                     connection.postMessage(bitfieldMessage);

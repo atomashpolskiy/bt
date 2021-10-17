@@ -38,7 +38,7 @@ public class ExtendedHandshakeConsumer {
     public void consume(ExtendedHandshake message, MessageContext messageContext) {
         BEInteger peerListeningPort = message.getPort();
         if (peerListeningPort != null) {
-            InetPeer peer = (InetPeer) messageContext.getConnectionKey().getPeer();
+            InetPeer peer = messageContext.getConnectionKey().getPeer();
             int listeningPort = (Integer) peerListeningPort.getValue();
             peer.setPort(listeningPort);
             if (LOGGER.isDebugEnabled()) {

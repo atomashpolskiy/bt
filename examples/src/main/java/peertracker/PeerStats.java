@@ -20,8 +20,10 @@ import bt.event.PeerBitfieldUpdatedEvent;
 import bt.event.PeerConnectedEvent;
 import bt.event.PeerDisconnectedEvent;
 import bt.event.PeerDiscoveredEvent;
-import bt.net.Peer;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 
+import java.net.InetAddress;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -77,39 +79,75 @@ public class PeerStats {
         }
     }
 
-    private final Map<Peer, Counter> counters = new ConcurrentHashMap<>(5000);
+    private final Map<CounterKey, Counter> counters = new ConcurrentHashMap<>(5000);
 
     public void onPeerDiscovered(PeerDiscoveredEvent event) {
-        getCounter(event.getPeer()).incrementDiscovered();
+        final CounterKey counterKey = new CounterKey(event.getPeer().getInetAddress(), event.getPeer().getPort());
+        getCounter(counterKey).incrementDiscovered();
     }
 
-    public void onPeerConnected(PeerConnectedEvent event) {
-        getCounter(event.getPeer()).incrementConnected();
+    public boolean onPeerConnected(PeerConnectedEvent event) {
+        final CounterKey counterKey = new CounterKey(event.getPeer().getInetAddress(), event.getRemotePort());
+        getCounter(counterKey).incrementConnected();
+        return true;
     }
 
     public void onPeerDisconnected(PeerDisconnectedEvent event) {
-        getCounter(event.getPeer()).incrementDisconnected();
+        final CounterKey counterKey = new CounterKey(event.getPeer().getInetAddress(), event.getRemotePort());
+        getCounter(counterKey).incrementDisconnected();
     }
 
     public void onPeerBitfieldUpdated(PeerBitfieldUpdatedEvent event) {
-        Counter counter = getCounter(event.getPeer());
+        final CounterKey counterKey = new CounterKey(event.getPeer().getInetAddress(),
+                event.getConnectionKey().getRemotePort());
+        Counter counter = getCounter(counterKey);
         counter.setPiecesCompleted(event.getBitfield().getPiecesComplete());
         counter.setPiecesRemaining(event.getBitfield().getPiecesIncomplete());
     }
 
-    private Counter getCounter(Peer peer) {
-        Counter counter = counters.get(peer);
-        if (counter == null) {
-            counter = new Counter();
-            Counter existing = counters.putIfAbsent(peer, counter);
-            if (existing != null) {
-                counter = existing;
-            }
-        }
+    private Counter getCounter(CounterKey counterKey) {
+        Counter counter = counters.computeIfAbsent(counterKey, ck -> new Counter());
         return counter;
     }
 
-    public Map<Peer, Counter> getCounters() {
+    public Map<CounterKey, Counter> getCounters() {
         return counters;
+    }
+
+    /**
+     * To uniquely identify a connection we use the remote address, and remote port. This uniquely identifies a
+     * connection for a unique torrent. The remote port will always stay constant for a connection, and the remote port
+     * will always match the connecting port on an outgoing connection, ensuring that the peer discovery events are
+     * also properly matched.
+     */
+    public static class CounterKey {
+        private final InetAddress addr;
+        private final int remotePort;
+
+        public CounterKey(InetAddress addr, int remotePort) {
+            this.addr = addr;
+            this.remotePort = remotePort;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            CounterKey that = (CounterKey) o;
+            return remotePort == that.remotePort && Objects.equal(addr, that.addr);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(addr, remotePort);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .add("addr", addr)
+                    .add("remotePort", remotePort)
+                    .toString();
+        }
     }
 }

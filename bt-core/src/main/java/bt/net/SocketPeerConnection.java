@@ -40,7 +40,7 @@ public class SocketPeerConnection implements PeerConnection {
     private static final long WAIT_BETWEEN_READS = 100L;
 
     private final AtomicReference<TorrentId> torrentId;
-    private final Peer remotePeer;
+    private final InetPeer remotePeer;
     private final int remotePort;
 
     private final ChannelHandler handler;
@@ -50,7 +50,7 @@ public class SocketPeerConnection implements PeerConnection {
     private final ReentrantLock readLock;
     private final Condition condition;
 
-    SocketPeerConnection(Peer remotePeer, int remotePort, ChannelHandler handler) {
+    SocketPeerConnection(InetPeer remotePeer, int remotePort, ChannelHandler handler) {
         this.torrentId = new AtomicReference<>();
         this.remotePeer = remotePeer;
         this.remotePort = remotePort;
@@ -139,7 +139,7 @@ public class SocketPeerConnection implements PeerConnection {
     }
 
     @Override
-    public Peer getRemotePeer() {
+    public InetPeer getRemotePeer() {
         return remotePeer;
     }
 

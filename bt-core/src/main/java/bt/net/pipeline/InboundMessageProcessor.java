@@ -16,6 +16,7 @@
 
 package bt.net.pipeline;
 
+import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.net.buffer.*;
 import bt.protocol.Message;
@@ -36,7 +37,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class InboundMessageProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(InboundMessageProcessor.class);
 
-    private final Peer peer;
+    private final InetPeer peer;
     private final ByteBuffer buffer;
     private final ByteBufferView bufferView;
     private final DecodingBufferView decodingView;
@@ -51,7 +52,7 @@ public class InboundMessageProcessor {
     private final Queue<Message> messageQueue;
     private final Queue<BufferedDataWithOffset> bufferQueue;
 
-    public InboundMessageProcessor(Peer peer,
+    public InboundMessageProcessor(InetPeer peer,
                                    ByteBuffer buffer,
                                    MessageDeserializer deserializer,
                                    List<BufferMutator> decoders,

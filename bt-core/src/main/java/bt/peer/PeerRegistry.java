@@ -20,7 +20,6 @@ import bt.event.EventSink;
 import bt.event.EventSource;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
@@ -78,7 +77,7 @@ public class PeerRegistry implements IPeerRegistry {
                         Set<PeerSourceFactory> extraPeerSourceFactories,
                         Config config) {
 
-        this.localPeer = InetPeer.builder(config.getPeerAddress().orElse(config.getAcceptorAddress()), config.getAcceptorPort())
+        this.localPeer = ImmutablePeer.builder(config.getPeerAddress().orElse(config.getAcceptorAddress()), config.getAcceptorPort())
                 .peerId(idService.getLocalPeerId())
                 .build();
 
@@ -215,9 +214,7 @@ public class PeerRegistry implements IPeerRegistry {
 
     @Override
     public void addPeer(TorrentId torrentId, Peer peer) {
-        if (peer.isPortUnknown()) {
-            throw new IllegalArgumentException("Peer's port is unknown: " + peer);
-        } else if (peer.getPort() < 0 || peer.getPort() > 65535) {
+        if (peer.getPort() < 0 || peer.getPort() > 65535) {
             throw new IllegalArgumentException("Invalid port: " + peer.getPort());
         } else if (isLocal(peer)) {
             return;

@@ -17,7 +17,7 @@
 package bt.tracker;
 
 import bt.BtException;
-import bt.net.InetPeer;
+import bt.peer.ImmutablePeer;
 import bt.net.Peer;
 import bt.peer.PeerOptions;
 import bt.protocol.crypto.EncryptionPolicy;
@@ -169,7 +169,7 @@ public class CompactPeerInfo implements Iterable<Peer> {
                 if (requiresEncryption) {
                     options = options.withEncryptionPolicy(EncryptionPolicy.PREFER_ENCRYPTED);
                 }
-                Peer peer = InetPeer.builder(inetAddress, port).options(options).build();
+                Peer peer = ImmutablePeer.builder(inetAddress, port).options(options).build();
                 peerList.add(peer);
                 index++;
 

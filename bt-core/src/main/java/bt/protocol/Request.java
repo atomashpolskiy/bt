@@ -21,9 +21,9 @@ package bt.protocol;
  */
 public final class Request implements Message {
 
-    private int pieceIndex;
-    private int offset;
-    private int length;
+    private final int pieceIndex;
+    private final int offset;
+    private final int length;
 
     /**
      * @since 1.0

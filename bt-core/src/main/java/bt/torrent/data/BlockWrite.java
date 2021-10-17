@@ -16,6 +16,7 @@
 
 package bt.torrent.data;
 
+import bt.net.InetPeer;
 import bt.net.Peer;
 
 import java.util.Optional;
@@ -37,7 +38,7 @@ public class BlockWrite {
     /**
      * @since 1.9
      */
-    static BlockWrite complete(Peer peer,
+    static BlockWrite complete(InetPeer peer,
                                int pieceIndex,
                                int offset,
                                int length,
@@ -48,18 +49,18 @@ public class BlockWrite {
     /**
      * @since 1.9
      */
-    static BlockWrite rejected(Peer peer, int pieceIndex, int offset, int length) {
+    static BlockWrite rejected(InetPeer peer, int pieceIndex, int offset, int length) {
         return new BlockWrite(peer, null, true, pieceIndex, offset, length, null);
     }
 
     /**
      * @since 1.9
      */
-    static BlockWrite exceptional(Peer peer, Throwable error, int pieceIndex, int offset, int length) {
+    static BlockWrite exceptional(InetPeer peer, Throwable error, int pieceIndex, int offset, int length) {
         return new BlockWrite(peer, error, false, pieceIndex, offset, length, null);
     }
 
-    private final Peer peer;
+    private final InetPeer peer;
     private final int pieceIndex;
     private final int offset;
     private final int length;
@@ -69,7 +70,7 @@ public class BlockWrite {
 
     private final Optional<CompletableFuture<Boolean>> verificationFuture;
 
-    private BlockWrite(Peer peer,
+    private BlockWrite(InetPeer peer,
                        Throwable error,
                        boolean rejected,
                        int pieceIndex,
@@ -89,7 +90,7 @@ public class BlockWrite {
      * @return Sending peer
      * @since 1.0
      */
-    public Peer getPeer() {
+    public InetPeer getPeer() {
         return peer;
     }
 

@@ -18,6 +18,7 @@ package bt.event;
 
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
+import bt.net.InetPeer;
 import bt.net.Peer;
 
 import java.util.Objects;
@@ -44,7 +45,7 @@ public class PeerConnectedEvent extends BaseEvent implements TorrentEvent {
     /**
      * @since 1.5
      */
-    public Peer getPeer() {
+    public InetPeer getPeer() {
         return connectionKey.getPeer();
     }
 

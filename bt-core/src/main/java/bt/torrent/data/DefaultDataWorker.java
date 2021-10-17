@@ -20,6 +20,7 @@ import bt.data.ChunkDescriptor;
 import bt.data.ChunkVerifier;
 import bt.data.DataDescriptor;
 import bt.metainfo.TorrentId;
+import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.net.buffer.BufferedData;
 import bt.runtime.Config;
@@ -74,17 +75,17 @@ public class DefaultDataWorker implements DataWorker {
     }
 
     @Override
-    public CompletableFuture<BlockRead> addBlockRequest(TorrentId torrentId, Peer peer, int pieceIndex, int offset, int length) {
+    public CompletableFuture<BlockRead> addBlockRequest(TorrentId torrentId, InetPeer peer, int pieceIndex, int offset, int length) {
         DataDescriptor data = getDataDescriptor(torrentId);
         if (!data.getBitfield().isVerified(pieceIndex)) {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Rejecting request to read block because the piece is not verified yet:" +
-                        " piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + length + "}, peer {" + peer + "}");
+                        " piece index \\{" + pieceIndex + "}, offset \\{" + offset + "}, length \\{" + length + "}, peer \\{" + peer + "}");
             }
             return CompletableFuture.completedFuture(BlockRead.rejected(peer, pieceIndex, offset, length));
         } else if (!tryIncrementTaskCount()) {
             LOGGER.warn("Rejecting request to read block because the queue is full:" +
-                    " piece index {"+pieceIndex+"}, offset {"+offset+"}, length {"+length+"}, peer {"+peer+"}");
+                    " piece index \\{"+pieceIndex+"}, offset \\{"+offset+"}, length \\{"+length+"}, peer \\{"+peer+"}");
             return CompletableFuture.completedFuture(BlockRead.exceptional(peer,
                     QUEUE_FULL_EXCEPTION, pieceIndex, offset, length));
         }
@@ -95,7 +96,7 @@ public class DefaultDataWorker implements DataWorker {
                 return BlockRead.ready(peer, pieceIndex, offset, length, blockReader);
             } catch (Throwable e) {
                 LOGGER.error("Failed to perform request to read block:" +
-                        " piece index {" + pieceIndex + "}, offset {" + offset + "}, length {" + length + "}, peer {" + peer + "}", e);
+                        " piece index \\{" + pieceIndex + "}, offset \\{" + offset + "}, length \\{" + length + "}, peer \\{" + peer + "}", e);
                 return BlockRead.exceptional(peer, e, pieceIndex, offset, length);
             } finally {
                 pendingTasksCount.decrementAndGet();
@@ -104,7 +105,7 @@ public class DefaultDataWorker implements DataWorker {
     }
 
     @Override
-    public CompletableFuture<BlockWrite> addBlock(TorrentId torrentId, Peer peer, int pieceIndex, int offset, BufferedData buffer) {
+    public CompletableFuture<BlockWrite> addBlock(TorrentId torrentId, InetPeer peer, int pieceIndex, int offset, BufferedData buffer) {
         if (!tryIncrementTaskCount()) {
             LOGGER.warn("Can't accept write block request -- queue is full");
             buffer.dispose();

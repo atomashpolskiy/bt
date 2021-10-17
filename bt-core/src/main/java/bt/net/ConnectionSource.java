@@ -20,10 +20,13 @@ import bt.CountingThreadFactory;
 import bt.metainfo.TorrentId;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,8 +45,7 @@ public class ConnectionSource implements IConnectionSource {
     private final Object lock = new Object();
 
     private final ConcurrentMap<ConnectionKey, CompletableFuture<ConnectionResult>> pendingConnections;
-    // TODO: weak map
-    private final ConcurrentMap<Peer, Long> unreachablePeers;
+    private final Cache<Peer, Boolean> unreachablePeers;
 
     @Inject
     public ConnectionSource(Set<PeerConnectionAcceptor> connectionAcceptors,
@@ -63,7 +65,7 @@ public class ConnectionSource implements IConnectionSource {
         lifecycleBinder.onShutdown("Shutdown connection workers", connectionExecutor::shutdownNow);
 
         this.pendingConnections = new ConcurrentHashMap<>();
-        this.unreachablePeers = new ConcurrentHashMap<>();
+        this.unreachablePeers = CacheBuilder.newBuilder().expireAfterWrite(config.getUnreachablePeerBanDuration()).build();
 
         IncomingConnectionListener incomingListener =
                 new IncomingConnectionListener(connectionAcceptors, connectionExecutor, connectionPool, config);
@@ -84,27 +86,20 @@ public class ConnectionSource implements IConnectionSource {
 
     @Override
     public CompletableFuture<ConnectionResult> getConnectionAsync(Peer peer, TorrentId torrentId) {
-        ConnectionKey key = new ConnectionKey(peer, peer.getPort(), torrentId);
+        ConnectionKey key = new ConnectionKey(new InetPeer(peer.getInetAddress(), peer.getPort()), peer.getPort(), torrentId);
 
         CompletableFuture<ConnectionResult> result = validateNewConnPossible(peer, torrentId, key);
         if (result != null) {
             return result;
         }
 
-        Long bannedAt = unreachablePeers.get(peer);
-        if (bannedAt != null) {
-            if (System.currentTimeMillis() - bannedAt >= config.getUnreachablePeerBanDuration().toMillis()) {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Removing temporary ban for unreachable peer: {}", peer);
-                }
-                unreachablePeers.remove(peer);
-            } else {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Will not attempt to establish connection to peer: {}. " +
-                            "Reason: peer is unreachable. Torrent: {}", peer, torrentId);
-                }
-                return CompletableFuture.completedFuture(ConnectionResult.failure("Peer is unreachable"));
+        Boolean isBanned = Optional.ofNullable(unreachablePeers.getIfPresent(peer)).orElse(false);
+        if (isBanned) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Will not attempt to establish connection to peer: {}. " +
+                        "Reason: peer is unreachable. Torrent: {}", peer, torrentId);
             }
+            return CompletableFuture.completedFuture(ConnectionResult.failure("Peer is unreachable"));
         }
 
         synchronized (lock) {
@@ -126,11 +121,12 @@ public class ConnectionSource implements IConnectionSource {
         }
     }
 
-    private CompletableFuture<ConnectionResult> createPendingConnFuture(Peer peer, TorrentId torrentId,
+    private CompletableFuture<ConnectionResult> createPendingConnFuture(Peer discoveredPeer, TorrentId torrentId,
                                                                         ConnectionKey key,
                                                                         CompletableFuture<Void> addedToPendingConnections) {
         return CompletableFuture.supplyAsync(() -> {
             try {
+                InetPeer peer = new InetPeer(discoveredPeer);
                 ConnectionResult connectionResult =
                         connectionFactory.createOutgoingConnection(peer, torrentId);
                 if (connectionResult.isSuccess()) {
@@ -160,14 +156,12 @@ public class ConnectionSource implements IConnectionSource {
             if (acquiredConnection == null || throwable != null) {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Peer is unreachable: {}. Will prevent further attempts to establish connection.",
-                            peer);
+                            discoveredPeer);
                 }
-                unreachablePeers.putIfAbsent(peer, System.currentTimeMillis());
+                unreachablePeers.put(discoveredPeer, Boolean.TRUE);
             }
             if (throwable != null) {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Failed to establish outgoing connection to peer: " + peer, throwable);
-                }
+                LOGGER.debug("Failed to establish outgoing connection to peer: {}", discoveredPeer, throwable);
             }
         });
     }

@@ -22,7 +22,7 @@ import bt.dht.stream.StreamAdapter;
 import bt.event.EventSource;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.net.InetPeer;
+import bt.peer.ImmutablePeer;
 import bt.net.InetPeerAddress;
 import bt.net.Peer;
 import bt.net.portmapping.PortMapper;
@@ -229,7 +229,7 @@ public class MldhtService implements DHTService {
             final PeerLookupTask lookup = dht.createPeerLookup(torrentId.getBytes());
             final StreamAdapter<Peer> streamAdapter = new StreamAdapter<>();
             lookup.setResultHandler((k, p) -> {
-                Peer peer = InetPeer.build(p.getInetAddress(), p.getPort());
+                Peer peer = ImmutablePeer.build(p.getInetAddress(), p.getPort());
                 streamAdapter.addItem(peer);
             });
             lookup.addListener(t -> {
@@ -256,9 +256,6 @@ public class MldhtService implements DHTService {
 
     @Override
     public void addNode(Peer node) {
-        if (node.isPortUnknown()) {
-            throw new IllegalArgumentException("Peer's port is unknown: " + node);
-        }
         addNode(node.getInetAddress().getHostAddress(), node.getPort());
     }
 

@@ -20,6 +20,7 @@ import bt.magnet.UtMetadata;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
+import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.protocol.Message;
 import bt.protocol.extended.ExtendedHandshake;
@@ -44,11 +45,13 @@ public class MetadataConsumer {
     private static final Duration FIRST_BLOCK_ARRIVAL_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration WAIT_BEFORE_REREQUESTING_AFTER_REJECT = Duration.ofSeconds(10);
 
-    private final ConcurrentMap<Peer, Long> peersWithoutMetadata;
+    // note: all of these use the identity hash. This works, but is fragile and bad. This state
+    // probably would be better stored in a connection context.
+    private final ConcurrentMap<InetPeer, Long> peersWithoutMetadata;
 
-    private final Set<Peer> supportingPeers;
-    private final ConcurrentMap<Peer, Long> requestedFirstPeers;
-    private final Set<Peer> requestedAllPeers;
+    private final Set<InetPeer> supportingPeers;
+    private final ConcurrentMap<InetPeer, Long> requestedFirstPeers;
+    private final Set<InetPeer> requestedAllPeers;
 
     private volatile ExchangedMetadata metadata;
 
@@ -93,8 +96,8 @@ public class MetadataConsumer {
 
     @Consumes
     public void consume(UtMetadata message, MessageContext context) {
-        Peer peer = context.getPeer();
-        // being lenient herer and not checking if the peer advertised ut_metadata support
+        InetPeer peer = context.getPeer();
+        // being lenient here and not checking if the peer advertised ut_metadata support
         switch (message.getType()) {
             case DATA: {
                 int totalSize = message.getTotalSize().get();
@@ -160,7 +163,7 @@ public class MetadataConsumer {
             return;
         }
 
-        Peer peer = context.getPeer();
+        InetPeer peer = context.getPeer();
         if (supportingPeers.contains(peer)) {
             if (peersWithoutMetadata.containsKey(peer)) {
                 if ((System.currentTimeMillis() - peersWithoutMetadata.get(peer)) >= WAIT_BEFORE_REREQUESTING_AFTER_REJECT.toMillis()) {

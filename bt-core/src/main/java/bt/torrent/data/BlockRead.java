@@ -16,6 +16,7 @@
 
 package bt.torrent.data;
 
+import bt.net.InetPeer;
 import bt.net.Peer;
 
 import java.util.Optional;
@@ -36,34 +37,34 @@ public class BlockRead {
     /**
      * @since 1.9
      */
-    static BlockRead ready(Peer peer, int pieceIndex, int offset, int length, BlockReader reader) {
+    static BlockRead ready(InetPeer peer, int pieceIndex, int offset, int length, BlockReader reader) {
         return new BlockRead(peer, null, false, pieceIndex, offset, length, reader);
     }
 
     /**
      * @since 1.0
      */
-    static BlockRead rejected(Peer peer, int pieceIndex, int offset, int length) {
+    static BlockRead rejected(InetPeer peer, int pieceIndex, int offset, int length) {
         return new BlockRead(peer, null, true, pieceIndex, offset, length, null);
     }
 
     /**
      * @since 1.0
      */
-    static BlockRead exceptional(Peer peer, Throwable error, int pieceIndex, int offset, int length) {
+    static BlockRead exceptional(InetPeer peer, Throwable error, int pieceIndex, int offset, int length) {
         return new BlockRead(peer, error, false, pieceIndex, offset, length, null);
     }
 
-    private Peer peer;
-    private int pieceIndex;
-    private int offset;
-    private int length;
-    private Optional<BlockReader> reader;
+    private final InetPeer peer;
+    private final int pieceIndex;
+    private final int offset;
+    private final int length;
+    private final Optional<BlockReader> reader;
 
-    private boolean rejected;
-    private Optional<Throwable> error;
+    private final boolean rejected;
+    private final Optional<Throwable> error;
 
-    private BlockRead(Peer peer, Throwable error, boolean rejected,
+    private BlockRead(InetPeer peer, Throwable error, boolean rejected,
                       int pieceIndex, int offset, int length, BlockReader reader) {
         this.peer = peer;
         this.error = Optional.ofNullable(error);
@@ -78,7 +79,7 @@ public class BlockRead {
      * @return Requesting peer
      * @since 1.0
      */
-    public Peer getPeer() {
+    public InetPeer getPeer() {
         return peer;
     }
 

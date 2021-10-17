@@ -30,7 +30,7 @@ class WriteOnlyPeerConnection implements PeerConnection {
     }
 
     @Override
-    public Peer getRemotePeer() {
+    public InetPeer getRemotePeer() {
         return delegate.getRemotePeer();
     }
 

@@ -18,6 +18,7 @@ package bt.torrent.messaging;
 
 import bt.BtException;
 import bt.metainfo.TorrentId;
+import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
@@ -47,7 +48,10 @@ public class PeerRequestConsumer {
 
     private final TorrentId torrentId;
     private final DataWorker dataWorker;
-    private final Map<Peer, Queue<BlockRead>> completedRequests;
+
+    // note: this map uses the identity hash. This is fragile and bad. This would be better suited for a connection
+    // context somewhere.
+    private final Map<InetPeer, Queue<BlockRead>> completedRequests;
 
     public PeerRequestConsumer(TorrentId torrentId, DataWorker dataWorker) {
         this.torrentId = torrentId;
@@ -73,11 +77,11 @@ public class PeerRequestConsumer {
         }
     }
 
-    private CompletableFuture<BlockRead> addBlockRequest(Peer peer, Request request) {
+    private CompletableFuture<BlockRead> addBlockRequest(InetPeer peer, Request request) {
         return dataWorker.addBlockRequest(torrentId, peer, request.getPieceIndex(), request.getOffset(), request.getLength());
     }
 
-    private Queue<BlockRead> getCompletedRequestsForPeer(Peer peer) {
+    private Queue<BlockRead> getCompletedRequestsForPeer(InetPeer peer) {
         Queue<BlockRead> queue = completedRequests.get(peer);
         if (queue == null) {
             queue = new ConcurrentLinkedQueue<>();
@@ -91,7 +95,7 @@ public class PeerRequestConsumer {
 
     @Produces
     public void produce(Consumer<Message> messageConsumer, MessageContext context) {
-        Peer peer = context.getPeer();
+        InetPeer peer = context.getPeer();
         Queue<BlockRead> queue = getCompletedRequestsForPeer(peer);
         BlockRead block;
         while ((block = queue.poll()) != null) {

@@ -18,6 +18,7 @@ package bt.torrent.messaging;
 
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
+import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.protocol.Have;
 import bt.protocol.Message;
@@ -58,7 +59,7 @@ public class RoutingPeerWorker_WithCompilerTest {
 
         DefaultMessageRouter router = new DefaultMessageRouter(agents);
         IPeerWorkerFactory peerWorkerFactory = new PeerWorkerFactory(router);
-        ConnectionKey connectionKey = new ConnectionKey(mock(Peer.class),
+        ConnectionKey connectionKey = new ConnectionKey(mock(InetPeer.class),
                 1, TorrentId.fromBytes(new byte[20]));
         this.peerWorker = peerWorkerFactory.createPeerWorker(connectionKey);
     }

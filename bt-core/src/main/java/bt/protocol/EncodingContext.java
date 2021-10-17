@@ -16,17 +16,17 @@
 
 package bt.protocol;
 
-import bt.net.Peer;
+import bt.net.InetPeer;
 
 public class EncodingContext {
 
-    private final Peer peer;
+    private final InetPeer peer;
 
-    public EncodingContext(Peer peer) {
+    public EncodingContext(InetPeer peer) {
         this.peer = peer;
     }
 
-    public Peer getPeer() {
+    public InetPeer getPeer() {
         return peer;
     }
 }

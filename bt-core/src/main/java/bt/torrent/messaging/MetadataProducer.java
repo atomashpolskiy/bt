@@ -18,6 +18,7 @@ package bt.torrent.messaging;
 
 import bt.magnet.UtMetadata;
 import bt.metainfo.Torrent;
+import bt.net.InetPeer;
 import bt.net.Peer;
 import bt.protocol.Message;
 import bt.runtime.Config;
@@ -38,7 +39,9 @@ public class MetadataProducer {
     // initialized on the first metadata request if the torrent is present
     private volatile ExchangedMetadata metadata;
 
-    private final ConcurrentMap<Peer, Queue<Message>> outboundMessages;
+    // note: this map uses the identity hash. This is fragile and bad. This would be better suited for a connection
+    // context somewhere.
+    private final ConcurrentMap<InetPeer, Queue<Message>> outboundMessages;
 
     private final int metadataExchangeBlockSize;
 
@@ -51,7 +54,7 @@ public class MetadataProducer {
 
     @Consumes
     public void consume(UtMetadata message, MessageContext context) {
-        Peer peer = context.getPeer();
+        InetPeer peer = context.getPeer();
         // being lenient herer and not checking if the peer advertised ut_metadata support
         switch (message.getType()) {
             case REQUEST: {
@@ -65,7 +68,7 @@ public class MetadataProducer {
         }
     }
 
-    private void processMetadataRequest(Peer peer, int pieceIndex) {
+    private void processMetadataRequest(InetPeer peer, int pieceIndex) {
         Message response;
 
         Torrent torrent = torrentSupplier.get();
@@ -85,21 +88,14 @@ public class MetadataProducer {
         getOrCreateOutboundMessages(peer).add(response);
     }
 
-    private Queue<Message> getOrCreateOutboundMessages(Peer peer) {
-        Queue<Message> queue = outboundMessages.get(peer);
-        if (queue == null) {
-            queue = new LinkedBlockingQueue<>();
-            Queue<Message> existing = outboundMessages.putIfAbsent(peer, queue);
-            if (existing != null) {
-                queue = existing;
-            }
-        }
+    private Queue<Message> getOrCreateOutboundMessages(InetPeer peer) {
+        Queue<Message> queue = outboundMessages.computeIfAbsent(peer, key->new LinkedBlockingQueue<>());
         return queue;
     }
 
     @Produces
     public void produce(Consumer<Message> messageConsumer, MessageContext context) {
-        Peer peer = context.getPeer();
+        InetPeer peer = context.getPeer();
 
         Queue<Message> queue = outboundMessages.get(peer);
         if (queue != null && queue.size() > 0) {

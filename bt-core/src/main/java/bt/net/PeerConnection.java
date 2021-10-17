@@ -33,7 +33,7 @@ public interface PeerConnection extends Closeable {
      * @return Remote peer
      * @since 1.0
      */
-    Peer getRemotePeer();
+    InetPeer getRemotePeer();
 
     /**
      * @since 1.9

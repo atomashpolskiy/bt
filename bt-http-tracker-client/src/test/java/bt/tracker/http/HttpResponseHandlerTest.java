@@ -16,7 +16,7 @@
 
 package bt.tracker.http;
 
-import bt.net.InetPeer;
+import bt.peer.ImmutablePeer;
 import bt.net.Peer;
 import bt.tracker.TrackerResponse;
 import org.junit.Before;
@@ -97,7 +97,7 @@ public class HttpResponseHandlerTest {
             throw new RuntimeException("Unexpected error", e);
         }
 
-        return InetPeer.build(inetAddress, port);
+        return ImmutablePeer.build(inetAddress, port);
     }
 
     @Test

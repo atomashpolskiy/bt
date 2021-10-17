@@ -85,7 +85,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
     }
 
     @Override
-    public ConnectionResult createOutgoingConnection(Peer peer, TorrentId torrentId) {
+    public ConnectionResult createOutgoingConnection(InetPeer peer, TorrentId torrentId) {
         Objects.requireNonNull(peer);
         Objects.requireNonNull(torrentId);
 
@@ -117,11 +117,11 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
     }
 
     @Override
-    public ConnectionResult createIncomingConnection(Peer peer, SocketChannel channel) {
+    public ConnectionResult createIncomingConnection(InetPeer peer, SocketChannel channel) {
         return createConnection(peer, null, channel, true);
     }
 
-    private ConnectionResult createConnection(Peer peer, TorrentId torrentId, SocketChannel channel, boolean incoming) {
+    private ConnectionResult createConnection(InetPeer peer, TorrentId torrentId, SocketChannel channel, boolean incoming) {
         BorrowedBuffer<ByteBuffer> in = bufferManager.borrowByteBuffer();
         BorrowedBuffer<ByteBuffer> out = bufferManager.borrowByteBuffer();
         try {
@@ -139,7 +139,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
     }
 
     private ConnectionResult _createConnection(
-            Peer peer,
+            InetPeer peer,
             TorrentId torrentId,
             SocketChannel channel,
             boolean incoming,
@@ -195,7 +195,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
     }
 
     private ChannelPipeline createPipeline(
-            Peer peer,
+            InetPeer peer,
             ByteChannel channel,
             BorrowedBuffer<ByteBuffer> in,
             BorrowedBuffer<ByteBuffer> out,

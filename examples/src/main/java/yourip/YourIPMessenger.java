@@ -16,7 +16,7 @@
 
 package yourip;
 
-import bt.net.Peer;
+import bt.net.InetPeer;
 import bt.peer.IPeerRegistry;
 import bt.protocol.Message;
 import bt.protocol.extended.ExtendedHandshake;
@@ -33,8 +33,10 @@ public class YourIPMessenger {
 
     private final IPeerRegistry peerRegistry;
 
-    private Set<Peer> supportingPeers;
-    private Set<Peer> known;
+    // note: these sets use the identity hash. This is fragile and bad. This would be better suited for a connection
+    // context somewhere.
+    private Set<InetPeer> supportingPeers;
+    private Set<InetPeer> known;
 
     @Inject
     public YourIPMessenger(IPeerRegistry peerRegistry) {
@@ -45,10 +47,10 @@ public class YourIPMessenger {
 
     @Consumes
     public void consume(ExtendedHandshake handshake, MessageContext context) {
-        Peer peer = context.getPeer();
+        InetPeer peer = context.getPeer();
         if (handshake.getSupportedMessageTypes().contains(YourIP.id())) {
             supportingPeers.add(peer);
-        } else if (supportingPeers.contains(peer)) {
+        } else {
             supportingPeers.remove(peer);
         }
     }
@@ -61,7 +63,7 @@ public class YourIPMessenger {
 
     @Produces
     public void produce(Consumer<Message> messageConsumer, MessageContext context) {
-        Peer peer = context.getPeer();
+        InetPeer peer = context.getPeer();
         if (supportingPeers.contains(peer) && !known.contains(peer)) {
             String address = context.getPeer().getInetAddress().toString() +
                     ":" + context.getConnectionKey().getRemotePort();

@@ -16,6 +16,7 @@
 
 package bt.net;
 
+import bt.peer.ImmutablePeer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -149,7 +150,7 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
     private ConnectionResult createConnection(SocketChannel incomingChannel, SocketAddress remoteAddress) {
         try {
             InetAddress address = ((InetSocketAddress)remoteAddress).getAddress();
-            Peer peer = InetPeer.builder(address).build();
+            InetPeer peer = new InetPeer(address); // We don't know the listening port
             return connectionFactory.createIncomingConnection(peer, incomingChannel);
         } catch (Exception e) {
             LOGGER.error("Failed to establish incoming connection from peer: " + remoteAddress, e);
