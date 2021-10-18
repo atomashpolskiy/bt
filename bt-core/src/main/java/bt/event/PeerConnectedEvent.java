@@ -18,8 +18,7 @@ package bt.event;
 
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
-import bt.net.InetPeer;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 
 import java.util.Objects;
 

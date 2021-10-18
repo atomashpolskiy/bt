@@ -36,9 +36,11 @@ import java.util.function.BiConsumer;
  */
 public class AlphaSortedMapping implements ExtendedMessageTypeMapping {
 
-    private Map<Integer, String> nameMap;
-    private Map<String, Integer> idMap;
-    private Map<Class<?>, String> typeMap;
+    //TODO: these can be a guava BiMap
+    private final Map<Integer, String> nameMap;
+    private final Map<String, Integer> idMap;
+
+    private final Map<Class<?>, String> typeMap;
 
     /**
      * @since 1.0

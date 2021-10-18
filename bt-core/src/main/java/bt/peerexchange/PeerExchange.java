@@ -161,13 +161,7 @@ class PeerExchange extends ExtendedMessage {
     private static BEString encodePeerOptions(Collection<Peer> peers) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         for (Peer peer : peers) {
-            byte options = 0;
-            EncryptionPolicy encryptionPolicy = peer.getOptions().getEncryptionPolicy();
-            if (encryptionPolicy == EncryptionPolicy.PREFER_ENCRYPTED
-                    || encryptionPolicy == EncryptionPolicy.REQUIRE_ENCRYPTED) {
-                options |= CRYPTO_FLAG;
-            }
-            bos.write(options);
+            bos.write(peer.getOptions().getPExBitField());
         }
         return new BEString(bos.toByteArray());
     }

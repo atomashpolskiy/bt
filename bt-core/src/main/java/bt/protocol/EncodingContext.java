@@ -16,7 +16,7 @@
 
 package bt.protocol;
 
-import bt.net.InetPeer;
+import bt.net.peer.InetPeer;
 
 public class EncodingContext {
 

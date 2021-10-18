@@ -18,8 +18,7 @@ package bt.torrent.messaging;
 
 import bt.event.EventSink;
 import bt.metainfo.TorrentId;
-import bt.net.InetPeer;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.net.buffer.BufferedData;
 import bt.net.pipeline.IBufferedPieceRegistry;
 import bt.protocol.Have;

@@ -18,7 +18,7 @@ package bt.net.extended;
 
 import bt.bencoding.types.BEInteger;
 import bt.net.IPeerConnectionPool;
-import bt.net.InetPeer;
+import bt.net.peer.InetPeer;
 import bt.protocol.extended.ExtendedHandshake;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.messaging.MessageContext;

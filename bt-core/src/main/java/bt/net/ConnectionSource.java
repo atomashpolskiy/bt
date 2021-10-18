@@ -18,6 +18,7 @@ package bt.net;
 
 import bt.CountingThreadFactory;
 import bt.metainfo.TorrentId;
+import bt.net.peer.InetPeer;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import com.google.common.cache.Cache;
@@ -86,7 +87,7 @@ public class ConnectionSource implements IConnectionSource {
 
     @Override
     public CompletableFuture<ConnectionResult> getConnectionAsync(Peer peer, TorrentId torrentId) {
-        ConnectionKey key = new ConnectionKey(new InetPeer(peer.getInetAddress(), peer.getPort()), peer.getPort(), torrentId);
+        ConnectionKey key = new ConnectionKey(new InetPeer(peer), peer.getPort(), torrentId);
 
         CompletableFuture<ConnectionResult> result = validateNewConnPossible(peer, torrentId, key);
         if (result != null) {

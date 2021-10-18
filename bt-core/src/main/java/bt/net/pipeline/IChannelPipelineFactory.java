@@ -16,7 +16,7 @@
 
 package bt.net.pipeline;
 
-import bt.net.InetPeer;
+import bt.net.peer.InetPeer;
 
 /**
  * @since 1.6

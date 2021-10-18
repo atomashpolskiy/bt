@@ -16,43 +16,23 @@
 
 package yourip;
 
-import bt.net.InetPeer;
 import bt.peer.IPeerRegistry;
 import bt.protocol.Message;
-import bt.protocol.extended.ExtendedHandshake;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
+import bt.torrent.messaging.ExtensionConnectionState;
 import bt.torrent.messaging.MessageContext;
 import com.google.inject.Inject;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.function.Consumer;
 
 public class YourIPMessenger {
 
     private final IPeerRegistry peerRegistry;
 
-    // note: these sets use the identity hash. This is fragile and bad. This would be better suited for a connection
-    // context somewhere.
-    private Set<InetPeer> supportingPeers;
-    private Set<InetPeer> known;
-
     @Inject
     public YourIPMessenger(IPeerRegistry peerRegistry) {
         this.peerRegistry = peerRegistry;
-        this.supportingPeers = new HashSet<>();
-        this.known = new HashSet<>();
-    }
-
-    @Consumes
-    public void consume(ExtendedHandshake handshake, MessageContext context) {
-        InetPeer peer = context.getPeer();
-        if (handshake.getSupportedMessageTypes().contains(YourIP.id())) {
-            supportingPeers.add(peer);
-        } else {
-            supportingPeers.remove(peer);
-        }
     }
 
     @Consumes
@@ -63,12 +43,16 @@ public class YourIPMessenger {
 
     @Produces
     public void produce(Consumer<Message> messageConsumer, MessageContext context) {
-        InetPeer peer = context.getPeer();
-        if (supportingPeers.contains(peer) && !known.contains(peer)) {
+        YourIPState yourIPState = context.getConnectionState().getOrBuildExtensionState(YourIPState.class);
+        if (context.getPeer().supportsExtension(YourIP.id()) && !yourIPState.known) {
             String address = context.getPeer().getInetAddress().toString() +
                     ":" + context.getConnectionKey().getRemotePort();
             messageConsumer.accept(new YourIP(address));
-            known.add(peer);
+            yourIPState.known = true;
         }
+    }
+
+    public static class YourIPState implements ExtensionConnectionState<YourIPState> {
+        private boolean known = false;
     }
 }

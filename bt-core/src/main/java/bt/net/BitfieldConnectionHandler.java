@@ -17,6 +17,7 @@
 package bt.net;
 
 import bt.data.Bitfield;
+import bt.net.peer.InetPeer;
 import bt.protocol.BitOrder;
 import bt.protocol.Handshake;
 import bt.torrent.TorrentDescriptor;
@@ -33,7 +34,7 @@ import java.util.Optional;
  */
 public class BitfieldConnectionHandler implements HandshakeHandler {
 
-    private TorrentRegistry torrentRegistry;
+    private final TorrentRegistry torrentRegistry;
 
     @Inject
     public BitfieldConnectionHandler(TorrentRegistry torrentRegistry) {

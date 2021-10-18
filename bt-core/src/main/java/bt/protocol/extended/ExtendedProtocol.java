@@ -19,11 +19,11 @@ package bt.protocol.extended;
 import bt.BtException;
 import bt.module.ExtendedMessageHandlers;
 import bt.net.buffer.ByteBufferView;
+import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
-import bt.protocol.handler.BaseMessageHandler;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
-import bt.protocol.DecodingContext;
+import bt.protocol.handler.BaseMessageHandler;
 import bt.protocol.handler.MessageHandler;
 import com.google.inject.Inject;
 
@@ -162,12 +162,9 @@ public class ExtendedProtocol extends BaseMessageHandler<ExtendedMessage> {
             if (typeName == null) {
                 throw new IllegalStateException("Unknown message type: " + messageType.getName());
             }
-            Integer typeId = null;
-            for (Map.Entry<Integer, String> e : extendedHandshakeHandler.getPeerTypeMapping(context.getPeer()).entrySet()) {
-                if (e.getValue().equals(typeName)) {
-                    typeId = e.getKey();
-                }
-            }
+
+            Integer typeId = context.getPeer().getExtensionMap().inverse().get(typeName);
+
             if (typeId == null) {
                 throw new IllegalStateException("Peer does not support extension message: " + typeName);
             }

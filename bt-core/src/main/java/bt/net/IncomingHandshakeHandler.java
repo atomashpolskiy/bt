@@ -17,6 +17,7 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.net.peer.InetPeer;
 import bt.protocol.Handshake;
 import bt.protocol.IHandshakeFactory;
 import bt.protocol.Message;

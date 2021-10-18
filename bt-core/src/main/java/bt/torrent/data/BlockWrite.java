@@ -16,8 +16,7 @@
 
 package bt.torrent.data;
 
-import bt.net.InetPeer;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;

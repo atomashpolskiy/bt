@@ -20,10 +20,7 @@ import bt.magnet.UtMetadata;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
-import bt.net.InetPeer;
-import bt.net.Peer;
 import bt.protocol.Message;
-import bt.protocol.extended.ExtendedHandshake;
 import bt.runtime.Config;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
@@ -33,25 +30,16 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 public class MetadataConsumer {
     private static final Logger LOGGER = LoggerFactory.getLogger(MetadataConsumer.class);
 
+    private static final String UT_METADATA_EXTENSION = "ut_metadata";
+
     private static final Duration FIRST_BLOCK_ARRIVAL_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration WAIT_BEFORE_REREQUESTING_AFTER_REJECT = Duration.ofSeconds(10);
-
-    // note: all of these use the identity hash. This works, but is fragile and bad. This state
-    // probably would be better stored in a connection context.
-    private final ConcurrentMap<InetPeer, Long> peersWithoutMetadata;
-
-    private final Set<InetPeer> supportingPeers;
-    private final ConcurrentMap<InetPeer, Long> requestedFirstPeers;
-    private final Set<InetPeer> requestedAllPeers;
 
     private volatile ExchangedMetadata metadata;
 
@@ -69,12 +57,6 @@ public class MetadataConsumer {
                             TorrentId torrentId,
                             Config config) {
 
-        this.peersWithoutMetadata = new ConcurrentHashMap<>();
-
-        this.supportingPeers = ConcurrentHashMap.newKeySet();
-        this.requestedFirstPeers = new ConcurrentHashMap<>();
-        this.requestedAllPeers = ConcurrentHashMap.newKeySet();
-
         this.metadataService = metadataService;
 
         this.torrentId = Objects.requireNonNull(torrentId);
@@ -85,18 +67,7 @@ public class MetadataConsumer {
     }
 
     @Consumes
-    public void consume(ExtendedHandshake handshake, MessageContext messageContext) {
-        if (handshake.getSupportedMessageTypes().contains("ut_metadata")) {
-            // TODO: peer may eventually turn off the ut_metadata extension
-            // moreover the extended handshake message type map is additive,
-            // so we can't learn about the peer turning off extensions solely from the message
-            supportingPeers.add(messageContext.getPeer());
-        }
-    }
-
-    @Consumes
     public void consume(UtMetadata message, MessageContext context) {
-        InetPeer peer = context.getPeer();
         // being lenient here and not checking if the peer advertised ut_metadata support
         switch (message.getType()) {
             case DATA: {
@@ -109,7 +80,8 @@ public class MetadataConsumer {
             }
             break;
             case REJECT: {
-                peersWithoutMetadata.put(peer, System.currentTimeMillis());
+                context.getConnectionState().getOrBuildExtensionState(MetadataConsumerState.class)
+                        .setWithoutMetadata(System.currentTimeMillis());
             }
             break;
             default: {
@@ -140,8 +112,6 @@ public class MetadataConsumer {
                     if (fetchedTorrent != null) {
                         synchronized (torrent) {
                             torrent.set(fetchedTorrent);
-                            requestedFirstPeers.clear();
-                            requestedAllPeers.clear();
                             torrent.notifyAll();
                         }
                     }
@@ -163,24 +133,25 @@ public class MetadataConsumer {
             return;
         }
 
-        InetPeer peer = context.getPeer();
-        if (supportingPeers.contains(peer)) {
-            if (peersWithoutMetadata.containsKey(peer)) {
-                if ((System.currentTimeMillis() - peersWithoutMetadata.get(peer)) >= WAIT_BEFORE_REREQUESTING_AFTER_REJECT.toMillis()) {
-                    peersWithoutMetadata.remove(peer);
-                }
+        if (context.getPeer().supportsExtension(UT_METADATA_EXTENSION)) {
+            MetadataConsumerState state = context.getConnectionState().getOrBuildExtensionState(MetadataConsumerState.class);
+            final long now = System.currentTimeMillis();
+            if (state.getWithoutMetadata() != MetadataConsumerState.NOT_RECENTLY &&
+                    (now - state.getWithoutMetadata()) >= WAIT_BEFORE_REREQUESTING_AFTER_REJECT.toMillis()) {
+                state.setWithoutMetadata(MetadataConsumerState.NOT_RECENTLY);
             }
 
-            if (!peersWithoutMetadata.containsKey(peer)) {
+            if (state.getWithoutMetadata() == MetadataConsumerState.NOT_RECENTLY) {
                 if (metadata == null) {
-                    if (!requestedFirstPeers.containsKey(peer) ||
-                            (System.currentTimeMillis() - requestedFirstPeers.get(peer) > FIRST_BLOCK_ARRIVAL_TIMEOUT.toMillis())) {
-                        requestedFirstPeers.put(peer, System.currentTimeMillis());
+                    final long requestedFirstPeers = state.getRequestedFirstPeers();
+                    if (requestedFirstPeers != MetadataConsumerState.NOT_RECENTLY ||
+                            (now - requestedFirstPeers > FIRST_BLOCK_ARRIVAL_TIMEOUT.toMillis())) {
+                        state.setRequestedFirstPeers(now);
                         // start with the first piece of metadata
                         messageConsumer.accept(UtMetadata.request(0));
                     }
-                } else if (!requestedAllPeers.contains(peer)) {
-                    requestedAllPeers.add(peer);
+                } else if (!state.isRequestedAllPeers()) {
+                    state.setRequestedAllPeers(true);
                     // TODO: larger metadata should be handled in more intelligent way
                     // starting with block #1 because by now we should have already received block #0
                     for (int i = 1; i < metadata.getBlockCount(); i++) {
@@ -207,5 +178,44 @@ public class MetadataConsumer {
             }
         }
         return torrent.get();
+    }
+
+    /**
+     * A class which stores the state for the metadata sharing extension
+     */
+    public static class MetadataConsumerState implements ExtensionConnectionState<MetadataConsumerState> {
+        private static final long NOT_RECENTLY = -1;
+
+        // the last time that we probed this peer for metadata and got a reject
+        private long withoutMetadata = NOT_RECENTLY;
+
+        // the last time we requested the first metadata block from this peer.
+        private long requestedFirstPeers = NOT_RECENTLY;
+        // whether we requested all metadata blocks from this peer
+        private boolean requestedAllPeers = false;
+
+        public long getWithoutMetadata() {
+            return withoutMetadata;
+        }
+
+        public void setWithoutMetadata(long withoutMetadata) {
+            this.withoutMetadata = withoutMetadata;
+        }
+
+        public long getRequestedFirstPeers() {
+            return requestedFirstPeers;
+        }
+
+        public void setRequestedFirstPeers(long requestedFirstPeers) {
+            this.requestedFirstPeers = requestedFirstPeers;
+        }
+
+        public boolean isRequestedAllPeers() {
+            return requestedAllPeers;
+        }
+
+        public void setRequestedAllPeers(boolean requestedAllPeers) {
+            this.requestedAllPeers = requestedAllPeers;
+        }
     }
 }

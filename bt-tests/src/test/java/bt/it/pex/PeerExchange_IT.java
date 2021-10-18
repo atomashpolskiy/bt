@@ -23,6 +23,7 @@ import bt.it.fixture.Swarm;
 import bt.it.fixture.SwarmPeer;
 import bt.net.ConnectionKey;
 import bt.net.Peer;
+import bt.peer.ImmutablePeer;
 import bt.peerexchange.PeerExchangeConfig;
 import bt.peerexchange.PeerExchangeModule;
 import bt.runtime.Config;
@@ -78,15 +79,13 @@ public class PeerExchange_IT extends BaseBtTest {
                 }
             }))
             .module(new SharedTrackerModule(new PEXPeerFilter(PEER_COUNT, 1)))
-            .module(new PeerExchangeModule())
             .useInMemoryFileSystem()
             .build();
 
-    // TODO: fails in Travis when JaCoCo is enabled -- need to investigate
-//    @Test
+    @Test
     public void testPeerExchange() {
 
-        ConcurrentMap<Peer, Set<ConnectionKey>> discoveredPeers = new ConcurrentHashMap<>();
+        ConcurrentMap<ImmutablePeer, Set<ConnectionKey>> discoveredPeers = new ConcurrentHashMap<>();
 
         swarm.getSeeders().forEach(seeder ->
                 seeder.getHandle().startAsync(state -> {
@@ -123,13 +122,17 @@ public class PeerExchange_IT extends BaseBtTest {
             });
             for (Peer swarmPeer : swarmPeers) {
                 // TODO: this must be updated after switching to ConnectionKeys
-//                assertContainsPeer(peers, swarmPeer);
+                if (!peer.equals(swarmPeer))
+                    assertContainsPeer(peers, swarmPeer);
             }
         });
     }
 
-    private static void assertContainsPeer(Collection<Peer> peers, Peer peer) {
-        assertTrue(peers.contains(peer));
+    private void assertContainsPeer(Collection<ConnectionKey> peers, Peer peer) {
+        assertTrue("Peer: " + peer + " not found in " + peers,
+                peers.stream()
+                        .map(ConnectionKey::getPeer)
+                        .anyMatch(p -> p.getInetAddress().equals(peer.getInetAddress()) && p.getPort() == peer.getPort()));
     }
 
     /**

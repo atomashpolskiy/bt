@@ -17,6 +17,7 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.net.peer.InetPeer;
 import com.google.common.base.MoreObjects;
 
 import java.util.Objects;

@@ -16,7 +16,7 @@
 
 package bt.net.pipeline;
 
-import bt.net.InetPeer;
+import bt.net.peer.InetPeer;
 import bt.protocol.EncodingContext;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;

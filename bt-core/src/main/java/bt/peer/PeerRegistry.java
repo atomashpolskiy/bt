@@ -21,6 +21,7 @@ import bt.event.EventSource;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
+import bt.net.peer.LocalPeer;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdentityService;
@@ -55,7 +56,7 @@ public class PeerRegistry implements IPeerRegistry {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerRegistry.class);
 
-    private final Peer localPeer;
+    private final LocalPeer localPeer;
 
     private final ScheduledExecutorService scheduledExecutorService;
     private final TorrentRegistry torrentRegistry;
@@ -77,9 +78,8 @@ public class PeerRegistry implements IPeerRegistry {
                         Set<PeerSourceFactory> extraPeerSourceFactories,
                         Config config) {
 
-        this.localPeer = ImmutablePeer.builder(config.getPeerAddress().orElse(config.getAcceptorAddress()), config.getAcceptorPort())
-                .peerId(idService.getLocalPeerId())
-                .build();
+        this.localPeer = new LocalPeer(config.getPeerAddress().orElse(config.getAcceptorAddress()), config.getAcceptorPort(),
+                idService.getLocalPeerId());
 
         this.torrentRegistry = torrentRegistry;
         this.trackerService = trackerService;
@@ -250,8 +250,7 @@ public class PeerRegistry implements IPeerRegistry {
     }
 
     @Override
-    public Peer getLocalPeer() {
+    public LocalPeer getLocalPeer() {
         return localPeer;
     }
-
 }

@@ -47,6 +47,7 @@ public class PeerExchangeModule implements Module {
 
         ServiceModule.extend(binder).addPeerSourceFactory(PeerExchangePeerSourceFactory.class);
         ServiceModule.extend(binder).addMessagingAgentType(PeerExchangePeerSourceFactory.class);
+        ProtocolModule.extend(binder).addHandshakeHandler(PeerExchangePeerSourceFactory.class);
         ProtocolModule.extend(binder).addExtendedMessageHandler("ut_pex", PeerExchangeMessageHandler.class);
     }
 }

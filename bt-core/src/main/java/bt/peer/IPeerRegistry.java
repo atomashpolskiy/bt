@@ -18,6 +18,7 @@ package bt.peer;
 
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
+import bt.net.peer.LocalPeer;
 import bt.tracker.AnnounceKey;
 
 /**
@@ -33,7 +34,7 @@ public interface IPeerRegistry {
      * @return Local peer
      * @since 1.0
      */
-    Peer getLocalPeer();
+    LocalPeer getLocalPeer();
 
     /**
      * Add peer for a given torrent and notify all peer consumers.

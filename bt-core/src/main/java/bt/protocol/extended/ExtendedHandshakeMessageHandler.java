@@ -20,10 +20,9 @@ import bt.BtException;
 import bt.bencoding.BEType;
 import bt.bencoding.model.BEObject;
 import bt.bencoding.serializers.BEParser;
-import bt.bencoding.types.BEInteger;
 import bt.bencoding.types.BEMap;
-import bt.net.InetPeer;
 import bt.net.buffer.ByteBufferView;
+import bt.net.peer.InetPeer;
 import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
@@ -34,22 +33,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshake> {
 
     private Collection<Class<? extends ExtendedHandshake>> supportedTypes;
 
-    // note: this map uses the identity hash. This is fragile and bad. This would be better suited for a connection
-    // context somewhere.
-    private ConcurrentMap<InetPeer, Map<Integer, String>> peerTypeMappings;
-
     ExtendedHandshakeMessageHandler() {
-        peerTypeMappings = new ConcurrentHashMap<>();
         supportedTypes = Collections.singleton(ExtendedHandshake.class);
     }
 
@@ -63,7 +53,7 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
         return ExtendedHandshake.class;
     }
 
-    private void processTypeMapping(InetPeer peer, BEObject mappingObj) {
+    private void processTypeMapping(InetPeer peer, BEObject<?> mappingObj) {
 
         if (mappingObj == null) {
             return;
@@ -77,42 +67,14 @@ class ExtendedHandshakeMessageHandler implements MessageHandler<ExtendedHandshak
 
         @SuppressWarnings("unchecked")
         Map<String, BEObject<?>> mapping = (Map<String, BEObject<?>>) mappingObj.getValue();
-        if (mapping.size() > 0) {
-            // according to BEP-10, peers are only required to send a delta of changes
-            // on subsequent handshakes, so we need to store all mappings received from the peer
-            // and merge the changes..
-            //
-            // subsequent handshake messages can be used to enable/disable extensions
-            // without restarting the connection
-            peerTypeMappings.put(peer, mergeMappings(peerTypeMappings.getOrDefault(peer, new HashMap<>()), mapping));
-        }
-    }
 
-    Map<Integer, String> getPeerTypeMapping(InetPeer peer) {
-        Map<Integer, String> mapping = peerTypeMappings.get(peer);
-        return (mapping == null) ? Collections.emptyMap() : Collections.unmodifiableMap(mapping);
-    }
-
-    private Map<Integer, String> mergeMappings(Map<Integer, String> existing, Map<String, BEObject<?>> changes) {
-
-        for (Map.Entry<String, BEObject<?>> entry : changes.entrySet()) {
-            String typeName = entry.getKey();
-            Integer typeId = ((BEInteger) entry.getValue()).getValue().intValue();
-            if (typeId == 0) {
-                // by setting type ID to 0 peer signals that he has disabled this extension
-                Iterator<Integer> iter = existing.keySet().iterator();
-                while (iter.hasNext()) {
-                    Integer key = iter.next();
-                    if (typeName.equals(existing.get(key))) {
-                        iter.remove();
-                        break;
-                    }
-                }
-            } else {
-                existing.put(typeId, typeName);
-            }
-        }
-        return existing;
+        // according to BEP-10, peers are only required to send a delta of changes
+        // on subsequent handshakes, so we need to store all mappings received from the peer
+        // and merge the changes..
+        //
+        // subsequent handshake messages can be used to enable/disable extensions
+        // without restarting the connection
+        peer.updateExtensionMap(mapping);
     }
 
     @Override

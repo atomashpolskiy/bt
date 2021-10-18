@@ -18,6 +18,7 @@ package bt.it.fixture;
 
 import bt.metainfo.MetadataService;
 import bt.metainfo.Torrent;
+import com.google.common.base.Suppliers;
 import org.junit.BeforeClass;
 
 import java.io.File;
@@ -73,7 +74,7 @@ public class BaseBtTest {
         SwarmBuilder builder = new SwarmBuilder(getTestName(), TEST_ROOT, getSingleFile());
         builder.module(new TestExecutorModule());
 
-        Supplier<Torrent> torrentSupplier = new CachingTorrentSupplier(() -> new MetadataService().fromUrl(METAINFO_URL));
+        Supplier<Torrent> torrentSupplier = Suppliers.memoize(() -> new MetadataService().fromUrl(METAINFO_URL));
         builder.torrentSupplier(torrentSupplier);
         return builder;
     }
@@ -84,32 +85,5 @@ public class BaseBtTest {
 
     private static TorrentFiles getSingleFile() {
         return new TorrentFiles(Collections.singletonMap(new String[]{FILE_NAME}, SINGLE_FILE_CONTENT));
-    }
-
-    /**
-     * Loads torrent only once.
-     */
-    private static class CachingTorrentSupplier implements Supplier<Torrent> {
-
-        private final Supplier<Torrent> delegate;
-        private volatile Torrent torrent;
-        private final Object lock;
-
-        public CachingTorrentSupplier(Supplier<Torrent> delegate) {
-            this.delegate = delegate;
-            this.lock = new Object();
-        }
-
-        @Override
-        public Torrent get() {
-            if (torrent == null) {
-                synchronized (lock) {
-                    if (torrent == null) {
-                        torrent = delegate.get();
-                    }
-                }
-            }
-            return torrent;
-        }
     }
 }

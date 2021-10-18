@@ -16,8 +16,9 @@
 
 package bt.it.fixture;
 
-import bt.net.Peer;
+import bt.net.peer.LocalPeer;
 import bt.peer.IPeerRegistry;
+import bt.peer.ImmutablePeer;
 import bt.runtime.BtClient;
 import bt.runtime.BtRuntime;
 
@@ -54,8 +55,9 @@ public abstract class SwarmPeer implements Closeable {
      * @return Unique peer instance, representing this swarm participant
      * @since 1.0
      */
-    public Peer getPeer() {
-        return runtime.service(IPeerRegistry.class).getLocalPeer();
+    public ImmutablePeer getPeer() {
+        final LocalPeer localPeer = runtime.service(IPeerRegistry.class).getLocalPeer();
+        return ImmutablePeer.build(localPeer.getInetAddress(), localPeer.getPort());
     }
 
     /**

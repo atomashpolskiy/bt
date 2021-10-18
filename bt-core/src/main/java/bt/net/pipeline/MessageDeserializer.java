@@ -17,8 +17,7 @@
 package bt.net.pipeline;
 
 import bt.BtException;
-import bt.net.InetPeer;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.net.buffer.ByteBufferView;
 import bt.protocol.DecodingContext;
 import bt.protocol.Message;

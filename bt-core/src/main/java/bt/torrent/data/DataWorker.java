@@ -17,7 +17,7 @@
 package bt.torrent.data;
 
 import bt.metainfo.TorrentId;
-import bt.net.InetPeer;
+import bt.net.peer.InetPeer;
 import bt.net.buffer.BufferedData;
 
 import java.util.concurrent.CompletableFuture;

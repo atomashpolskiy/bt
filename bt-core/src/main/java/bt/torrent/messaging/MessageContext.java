@@ -18,8 +18,7 @@ package bt.torrent.messaging;
 
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
-import bt.net.InetPeer;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 
 /**
  * Provides basic information about the context of a message (both inbound and outbound).

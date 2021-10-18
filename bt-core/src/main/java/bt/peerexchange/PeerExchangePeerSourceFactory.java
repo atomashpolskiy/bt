@@ -17,22 +17,31 @@
 package bt.peerexchange;
 
 import bt.BtException;
+import bt.bencoding.types.BEInteger;
 import bt.event.EventSource;
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
+import bt.net.HandshakeHandler;
+import bt.net.InetPortUtil;
 import bt.net.Peer;
+import bt.net.PeerConnection;
+import bt.net.peer.InetPeer;
 import bt.peer.ImmutablePeer;
+import bt.peer.PeerOptions;
 import bt.peer.PeerSource;
 import bt.peer.PeerSourceFactory;
+import bt.protocol.Handshake;
 import bt.protocol.Message;
 import bt.protocol.extended.ExtendedHandshake;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
+import bt.torrent.messaging.ExtensionConnectionState;
 import bt.torrent.messaging.MessageContext;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +51,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -55,11 +63,12 @@ import java.util.function.Consumer;
  * <p><b>Note that this class implements a service.
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
-public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
+public class PeerExchangePeerSourceFactory implements PeerSourceFactory, HandshakeHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerExchangePeerSourceFactory.class);
 
-    private static final Duration MAX_PEER_EVENT_STORAGE = Duration.ofMinutes(10);
+    private static final String UT_PEX_EXTENSION = "ut_pex";
+    private static final Duration MAX_PEER_EVENT_HISTORY_STORAGE = Duration.ofMinutes(15);
     private static final Duration CLEANER_INTERVAL = Duration.ofSeconds(37);
 
     private final Map<TorrentId, PeerExchangePeerSource> peerSources;
@@ -67,7 +76,6 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     private final Map<TorrentId, Queue<PeerEvent>> peerEvents;
     private final ReentrantReadWriteLock rwLock;
 
-    private final Set<ConnectionKey> peers;
     private final Cache<ConnectionKey, Long> lastSentPEXMessage;
 
     private final Duration minMessageInterval;
@@ -83,8 +91,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         this.peerSources = new ConcurrentHashMap<>();
         this.peerEvents = new ConcurrentHashMap<>();
         this.rwLock = new ReentrantReadWriteLock();
-        this.peers = ConcurrentHashMap.newKeySet();
-        this.lastSentPEXMessage = CacheBuilder.newBuilder().expireAfterAccess(MAX_PEER_EVENT_STORAGE).build();
+        this.lastSentPEXMessage = CacheBuilder.newBuilder().expireAfterAccess(MAX_PEER_EVENT_HISTORY_STORAGE).build();
         if (pexConfig.getMaxMessageInterval().compareTo(pexConfig.getMinMessageInterval()) < 0) {
             throw new IllegalArgumentException("Max message interval is greater than min interval");
         }
@@ -93,7 +100,6 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         this.minEventsPerMessage = pexConfig.getMinEventsPerMessage();
         this.maxEventsPerMessage = pexConfig.getMaxEventsPerMessage();
 
-        eventSource.onPeerConnected(null, e -> onPeerConnected(e.getConnectionKey()));
         eventSource.onPeerDisconnected(null, e -> onPeerDisconnected(e.getConnectionKey()));
         eventSource.onTorrentStopped(null, e -> cleanupTorrent(e.getTorrentId()));
 
@@ -105,13 +111,23 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         lifecycleBinder.onShutdown("Shutdown PEX cleanup scheduler", executor::shutdownNow);
     }
 
-    private void onPeerConnected(ConnectionKey connectionKey) {
-        //TODO: add code that adds this peer once its port becomes known from the extended handshake
-        if (!connectionKey.getPeer().isPortUnknown()) {
-            ImmutablePeer immutablePeer = ImmutablePeer.build(connectionKey.getPeer().getInetAddress(),
-                    connectionKey.getPeer().getPort());
-            getPeerEvents(connectionKey.getTorrentId()).add(PeerEvent.added(immutablePeer));
+    @Override
+    public void processIncomingHandshake(PeerConnection connection, Handshake peerHandshake) {
+        // Successfully connected. Add peer event that this peer connection has been established if it is an outgoing
+        // connection. If it is incoming, we must wait until we get the peer port from the extended handshake
+        if (!connection.isIncoming()) {
+            final InetPeer remotePeer = connection.getRemotePeer();
+            ImmutablePeer immutablePeer = ImmutablePeer.builder(remotePeer.getInetAddress(), remotePeer.getPort())
+                    .options(PeerOptions.builder().outgoingConnection(true).build())
+                    .build();
+            getPeerEvents(connection.getTorrentId()).add(PeerEvent.added(immutablePeer));
         }
+    }
+
+    @Override
+    public void processOutgoingHandshake(Handshake handshake) {
+        // ensure extensions protocol handshake is sent
+        handshake.setSupportsExtensionProtocol();
     }
 
     private void onPeerDisconnected(ConnectionKey connectionKey) {
@@ -120,7 +136,6 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
                     connectionKey.getPeer().getPort());
             getPeerEvents(connectionKey.getTorrentId()).add(PeerEvent.dropped(immutablePeer));
         }
-        peers.remove(connectionKey);
         lastSentPEXMessage.invalidate(connectionKey);
     }
 
@@ -130,14 +145,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     }
 
     private Queue<PeerEvent> getPeerEvents(TorrentId torrentId) {
-        Queue<PeerEvent> events = peerEvents.get(torrentId);
-        if (events == null) {
-            events = new PriorityBlockingQueue<>();
-            Queue<PeerEvent> existing = peerEvents.putIfAbsent(torrentId, events);
-            if (existing != null) {
-                events = existing;
-            }
-        }
+        Queue<PeerEvent> events = peerEvents.computeIfAbsent(torrentId, k->new PriorityBlockingQueue<>());
         return events;
     }
 
@@ -147,25 +155,55 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
     }
 
     private PeerExchangePeerSource getOrCreatePeerSource(TorrentId torrentId) {
-        PeerExchangePeerSource peerSource = peerSources.get(torrentId);
-        if (peerSource == null) {
-            peerSource = new PeerExchangePeerSource();
-            PeerExchangePeerSource existing = peerSources.putIfAbsent(torrentId, peerSource);
-            if (existing != null) {
-                peerSource = existing;
-            }
-        }
+        PeerExchangePeerSource peerSource = peerSources.computeIfAbsent(torrentId, tid -> new PeerExchangePeerSource());
         return peerSource;
     }
 
     @Consumes
     public void consume(ExtendedHandshake handshake, MessageContext messageContext) {
-        if (handshake.getSupportedMessageTypes().contains("ut_pex")) {
-            // TODO: peer may eventually turn off the PEX extension
-            // moreover the extended handshake message type map is additive,
-            // so we can't learn about the peer turning off extensions solely from the message
-            peers.add(messageContext.getConnectionKey());
+        PeerExchangeState state = messageContext.getConnectionState().getOrBuildExtensionState(PeerExchangeState.class);
+
+        // must check if was added to PEx state because multiple handshakes may be sent
+        if (!state.isOnPExList()) {
+            // outgoing connections were already added to the list because we have their port.
+            final InetPeer peer = messageContext.getPeer();
+            if (peer.isIncoming()) {
+                final BEInteger port = handshake.getPort();
+                if (isValidPort(port)) {
+                    ImmutablePeer immutablePeer = ImmutablePeer
+                            .builder(peer.getInetAddress(), extractPort(port))
+                            .options(
+                                    PeerOptions.builder()
+                                            .outgoingConnection(false)
+                                            .build()
+                            )
+                            .build();
+                    getPeerEvents(messageContext.getTorrentId()).add(PeerEvent.added(immutablePeer));
+
+                    state.setAddedToPexList(true);
+                }
+            } else {
+                state.setAddedToPexList(true);
+            }
         }
+    }
+
+    private boolean isValidPort(BEInteger port) {
+        if (port != null) {
+            try {
+                final int intPort = extractPort(port);
+                return InetPortUtil.isValidRemotePort(intPort);
+            } catch (Exception ex) {
+                LOGGER.debug("Received invalid port in handshake {}", port, ex);
+            }
+        }
+        return false;
+    }
+
+    private int extractPort(BEInteger port) {
+        long longPort = port.longValueExact();
+        final int intPort = Ints.saturatedCast(longPort);
+        return intPort;
     }
 
     @Consumes
@@ -180,7 +218,8 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
         Long lastSentPEXMessageToPeer = lastSentPEXMessage.getIfPresent(connectionKey);
         if (lastSentPEXMessageToPeer == null) lastSentPEXMessageToPeer = 0L;
 
-        if (peers.contains(connectionKey) && (currentTime - lastSentPEXMessageToPeer) >= minMessageInterval.toMillis()) {
+        if (messageContext.getPeer().supportsExtension(UT_PEX_EXTENSION)
+                && (currentTime - lastSentPEXMessageToPeer) >= minMessageInterval.toMillis()) {
             List<PeerEvent> events = new ArrayList<>();
 
             rwLock.readLock().lock();
@@ -193,8 +232,8 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
                         // - we don't know the listening port of the current connection's peer yet
                         // - event's peer and connection's peer are the same
                         if (!connectionKey.getPeer().isPortUnknown()
-                                && !exchangedPeer.getInetAddress().equals(connectionKey.getPeer().getInetAddress())
-                                && exchangedPeer.getPort() != connectionKey.getRemotePort()) {
+                                && !(exchangedPeer.getInetAddress().equals(connectionKey.getPeer().getInetAddress())
+                                && exchangedPeer.getPort() == connectionKey.getRemotePort())) {
                             events.add(event);
                         }
                     } else {
@@ -260,6 +299,21 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory {
             } finally {
                 rwLock.writeLock().unlock();
             }
+        }
+    }
+
+    /**
+     * A class to store PEx state on a connection
+     */
+    public static class PeerExchangeState implements ExtensionConnectionState<PeerExchangeState> {
+        private boolean addedToPexList = false;
+
+        public boolean isOnPExList() {
+            return addedToPexList;
+        }
+
+        public void setAddedToPexList(boolean addedToPexList) {
+            this.addedToPexList = addedToPexList;
         }
     }
 }

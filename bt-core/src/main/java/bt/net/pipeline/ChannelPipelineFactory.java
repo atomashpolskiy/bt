@@ -16,8 +16,7 @@
 
 package bt.net.pipeline;
 
-import bt.net.InetPeer;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.net.buffer.BorrowedBuffer;
 import bt.net.buffer.BufferMutator;
 import bt.net.buffer.IBufferManager;

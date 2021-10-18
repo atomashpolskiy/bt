@@ -19,6 +19,7 @@ package bt.net;
 import bt.CountingThreadFactory;
 import bt.event.EventSink;
 import bt.metainfo.TorrentId;
+import bt.net.peer.InetPeer;
 import bt.peer.ImmutablePeer;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
@@ -176,18 +177,24 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 }
             }
             if (outgoingConnection != null && incomingConnection != null) {
-                // always prefer to keep outgoing connections
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Closing duplicate incoming connection with {}:{}" +
-                                    " (established remote port {})",
-                            incomingConnection.getRemotePeer().getInetAddress(), outgoingConnection.getRemotePort(),
-                            incomingConnection.getRemotePort());
-                }
-                incomingConnection.closeQuietly();
+                closeDuplicateConnection(outgoingConnection, incomingConnection);
             }
         } finally {
             connectionLock.unlock();
         }
+    }
+
+    private void closeDuplicateConnection(PeerConnection outgoingConnection, PeerConnection incomingConnection) {
+        // close whichever connection which was established later, prefer outgoing connections on a tie
+        PeerConnection toClose = outgoingConnection.getEstablished().isBefore(incomingConnection.getEstablished())
+                ? incomingConnection : outgoingConnection;
+
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Closing duplicate connection with {}:{}  (established remote port {})",
+                    toClose.getRemotePeer().getInetAddress(), outgoingConnection.getRemotePort(),
+                    toClose.getRemotePort());
+        }
+        toClose.closeQuietly();
     }
 
     private List<PeerConnection> getConnectionsForAddress(TorrentId torrentId, InetAddress addr) {
@@ -300,7 +307,7 @@ class Connections {
     }
 
     PeerConnection get(Peer peer, int remotePort, TorrentId torrentId) {
-        return get(new ConnectionKey(new InetPeer(peer.getInetAddress(), peer.getPort()), remotePort, torrentId));
+        return get(new ConnectionKey(new InetPeer(peer), remotePort, torrentId));
     }
 
     PeerConnection get(ConnectionKey key) {

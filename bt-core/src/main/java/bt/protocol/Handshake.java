@@ -24,7 +24,7 @@ import bt.net.PeerId;
  * Standard handshake message.
  * This is the very first message that peers must send,
  * when initializing a new peer connection.
- *
+ * <p>
  * Handshake message includes:
  * - a constant header, specified in standard BitTorrent protocol
  * - torrent ID
@@ -35,11 +35,15 @@ import bt.net.PeerId;
  */
 public final class Handshake implements Message {
 
+    // Note: these are listed in little endian, so they are equal to 63-the reserved number listed in the BEPs
+    private static final int EXTENDED_FLAG_BIT_INDEX = 43;
+    private static final int DHT_FLAG_BIT_INDEX = 63;
+
     private static final int UPPER_RESERVED_BOUND = 8 * 8 - 1;
 
-    private byte[] reserved;
-    private TorrentId torrentId;
-    private PeerId peerId;
+    private final byte[] reserved;
+    private final TorrentId torrentId;
+    private final PeerId peerId;
 
     /**
      * @since 1.0
@@ -74,6 +78,38 @@ public final class Handshake implements Message {
         }
         Protocols.setBit(reserved, BitOrder.LITTLE_ENDIAN, bitIndex);
         // check range
+    }
+
+    /**
+     * Check whether the extension protocol is supported (BEP-0010)
+     *
+     * @return whether the extension protocol is supported (BEP-0010)
+     */
+    public boolean supportsExtensionProtocol() {
+        return isReservedBitSet(EXTENDED_FLAG_BIT_INDEX);
+    }
+
+    /**
+     * Mark the extension protocol as supported
+     */
+    public void setSupportsExtensionProtocol() {
+        setReservedBit(EXTENDED_FLAG_BIT_INDEX);
+    }
+
+    /**
+     * Check if the DHT extension is supported
+     *
+     * @return whether DHT extension is supported
+     */
+    public boolean isDHTSupported() {
+        return isReservedBitSet(DHT_FLAG_BIT_INDEX);
+    }
+
+    /**
+     * Mark the DHT extension as supported
+     */
+    public void setDHTSupported() {
+        setReservedBit(DHT_FLAG_BIT_INDEX);
     }
 
     /**

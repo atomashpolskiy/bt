@@ -19,8 +19,7 @@ package bt.event;
 import bt.data.Bitfield;
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
-import bt.net.InetPeer;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 
 /**
  * Indicates, that local information about some peer's data has been updated.

@@ -18,8 +18,7 @@ package bt.torrent.messaging;
 
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
-import bt.net.InetPeer;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.protocol.Have;
 import bt.protocol.Message;
 import bt.protocol.Piece;

@@ -18,8 +18,7 @@ package bt.torrent.messaging;
 
 import bt.magnet.UtMetadata;
 import bt.metainfo.Torrent;
-import bt.net.InetPeer;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.protocol.Message;
 import bt.runtime.Config;
 import bt.torrent.annotation.Consumes;

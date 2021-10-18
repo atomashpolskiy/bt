@@ -17,8 +17,10 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.net.peer.InetPeer;
 
 import java.nio.channels.SocketChannel;
+import java.time.Instant;
 
 /**
  * Used for creating peer connections, both incoming and outgoing.
@@ -33,7 +35,10 @@ public interface IPeerConnectionFactory {
     ConnectionResult createOutgoingConnection(InetPeer peer, TorrentId torrentId);
 
     /**
+     * @param peer The peer info
+     * @param channel The connected socket channel
+     * @param establishedTimestamp the timestamp when the connection was established
      * @since 1.6
      */
-    ConnectionResult createIncomingConnection(InetPeer peer, SocketChannel channel);
+    ConnectionResult createIncomingConnection(InetPeer peer, SocketChannel channel, Instant establishedTimestamp);
 }

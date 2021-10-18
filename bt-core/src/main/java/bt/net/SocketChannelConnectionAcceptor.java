@@ -16,7 +16,7 @@
 
 package bt.net;
 
-import bt.peer.ImmutablePeer;
+import bt.net.peer.InetPeer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +30,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.time.Instant;
 
 /**
  * @since 1.6
@@ -125,6 +126,7 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
     }
 
     private ConnectionRoutine getConnectionRoutine(SocketChannel incomingChannel, SocketAddress remoteAddress) {
+        final Instant connectedInstant = Instant.now();
         return new ConnectionRoutine() {
             @Override
             public SocketAddress getRemoteAddress() {
@@ -133,7 +135,7 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
 
             @Override
             public ConnectionResult establish() {
-                return createConnection(incomingChannel, remoteAddress);
+                return createConnection(incomingChannel, remoteAddress, connectedInstant);
             }
 
             @Override
@@ -144,14 +146,20 @@ public class SocketChannelConnectionAcceptor implements PeerConnectionAcceptor {
                     LOGGER.warn("Failed to close incoming channel: " + remoteAddress, e);
                 }
             }
+
+            @Override
+            public Instant getConnectionEstablishedTimestamp() {
+                return connectedInstant;
+            }
         };
     }
 
-    private ConnectionResult createConnection(SocketChannel incomingChannel, SocketAddress remoteAddress) {
+    private ConnectionResult createConnection(SocketChannel incomingChannel, SocketAddress remoteAddress,
+                                              Instant connectionEstablishedTimestamp) {
         try {
             InetAddress address = ((InetSocketAddress)remoteAddress).getAddress();
             InetPeer peer = new InetPeer(address); // We don't know the listening port
-            return connectionFactory.createIncomingConnection(peer, incomingChannel);
+            return connectionFactory.createIncomingConnection(peer, incomingChannel, connectionEstablishedTimestamp);
         } catch (Exception e) {
             LOGGER.error("Failed to establish incoming connection from peer: " + remoteAddress, e);
             try {
