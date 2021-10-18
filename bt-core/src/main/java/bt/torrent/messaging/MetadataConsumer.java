@@ -183,7 +183,7 @@ public class MetadataConsumer {
     /**
      * A class which stores the state for the metadata sharing extension
      */
-    public static class MetadataConsumerState implements ExtensionConnectionState<MetadataConsumerState> {
+    public static class MetadataConsumerState implements ExtensionConnectionState {
         private static final long NOT_RECENTLY = -1;
 
         // the last time that we probed this peer for metadata and got a reject

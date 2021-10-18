@@ -305,7 +305,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory, Handsha
     /**
      * A class to store PEx state on a connection
      */
-    public static class PeerExchangeState implements ExtensionConnectionState<PeerExchangeState> {
+    public static class PeerExchangeState implements ExtensionConnectionState {
         private boolean addedToPexList = false;
 
         public boolean isOnPExList() {

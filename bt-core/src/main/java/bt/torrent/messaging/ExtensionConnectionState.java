@@ -7,5 +7,5 @@ package bt.torrent.messaging;
  * The class implementing this interface must have a default constructor available. If the connection does not yet have
  * this state object, it is build using the default constructor via reflection.
  */
-public interface ExtensionConnectionState<V> {
+public interface ExtensionConnectionState {
 }

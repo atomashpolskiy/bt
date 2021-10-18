@@ -91,7 +91,7 @@ public class PeerRequestConsumer {
         }
     }
 
-    public static class PeerRequestState implements ExtensionConnectionState<PeerRequestState> {
+    public static class PeerRequestState implements ExtensionConnectionState {
         private final Queue<BlockRead> readQueue = new ConcurrentLinkedQueue<>();
 
         public Queue<BlockRead> getReadQueue() {

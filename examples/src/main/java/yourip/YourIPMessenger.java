@@ -52,7 +52,7 @@ public class YourIPMessenger {
         }
     }
 
-    public static class YourIPState implements ExtensionConnectionState<YourIPState> {
+    public static class YourIPState implements ExtensionConnectionState {
         private boolean known = false;
     }
 }

@@ -60,7 +60,7 @@ public class ConnectionState {
     private final Queue<Request> requestQueue;
     private Optional<Assignment> assignment;
 
-    private final ConcurrentMap<Class<? extends ExtensionConnectionState<?>>, Object> extensionMap;
+    private final ConcurrentMap<Class<? extends ExtensionConnectionState>, Object> extensionMap;
 
     ConnectionState() {
         this.choking = true;
@@ -254,9 +254,9 @@ public class ConnectionState {
     /**
      * Get the state for the passed in extension
      */
-    public <T extends ExtensionConnectionState<V>, V> V getOrBuildExtensionState(Class<T> extensionClass) {
+    public <T extends ExtensionConnectionState> T getOrBuildExtensionState(Class<T> extensionClass) {
         @SuppressWarnings("unchecked")
-        V ret = (V) extensionMap.computeIfAbsent(extensionClass, k -> {
+        T ret = (T) extensionMap.computeIfAbsent(extensionClass, k -> {
             try {
                 final Constructor<T> constructor = extensionClass.getDeclaredConstructor();
                 return constructor.newInstance();
