@@ -56,7 +56,8 @@ public class InboundMessageProcessor {
                                    MessageDeserializer deserializer,
                                    List<BufferMutator> decoders,
                                    IBufferedPieceRegistry bufferedPieceRegistry) {
-        if (buffer.position() != 0 || buffer.limit() != buffer.capacity() || buffer.capacity() == 0) {
+        if (buffer.limit() != buffer.capacity() || buffer.capacity() == 0) {
+            // Note: buffer position might not be zero because MSE attempts may have loaded the handshake.
             throw new IllegalArgumentException("Illegal buffer params (position: "
                     + buffer.position() + ", limit: " + buffer.limit() + ", capacity: " + buffer.capacity() + ")");
         }

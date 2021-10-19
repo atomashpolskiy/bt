@@ -7,6 +7,7 @@ import bt.net.Peer;
 import bt.net.PeerId;
 import bt.peer.PeerOptions;
 import bt.protocol.InvalidMessageException;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableBiMap;
@@ -206,5 +207,14 @@ public class InetPeer {
 
             this.extensionMap = Maps.unmodifiableBiMap(newMapping);
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("address", address)
+                .add("port", port)
+                .add("peerId", peerId)
+                .toString();
     }
 }

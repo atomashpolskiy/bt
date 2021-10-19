@@ -33,7 +33,7 @@ public interface BorrowedBuffer<T extends Buffer> {
      * unless it is known for sure, that such field or variable will be short-lived
      * and used exclusively between calls to this method and {@link #unlock()}.
      *
-     * Caller of this method SHOULD call {@link #unlock()} as soon as he's finished working with the buffer,
+     * Caller of this method SHOULD call {@link #unlock()} as soon as it's finished working with the buffer,
      * e.g. by using the same try-finally pattern as when working with locks:
      *
      * <blockquote><pre>
