@@ -17,7 +17,7 @@
 package yourip;
 
 import bt.Bt;
-import bt.net.InetPeer;
+import bt.peer.ImmutablePeer;
 import bt.net.Peer;
 import bt.runtime.BtClient;
 import bt.runtime.Config;
@@ -26,7 +26,6 @@ import yourip.mock.MockStorage;
 import yourip.mock.MockTorrent;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,7 +37,7 @@ public class Main {
     private static final int[] ports = new int[] {6891, 6892};
     private static final Set<Peer> peers = new HashSet<Peer>() {{
         for (int port : ports) {
-            add(InetPeer.build(InetAddress.getLoopbackAddress(), port));
+            add(ImmutablePeer.build(InetAddress.getLoopbackAddress(), port));
         }
     }};
 

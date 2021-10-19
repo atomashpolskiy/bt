@@ -54,12 +54,12 @@ public class StatsDumper {
                 for (Map.Entry<TorrentId, PeerStats> e : aggregateStats.entrySet()) {
                     TorrentId torrentId = e.getKey();
                     PeerStats stats = e.getValue();
-                    Map<Peer, PeerStats.Counter> counters = stats.getCounters();
+                    Map<PeerStats.CounterKey, PeerStats.Counter> counters = stats.getCounters();
 
                     w.write(String.format("[%s]\ttotal known peers: %6d", torrentId, counters.size()));
                     w.newLine();
-                    for (Map.Entry<Peer, PeerStats.Counter> e2 : counters.entrySet()) {
-                        Peer peer = e2.getKey();
+                    for (Map.Entry<PeerStats.CounterKey, PeerStats.Counter> e2 : counters.entrySet()) {
+                        PeerStats.CounterKey counterKey = e2.getKey();
                         PeerStats.Counter counter = e2.getValue();
 
                         long discovered = counter.getDiscoveredTimes();
@@ -68,7 +68,7 @@ public class StatsDumper {
                         String available = (connected == 0) ? "-" : getAvailableDataPercentage(counter) + "%";
 
                         w.write(String.format("\t(%50s)\tdata available: %4s\ttimes discovered: %6d,\ttimes connected: %6d,\ttimes disconnected: %6d",
-                                peer, available, discovered, connected, disconnected));
+                                counterKey, available, discovered, connected, disconnected));
                         w.newLine();
                     }
                     w.newLine();

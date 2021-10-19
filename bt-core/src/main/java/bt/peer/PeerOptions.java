@@ -16,8 +16,6 @@
 
 package bt.peer;
 
-import bt.protocol.crypto.EncryptionPolicy;
-
 /**
  * Provides information on various options, preferences and modes of operations of a particular peer.
  * Instances of this class are immutable; mutator methods return new instances
@@ -27,6 +25,8 @@ import bt.protocol.crypto.EncryptionPolicy;
  */
 public class PeerOptions {
 
+    public static final PeerOptions DEFAULT_OPTS = buildPeerOptions((byte) 0);
+
     /**
      * Returns default options.
      *
@@ -34,55 +34,160 @@ public class PeerOptions {
      * @since 1.2
      */
     public static PeerOptions defaultOptions() {
-        return new PeerOptions(EncryptionPolicy.PREFER_PLAINTEXT);
+        return DEFAULT_OPTS;
     }
 
-    private final EncryptionPolicy encryptionPolicy;
+    private static final int PREFERS_ENCRYPTION = 0x1;
+    private static final int IS_SEED = 0x2;
+    private static final int SUPPORT_uTP = 0x4;
+    private static final int UT_HOLE_PUNCH = 0x8;
+    private static final int OUTGOING_CONNECTION = 0x10;
 
-    private PeerOptions(EncryptionPolicy encryptionPolicy) {
-        this.encryptionPolicy = encryptionPolicy;
+
+    private static PeerOptions buildPeerOptions(boolean prefersEncryption,
+                                                boolean isSeed,
+                                                boolean uTPsupport,
+                                                boolean utHolePunch,
+                                                boolean outgoingConnection) {
+        byte bitField = 0;
+        if (prefersEncryption) bitField |= PREFERS_ENCRYPTION;
+        if (isSeed) bitField |= IS_SEED;
+        if (uTPsupport) bitField |= SUPPORT_uTP;
+        if (utHolePunch) bitField |= UT_HOLE_PUNCH;
+        if (outgoingConnection) bitField |= OUTGOING_CONNECTION;
+        if (DEFAULT_OPTS.getPExBitField() == bitField) {
+            return DEFAULT_OPTS;
+        }
+        return new PeerOptions(bitField);
+    }
+
+    public static PeerOptions buildPeerOptions(byte bitField) {
+        return new PeerOptions(bitField);
+    }
+
+    private final byte bitField;
+
+    private PeerOptions(byte bitField) {
+        this.bitField = bitField;
+    }
+
+    public boolean prefersEncryption() {
+        return getField(PREFERS_ENCRYPTION);
+    }
+
+    public boolean isSeed() {
+        return getField(IS_SEED);
+    }
+
+    public boolean utpSupport() {
+        return getField(SUPPORT_uTP);
+    }
+
+    public boolean utHolePunch() {
+        return getField(UT_HOLE_PUNCH);
     }
 
     /**
-     * @return Message Stream Encryption policy
-     * @since 1.2
+     * @return Whether this peer is an outgoing connection
+     * @since 1.10
      */
-    public EncryptionPolicy getEncryptionPolicy() {
-        return encryptionPolicy;
+    public boolean outgoingConnection() {
+        return getField(OUTGOING_CONNECTION);
+    }
+
+    /**
+     * @return Copy of the original options with adjusted outgoing property
+     * @since 1.10
+     */
+    public PeerOptions outgoingConnection(boolean boolValToSet) {
+        return newWithBit(boolValToSet, OUTGOING_CONNECTION);
+    }
+
+    private PeerOptions newWithBit(boolean valToSet, int bitToSet) {
+        byte newField = bitField;
+        if (valToSet) {
+            newField |= bitToSet;
+        } else {
+            newField &= bitToSet;
+        }
+        if (newField == bitField) {
+            return this;
+        }
+        return new PeerOptions(newField);
+    }
+
+    private boolean getField(int bitMask) {
+        return (bitField & bitMask) != 0;
+    }
+
+    public byte getPExBitField() {
+        return bitField;
     }
 
     /**
      * @return Copy of the original options with adjusted Message Stream Encryption policy
      * @since 1.2
      */
-    public PeerOptions withEncryptionPolicy(EncryptionPolicy encryptionPolicy) {
-        return new Builder().encryptionPolicy(encryptionPolicy).build();
+    public PeerOptions prefersEncryption(boolean prefersEncryption) {
+        return newWithBit(prefersEncryption, PREFERS_ENCRYPTION);
+    }
+
+    /**
+     * @return Copy of the original options with adjusted seed field
+     * @since 1.10
+     */
+    public PeerOptions seed(boolean seed) {
+        return newWithBit(seed, IS_SEED);
+    }
+
+    /**
+     * Return a new builder for PeerOptions
+     *
+     * @return the builder for the peer builder options
+     * @since 1.10
+     */
+    public static Builder builder() {
+        return new Builder();
     }
 
     /**
      * @since 1.2
      */
-    private static class Builder {
-        private EncryptionPolicy encryptionPolicy;
+    public static class Builder {
+        private boolean prefersEncryption = false;
+        private boolean isSeed = false;
+        private boolean uTPsupport = false;
+        private boolean utHolePunch = false;
+        private boolean outgoingConnection = false;
 
         private Builder() {
         }
 
         /**
-         * Indicate policy regarding Message Stream Encryption.
+         * Indicate preference regarding Message Stream Encryption.
          *
-         * @since 1.2
+         * @since 1.10
          */
-        public Builder encryptionPolicy(EncryptionPolicy encryptionPolicy) {
-            this.encryptionPolicy = encryptionPolicy;
+        public Builder prefersEncryption(boolean prefersEncryption) {
+            this.prefersEncryption = prefersEncryption;
             return this;
         }
 
         /**
-         * @since 1.2
+         * Indicate policy regarding Message Stream Encryption.
+         *
+         * @since 1.10
+         */
+        public Builder outgoingConnection(boolean outgoingConnection) {
+            this.outgoingConnection = outgoingConnection;
+            return this;
+        }
+
+        /**
+         * @since 1.10
          */
         public PeerOptions build() {
-            return new PeerOptions(encryptionPolicy);
+            return PeerOptions.buildPeerOptions(prefersEncryption, isSeed, uTPsupport, utHolePunch, outgoingConnection);
         }
     }
 }

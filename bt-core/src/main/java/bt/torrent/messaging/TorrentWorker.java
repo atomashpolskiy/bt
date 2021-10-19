@@ -111,7 +111,9 @@ public class TorrentWorker {
 
         eventSource.onPeerDiscovered(torrentId, e -> onPeerDiscovered(e.getPeer()));
 
-        eventSource.onPeerConnected(torrentId, e -> onPeerConnected(e.getConnectionKey()));
+        eventSource.onPeerConnected(torrentId, e -> {
+            return addPeer(e.getConnectionKey());
+        });
 
         eventSource.onPeerDisconnected(torrentId, e -> onPeerDisconnected(e.getConnectionKey()));
     }
@@ -133,7 +135,7 @@ public class TorrentWorker {
      *
      * @since 1.0
      */
-    private void addPeer(ConnectionKey connectionKey) {
+    private boolean addPeer(ConnectionKey connectionKey) {
         if (tryAddPeerWithLimits()) {
             // If worker was null, our peerCount could diverge from the size peerMap. In practice,
             // worker is never null, and ConcurrentHashMap cannot hold null values, but we add requireNonNull
@@ -143,11 +145,13 @@ public class TorrentWorker {
             if (existing == null) {
                 dispatcher.addMessageConsumer(connectionKey, message -> consume(connectionKey, message));
                 dispatcher.addMessageSupplier(connectionKey, () -> produce(connectionKey));
+                return true;
             } else {
                 // The peer was already present, so don't increment the count.
                 peerCount.decrementAndGet();
             }
         }
+        return false;
     }
 
     private boolean tryAddPeerWithLimits() {
@@ -412,10 +416,6 @@ public class TorrentWorker {
         if (underPeerLimit(peerCount.get())) {
             connectionSource.getConnectionAsync(peer, torrentId);
         }
-    }
-
-    private void onPeerConnected(ConnectionKey connectionKey) {
-        addPeer(connectionKey);
     }
 
     private void onPeerDisconnected(ConnectionKey connectionKey) {

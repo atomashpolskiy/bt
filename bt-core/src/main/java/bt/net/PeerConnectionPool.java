@@ -16,24 +16,24 @@
 
 package bt.net;
 
-import bt.CountingThreadFactory;
 import bt.event.EventSink;
 import bt.metainfo.TorrentId;
+import bt.net.peer.InetPeer;
+import bt.peer.ImmutablePeer;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -78,12 +78,12 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     @Override
     public PeerConnection getConnection(Peer peer, TorrentId torrentId) {
-        return connections.get(peer, peer.getPort(), torrentId);
+        return connections.getIfPresent(peer, peer.getPort(), torrentId);
     }
 
     @Override
     public PeerConnection getConnection(ConnectionKey key) {
-        return connections.get(key);
+        return connections.getIfPresent(key);
     }
 
     @Override
@@ -113,7 +113,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 newConnection.closeQuietly();
             } else {
                 List<PeerConnection> connectionsWithSameAddress =
-                        getConnectionsForAddress(newConnection.getTorrentId(), newConnection.getRemotePeer());
+                        getConnectionsForAddress(newConnection.getTorrentId(), newConnection.getRemotePeer().getInetAddress());
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Checking duplicate connections for newly established" +
                             " connection with peer: {} (established remote port: {})." +
@@ -145,16 +145,20 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             }
             return existingConnection;
         } else {
-            eventSink.firePeerConnected(connectionKey);
+            if (!eventSink.firePeerConnected(connectionKey)) {
+                // connection failed for some reason
+                purgeConnection(newConnection);
+            }
             return newConnection;
         }
     }
 
     @Override
-    public void checkDuplicateConnections(TorrentId torrentId, Peer peer) {
+    public void checkDuplicateConnections(TorrentId torrentId, InetPeer connectedPeer) {
+        ImmutablePeer peer = ImmutablePeer.build(connectedPeer.getInetAddress(), connectedPeer.getPort());
         connectionLock.lock();
         try {
-            List<PeerConnection> connectionsWithSameAddress = getConnectionsForAddress(torrentId, peer);
+            List<PeerConnection> connectionsWithSameAddress = getConnectionsForAddress(torrentId, peer.getInetAddress());
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Checking duplicate connections for newly discovered peer: {}." +
                         " All connections:\n{}", peer, connectionsWithSameAddress.stream()
@@ -174,28 +178,34 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 }
             }
             if (outgoingConnection != null && incomingConnection != null) {
-                // always prefer to keep outgoing connections
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Closing duplicate incoming connection with {}:{}" +
-                                    " (established remote port {})",
-                            incomingConnection.getRemotePeer().getInetAddress(), outgoingConnection.getRemotePort(),
-                            incomingConnection.getRemotePort());
-                }
-                incomingConnection.closeQuietly();
+                closeDuplicateConnection(outgoingConnection, incomingConnection);
             }
         } finally {
             connectionLock.unlock();
         }
     }
 
-    private List<PeerConnection> getConnectionsForAddress(TorrentId torrentId, Peer peer) {
+    private void closeDuplicateConnection(PeerConnection outgoingConnection, PeerConnection incomingConnection) {
+        // close whichever connection which was established later, prefer outgoing connections on a tie
+        PeerConnection toClose = outgoingConnection.getEstablished().isBefore(incomingConnection.getEstablished())
+                ? incomingConnection : outgoingConnection;
+
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Closing duplicate connection with {}:{}  (established remote port {})",
+                    toClose.getRemotePeer().getInetAddress(), outgoingConnection.getRemotePort(),
+                    toClose.getRemotePort());
+        }
+        toClose.closeQuietly();
+    }
+
+    private List<PeerConnection> getConnectionsForAddress(TorrentId torrentId, InetAddress addr) {
         List<PeerConnection> connectionsWithSameAddress = new ArrayList<>();
         connections.visitConnections(torrentId, connection -> {
             if (connection.isClosed()) {
                 return;
             }
-            Peer connectionPeer = connection.getRemotePeer();
-            if (connectionPeer.getInetAddress().equals(peer.getInetAddress())) {
+            InetPeer connectionPeer = connection.getRemotePeer();
+            if (connectionPeer.getInetAddress().equals(addr)) {
                 connectionsWithSameAddress.add(connection);
             }
         });
@@ -297,11 +307,11 @@ class Connections {
         return existing;
     }
 
-    PeerConnection get(Peer peer, int remotePort, TorrentId torrentId) {
-        return get(new ConnectionKey(peer, remotePort, torrentId));
+    PeerConnection getIfPresent(Peer peer, int remotePort, TorrentId torrentId) {
+        return getIfPresent(new ConnectionKey(new InetPeer(peer), remotePort, torrentId));
     }
 
-    PeerConnection get(ConnectionKey key) {
+    PeerConnection getIfPresent(ConnectionKey key) {
         return connections.get(key);
     }
 

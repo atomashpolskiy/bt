@@ -17,16 +17,17 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.net.peer.InetPeer;
 import com.google.common.base.MoreObjects;
 
 import java.util.Objects;
 
 public class ConnectionKey {
-    private final Peer peer;
+    private final InetPeer peer;
     private final int remotePort;
     private final TorrentId torrentId;
 
-    public ConnectionKey(Peer peer, int remotePort, TorrentId torrentId) {
+    public ConnectionKey(InetPeer peer, int remotePort, TorrentId torrentId) {
         Objects.requireNonNull(peer);
         Objects.requireNonNull(torrentId);
         this.peer = peer;
@@ -34,7 +35,7 @@ public class ConnectionKey {
         this.torrentId = torrentId;
     }
 
-    public Peer getPeer() {
+    public InetPeer getPeer() {
         return peer;
     }
 

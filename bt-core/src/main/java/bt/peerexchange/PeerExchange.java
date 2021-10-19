@@ -21,6 +21,8 @@ import bt.bencoding.types.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.bencoding.types.BEString;
 import bt.net.Peer;
+import bt.peer.ImmutablePeer;
+import bt.peer.PeerOptions;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.protocol.extended.ExtendedMessage;
@@ -161,13 +163,7 @@ class PeerExchange extends ExtendedMessage {
     private static BEString encodePeerOptions(Collection<Peer> peers) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         for (Peer peer : peers) {
-            byte options = 0;
-            EncryptionPolicy encryptionPolicy = peer.getOptions().getEncryptionPolicy();
-            if (encryptionPolicy == EncryptionPolicy.PREFER_ENCRYPTED
-                    || encryptionPolicy == EncryptionPolicy.REQUIRE_ENCRYPTED) {
-                options |= CRYPTO_FLAG;
-            }
-            bos.write(options);
+            bos.write(peer.getOptions().getPExBitField());
         }
         return new BEString(bos.toByteArray());
     }
@@ -182,8 +178,8 @@ class PeerExchange extends ExtendedMessage {
             dropped = new HashSet<>();
         }
 
-        public Builder added(Peer peer) {
-            added.add(peer);
+        public Builder added(Peer peer, PeerOptions updatedPeerOpts) {
+            added.add(ImmutablePeer.builder(peer.getInetAddress(), peer.getPort()).options(updatedPeerOpts).build());
             dropped.remove(peer);
             return this;
         }

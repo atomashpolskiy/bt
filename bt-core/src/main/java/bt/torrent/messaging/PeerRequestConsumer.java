@@ -18,7 +18,7 @@ package bt.torrent.messaging;
 
 import bt.BtException;
 import bt.metainfo.TorrentId;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.Piece;
@@ -47,12 +47,10 @@ public class PeerRequestConsumer {
 
     private final TorrentId torrentId;
     private final DataWorker dataWorker;
-    private final Map<Peer, Queue<BlockRead>> completedRequests;
 
     public PeerRequestConsumer(TorrentId torrentId, DataWorker dataWorker) {
         this.torrentId = torrentId;
         this.dataWorker = dataWorker;
-        this.completedRequests = new ConcurrentHashMap<>();
     }
 
     @Consumes
@@ -67,32 +65,21 @@ public class PeerRequestConsumer {
                 } else if (block.isRejected()) {
                     LOGGER.warn("Failed to perform request to read block: rejected by I/O worker");
                 } else {
-                    getCompletedRequestsForPeer(context.getPeer()).add(block);
+                    PeerRequestState state = context.getConnectionState().getOrBuildExtensionState(PeerRequestState.class);
+                    state.getReadQueue().add(block);
                 }
             });
         }
     }
 
-    private CompletableFuture<BlockRead> addBlockRequest(Peer peer, Request request) {
+    private CompletableFuture<BlockRead> addBlockRequest(InetPeer peer, Request request) {
         return dataWorker.addBlockRequest(torrentId, peer, request.getPieceIndex(), request.getOffset(), request.getLength());
-    }
-
-    private Queue<BlockRead> getCompletedRequestsForPeer(Peer peer) {
-        Queue<BlockRead> queue = completedRequests.get(peer);
-        if (queue == null) {
-            queue = new ConcurrentLinkedQueue<>();
-            Queue<BlockRead> existing = completedRequests.putIfAbsent(peer, queue);
-            if (existing != null) {
-                queue = existing;
-            }
-        }
-        return queue;
     }
 
     @Produces
     public void produce(Consumer<Message> messageConsumer, MessageContext context) {
-        Peer peer = context.getPeer();
-        Queue<BlockRead> queue = getCompletedRequestsForPeer(peer);
+        PeerRequestState state = context.getConnectionState().getOrBuildExtensionState(PeerRequestState.class);
+        Queue<BlockRead> queue = state.getReadQueue();
         BlockRead block;
         while ((block = queue.poll()) != null) {
             try {
@@ -101,6 +88,14 @@ public class PeerRequestConsumer {
             } catch (InvalidMessageException e) {
                 throw new BtException("Failed to send PIECE", e);
             }
+        }
+    }
+
+    public static class PeerRequestState implements ExtensionConnectionState {
+        private final Queue<BlockRead> readQueue = new ConcurrentLinkedQueue<>();
+
+        public Queue<BlockRead> getReadQueue() {
+            return readQueue;
         }
     }
 }

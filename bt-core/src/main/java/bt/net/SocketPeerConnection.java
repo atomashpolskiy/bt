@@ -17,6 +17,7 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.net.peer.InetPeer;
 import bt.net.pipeline.ChannelHandler;
 import bt.protocol.Message;
 import com.google.common.base.MoreObjects;
@@ -24,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -40,21 +42,26 @@ public class SocketPeerConnection implements PeerConnection {
     private static final long WAIT_BETWEEN_READS = 100L;
 
     private final AtomicReference<TorrentId> torrentId;
-    private final Peer remotePeer;
+    private final InetPeer remotePeer;
     private final int remotePort;
+    private final boolean incoming;
 
     private final ChannelHandler handler;
 
+    private final Instant establishedTimestamp;
     private final AtomicLong lastActive;
 
     private final ReentrantLock readLock;
     private final Condition condition;
 
-    SocketPeerConnection(Peer remotePeer, int remotePort, ChannelHandler handler) {
+    SocketPeerConnection(InetPeer remotePeer, int remotePort, boolean incoming,
+                         ChannelHandler handler, Instant establishedTimestamp) {
         this.torrentId = new AtomicReference<>();
         this.remotePeer = remotePeer;
         this.remotePort = remotePort;
+        this.incoming = incoming;
         this.handler = handler;
+        this.establishedTimestamp = establishedTimestamp;
         this.lastActive = new AtomicLong();
         this.readLock = new ReentrantLock(true);
         this.condition = this.readLock.newCondition();
@@ -69,8 +76,7 @@ public class SocketPeerConnection implements PeerConnection {
     }
 
     @Override
-    public TorrentId getTorrentId() {
-        return torrentId.get();
+    public TorrentId getTorrentId() { return torrentId.get();
     }
 
     @Override
@@ -139,13 +145,18 @@ public class SocketPeerConnection implements PeerConnection {
     }
 
     @Override
-    public Peer getRemotePeer() {
+    public InetPeer getRemotePeer() {
         return remotePeer;
     }
 
     @Override
     public int getRemotePort() {
         return remotePort;
+    }
+
+    @Override
+    public boolean isIncoming() {
+        return incoming;
     }
 
     @Override
@@ -170,6 +181,11 @@ public class SocketPeerConnection implements PeerConnection {
     @Override
     public boolean isClosed() {
         return handler.isClosed();
+    }
+
+    @Override
+    public Instant getEstablished() {
+        return establishedTimestamp;
     }
 
     @Override

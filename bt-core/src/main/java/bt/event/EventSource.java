@@ -19,6 +19,7 @@ package bt.event;
 import bt.metainfo.TorrentId;
 
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * Provides API for hooking into the stream of runtime events.
@@ -35,11 +36,26 @@ public interface EventSource {
     EventSource onPeerDiscovered(TorrentId torrentId, Consumer<PeerDiscoveredEvent> listener);
 
     /**
-     * Fired, when a new connection with some peer has been established.
+     * Fired, when a new peer has been discovered for some torrent.
      *
      * @since 1.5
+     * @deprecated
      */
-    EventSource onPeerConnected(TorrentId torrentId, Consumer<PeerConnectedEvent> listener);
+    default EventSource onPeerConnected(TorrentId torrentId, Consumer<PeerConnectedEvent> listener) {
+        return onPeerConnected(torrentId, pe -> {
+            listener.accept(pe);
+            return true;
+        });
+    }
+
+    /**
+     * Fired, when a new connection with some peer has been established.
+     *
+     * @param torrentId the torrent id to connect this listener to, or null if it should be run on all torrents
+     * @param listener the listener to run. Returns true if peer was connected successfully, false on error
+     * @since 1.10
+     */
+    EventSource onPeerConnected(TorrentId torrentId, Predicate<PeerConnectedEvent> listener);
 
     /**
      * Fired, when a connection with some peer has been terminated.

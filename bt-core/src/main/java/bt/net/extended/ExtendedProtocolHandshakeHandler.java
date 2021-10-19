@@ -34,9 +34,7 @@ import java.io.IOException;
  */
 public class ExtendedProtocolHandshakeHandler implements HandshakeHandler {
 
-    private static final int EXTENDED_FLAG_BIT_INDEX = 43;
-
-    private IExtendedHandshakeFactory extendedHandshakeFactory;
+    private final IExtendedHandshakeFactory extendedHandshakeFactory;
 
     @Inject
     public ExtendedProtocolHandshakeHandler(IExtendedHandshakeFactory extendedHandshakeFactory) {
@@ -45,14 +43,17 @@ public class ExtendedProtocolHandshakeHandler implements HandshakeHandler {
 
     @Override
     public void processIncomingHandshake(PeerConnection connection, Handshake peerHandshake) {
-        ExtendedHandshake extendedHandshake = getHandshake(peerHandshake.getTorrentId());
-        // do not send the extended handshake
-        // if local client does not have any extensions turned on
-        if (!extendedHandshake.getData().isEmpty()) {
-            try {
-                connection.postMessage(extendedHandshake);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to send extended handshake to peer: " + connection.getRemotePeer(), e);
+        connection.getRemotePeer().setPeerId(peerHandshake.getPeerId());
+        if (peerHandshake.supportsExtensionProtocol()) {
+            // do not send the extended handshake
+            // if local client does not have any extensions turned on
+            ExtendedHandshake extendedHandshake = getHandshake(peerHandshake.getTorrentId());
+            if (!extendedHandshake.getData().isEmpty()) {
+                try {
+                    connection.postMessage(extendedHandshake);
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to send extended handshake to peer: " + connection.getRemotePeer(), e);
+                }
             }
         }
     }
@@ -63,7 +64,7 @@ public class ExtendedProtocolHandshakeHandler implements HandshakeHandler {
         // do not advertise support for the extended protocol
         // if local client does not have any extensions turned on
         if (!extendedHandshake.getData().isEmpty()) {
-            handshake.setReservedBit(EXTENDED_FLAG_BIT_INDEX);
+            handshake.setSupportsExtensionProtocol();
         }
     }
 

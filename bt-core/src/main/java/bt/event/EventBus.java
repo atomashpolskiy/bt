@@ -29,6 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * Basic implementation of event bus, that connects event producers and listeners.
@@ -39,9 +41,9 @@ import java.util.function.Consumer;
 public class EventBus implements EventSink, EventSource {
     private static final Logger LOGGER = LoggerFactory.getLogger(EventBus.class);
 
-    private final ConcurrentMap<Class<? extends BaseEvent>, Collection<Consumer<? extends BaseEvent>>> listeners;
+    private final ConcurrentMap<Class<? extends BaseEvent>, Collection<Predicate<? extends BaseEvent>>> listeners;
 
-    private final ConcurrentMap<TorrentId, ConcurrentMap<Class<? extends BaseEvent>, Collection<Consumer<? extends BaseEvent>>>> listenersOnTorrent;
+    private final ConcurrentMap<TorrentId, ConcurrentMap<Class<? extends BaseEvent>, Collection<Predicate<? extends BaseEvent>>>> listenersOnTorrent;
 
     private final ReentrantReadWriteLock eventLock;
 
@@ -63,12 +65,13 @@ public class EventBus implements EventSink, EventSource {
     }
 
     @Override
-    public synchronized void firePeerConnected(ConnectionKey connectionKey) {
+    public synchronized boolean firePeerConnected(ConnectionKey connectionKey) {
         long timestamp = System.currentTimeMillis();
         if (hasListeners(PeerConnectedEvent.class, connectionKey.getTorrentId())) {
             long id = nextId();
-            fireEvent(new PeerConnectedEvent(id, timestamp, connectionKey), connectionKey.getTorrentId());
+            return fireEvent(new PeerConnectedEvent(id, timestamp, connectionKey), connectionKey.getTorrentId());
         }
+        return true;
     }
 
     @Override
@@ -129,7 +132,7 @@ public class EventBus implements EventSink, EventSource {
     }
 
     private boolean hasListeners(Class<? extends BaseEvent> eventType, TorrentId torrentId) {
-        Collection<Consumer<? extends BaseEvent>> listeners = this.listeners.get(eventType);
+        Collection<Predicate<? extends BaseEvent>> listeners = this.listeners.get(eventType);
         if (listeners != null && !listeners.isEmpty()) {
             return true;
         }
@@ -138,7 +141,7 @@ public class EventBus implements EventSink, EventSource {
             return false;
         }
 
-        ConcurrentMap<Class<? extends BaseEvent>, Collection<Consumer<? extends BaseEvent>>> map = this.listenersOnTorrent.get(torrentId);
+        ConcurrentMap<Class<? extends BaseEvent>, Collection<Predicate<? extends BaseEvent>>> map = this.listenersOnTorrent.get(torrentId);
         if (map == null) {
             return false;
         }
@@ -151,35 +154,38 @@ public class EventBus implements EventSink, EventSource {
         return ++idSequence;
     }
 
-    private <E extends BaseEvent> void fireEvent(E event, TorrentId torrentId) {
+    private <E extends BaseEvent> boolean fireEvent(E event, TorrentId torrentId) {
         eventLock.readLock().lock();
         try {
-            Collection<Consumer<? extends BaseEvent>> listeners = this.listeners.get(event.getClass());
-            doFireEvent(event, listeners, "Firing event: {}. General Listeners count: {}");
+            Collection<Predicate<? extends BaseEvent>> listeners = this.listeners.get(event.getClass());
+            boolean ret = doFireEvent(event, listeners, "Firing event: {}. General Listeners count: {}");
             if (torrentId != null) {
-                ConcurrentMap<Class<? extends BaseEvent>, Collection<Consumer<? extends BaseEvent>>> map = this.listenersOnTorrent.get(torrentId);
+                ConcurrentMap<Class<? extends BaseEvent>, Collection<Predicate<? extends BaseEvent>>> map = this.listenersOnTorrent.get(torrentId);
                 if (map != null) {
                     listeners = map.get(event.getClass());
-                    doFireEvent(event, listeners, "Firing event: {}. Torrent Listeners count: {}");
+                    ret &= doFireEvent(event, listeners, "Firing event: {}. Torrent Listeners count: {}");
                 }
             }
+            return ret;
         } finally {
             eventLock.readLock().unlock();
         }
     }
 
-    private <E extends BaseEvent> void doFireEvent(E event, Collection<Consumer<? extends BaseEvent>> listeners, String s) {
+    private <E extends BaseEvent> boolean doFireEvent(E event, Collection<Predicate<? extends BaseEvent>> listeners, String s) {
         if (LOGGER.isTraceEnabled()) {
             int count = (listeners == null) ? 0 : listeners.size();
             LOGGER.trace(s, event, count);
         }
+        boolean ret = true;
         if (listeners != null && !listeners.isEmpty()) {
-            for (Consumer<? extends BaseEvent> listener : listeners) {
+            for (Predicate<? extends BaseEvent> listener : listeners) {
                 @SuppressWarnings("unchecked")
-                Consumer<E> _listener = (Consumer<E>) listener;
-                _listener.accept(event);
+                Predicate<E> _listener = (Predicate<E>) listener;
+                ret &= _listener.test(event);
             }
         }
+        return ret;
     }
 
     @Override
@@ -189,7 +195,7 @@ public class EventBus implements EventSink, EventSource {
     }
 
     @Override
-    public EventSource onPeerConnected(TorrentId torrentId, Consumer<PeerConnectedEvent> listener) {
+    public EventSource onPeerConnected(TorrentId torrentId, Predicate<PeerConnectedEvent> listener) {
         addListener(PeerConnectedEvent.class, torrentId, listener);
         return this;
     }
@@ -231,7 +237,14 @@ public class EventBus implements EventSink, EventSource {
     }
 
     private <E extends BaseEvent> void addListener(Class<E> eventType, TorrentId torrentId, Consumer<E> listener) {
-        Collection<Consumer<? extends BaseEvent>> listeners;
+        addListener(eventType, torrentId, (e) -> {
+            listener.accept(e);
+            return true;
+        });
+    }
+
+    private <E extends BaseEvent> void addListener(Class<E> eventType, TorrentId torrentId, Predicate<E> listener) {
+        Collection<Predicate<? extends BaseEvent>> listeners;
         if (torrentId == null) {
             listeners = this.listeners.computeIfAbsent(eventType, key -> ConcurrentHashMap.newKeySet());
         } else {
@@ -241,11 +254,12 @@ public class EventBus implements EventSink, EventSource {
 
         eventLock.writeLock().lock();
         try {
-            Consumer<E> safeListener = event -> {
+            Predicate<E> safeListener = event -> {
                 try {
-                    listener.accept(event);
+                    return listener.test(event);
                 } catch (Exception ex) {
                     LOGGER.error("Listener invocation failed", ex);
+                    return false;
                 }
             };
             listeners.add(safeListener);

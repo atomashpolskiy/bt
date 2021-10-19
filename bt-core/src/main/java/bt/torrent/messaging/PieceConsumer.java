@@ -18,7 +18,7 @@ package bt.torrent.messaging;
 
 import bt.event.EventSink;
 import bt.metainfo.TorrentId;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.net.buffer.BufferedData;
 import bt.net.pipeline.IBufferedPieceRegistry;
 import bt.protocol.Have;
@@ -69,7 +69,7 @@ public class PieceConsumer {
 
     @Consumes
     public void consume(Piece piece, MessageContext context) {
-        Peer peer = context.getPeer();
+        InetPeer peer = context.getPeer();
         ConnectionState connectionState = context.getConnectionState();
 
         // check that this block was requested in the first place
@@ -87,9 +87,9 @@ public class PieceConsumer {
             if (LOGGER.isTraceEnabled()) {
                 LOGGER.trace(
                         "Discarding received block because the chunk is already complete and/or verified: " +
-                        "piece index {" + piece.getPieceIndex() + "}, " +
-                        "offset {" + piece.getOffset() + "}, " +
-                        "length {" + piece.getLength() + "}");
+                        "piece index \\{" + piece.getPieceIndex() + "}, " +
+                        "offset \\{" + piece.getOffset() + "}, " +
+                        "length \\{" + piece.getLength() + "}");
             }
             return;
         }
@@ -141,7 +141,7 @@ public class PieceConsumer {
         return connectionState.getPendingRequests().remove(key);
     }
 
-    private /*nullable*/CompletableFuture<BlockWrite> addBlock(Peer peer, ConnectionState connectionState, Piece piece) {
+    private /*nullable*/CompletableFuture<BlockWrite> addBlock(InetPeer peer, ConnectionState connectionState, Piece piece) {
         int pieceIndex = piece.getPieceIndex(),
                 offset = piece.getOffset(),
                 blockLength = piece.getLength();

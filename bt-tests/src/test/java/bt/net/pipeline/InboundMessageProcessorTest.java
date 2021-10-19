@@ -17,9 +17,10 @@
 package bt.net.pipeline;
 
 import bt.metainfo.TorrentId;
-import bt.net.InetPeer;
+import bt.net.peer.InetPeer;
 import bt.net.PeerId;
 import bt.net.buffer.BufferedData;
+import bt.peer.ImmutablePeer;
 import bt.protocol.*;
 import bt.protocol.handler.MessageHandler;
 import bt.test.protocol.ProtocolTest;
@@ -42,7 +43,7 @@ public class InboundMessageProcessorTest {
 
     public void setUp(int bufferSize) {
         this.buffer = ByteBuffer.allocate(bufferSize);
-        InetPeer peer = InetPeer.build(InetAddress.getLoopbackAddress(), 9999);
+        InetPeer peer = new InetPeer(ImmutablePeer.build(InetAddress.getLoopbackAddress(), 9999));
         this.encodingContext = new EncodingContext(peer);
         this.protocol = ProtocolTest.forBittorrentProtocol().build().getProtocol();
         MessageDeserializer deserializer = new MessageDeserializer(peer, protocol);

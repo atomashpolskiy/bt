@@ -19,7 +19,7 @@ package bt.net.crypto;
 import bt.metainfo.TorrentId;
 import bt.net.BigIntegers;
 import bt.net.ByteChannelReader;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.net.buffer.DelegatingByteBufferView;
 import bt.protocol.DecodingContext;
 import bt.protocol.Handshake;
@@ -121,7 +121,8 @@ public class MSEHandshakeProcessor {
         this.protocol = protocol;
     }
 
-    public Optional<MSECipher> negotiateOutgoing(Peer peer, ByteChannel channel, TorrentId torrentId, ByteBuffer in, ByteBuffer out) throws IOException {
+    public Optional<MSECipher> negotiateOutgoing(InetPeer peer, ByteChannel channel,
+                                                 TorrentId torrentId, ByteBuffer in, ByteBuffer out) throws IOException {
         if (mseDisabled) {
             return Optional.empty();
         }
@@ -291,7 +292,8 @@ public class MSEHandshakeProcessor {
         }
     }
 
-    public Optional<MSECipher> negotiateIncoming(Peer peer, ByteChannel channel, ByteBuffer in, ByteBuffer out) throws IOException {
+    public Optional<MSECipher> negotiateIncoming(InetPeer peer, ByteChannel channel,
+                                                 ByteBuffer in, ByteBuffer out) throws IOException {
         if (mseDisabled) {
             return Optional.empty();
         }

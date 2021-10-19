@@ -16,7 +16,7 @@
 
 package bt.net.pipeline;
 
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.net.buffer.BorrowedBuffer;
 import bt.net.buffer.BufferMutator;
 import bt.net.buffer.IBufferManager;
@@ -41,11 +41,11 @@ public class ChannelPipelineFactory implements IChannelPipelineFactory {
     }
 
     @Override
-    public ChannelPipelineBuilder buildPipeline(Peer peer) {
+    public ChannelPipelineBuilder buildPipeline(InetPeer peer) {
         return new ChannelPipelineBuilder(peer) {
             @Override
             protected ChannelPipeline doBuild(
-                    Peer peer,
+                    InetPeer peer,
                     ByteChannel channel,
                     MessageHandler<Message> protocol,
                     Optional<BorrowedBuffer<ByteBuffer>> inboundBuffer,

@@ -16,7 +16,7 @@
 
 package bt.net.pipeline;
 
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.net.buffer.BorrowedBuffer;
 import bt.net.buffer.BufferMutator;
 import bt.protocol.Message;
@@ -38,7 +38,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private DefaultChannelHandlerContext context;
 
     public DefaultChannelPipeline(
-            Peer peer,
+            InetPeer peer,
             MessageHandler<Message> protocol,
             BorrowedBuffer<ByteBuffer> inboundBuffer,
             BorrowedBuffer<ByteBuffer> outboundBuffer,

@@ -16,7 +16,7 @@
 
 package bt.net.pipeline;
 
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 
 /**
  * @since 1.6
@@ -27,6 +27,7 @@ public interface IChannelPipelineFactory {
      * Start building a pipeline for the given peer.
      *
      * @since 1.6
+     * @param peer
      */
-    ChannelPipelineBuilder buildPipeline(Peer peer);
+    ChannelPipelineBuilder buildPipeline(InetPeer peer);
 }

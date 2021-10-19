@@ -19,7 +19,7 @@ package bt.torrent.messaging;
 import bt.BtException;
 import bt.data.ChunkDescriptor;
 import bt.data.DataDescriptor;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.protocol.Cancel;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
@@ -57,7 +57,7 @@ public class RequestProducer {
     @Produces
     public void produce(Consumer<Message> messageConsumer, MessageContext context) {
 
-        Peer peer = context.getPeer();
+        InetPeer peer = context.getPeer();
         ConnectionState connectionState = context.getConnectionState();
 
         if (!connectionState.getCurrentAssignment().isPresent()) {

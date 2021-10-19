@@ -19,6 +19,7 @@ package bt.it.fixture;
 import bt.metainfo.TorrentId;
 import bt.net.Peer;
 import bt.peer.IPeerRegistry;
+import bt.peer.ImmutablePeer;
 import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
 import bt.tracker.Tracker;
@@ -190,7 +191,8 @@ public class SharedTrackerModule implements Module {
                     }
                 }
             }
-            return peerRegistry.getLocalPeer();
+            return ImmutablePeer.build(peerRegistry.getLocalPeer().getInetAddress(),
+                    peerRegistry.getLocalPeer().getPort());
         }
 
         @Override
@@ -206,8 +208,8 @@ public class SharedTrackerModule implements Module {
 
     private static class KnownPeersService {
 
-        private ConcurrentMap<String, Set<Peer>> knownPeers;
-        private ReentrantReadWriteLock lock;
+        private final ConcurrentMap<String, Set<Peer>> knownPeers;
+        private final ReentrantReadWriteLock lock;
 
         KnownPeersService() {
             knownPeers = new ConcurrentHashMap<>();

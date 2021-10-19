@@ -18,6 +18,7 @@ package bt.protocol.extended;
 
 import bt.bencoding.types.BEInteger;
 import bt.bencoding.types.BEString;
+import bt.event.EventSource;
 import bt.metainfo.TorrentId;
 import bt.protocol.IExtendedHandshakeFactory;
 import bt.protocol.crypto.EncryptionPolicy;
@@ -28,7 +29,6 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -58,25 +58,22 @@ public class ExtendedHandshakeFactory implements IExtendedHandshakeFactory {
     public ExtendedHandshakeFactory(TorrentRegistry torrentRegistry,
                                     ExtendedMessageTypeMapping messageTypeMapping,
                                     ApplicationService applicationService,
-                                    Config config) {
+                                    Config config,
+                                    EventSource eventSource) {
         this.torrentRegistry = torrentRegistry;
         this.messageTypeMapping = messageTypeMapping;
         this.applicationService = applicationService;
         this.encryptionPolicy = config.getEncryptionPolicy();
         this.tcpAcceptorPort = config.getAcceptorPort();
         this.extendedHandshakes = new ConcurrentHashMap<>();
+
+        // don't leak memory if a torrent is stopped.
+        eventSource.onTorrentStopped(null, torrentStoppedEvent -> extendedHandshakes.remove(torrentStoppedEvent.getTorrentId()));
     }
 
     @Override
     public ExtendedHandshake getHandshake(TorrentId torrentId) {
-        ExtendedHandshake handshake = extendedHandshakes.get(torrentId);
-        if (handshake == null) {
-            handshake = buildHandshake(torrentId);
-            ExtendedHandshake existing = extendedHandshakes.putIfAbsent(torrentId, handshake);
-            if (existing != null) {
-                handshake = existing;
-            }
-        }
+        ExtendedHandshake handshake = extendedHandshakes.computeIfAbsent(torrentId, this::buildHandshake);
         return handshake;
     }
 

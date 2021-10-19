@@ -19,7 +19,7 @@ package bt.event;
 import bt.data.Bitfield;
 import bt.metainfo.TorrentId;
 import bt.net.ConnectionKey;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 
 /**
  * Indicates, that local information about some peer's data has been updated.
@@ -46,7 +46,7 @@ public class PeerBitfieldUpdatedEvent extends BaseEvent implements TorrentEvent 
     /**
      * @since 1.5
      */
-    public Peer getPeer() {
+    public InetPeer getPeer() {
         return connectionKey.getPeer();
     }
 

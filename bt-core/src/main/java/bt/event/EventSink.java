@@ -39,9 +39,11 @@ public interface EventSink {
     /**
      * Generate event, that a new connection with some peer has been established.
      *
+     * @param connectionKey the connection key
+     * @return true if the peer was successfully connected. False otherwise.
      * @since 1.9
      */
-    void firePeerConnected(ConnectionKey connectionKey);
+    boolean firePeerConnected(ConnectionKey connectionKey);
 
     /**
      * Generate event, that a connection with some peer has been terminated.

@@ -16,7 +16,7 @@
 
 package bt.net.pipeline;
 
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.protocol.EncodingContext;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
@@ -31,7 +31,7 @@ class MessageSerializer {
     private final EncodingContext context;
     private final MessageHandler<Message> protocol;
 
-    public MessageSerializer(Peer peer,
+    public MessageSerializer(InetPeer peer,
                              MessageHandler<Message> protocol) {
         this.context = new EncodingContext(peer);
         this.protocol = protocol;

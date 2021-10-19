@@ -22,6 +22,7 @@ import bt.net.buffer.BorrowedBuffer;
 import bt.net.buffer.IBufferManager;
 import bt.net.crypto.CipherBufferMutator;
 import bt.net.crypto.MSEHandshakeProcessor;
+import bt.net.peer.InetPeer;
 import bt.net.pipeline.ChannelHandler;
 import bt.net.pipeline.ChannelPipeline;
 import bt.net.pipeline.ChannelPipelineBuilder;
@@ -43,6 +44,7 @@ import java.nio.channels.ByteChannel;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -85,7 +87,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
     }
 
     @Override
-    public ConnectionResult createOutgoingConnection(Peer peer, TorrentId torrentId) {
+    public ConnectionResult createOutgoingConnection(InetPeer peer, TorrentId torrentId) {
         Objects.requireNonNull(peer);
         Objects.requireNonNull(torrentId);
 
@@ -103,7 +105,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
             return ConnectionResult.failure("I/O error", e);
         }
 
-        return createConnection(peer, torrentId, channel, false);
+        return createConnection(peer, torrentId, channel, false, Instant.now());
     }
 
     private SocketChannel getChannel(InetAddress inetAddress, int port) throws IOException {
@@ -117,19 +119,21 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
     }
 
     @Override
-    public ConnectionResult createIncomingConnection(Peer peer, SocketChannel channel) {
-        return createConnection(peer, null, channel, true);
+    public ConnectionResult createIncomingConnection(InetPeer peer, SocketChannel channel, Instant establishedTimestamp) {
+        return createConnection(peer, null, channel, true, establishedTimestamp);
     }
 
-    private ConnectionResult createConnection(Peer peer, TorrentId torrentId, SocketChannel channel, boolean incoming) {
+    private ConnectionResult createConnection(InetPeer peer, TorrentId torrentId, SocketChannel channel,
+                                              boolean incoming, Instant establishedTimestamp) {
         BorrowedBuffer<ByteBuffer> in = bufferManager.borrowByteBuffer();
         BorrowedBuffer<ByteBuffer> out = bufferManager.borrowByteBuffer();
         try {
-            return _createConnection(peer, torrentId, channel, incoming, in, out);
+            return _createConnection(peer, torrentId, channel, incoming, in, out, establishedTimestamp);
         } catch (Exception e) {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Failed to establish connection with peer: {}. Reason: {} ({})",
                         peer, e.getClass().getName(), e.getMessage());
+                LOGGER.trace("Failed to establish connection with peer {}", peer, e);
             }
             closeQuietly(channel);
             releaseBuffer(in);
@@ -139,12 +143,13 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
     }
 
     private ConnectionResult _createConnection(
-            Peer peer,
+            InetPeer peer,
             TorrentId torrentId,
             SocketChannel channel,
             boolean incoming,
             BorrowedBuffer<ByteBuffer> in,
-            BorrowedBuffer<ByteBuffer> out) throws IOException {
+            BorrowedBuffer<ByteBuffer> out,
+            Instant establishedTimestamp) throws IOException {
 
         // sanity check
         if (!incoming && torrentId == null) {
@@ -162,6 +167,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
             } else {
                 cipherOptional = cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId, inBuffer, outBuffer);
             }
+            peer.prefersEncryption(cipherOptional.isPresent());
         } finally {
             in.unlock();
             out.unlock();
@@ -172,7 +178,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
         channelHandler.register();
 
         int remotePort = ((InetSocketAddress) channel.getRemoteAddress()).getPort();
-        PeerConnection connection = new SocketPeerConnection(peer, remotePort, channelHandler);
+        PeerConnection connection = new SocketPeerConnection(peer, remotePort, incoming, channelHandler, establishedTimestamp);
         ConnectionHandler connectionHandler;
         if (incoming) {
             connectionHandler = connectionHandlerFactory.getIncomingHandler();
@@ -195,7 +201,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
     }
 
     private ChannelPipeline createPipeline(
-            Peer peer,
+            InetPeer peer,
             ByteChannel channel,
             BorrowedBuffer<ByteBuffer> in,
             BorrowedBuffer<ByteBuffer> out,

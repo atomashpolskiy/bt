@@ -17,6 +17,7 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.net.peer.InetPeer;
 import bt.protocol.Handshake;
 import bt.protocol.IHandshakeFactory;
 import bt.protocol.Message;
@@ -54,7 +55,7 @@ class IncomingHandshakeHandler implements ConnectionHandler {
 
     @Override
     public boolean handleConnection(PeerConnection connection) {
-        Peer peer = connection.getRemotePeer();
+        InetPeer peer = connection.getRemotePeer();
         Message firstMessage = null;
         try {
             firstMessage = connection.readMessage(handshakeTimeout.toMillis());

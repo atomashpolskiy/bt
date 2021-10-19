@@ -17,10 +17,12 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.net.peer.InetPeer;
 import bt.protocol.Message;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.time.Instant;
 
 /**
  * Connection with a remote peer.
@@ -33,7 +35,7 @@ public interface PeerConnection extends Closeable {
      * @return Remote peer
      * @since 1.0
      */
-    Peer getRemotePeer();
+    InetPeer getRemotePeer();
 
     /**
      * @since 1.9
@@ -89,6 +91,14 @@ public interface PeerConnection extends Closeable {
     void postMessage(Message message) throws IOException;
 
     /**
+     * Returns when this connection was established
+     *
+     * @return when this connection was established
+     * @since 1.10
+     */
+    Instant getEstablished();
+
+    /**
      * @return Last time a message was received or sent via this connection
      * @since 1.0
      */
@@ -106,4 +116,12 @@ public interface PeerConnection extends Closeable {
      * @since 1.0
      */
     boolean isClosed();
+
+    /**
+     * Check whether this connection is an incoming connection or outgoing connection
+     *
+     * @return true if and only if this connection is an incoming connection
+     * @since 1.10
+     */
+    boolean isIncoming();
 }

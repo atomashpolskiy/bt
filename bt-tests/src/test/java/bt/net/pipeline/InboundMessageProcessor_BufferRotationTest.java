@@ -16,9 +16,10 @@
 
 package bt.net.pipeline;
 
-import bt.net.InetPeer;
+import bt.net.peer.InetPeer;
 import bt.net.ReadByBlockChannel;
 import bt.net.buffer.BufferedData;
+import bt.peer.ImmutablePeer;
 import bt.protocol.EncodingContext;
 import bt.protocol.Message;
 import bt.protocol.Piece;
@@ -55,7 +56,7 @@ public class InboundMessageProcessor_BufferRotationTest {
     @Before
     public void setUp() {
         this.buffer = ByteBuffer.allocate(BUFFER_LENGTH);
-        InetPeer peer = InetPeer.build(InetAddress.getLoopbackAddress(), 9999);
+        InetPeer peer = new InetPeer(ImmutablePeer.build(InetAddress.getLoopbackAddress(), 9999));
         this.encodingContext = new EncodingContext(peer);
         this.protocol = ProtocolTest.forBittorrentProtocol().build().getProtocol();
         MessageDeserializer deserializer = new MessageDeserializer(peer, protocol);

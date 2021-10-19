@@ -18,7 +18,7 @@ package bt.net.extended;
 
 import bt.bencoding.types.BEInteger;
 import bt.net.IPeerConnectionPool;
-import bt.net.InetPeer;
+import bt.net.peer.InetPeer;
 import bt.protocol.extended.ExtendedHandshake;
 import bt.torrent.annotation.Consumes;
 import bt.torrent.messaging.MessageContext;
@@ -38,7 +38,7 @@ public class ExtendedHandshakeConsumer {
     public void consume(ExtendedHandshake message, MessageContext messageContext) {
         BEInteger peerListeningPort = message.getPort();
         if (peerListeningPort != null) {
-            InetPeer peer = (InetPeer) messageContext.getConnectionKey().getPeer();
+            InetPeer peer = messageContext.getConnectionKey().getPeer();
             int listeningPort = (Integer) peerListeningPort.getValue();
             peer.setPort(listeningPort);
             if (LOGGER.isDebugEnabled()) {

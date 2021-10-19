@@ -35,16 +35,7 @@ public interface Peer {
     InetAddress getInetAddress();
 
     /**
-     * @return true, if the peer's listening port is not known yet
-     * @see #getPort()
-     * @since 1.9
-     */
-    boolean isPortUnknown();
-
-    /**
-     * @return Peer's listening port or {@link InetPeer#UNKNOWN_PORT}, if it's not known yet
-     *         (e.g. when the connection is incoming and the remote side hasn't
-     *         yet communicated to us its' listening port via extended handshake)
+     * @return Peer's remote listening port
      * @since 1.0
      */
     int getPort();

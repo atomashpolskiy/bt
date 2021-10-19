@@ -17,6 +17,7 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.net.peer.InetPeer;
 
 import java.util.function.Consumer;
 
@@ -30,7 +31,9 @@ public interface IPeerConnectionPool {
     /**
      * @return Connection for given peer and torrent, if exists; null otherwise
      * @since 1.7
+     * @deprecated Use {@link #getConnection(ConnectionKey)} instead
      */
+    @Deprecated
     PeerConnection getConnection(Peer peer, TorrentId torrentId);
 
     /**
@@ -61,5 +64,5 @@ public interface IPeerConnectionPool {
     /**
      * @since 1.9
      */
-    void checkDuplicateConnections(TorrentId torrentId, Peer peer);
+    void checkDuplicateConnections(TorrentId torrentId, InetPeer peer);
 }

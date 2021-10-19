@@ -17,6 +17,7 @@
 package bt.net;
 
 import java.net.SocketAddress;
+import java.time.Instant;
 
 /**
  * Encapsulates a procedure for establishing the connection.
@@ -43,4 +44,11 @@ public interface ConnectionRoutine {
      * @since 1.6
      */
     void cancel();
+
+    /**
+     * Get when this connection was established
+     *
+     * @return when this connection was established
+     */
+    Instant getConnectionEstablishedTimestamp();
 }

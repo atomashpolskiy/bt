@@ -20,6 +20,8 @@ import bt.protocol.Cancel;
 import bt.protocol.Request;
 import bt.torrent.data.BlockWrite;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,6 +30,8 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -48,13 +52,15 @@ public class ConnectionState {
     private Optional<Boolean> shouldChoke;
     private long lastChoked;
 
-    private Set<Object> cancelledPeerRequests;
-    private Set<Object> pendingRequests;
-    private Map<Object, CompletableFuture<BlockWrite>> pendingWrites;
+    private final Set<Object> cancelledPeerRequests;
+    private final Set<Object> pendingRequests;
+    private final Map<Object, CompletableFuture<BlockWrite>> pendingWrites;
 
-    private Set<Integer> enqueuedPieces;
-    private Queue<Request> requestQueue;
+    private final Set<Integer> enqueuedPieces;
+    private final Queue<Request> requestQueue;
     private Optional<Assignment> assignment;
+
+    private final ConcurrentMap<Class<? extends ExtensionConnectionState>, Object> extensionMap;
 
     ConnectionState() {
         this.choking = true;
@@ -68,6 +74,7 @@ public class ConnectionState {
         this.requestQueue = new ArrayDeque<>();
 
         this.assignment = Optional.empty();
+        this.extensionMap = new ConcurrentHashMap<>();
     }
 
     /**
@@ -242,6 +249,23 @@ public class ConnectionState {
      */
     public Map<Object, CompletableFuture<BlockWrite>> getPendingWrites() {
         return pendingWrites;
+    }
+
+    /**
+     * Get the state for the passed in extension
+     */
+    public <T extends ExtensionConnectionState> T getOrBuildExtensionState(Class<T> extensionClass) {
+        @SuppressWarnings("unchecked")
+        T ret = (T) extensionMap.computeIfAbsent(extensionClass, k -> {
+            try {
+                final Constructor<T> constructor = extensionClass.getDeclaredConstructor();
+                return constructor.newInstance();
+            } catch (NoSuchMethodException | SecurityException | InstantiationException |
+                    IllegalAccessException | InvocationTargetException ex) {
+                throw new IllegalArgumentException(extensionClass + "must have a working default constructor", ex);
+            }
+        });
+        return ret;
     }
 
     /**************************************************/

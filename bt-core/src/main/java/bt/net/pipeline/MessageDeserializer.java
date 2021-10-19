@@ -17,7 +17,7 @@
 package bt.net.pipeline;
 
 import bt.BtException;
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.net.buffer.ByteBufferView;
 import bt.protocol.DecodingContext;
 import bt.protocol.Message;
@@ -31,9 +31,9 @@ import java.util.Objects;
 class MessageDeserializer {
 
     private final MessageHandler<Message> protocol;
-    private final Peer peer;
+    private final InetPeer peer;
 
-    public MessageDeserializer(Peer peer, MessageHandler<Message> protocol) {
+    public MessageDeserializer(InetPeer peer, MessageHandler<Message> protocol) {
         this.peer = peer;
         this.protocol = protocol;
     }

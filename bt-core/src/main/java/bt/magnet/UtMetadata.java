@@ -17,6 +17,7 @@
 package bt.magnet;
 
 import bt.protocol.extended.ExtendedMessage;
+import bt.torrent.messaging.MetadataConsumer;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -68,7 +69,7 @@ public class UtMetadata extends ExtendedMessage {
         }
     }
 
-    private static final String id = "ut_metadata";
+    private static final String id = MetadataConsumer.UT_METADATA_EXTENSION;
     private static final String messageTypeField = "msg_type";
     private static final String pieceIndexField = "piece";
     private static final String totalSizeField = "total_size";

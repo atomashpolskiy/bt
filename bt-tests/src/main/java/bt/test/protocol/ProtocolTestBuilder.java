@@ -16,7 +16,7 @@
 
 package bt.test.protocol;
 
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.protocol.Bitfield;
 import bt.protocol.Cancel;
 import bt.protocol.DecodingContext;
@@ -155,7 +155,7 @@ public class ProtocolTestBuilder {
             matchers = Collections.emptyMap();
         }
         if (decodingContextSupplier == null) {
-            decodingContextSupplier = () -> new DecodingContext(mock(Peer.class));
+            decodingContextSupplier = () -> new DecodingContext(mock(InetPeer.class));
         }
         return new ProtocolTest(protocolBuilder.build(), decodingContextSupplier, matchers);
     }

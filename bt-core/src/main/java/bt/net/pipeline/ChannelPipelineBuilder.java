@@ -16,7 +16,7 @@
 
 package bt.net.pipeline;
 
-import bt.net.Peer;
+import bt.net.peer.InetPeer;
 import bt.net.buffer.BorrowedBuffer;
 import bt.net.buffer.BufferMutator;
 import bt.protocol.Message;
@@ -33,7 +33,7 @@ import java.util.Optional;
 
 public abstract class ChannelPipelineBuilder {
 
-    private final Peer peer;
+    private final InetPeer peer;
     private ByteChannel channel;
     private MessageHandler<Message> protocol;
     private BorrowedBuffer<ByteBuffer> inboundBuffer;
@@ -41,7 +41,7 @@ public abstract class ChannelPipelineBuilder {
     private List<BufferMutator> decoders;
     private List<BufferMutator> encoders;
 
-    ChannelPipelineBuilder(Peer peer) {
+    ChannelPipelineBuilder(InetPeer peer) {
         this.peer = Objects.requireNonNull(peer);
     }
 
@@ -99,7 +99,7 @@ public abstract class ChannelPipelineBuilder {
     }
 
     protected abstract ChannelPipeline doBuild(
-            Peer peer,
+            InetPeer peer,
             ByteChannel channel,
             MessageHandler<Message> protocol,
             Optional<BorrowedBuffer<ByteBuffer>> inboundBuffer,

@@ -18,7 +18,7 @@ package bt.peer.lan;
 
 import bt.BufferingMap;
 import bt.metainfo.TorrentId;
-import bt.net.InetPeer;
+import bt.peer.ImmutablePeer;
 import bt.net.Peer;
 import bt.peer.PeerSource;
 import bt.peer.PeerSourceFactory;
@@ -115,7 +115,7 @@ public class LocalServiceDiscoveryPeerSourceFactory implements PeerSourceFactory
     }
 
     private void collectPeers(SocketAddress address, AnnounceMessage message) {
-        Peer peer = InetPeer.build(((InetSocketAddress) address).getAddress(), message.getPort());
+        Peer peer = ImmutablePeer.build(((InetSocketAddress) address).getAddress(), message.getPort());
         message.getTorrentIds().forEach(id -> collectedPeers.add(id, peer));
     }
 

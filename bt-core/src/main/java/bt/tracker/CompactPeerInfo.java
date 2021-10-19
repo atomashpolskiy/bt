@@ -17,10 +17,9 @@
 package bt.tracker;
 
 import bt.BtException;
-import bt.net.InetPeer;
 import bt.net.Peer;
+import bt.peer.ImmutablePeer;
 import bt.peer.PeerOptions;
-import bt.protocol.crypto.EncryptionPolicy;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -84,7 +83,7 @@ public class CompactPeerInfo implements Iterable<Peer> {
     private final int addressLength;
 
     private final byte[] peers;
-    private final Optional<byte[]> cryptoFlags;
+    private final Optional<byte[]> peerFlags;
 
     private final List<Peer> peerList;
 
@@ -102,12 +101,11 @@ public class CompactPeerInfo implements Iterable<Peer> {
      * Create a list of peers from its' binary representation,
      * using the specified address type for decoding individual addresses.
      *
-     * @param cryptoFlags Byte array, where each byte indicates
-     *                    whether the corresponding peer from {@code peers} supports MSE:
-     *                    1 if peer supports encryption, 0 otherwise.
+     * @param peerFlags Byte array, where each byte indicates information about the peer as documented on BEP-0011 (PEx)
+     *                  See: {@link PeerOptions}
      * @since 1.2
      */
-    public CompactPeerInfo(byte[] peers, AddressType addressType, byte[] cryptoFlags) {
+    public CompactPeerInfo(byte[] peers, AddressType addressType, byte[] peerFlags) {
         Objects.requireNonNull(peers);
         Objects.requireNonNull(addressType);
 
@@ -117,13 +115,13 @@ public class CompactPeerInfo implements Iterable<Peer> {
                     peers.length + ") is not divisible by " + peerLength);
         }
         int numOfPeers = peers.length / peerLength;
-        if (cryptoFlags != null && cryptoFlags.length != numOfPeers) {
+        if (peerFlags != null && peerFlags.length != numOfPeers) {
             throw new IllegalArgumentException("Number of peers (" + numOfPeers +
-                    ") is different from the number of crypto flags (" + cryptoFlags.length + ")");
+                    ") is different from the number of crypto flags (" + peerFlags.length + ")");
         }
         this.addressLength = addressType.length();
         this.peers = peers;
-        this.cryptoFlags = Optional.ofNullable(cryptoFlags);
+        this.peerFlags = Optional.ofNullable(peerFlags);
 
         this.peerList = new ArrayList<>();
     }
@@ -164,12 +162,9 @@ public class CompactPeerInfo implements Iterable<Peer> {
                 to = pos = pos + PORT_LENGTH;
                 port = (((peers[from] << 8) & 0xFF00) + (peers[to - 1] & 0x00FF));
 
-                PeerOptions options = PeerOptions.defaultOptions();
-                boolean requiresEncryption = cryptoFlags.isPresent() && cryptoFlags.get()[index] == 1;
-                if (requiresEncryption) {
-                    options = options.withEncryptionPolicy(EncryptionPolicy.PREFER_ENCRYPTED);
-                }
-                Peer peer = InetPeer.builder(inetAddress, port).options(options).build();
+                PeerOptions options = peerFlags.map(bytes -> PeerOptions.buildPeerOptions(bytes[index]))
+                        .orElseGet(PeerOptions::defaultOptions);
+                Peer peer = ImmutablePeer.builder(inetAddress, port).options(options).build();
                 peerList.add(peer);
                 index++;
 

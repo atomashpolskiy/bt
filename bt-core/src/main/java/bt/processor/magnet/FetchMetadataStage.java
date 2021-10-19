@@ -22,7 +22,7 @@ import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
 import bt.metainfo.TorrentId;
 import bt.metainfo.TorrentSource;
-import bt.net.InetPeer;
+import bt.peer.ImmutablePeer;
 import bt.peer.IPeerRegistry;
 import bt.processor.ProcessingStage;
 import bt.processor.listener.ProcessingEvent;
@@ -74,7 +74,7 @@ public class FetchMetadataStage extends TerminateOnErrorProcessingStage<MagnetCo
         getDescriptor(torrentId).start();
 
         context.getMagnetUri().getPeerAddresses().forEach(peerAddress -> {
-            peerRegistry.addPeer(torrentId, InetPeer.build(peerAddress));
+            peerRegistry.addPeer(torrentId, ImmutablePeer.build(peerAddress));
         });
 
         context.getMagnetUri().getTrackerUrls().forEach(trackerUrl -> {

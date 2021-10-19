@@ -17,9 +17,11 @@
 package bt.net;
 
 import bt.metainfo.TorrentId;
+import bt.net.peer.InetPeer;
 import bt.protocol.Message;
 
 import java.io.IOException;
+import java.time.Instant;
 
 class WriteOnlyPeerConnection implements PeerConnection {
 
@@ -30,7 +32,7 @@ class WriteOnlyPeerConnection implements PeerConnection {
     }
 
     @Override
-    public Peer getRemotePeer() {
+    public InetPeer getRemotePeer() {
         return delegate.getRemotePeer();
     }
 
@@ -65,6 +67,11 @@ class WriteOnlyPeerConnection implements PeerConnection {
     }
 
     @Override
+    public Instant getEstablished() {
+        return delegate.getEstablished();
+    }
+
+    @Override
     public long getLastActive() {
         return delegate.getLastActive();
     }
@@ -77,6 +84,11 @@ class WriteOnlyPeerConnection implements PeerConnection {
     @Override
     public boolean isClosed() {
         return delegate.isClosed();
+    }
+
+    @Override
+    public boolean isIncoming() {
+        return delegate.isIncoming();
     }
 
     @Override

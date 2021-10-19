@@ -18,7 +18,7 @@ package bt.tracker.http;
 
 import bt.BtException;
 import bt.metainfo.TorrentId;
-import bt.net.Peer;
+import bt.net.peer.LocalPeer;
 import bt.peer.IPeerRegistry;
 import bt.protocol.crypto.EncryptionPolicy;
 import bt.service.IdentityService;
@@ -220,7 +220,7 @@ public class HttpTracker implements Tracker {
         queryBuilder.add("info_hash", requestBuilder.getTorrentId().getBytes());
         queryBuilder.add("peer_id", idService.getLocalPeerId().getBytes());
 
-        Peer peer = peerRegistry.getLocalPeer();
+        LocalPeer peer = peerRegistry.getLocalPeer();
         InetAddress inetAddress = peer.getInetAddress();
         if (inetAddress != null) {
             queryBuilder.add("ip", inetAddress.getHostAddress());

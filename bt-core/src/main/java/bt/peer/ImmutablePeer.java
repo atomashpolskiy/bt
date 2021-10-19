@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-package bt.net;
+package bt.peer;
 
-import bt.peer.PeerOptions;
+import bt.net.InetPeerAddress;
+import bt.net.InetPortUtil;
+import bt.net.Peer;
+import bt.net.PeerId;
 import com.google.common.base.MoreObjects;
 
 import java.net.InetAddress;
@@ -27,17 +30,15 @@ import java.util.function.Supplier;
 /**
  * @since 1.0
  */
-public class InetPeer implements Peer {
-
-    public static final int UNKNOWN_PORT = -1;
+public class ImmutablePeer implements Peer {
 
     private final Supplier<InetAddress> addressSupplier;
-    private volatile int port;
+    private final int port;
     private final Optional<PeerId> peerId;
 
     private final PeerOptions options;
 
-    private InetPeer(Supplier<InetAddress> addressSupplier, int port, PeerId peerId, PeerOptions options) {
+    private ImmutablePeer(Supplier<InetAddress> addressSupplier, int port, PeerId peerId, PeerOptions options) {
         this.addressSupplier = addressSupplier;
         this.port = port;
         this.peerId = Optional.ofNullable(peerId);
@@ -47,11 +48,6 @@ public class InetPeer implements Peer {
     @Override
     public InetAddress getInetAddress() {
         return addressSupplier.get();
-    }
-
-    @Override
-    public boolean isPortUnknown() {
-        return (port == UNKNOWN_PORT);
     }
 
     @Override
@@ -69,21 +65,6 @@ public class InetPeer implements Peer {
         return options;
     }
 
-    public void setPort(int newPort) {
-        checkPort(newPort);
-        if (port != UNKNOWN_PORT && port != newPort) {
-            throw new IllegalStateException("Port already set to: " + port + "." +
-                    " Attempted to update to: " + newPort);
-        }
-        port = newPort;
-    }
-
-    private static void checkPort(int port) {
-        if (port < 0 || port > 65535) {
-            throw new IllegalArgumentException("Invalid port: " + port);
-        }
-    }
-
     @Override
     public String toString() {
         MoreObjects.ToStringHelper builder = MoreObjects.toStringHelper(this)
@@ -95,31 +76,37 @@ public class InetPeer implements Peer {
         return builder.toString();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ImmutablePeer immutablePeer = (ImmutablePeer) o;
+        return port == immutablePeer.port
+                && addressSupplier.get().equals(immutablePeer.addressSupplier.get())
+                && peerId.equals(immutablePeer.peerId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(addressSupplier.get(), port, peerId);
+    }
+
     public static Builder builder(InetPeerAddress holder) {
-        int port = holder.getPort();
-        checkPort(port);
+        int port = InetPortUtil.checkValidRemotePort(holder.getPort());
         return new Builder(holder::getAddress, port);
     }
 
     public static Builder builder(InetAddress address, int port) {
-        checkPort(port);
+        InetPortUtil.checkValidRemotePort(port);
         return new Builder(() -> address, port);
     }
 
-    public static Builder builder(InetAddress address) {
-        return new Builder(() -> address, UNKNOWN_PORT);
-    }
-
-    public static InetPeer build(InetPeerAddress peerAddress) {
-        return builder(peerAddress).build();
-    }
-
-    public static InetPeer build(InetAddress address, int port) {
+    public static ImmutablePeer build(InetAddress address, int port) {
         return builder(address, port).build();
     }
 
-    public static InetPeer build(InetAddress address) {
-        return builder(address).build();
+    public static ImmutablePeer build(InetPeerAddress address) {
+        return new Builder(address::getAddress, InetPortUtil.checkValidRemotePort(address.getPort())).build();
     }
 
     public static class Builder {
@@ -144,10 +131,10 @@ public class InetPeer implements Peer {
             return this;
         }
 
-        public InetPeer build() {
+        public ImmutablePeer build() {
             PeerOptions options = (this.options == null) ?
                     PeerOptions.defaultOptions() : this.options;
-            return new InetPeer(addressSupplier, port, peerId, options);
+            return new ImmutablePeer(addressSupplier, port, peerId, options);
         }
     }
 }
