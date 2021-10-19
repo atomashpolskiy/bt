@@ -88,7 +88,7 @@ public class MetadataProducer {
     }
 
     private Queue<Message> getOrCreateOutboundMessages(InetPeer peer) {
-        Queue<Message> queue = outboundMessages.computeIfAbsent(peer, key->new LinkedBlockingQueue<>());
+        Queue<Message> queue = outboundMessages.computeIfAbsent(peer, key -> new LinkedBlockingQueue<>());
         return queue;
     }
 

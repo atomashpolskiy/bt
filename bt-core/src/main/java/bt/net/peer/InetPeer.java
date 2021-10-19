@@ -43,7 +43,7 @@ public class InetPeer {
     private volatile PeerId peerId;
     // maps each supported extension to an extended message id. See BEP-0010
     private volatile BiMap<Integer, String> extensionMap = ImmutableBiMap.of();
-    // a lock for the object
+    // a lock for the extensionMap to ensure two threads don't try to update it at once.
     private final Object extensionMapLock = new Object();
 
     /**

@@ -67,7 +67,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory, Handsha
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerExchangePeerSourceFactory.class);
 
-    private static final String UT_PEX_EXTENSION = "ut_pex";
+    public static final String UT_PEX_EXTENSION = "ut_pex";
     private static final Duration MAX_PEER_EVENT_HISTORY_STORAGE = Duration.ofMinutes(15);
     private static final Duration CLEANER_INTERVAL = Duration.ofSeconds(37);
 

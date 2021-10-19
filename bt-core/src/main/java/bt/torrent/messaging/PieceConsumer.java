@@ -87,9 +87,9 @@ public class PieceConsumer {
             if (LOGGER.isTraceEnabled()) {
                 LOGGER.trace(
                         "Discarding received block because the chunk is already complete and/or verified: " +
-                        "piece index \\{" + piece.getPieceIndex() + "\\}, " +
-                        "offset \\{" + piece.getOffset() + "\\}, " +
-                        "length \\{" + piece.getLength() + "\\}");
+                        "piece index \\{" + piece.getPieceIndex() + "}, " +
+                        "offset \\{" + piece.getOffset() + "}, " +
+                        "length \\{" + piece.getLength() + "}");
             }
             return;
         }

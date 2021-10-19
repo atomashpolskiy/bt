@@ -36,7 +36,7 @@ import java.util.function.Consumer;
 public class MetadataConsumer {
     private static final Logger LOGGER = LoggerFactory.getLogger(MetadataConsumer.class);
 
-    private static final String UT_METADATA_EXTENSION = "ut_metadata";
+    public static final String UT_METADATA_EXTENSION = "ut_metadata";
 
     private static final Duration FIRST_BLOCK_ARRIVAL_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration WAIT_BEFORE_REREQUESTING_AFTER_REJECT = Duration.ofSeconds(10);
