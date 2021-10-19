@@ -130,6 +130,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Failed to establish connection with peer: {}. Reason: {} ({})",
                         peer, e.getClass().getName(), e.getMessage());
+                LOGGER.trace("Failed to establish connection with peer {}", peer, e);
             }
             closeQuietly(channel);
             releaseBuffer(in);
