@@ -19,8 +19,10 @@ package bt.tracker.udp;
 import bt.metainfo.TorrentId;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdentityService;
+import bt.torrent.DefaultTorrentSessionState;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
+import bt.torrent.TorrentSessionState;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
 import bt.tracker.TrackerResponse;
@@ -144,7 +146,10 @@ class UdpTracker implements Tracker {
                         .ifPresent(state -> {
                             request.setDownloaded(state.getDownloaded());
                             request.setUploaded(state.getUploaded());
-                            request.setLeft(state.getLeft());
+                            long left = state.getLeft();
+                            if (left != TorrentSessionState.UNKNOWN) {
+                                request.setLeft(left);
+                            }
                         });
                 request.setNumwant(getNumWant() == null ? numberOfPeersToRequestFromTracker : getNumWant());
 

@@ -24,6 +24,7 @@ import bt.protocol.crypto.EncryptionPolicy;
 import bt.service.IdentityService;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
+import bt.torrent.TorrentSessionState;
 import bt.tracker.SecretKey;
 import bt.tracker.Tracker;
 import bt.tracker.TrackerRequestBuilder;
@@ -233,7 +234,10 @@ public class HttpTracker implements Tracker {
                 .ifPresent(state -> {
                     queryBuilder.add("uploaded", state.getUploaded());
                     queryBuilder.add("downloaded", state.getDownloaded());
-                    queryBuilder.add("left", state.getLeft());
+                    long left = state.getLeft();
+                    if (left != TorrentSessionState.UNKNOWN) {
+                        queryBuilder.add("left", state.getLeft());
+                    }
                 });
 
         queryBuilder.add("compact", 1);

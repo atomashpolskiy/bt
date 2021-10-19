@@ -28,6 +28,10 @@ import java.util.Set;
  * @since 1.0
  */
 public interface TorrentSessionState {
+    /**
+     * The bytes returned when the data transfer is unknown
+     */
+    long UNKNOWN = -1;
 
     /**
      * @return Total number of pieces in the torrent
@@ -78,7 +82,7 @@ public interface TorrentSessionState {
     long getUploaded();
 
     /**
-     * Get the number of bytes left to verify
+     * Get the number of bytes left to verify, or {@link #UNKNOWN} if unknown (torrent not yet fetched)
      *
      * @return the number of bytes left to verify
      * @since 1.10
@@ -89,6 +93,7 @@ public interface TorrentSessionState {
      * Check if the torrent was finished upon initial hashing
      *
      * @return true if the torrent file was complete upon initial hashing
+     * @since 1.10
      */
     boolean startedAsSeed();
 
