@@ -16,7 +16,6 @@
 
 package bt.net;
 
-import bt.CountingThreadFactory;
 import bt.event.EventSink;
 import bt.metainfo.TorrentId;
 import bt.net.peer.InetPeer;
@@ -35,7 +34,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -80,12 +78,12 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 
     @Override
     public PeerConnection getConnection(Peer peer, TorrentId torrentId) {
-        return connections.get(peer, peer.getPort(), torrentId);
+        return connections.getIfPresent(peer, peer.getPort(), torrentId);
     }
 
     @Override
     public PeerConnection getConnection(ConnectionKey key) {
-        return connections.get(key);
+        return connections.getIfPresent(key);
     }
 
     @Override
@@ -147,7 +145,10 @@ public class PeerConnectionPool implements IPeerConnectionPool {
             }
             return existingConnection;
         } else {
-            eventSink.firePeerConnected(connectionKey);
+            if (!eventSink.firePeerConnected(connectionKey)) {
+                // connection failed for some reason
+                purgeConnection(newConnection);
+            }
             return newConnection;
         }
     }
@@ -306,11 +307,11 @@ class Connections {
         return existing;
     }
 
-    PeerConnection get(Peer peer, int remotePort, TorrentId torrentId) {
-        return get(new ConnectionKey(new InetPeer(peer), remotePort, torrentId));
+    PeerConnection getIfPresent(Peer peer, int remotePort, TorrentId torrentId) {
+        return getIfPresent(new ConnectionKey(new InetPeer(peer), remotePort, torrentId));
     }
 
-    PeerConnection get(ConnectionKey key) {
+    PeerConnection getIfPresent(ConnectionKey key) {
         return connections.get(key);
     }
 
