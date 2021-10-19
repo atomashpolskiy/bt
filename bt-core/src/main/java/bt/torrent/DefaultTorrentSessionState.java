@@ -139,7 +139,10 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
 
     @Override
     public long getLeft() {
-        return descriptor.get().getLeft();
+        if (descriptor.get() != null) {
+            return descriptor.get().getLeft();
+        }
+        return UNKNOWN;
     }
 
     @Override
