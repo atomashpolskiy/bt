@@ -166,6 +166,7 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
             } else {
                 cipherOptional = cryptoHandshakeProcessor.negotiateOutgoing(peer, channel, torrentId, inBuffer, outBuffer);
             }
+            peer.prefersEncryption(cipherOptional.isPresent());
         } finally {
             in.unlock();
             out.unlock();

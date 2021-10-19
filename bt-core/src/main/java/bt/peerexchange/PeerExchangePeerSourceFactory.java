@@ -118,9 +118,9 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory, Handsha
         if (!connection.isIncoming()) {
             final InetPeer remotePeer = connection.getRemotePeer();
             ImmutablePeer immutablePeer = ImmutablePeer.builder(remotePeer.getInetAddress(), remotePeer.getPort())
-                    .options(PeerOptions.builder().outgoingConnection(true).build())
+                    .options(remotePeer.getOptions())
                     .build();
-            getPeerEvents(connection.getTorrentId()).add(PeerEvent.added(immutablePeer));
+            getPeerEvents(connection.getTorrentId()).add(PeerEvent.added(immutablePeer, remotePeer::getOptions));
         }
     }
 
@@ -172,13 +172,9 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory, Handsha
                 if (isValidPort(port)) {
                     ImmutablePeer immutablePeer = ImmutablePeer
                             .builder(peer.getInetAddress(), extractPort(port))
-                            .options(
-                                    PeerOptions.builder()
-                                            .outgoingConnection(false)
-                                            .build()
-                            )
+                            .options(peer.getOptions())
                             .build();
-                    getPeerEvents(messageContext.getTorrentId()).add(PeerEvent.added(immutablePeer));
+                    getPeerEvents(messageContext.getTorrentId()).add(PeerEvent.added(immutablePeer, peer::getOptions));
 
                     state.setAddedToPexList(true);
                 }
@@ -254,7 +250,7 @@ public class PeerExchangePeerSourceFactory implements PeerSourceFactory, Handsha
                 events.forEach(event -> {
                     switch (event.getType()) {
                         case ADDED: {
-                            messageBuilder.added(event.getPeer());
+                            messageBuilder.added(event.getPeer(), event.getPeerOptions());
                             break;
                         }
                         case DROPPED: {

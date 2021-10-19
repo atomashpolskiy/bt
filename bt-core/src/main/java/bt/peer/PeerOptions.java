@@ -55,6 +55,9 @@ public class PeerOptions {
         if (uTPsupport) bitField |= SUPPORT_uTP;
         if (utHolePunch) bitField |= UT_HOLE_PUNCH;
         if (outgoingConnection) bitField |= OUTGOING_CONNECTION;
+        if (DEFAULT_OPTS.getPExBitField() == bitField) {
+            return DEFAULT_OPTS;
+        }
         return new PeerOptions(bitField);
     }
 
@@ -84,8 +87,33 @@ public class PeerOptions {
         return getField(UT_HOLE_PUNCH);
     }
 
+    /**
+     * @return Whether this peer is an outgoing connection
+     * @since 1.10
+     */
     public boolean outgoingConnection() {
         return getField(OUTGOING_CONNECTION);
+    }
+
+    /**
+     * @return Copy of the original options with adjusted outgoing property
+     * @since 1.10
+     */
+    public PeerOptions outgoingConnection(boolean boolValToSet) {
+        return newWithBit(boolValToSet, OUTGOING_CONNECTION);
+    }
+
+    private PeerOptions newWithBit(boolean valToSet, int bitToSet) {
+        byte newField = bitField;
+        if (valToSet) {
+            newField |= bitToSet;
+        } else {
+            newField &= bitToSet;
+        }
+        if (newField == bitField) {
+            return this;
+        }
+        return new PeerOptions(newField);
     }
 
     private boolean getField(int bitMask) {
@@ -101,7 +129,15 @@ public class PeerOptions {
      * @since 1.2
      */
     public PeerOptions prefersEncryption(boolean prefersEncryption) {
-        return new Builder().prefersEncryption(prefersEncryption).build();
+        return newWithBit(prefersEncryption, PREFERS_ENCRYPTION);
+    }
+
+    /**
+     * @return Copy of the original options with adjusted seed field
+     * @since 1.10
+     */
+    public PeerOptions seed(boolean seed) {
+        return newWithBit(seed, IS_SEED);
     }
 
     /**

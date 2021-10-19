@@ -5,6 +5,7 @@ import bt.bencoding.types.BEInteger;
 import bt.net.InetPortUtil;
 import bt.net.Peer;
 import bt.net.PeerId;
+import bt.peer.PeerOptions;
 import bt.protocol.InvalidMessageException;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import java.net.InetAddress;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This class represents a peer past the discovery stage, that we are in the process of establishing a connection with
@@ -36,11 +38,11 @@ public class InetPeer {
     public static final int UNKNOWN_PORT = -1;
 
     private final InetAddress address;
-    private final boolean incoming;
 
     // may be mutated
     private volatile int port;
     private volatile PeerId peerId;
+    private AtomicReference<PeerOptions> options;
     // maps each supported extension to an extended message id. See BEP-0010
     private volatile BiMap<Integer, String> extensionMap = ImmutableBiMap.of();
     // a lock for the extensionMap to ensure two threads don't try to update it at once.
@@ -52,7 +54,7 @@ public class InetPeer {
      * @param peer the peer to connect to
      */
     public InetPeer(Peer peer) {
-        this(peer.getInetAddress(), peer.getPort(), false);
+        this(peer.getInetAddress(), peer.getPort(), false, peer.getOptions().outgoingConnection(true));
     }
 
     /**
@@ -61,13 +63,13 @@ public class InetPeer {
      * @param address the address of the incoming peer
      */
     public InetPeer(InetAddress address) {
-        this(address, UNKNOWN_PORT, true);
+        this(address, UNKNOWN_PORT, true, PeerOptions.builder().outgoingConnection(false).build());
     }
 
-    private InetPeer(InetAddress address, int port, boolean incoming) {
+    private InetPeer(InetAddress address, int port, boolean incoming, PeerOptions peerOptions) {
         this.address = address;
         this.port = port;
-        this.incoming = incoming;
+        this.options = new AtomicReference<>(peerOptions);
     }
 
     public InetAddress getInetAddress() {
@@ -87,6 +89,11 @@ public class InetPeer {
         return Optional.ofNullable(peerId);
     }
 
+    /**
+     * Set the peer id of this peer, as received in a handshake message
+     *
+     * @param peerId the peer id of this peer
+     */
     public void setPeerId(PeerId peerId) {
         this.peerId = peerId;
     }
@@ -107,7 +114,7 @@ public class InetPeer {
      * @return true if this peer connection was initiated from an incoming connection. False otherwise
      */
     public boolean isIncoming() {
-        return incoming;
+        return !options.get().outgoingConnection();
     }
 
     /**
@@ -117,6 +124,33 @@ public class InetPeer {
      */
     public boolean isPortUnknown() {
         return port == UNKNOWN_PORT;
+    }
+
+    /**
+     * Set whether this peer is a seed
+     *
+     * @param seed whether this peer is a seed
+     */
+    public void seed(boolean seed) {
+        this.options.getAndUpdate(o->o.seed(seed));
+    }
+
+    /**
+     * Set whether this peer prefers encryption
+     *
+     * @param prefersEncryption whether this peer is prefers encryption
+     */
+    public void prefersEncryption(boolean prefersEncryption) {
+        this.options.getAndUpdate(o -> o.prefersEncryption(prefersEncryption));
+    }
+
+    /**
+     * Set the options of this peer
+     *
+     * @return the opts of this peers
+     */
+    public PeerOptions getOptions() {
+        return options.get();
     }
 
     /**
@@ -143,8 +177,9 @@ public class InetPeer {
      * @param changes the additive changes to the extension map
      */
     public void updateExtensionMap(Map<String, BEObject<?>> changes) {
-        if (changes.isEmpty())
+        if (changes.isEmpty()) {
             return;
+        }
         synchronized (extensionMapLock) {
             // copy on write in case a different thread is reading this map.
             BiMap<Integer, String> newMapping = HashBiMap.create(extensionMap);
@@ -160,10 +195,12 @@ public class InetPeer {
                     }
                 } catch (Exception ex) {
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Peer {}:{} sent a bad dictionary for protocol extensions (BEP-0010) with key {}", address, port, typeName);
+                        logger.debug("Peer {}:{} sent a bad dictionary for protocol extensions (BEP-0010) with key {}",
+                                address, port, typeName);
                         logger.trace("PeerID: {}", peerId, ex);
                     }
-                    throw new InvalidMessageException("Bad dictionary for protocol extensions (BEP-0010) with key "+ typeName);
+                    throw new InvalidMessageException(
+                            "Bad dictionary for protocol extensions (BEP-0010) with key " + typeName);
                 }
             }
 

@@ -17,27 +17,40 @@
 package bt.peerexchange;
 
 import bt.net.Peer;
+import bt.peer.PeerOptions;
+
+import java.util.function.Supplier;
 
 class PeerEvent implements Comparable<PeerEvent> {
 
     enum Type { ADDED, DROPPED }
 
-    static PeerEvent added(Peer peer) {
-        return new PeerEvent(Type.ADDED, peer);
+    static PeerEvent added(Peer peer, Supplier<PeerOptions> peerOptionsSupplier) {
+        return new PeerEvent(Type.ADDED, peer, peerOptionsSupplier);
     }
 
     static PeerEvent dropped(Peer peer) {
-        return new PeerEvent(Type.DROPPED, peer);
+        return new PeerEvent(Type.DROPPED, peer, null);
     }
 
-    private Type type;
-    private Peer peer;
-    private long instant;
+    private final Type type;
+    private final Peer peer;
+    private final Supplier<PeerOptions> peerOptionsSupplier;
+    private final long instant;
 
-    private PeerEvent(Type type, Peer peer) {
+    /**
+     * Construct a new PeerEvent
+     *
+     * @param type                the type of event
+     * @param peer                the peer of the event
+     * @param peerOptionsSupplier A supplier to get the most up to date peer options. The options may change from the
+     *                            time we add this message and we want to send the most up to date options.
+     */
+    private PeerEvent(Type type, Peer peer, Supplier<PeerOptions> peerOptionsSupplier) {
 
         this.type = type;
         this.peer = peer;
+        this.peerOptionsSupplier = peerOptionsSupplier;
 
         instant = System.currentTimeMillis();
     }
@@ -48,6 +61,10 @@ class PeerEvent implements Comparable<PeerEvent> {
 
     Peer getPeer() {
         return peer;
+    }
+
+    PeerOptions getPeerOptions() {
+        return peerOptionsSupplier.get();
     }
 
     long getInstant() {

@@ -4,11 +4,14 @@ import bt.protocol.BitOrder;
 import bt.protocol.Protocols;
 
 import java.util.BitSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.function.BiConsumer;
 import java.util.function.IntConsumer;
 
 public class PeerBitfield extends Bitfield {
+    private final AtomicInteger piecesLeft;
+
     /**
      * Create an empty bitfield for a peer
      *
@@ -16,6 +19,7 @@ public class PeerBitfield extends Bitfield {
      */
     public PeerBitfield(int piecesTotal) {
         super(piecesTotal);
+        this.piecesLeft = new AtomicInteger(piecesTotal);
     }
 
     /**
@@ -29,6 +33,7 @@ public class PeerBitfield extends Bitfield {
      */
     public PeerBitfield(byte[] value, BitOrder bitOrder, int piecesTotal) {
         super(piecesTotal, createBitmask(value, bitOrder, piecesTotal));
+        this.piecesLeft = new AtomicInteger(super.getPiecesIncomplete());
     }
 
     private static BitSet createBitmask(byte[] bytes, BitOrder bitOrder, int piecesTotal) {
@@ -59,7 +64,11 @@ public class PeerBitfield extends Bitfield {
      * @since 1.10
      */
     public boolean markPeerPieceVerified(int pieceIndex) {
-        return checkAndMarkVerified(pieceIndex);
+        boolean newlyVerified = checkAndMarkVerified(pieceIndex);
+        if (newlyVerified) {
+            piecesLeft.decrementAndGet();
+        }
+        return newlyVerified;
     }
 
 
@@ -70,5 +79,10 @@ public class PeerBitfield extends Bitfield {
         } finally {
             lock.readLock().unlock();
         }
+    }
+
+    @Override
+    public int getPiecesIncomplete() {
+        return piecesLeft.get();
     }
 }

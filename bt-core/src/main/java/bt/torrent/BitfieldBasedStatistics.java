@@ -19,6 +19,8 @@ package bt.torrent;
 import bt.data.Bitfield;
 import bt.data.PeerBitfield;
 import bt.net.ConnectionKey;
+import bt.net.Peer;
+import bt.net.peer.InetPeer;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -90,12 +92,13 @@ public class BitfieldBasedStatistics implements PieceStatistics {
      */
     public void addPiece(ConnectionKey connectionKey, Integer pieceIndex) {
         PeerBitfield bitfield = peerBitfields.computeIfAbsent(connectionKey, key -> new PeerBitfield(localBitfield.getPiecesTotal()));
-        markPieceVerified(bitfield, pieceIndex);
+        markPieceVerified(connectionKey.getPeer(), bitfield, pieceIndex);
     }
 
-    private void markPieceVerified(PeerBitfield bitfield, Integer pieceIndex) {
+    private void markPieceVerified(InetPeer peer, PeerBitfield bitfield, Integer pieceIndex) {
         if (bitfield.markPeerPieceVerified(pieceIndex)) {
             pieceTotals.getAndIncrement(pieceIndex);
+            peer.seed(bitfield.getPiecesIncomplete() == 0);
         }
     }
 
