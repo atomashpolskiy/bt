@@ -56,9 +56,10 @@ public class InboundMessageProcessor {
                                    MessageDeserializer deserializer,
                                    List<BufferMutator> decoders,
                                    IBufferedPieceRegistry bufferedPieceRegistry) {
-        if (buffer.position() != 0 || buffer.limit() != buffer.capacity() || buffer.capacity() == 0) {
-            throw new IllegalArgumentException("Illegal buffer params (position: "
-                    + buffer.position() + ", limit: " + buffer.limit() + ", capacity: " + buffer.capacity() + ")");
+        if (buffer.capacity() == 0) {
+            // Note: buffer position and/or limit might not be zero because MSE attempt will have loaded the handshake.
+            // if we enable encryption and the incoming connection is plain text
+            throw new IllegalArgumentException("Buffer has zero capacity");
         }
         this.peer = peer;
         this.buffer = buffer;

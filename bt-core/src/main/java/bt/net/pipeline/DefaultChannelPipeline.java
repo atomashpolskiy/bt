@@ -49,12 +49,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         ByteBuffer buffer;
         try {
             buffer = inboundBuffer.lockAndGet();
+            // constructor does some sanity checks on the buffer so it requires the lock
+            this.inboundMessageProcessor = new InboundMessageProcessor(peer, buffer,
+                    new MessageDeserializer(peer, protocol), decoders, bufferedPieceRegistry);
         } finally {
             inboundBuffer.unlock();
         }
 
-        this.inboundMessageProcessor = new InboundMessageProcessor(peer, buffer,
-                new MessageDeserializer(peer, protocol), decoders, bufferedPieceRegistry);
         this.serializer = new MessageSerializer(peer, protocol);
         this.inboundBuffer = inboundBuffer;
         this.outboundBuffer = outboundBuffer;

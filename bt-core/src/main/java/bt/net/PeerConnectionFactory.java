@@ -128,8 +128,12 @@ public class PeerConnectionFactory implements IPeerConnectionFactory {
             return _createConnection(peer, torrentId, channel, incoming, in, out);
         } catch (Exception e) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Failed to establish connection with peer: {}. Reason: {} ({})",
-                        peer, e.getClass().getName(), e.getMessage());
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Failed to establish connection with peer {}", peer, e);
+                } else {
+                    LOGGER.debug("Failed to establish connection with peer: {}. Reason: {} ({})",
+                            peer, e.getClass().getName(), e.getMessage());
+                }
             }
             closeQuietly(channel);
             releaseBuffer(in);
