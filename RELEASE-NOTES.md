@@ -61,6 +61,7 @@ For the latest information visit project web site: http://atomashpolskiy.github.
 * Bt now respects tracker minimum announce intervals
 * Bt now does not send a completed event to the tracker if the torrent was already completed before it connected to the tracker
 * The first tracker announce is synchronously waited for - this decreases the time to connect to the first peers returned from the tracker.
+* Fix bug that prevents plain text clients from connecting when MSE encryption is enabled
 
 ## 1.9
 
