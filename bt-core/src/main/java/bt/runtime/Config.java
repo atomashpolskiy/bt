@@ -23,7 +23,6 @@ import bt.service.NetworkUtil;
 
 import java.net.InetAddress;
 import java.time.Duration;
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -312,7 +311,16 @@ public class Config {
     }
 
     /**
-     * Set the tracker timeout
+     * Set the tracker/peer source timeout
+     *
+     * Currently used in the following contexts:
+     * - HTTP trackers: used as connection timeout and SO_TIMEOUT;
+     *   default is 30 seconds
+     * - UDP trackers: used as an additional limit on maximal BEP-0015 timeout;
+     *   formula is Math.min(3840 seconds, trackerTimeout)
+     * - all ScheduledPeerSources (HTTP, UDP, DHT): used during the first (initial)
+     *   peer collection as a limit on the time to wait for the collection to finish
+     *   before querying the next peer source; default is 10 seconds
      *
      * @param trackerTimeout the amount of time to wait for a response from the tracker
      */
@@ -321,7 +329,9 @@ public class Config {
     }
 
     /**
-     * The amount of time to wait for a tracker to respond
+     * Tracker/peer source timeout
+     *
+     * See {@link #setTrackerTimeout(Duration)} for the explanation on how this is used
      *
      * @since 1.10
      */

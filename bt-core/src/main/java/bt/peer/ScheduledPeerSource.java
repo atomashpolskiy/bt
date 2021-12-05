@@ -95,6 +95,8 @@ public abstract class ScheduledPeerSource implements PeerSource {
 
     private void waitForFutureAndLogExceptions(Future<?> future) {
         try {
+            // keep in mind that this only really affects the first (initial)
+            // peer collection (see the algorithm in schedulePeerCollection() method)
             long secondsToWait = trackerTimeout == null ? 10 : trackerTimeout.getSeconds();
             future.get(secondsToWait, TimeUnit.SECONDS);
         } catch (TimeoutException | InterruptedException | ExecutionException e) {
