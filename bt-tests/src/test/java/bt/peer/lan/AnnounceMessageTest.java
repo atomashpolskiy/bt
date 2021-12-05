@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,9 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 import static bt.peer.lan.AnnounceMessage.calculateMessageSize;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 public class AnnounceMessageTest {
     private static final TorrentId torrentId = TorrentId.fromBytes(new byte[]{1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6,7,8});

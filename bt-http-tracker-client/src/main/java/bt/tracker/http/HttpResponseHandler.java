@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@
 package bt.tracker.http;
 
 import bt.BtException;
-import bt.bencoding.serializers.BEParser;
-import bt.bencoding.types.BEMap;
 import bt.bencoding.model.BEObject;
 import bt.bencoding.model.BEObjectModel;
 import bt.bencoding.model.ValidationResult;
 import bt.bencoding.model.YamlBEObjectModelLoader;
+import bt.bencoding.serializers.BEParser;
+import bt.bencoding.types.BEMap;
 import bt.tracker.CompactPeerInfo;
 import bt.tracker.CompactPeerInfo.AddressType;
 import bt.tracker.TrackerResponse;

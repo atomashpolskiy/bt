@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,7 @@
 package bt.data;
 
 import bt.metainfo.Torrent;
-import bt.metainfo.TorrentFile;
-import bt.processor.ProcessingContext;
 import bt.torrent.callbacks.FileDownloadCompleteCallback;
-
-import java.util.Optional;
-import java.util.function.BiConsumer;
 
 /**
  * <p><b>Note that this class implements a service.

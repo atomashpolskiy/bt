@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import bt.metainfo.Torrent;
 import bt.metainfo.TorrentId;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 /**
  * Generic tracker interface.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,17 @@
 
 package bt.bencoding;
 
+import bt.bencoding.model.BEObject;
+import bt.bencoding.serializers.BEParser;
 import bt.bencoding.types.BEInteger;
 import bt.bencoding.types.BEList;
 import bt.bencoding.types.BEMap;
-import bt.bencoding.model.BEObject;
 import bt.bencoding.types.BEString;
-import bt.bencoding.serializers.BEParser;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;

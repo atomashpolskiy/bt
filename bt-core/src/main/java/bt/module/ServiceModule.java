@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,11 @@
 
 package bt.module;
 
-import bt.data.*;
+import bt.data.ChunkVerifier;
+import bt.data.DataDescriptorFactory;
+import bt.data.DataReaderFactory;
+import bt.data.DefaultChunkVerifier;
+import bt.data.IDataDescriptorFactory;
 import bt.data.digest.Digester;
 import bt.data.digest.SHA1Digester;
 import bt.event.EventBus;
@@ -24,7 +28,19 @@ import bt.event.EventSink;
 import bt.event.EventSource;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.MetadataService;
-import bt.net.*;
+import bt.net.ConnectionSource;
+import bt.net.DataReceiver;
+import bt.net.DataReceivingLoop;
+import bt.net.IConnectionHandlerFactory;
+import bt.net.IConnectionSource;
+import bt.net.IMessageDispatcher;
+import bt.net.IPeerConnectionFactory;
+import bt.net.IPeerConnectionPool;
+import bt.net.MessageDispatcher;
+import bt.net.PeerConnectionFactory;
+import bt.net.PeerConnectionPool;
+import bt.net.SharedSelector;
+import bt.net.SocketChannelConnectionAcceptor;
 import bt.net.buffer.BufferManager;
 import bt.net.buffer.IBufferManager;
 import bt.net.pipeline.BufferedPieceRegistry;
@@ -32,14 +48,23 @@ import bt.net.pipeline.ChannelPipelineFactory;
 import bt.net.pipeline.IBufferedPieceRegistry;
 import bt.net.pipeline.IChannelPipelineFactory;
 import bt.net.portmapping.impl.PortMappingInitializer;
-import bt.peer.*;
+import bt.peer.IPeerRegistry;
+import bt.peer.PeerRegistry;
+import bt.peer.PeerSourceFactory;
 import bt.processor.ProcessorFactory;
 import bt.processor.TorrentProcessorFactory;
 import bt.protocol.Message;
 import bt.protocol.handler.MessageHandler;
 import bt.runtime.Config;
-import bt.service.*;
+import bt.service.ApplicationService;
+import bt.service.ClasspathApplicationService;
+import bt.service.ExecutorServiceProvider;
+import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IRuntimeLifecycleBinder.LifecycleEvent;
+import bt.service.IdentityService;
+import bt.service.LifecycleBinding;
+import bt.service.RuntimeLifecycleBinder;
+import bt.service.VersionAwareIdentityService;
 import bt.torrent.AdhocTorrentRegistry;
 import bt.torrent.TorrentRegistry;
 import bt.torrent.data.BlockCache;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,16 @@
 package bt.protocol.extended;
 
 import bt.BtException;
-import bt.bencoding.serializers.BEParser;
 import bt.bencoding.BEType;
+import bt.bencoding.model.BEObject;
+import bt.bencoding.serializers.BEParser;
 import bt.bencoding.types.BEInteger;
 import bt.bencoding.types.BEMap;
-import bt.bencoding.model.BEObject;
 import bt.net.Peer;
 import bt.net.buffer.ByteBufferView;
+import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
-import bt.protocol.DecodingContext;
 import bt.protocol.handler.MessageHandler;
 
 import java.io.ByteArrayOutputStream;

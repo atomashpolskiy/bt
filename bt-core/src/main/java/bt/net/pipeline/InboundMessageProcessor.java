@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2019 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,11 @@
 package bt.net.pipeline;
 
 import bt.net.Peer;
-import bt.net.buffer.*;
+import bt.net.buffer.BufferMutator;
+import bt.net.buffer.BufferedData;
+import bt.net.buffer.ByteBufferView;
+import bt.net.buffer.DelegatingByteBufferView;
+import bt.net.buffer.SplicedByteBufferView;
 import bt.protocol.Message;
 import bt.protocol.Piece;
 import com.google.common.base.MoreObjects;

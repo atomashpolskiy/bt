@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2019 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,12 @@ import bt.metainfo.TorrentId;
 import bt.net.InetPeer;
 import bt.net.PeerId;
 import bt.net.buffer.BufferedData;
-import bt.protocol.*;
+import bt.protocol.Bitfield;
+import bt.protocol.EncodingContext;
+import bt.protocol.Handshake;
+import bt.protocol.Have;
+import bt.protocol.Message;
+import bt.protocol.Piece;
 import bt.protocol.handler.MessageHandler;
 import bt.test.protocol.ProtocolTest;
 import org.junit.Test;
@@ -30,7 +35,12 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class InboundMessageProcessorTest {
 

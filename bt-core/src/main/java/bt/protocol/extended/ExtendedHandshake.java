@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,10 @@
 package bt.protocol.extended;
 
 import bt.BtException;
+import bt.bencoding.model.BEObject;
 import bt.bencoding.types.BEInteger;
 import bt.bencoding.types.BEMap;
-import bt.bencoding.model.BEObject;
 
-import java.math.BigInteger;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;

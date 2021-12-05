@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,12 @@
 package bt.protocol.handler;
 
 import bt.net.buffer.ByteBufferView;
+import bt.protocol.DecodingContext;
 import bt.protocol.EncodingContext;
 import bt.protocol.InvalidMessageException;
-import bt.protocol.DecodingContext;
 import bt.protocol.Request;
 
 import java.nio.ByteBuffer;
-import java.util.Objects;
 
 import static bt.protocol.Protocols.readInt;
 import static bt.protocol.Protocols.verifyPayloadHasLength;

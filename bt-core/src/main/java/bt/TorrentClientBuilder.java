@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import bt.magnet.MagnetUri;
 import bt.magnet.MagnetUriParser;
 import bt.metainfo.IMetadataService;
 import bt.metainfo.Torrent;
-import bt.metainfo.TorrentFile;
 import bt.processor.ProcessingContext;
 import bt.processor.ProcessingStage;
 import bt.processor.listener.ListenerSource;
@@ -31,7 +30,6 @@ import bt.processor.torrent.TorrentContext;
 import bt.runtime.BtRuntime;
 import bt.torrent.callbacks.FileDownloadCompleteCallback;
 import bt.torrent.fileselector.FilePrioritySkipSelector;
-import bt.torrent.fileselector.TorrentFileSelector;
 import bt.torrent.selector.PieceSelector;
 import bt.torrent.selector.RarestFirstSelector;
 import bt.torrent.selector.SequentialSelector;
@@ -39,10 +37,8 @@ import bt.torrent.selector.SequentialSelector;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;

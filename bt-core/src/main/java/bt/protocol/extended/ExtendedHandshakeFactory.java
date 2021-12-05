@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,12 +28,13 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static bt.protocol.extended.ExtendedHandshake.*;
+import static bt.protocol.extended.ExtendedHandshake.ENCRYPTION_PROPERTY;
+import static bt.protocol.extended.ExtendedHandshake.TCPPORT_PROPERTY;
+import static bt.protocol.extended.ExtendedHandshake.VERSION_PROPERTY;
 
 /**
  *<p><b>Note that this class implements a service.

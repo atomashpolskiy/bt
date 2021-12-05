@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import bt.metainfo.TorrentSource;
 import bt.net.InetPeer;
 import bt.peer.IPeerRegistry;
 import bt.processor.ProcessingStage;
-import bt.processor.listener.ProcessingEvent;
 import bt.processor.TerminateOnErrorProcessingStage;
+import bt.processor.listener.ProcessingEvent;
 import bt.runtime.Config;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;

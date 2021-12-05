@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016—2017 Andrei Tomashpolskiy and individual contributors.
+ * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package bt.torrent.messaging;
 
 import bt.BtException;
+import bt.data.Bitfield;
 import bt.data.ChunkDescriptor;
 import bt.data.DataDescriptor;
 import bt.net.Peer;
@@ -24,13 +25,15 @@ import bt.protocol.Cancel;
 import bt.protocol.InvalidMessageException;
 import bt.protocol.Message;
 import bt.protocol.Request;
-import bt.data.Bitfield;
 import bt.torrent.annotation.Produces;
 import bt.torrent.data.BlockWrite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
