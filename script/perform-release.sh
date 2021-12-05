@@ -10,4 +10,4 @@ else
     GPG_KEYNAME="-Dgpg.keyname=${GPG_KEYNAME}"
 fi
 
-mvn -Darguments="${GPG_KEYNAME}" -Prelease release:perform
+GPG_TTY=$(tty) mvn -Darguments="${GPG_KEYNAME}" -Prelease release:perform

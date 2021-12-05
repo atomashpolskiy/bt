@@ -10,4 +10,4 @@ else
     GPG_KEYNAME="-Dgpg.keyname=${GPG_KEYNAME}"
 fi
 
-mvn -Darguments="-DskipTests -DautoVersionSubmodules ${GPG_KEYNAME}" -Prelease release:prepare
+GPG_TTY=$(tty) mvn -Darguments="-DskipTests -DautoVersionSubmodules ${GPG_KEYNAME}" -Prelease release:prepare
