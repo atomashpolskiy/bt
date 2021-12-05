@@ -20,21 +20,6 @@
             <email>nordmann89@gmail.com</email>
             <url>https://github.com/atomashpolskiy</url>
         </developer>
-        <developer>
-            <id>MorrisLaw</id>
-            <name>Jeremy L. Morris</name>
-            <email>morrislaw93@gmail.com</email>
-            <url>https://github.com/MorrisLaw</url>
-        </developer>
-        <developer>
-            <id>ckovorodkin</id>
-            <name>Oleg Ermolaev</name>
-            <url>https://github.com/ckovorodkin</url>
-        </developer>
-        <developer>
-            <id>OlegAndreych</id>
-            <url>https://github.com/OlegAndreych</url>
-        </developer>
     </developers>
 
     <licenses>
