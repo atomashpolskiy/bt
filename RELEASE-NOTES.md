@@ -2,9 +2,17 @@
 
 For the latest information visit project web site: http://atomashpolskiy.github.io/bt/
 
-## 1.10
+## 1.11
 
 #### Date:
+
+### New Features:
+
+### Bug Fixes/Improvements:
+
+## 1.10
+
+#### Date: 12/05/2021
 
 ### New Features:
 
