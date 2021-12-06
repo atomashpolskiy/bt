@@ -290,7 +290,8 @@
                         </goals>
                         <phase>site</phase>
                         <configuration>
-                            <excludePackageNames>lbms:the8472:bt.cli:bt.test:bt.it:yourip</excludePackageNames>
+                            <excludePackageNames>lbms:the8472:bt.cli:bt.test:bt.it:yourip:datasharing:peertracker</excludePackageNames>
+                            <overview>doc/javadoc/overview.html</overview>
                         </configuration>
                     </execution>
                 </executions>
