@@ -16,7 +16,7 @@ github:
 author:
   name: Andrei Tomashpolskiy
   email: nordmann89@gmail.com
-timezone: Europe/Moscow
+timezone: Europe/Madrid
 encoding: utf-8
 
 # Other settings
@@ -28,7 +28,7 @@ paginate: 5
 #
 markdown: kramdown
 #theme:
-gems:
+plugins:
   - jekyll-feed
   - jekyll-coffeescript
   - jekyll-paginate
