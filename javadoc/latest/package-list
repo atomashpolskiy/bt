@@ -2,6 +2,8 @@ bt
 bt.bencoding
 bt.bencoding.model
 bt.bencoding.model.rule
+bt.bencoding.serializers
+bt.bencoding.types
 bt.data
 bt.data.digest
 bt.data.file
@@ -36,13 +38,16 @@ bt.runtime
 bt.service
 bt.torrent
 bt.torrent.annotation
+bt.torrent.callbacks
 bt.torrent.compiler
 bt.torrent.data
 bt.torrent.fileselector
+bt.torrent.maker
 bt.torrent.messaging
 bt.torrent.selector
 bt.tracker
 bt.tracker.http
+bt.tracker.http.urlencoding
 bt.tracker.udp
 datasharing
 peertracker
