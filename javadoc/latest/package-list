@@ -49,5 +49,3 @@ bt.tracker
 bt.tracker.http
 bt.tracker.http.urlencoding
 bt.tracker.udp
-datasharing
-peertracker
