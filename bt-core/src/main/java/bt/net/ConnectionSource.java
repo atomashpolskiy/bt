@@ -37,7 +37,7 @@ public class ConnectionSource implements IConnectionSource {
 
     private final IPeerConnectionFactory connectionFactory;
     private final IPeerConnectionPool connectionPool;
-    private final ExecutorService connectionExecutor;
+    private final ExecutorService outgoingConnectionExecutor;
     private final Config config;
     private final Object lock = new Object();
 
@@ -56,17 +56,23 @@ public class ConnectionSource implements IConnectionSource {
         this.connectionPool = connectionPool;
         this.config = config;
 
-        String threadName = String.format("%d.bt.net.pool.connection-worker", config.getAcceptorPort());
-        this.connectionExecutor = Executors.newFixedThreadPool(
+        String outgoingThreadName = String.format("%d.bt.net.pool.outgoing-connection-worker", config.getAcceptorPort());
+        this.outgoingConnectionExecutor = Executors.newFixedThreadPool(
                 config.getMaxPendingConnectionRequests(),
-                CountingThreadFactory.daemonFactory(threadName));
-        lifecycleBinder.onShutdown("Shutdown connection workers", connectionExecutor::shutdownNow);
+                CountingThreadFactory.daemonFactory(outgoingThreadName));
+        lifecycleBinder.onShutdown("Shutdown outgoing connection workers", outgoingConnectionExecutor::shutdownNow);
 
         this.pendingConnections = new ConcurrentHashMap<>();
         this.unreachablePeers = new ConcurrentHashMap<>();
 
+        String incomingThreadName = String.format("%d.bt.net.pool.incoming-connection-worker", config.getAcceptorPort());
+        ExecutorService incomingConnectionExecutor = Executors.newFixedThreadPool(
+                config.getMaxPendingConnectionRequests(),
+                CountingThreadFactory.daemonFactory(incomingThreadName));
+        lifecycleBinder.onShutdown("Shutdown incoming connection workers", incomingConnectionExecutor::shutdownNow);
+
         IncomingConnectionListener incomingListener =
-                new IncomingConnectionListener(connectionAcceptors, connectionExecutor, connectionPool, config);
+                new IncomingConnectionListener(connectionAcceptors, incomingConnectionExecutor, connectionPool, config);
         lifecycleBinder.onStartup("Initialize incoming connection acceptors", incomingListener::startup);
         lifecycleBinder.onShutdown("Shutdown incoming connection acceptors", incomingListener::shutdown);
     }
@@ -156,7 +162,7 @@ public class ConnectionSource implements IConnectionSource {
                     pendingConnections.remove(key);
                 }
             }
-        }, connectionExecutor).whenComplete((acquiredConnection, throwable) -> {
+        }, outgoingConnectionExecutor).whenComplete((acquiredConnection, throwable) -> {
             if (acquiredConnection == null || throwable != null) {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Peer is unreachable: {}. Will prevent further attempts to establish connection.",
