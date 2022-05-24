@@ -85,14 +85,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public boolean encode(Message message) {
         checkHandlerIsBound();
 
-        ByteBuffer buffer = outboundBuffer.lockAndGet();
-        if (buffer == null) {
-            // buffer has been released
-            // TODO: So what? Maybe throw an exception then?
-            return false;
-        }
-
         try {
+            ByteBuffer buffer = outboundBuffer.lockAndGet();
+            if (buffer == null) {
+                // buffer has been released
+                // this may happen in handshake stage when client send EOF, buffer has been released by SocketChannelHandler
+                // TODO: So what? Maybe throw an exception then?
+                return false;
+            }
             return writeMessageToBuffer(message, buffer);
         } finally {
             outboundBuffer.unlock();
