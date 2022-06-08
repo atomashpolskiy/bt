@@ -139,12 +139,13 @@ public class SocketChannelHandler implements ChannelHandler {
     public void flush() {
         synchronized (outboundBufferLock) {
             ByteBuffer buffer = outboundBuffer.lockAndGet();
-            if (buffer == null) {
-                // buffer has been released
-                return;
-            }
-            buffer.flip();
             try {
+                if (buffer == null) {
+                    // buffer has been released
+                    outboundBuffer.unlock();
+                    return;
+                }
+                buffer.flip();
                 while (buffer.hasRemaining() && !closing) {
                     channel.write(buffer);
                 }
