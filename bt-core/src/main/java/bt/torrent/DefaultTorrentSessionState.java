@@ -33,37 +33,41 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.summingLong;
 
 public class DefaultTorrentSessionState implements TorrentSessionState {
 
+    private static final AtomicLongFieldUpdater<DefaultTorrentSessionState> DOWNLOADED_FILED_UPDATER
+            = AtomicLongFieldUpdater.newUpdater(DefaultTorrentSessionState.class, "downloadedFromDisconnected");
+
+    private static final AtomicLongFieldUpdater<DefaultTorrentSessionState> UPLOADED_FILED_UPDATER
+            = AtomicLongFieldUpdater.newUpdater(DefaultTorrentSessionState.class, "uploadedToDisconnected");
+
     /**
      * Recently calculated amounts of downloaded and uploaded data
      */
     private final Map<ConnectionKey, TransferAmounts> recentAmountsForConnectedPeers;
 
-    /**
-     * Historical data (amount of data downloaded from disconnected peers)
-     */
-    private final AtomicLong downloadedFromDisconnected;
-
-    /**
-     * Historical data (amount of data uploaded to disconnected peers)
-     */
-    private final AtomicLong uploadedToDisconnected;
-
     private final Supplier<DataDescriptor> descriptor;
     private final TorrentWorker worker;
     private final PrioritizedPieceSelector pieceSelector;
 
+    /**
+     * Historical data (amount of data downloaded from disconnected peers)
+     */
+    private volatile long downloadedFromDisconnected;
+
+    /**
+     * Historical data (amount of data uploaded to disconnected peers)
+     */
+    private volatile long uploadedToDisconnected;
+
     public DefaultTorrentSessionState(Supplier<DataDescriptor> descriptor, TorrentWorker worker,
                                       PrioritizedPieceSelector pieceSelector) {
         this.recentAmountsForConnectedPeers = new HashMap<>();
-        this.downloadedFromDisconnected = new AtomicLong();
-        this.uploadedToDisconnected = new AtomicLong();
         this.descriptor = descriptor;
         this.worker = worker;
         this.pieceSelector = pieceSelector;
@@ -126,14 +130,14 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
     @Override
     public synchronized long getDownloaded() {
         long downloaded = getCurrentAmounts().values().stream().collect(summingLong(TransferAmounts::getDownloaded));
-        downloaded += downloadedFromDisconnected.get();
+        downloaded += DOWNLOADED_FILED_UPDATER.get(this);
         return downloaded;
     }
 
     @Override
     public synchronized long getUploaded() {
         long uploaded = getCurrentAmounts().values().stream().collect(summingLong(TransferAmounts::getUploaded));
-        uploaded += uploadedToDisconnected.get();
+        uploaded += UPLOADED_FILED_UPDATER.get(this);
         return uploaded;
     }
 
@@ -156,8 +160,8 @@ public class DefaultTorrentSessionState implements TorrentSessionState {
         Set<ConnectionKey> disconnectedPeers = new HashSet<>();
         recentAmountsForConnectedPeers.forEach((peer, amounts) -> {
             if (!connectedPeers.containsKey(peer)) {
-                downloadedFromDisconnected.addAndGet(amounts.getDownloaded());
-                uploadedToDisconnected.addAndGet(amounts.getUploaded());
+                DOWNLOADED_FILED_UPDATER.addAndGet(this, amounts.getDownloaded());
+                UPLOADED_FILED_UPDATER.addAndGet(this, amounts.getUploaded());
                 disconnectedPeers.add(peer);
             }
         });
