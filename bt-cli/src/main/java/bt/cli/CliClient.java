@@ -251,14 +251,19 @@ public class CliClient  {
 
         running = true;
         try {
-            client.startAsync(state -> {
-                printer.ifPresent(p -> p.print(state));
-                if (!options.shouldSeedAfterDownloaded() && state.getPiecesRemaining() == 0) {
-                    runtime.shutdown();
-                }
-            }, 1000);
+            client
+                .startAsync(state -> {
+                    printer.ifPresent(p -> p.print(state));
+                    if (!options.shouldSeedAfterDownloaded() && state.getPiecesRemaining() == 0) {
+                        runtime.shutdown();
+                    }
+                }, 1000)
+                .whenComplete((r, t) -> {
+                    if (t != null) {
+                        throw new RuntimeException(t);
+                    }
+                });
         } catch (Throwable e) {
-            // in case the start request to the tracker fails
             printer.ifPresent(SessionStatePrinter::shutdown);
             printAndShutdown(e);
         }
