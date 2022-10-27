@@ -75,7 +75,10 @@ class ExchangedMetadata {
         if (digest == null) {
             synchronized (digestLock) {
                 if (digest == null) {
-                    digest = SHA1Digester.newDigester().digest(metadata);
+                    int bufferSize = metadata.length() < SHA1Digester.DEFAULT_BUFFER_SIZE
+                            ? (int) metadata.length()
+                            : SHA1Digester.DEFAULT_BUFFER_SIZE;
+                    digest = SHA1Digester.newDigester(bufferSize).digest(metadata);
                 }
             }
         }
