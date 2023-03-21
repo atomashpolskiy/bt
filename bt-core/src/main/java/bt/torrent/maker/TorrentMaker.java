@@ -182,6 +182,7 @@ public class TorrentMaker {
         try {
             List<StorageUnit> fileStorageUnits = files.stream()
                     .map(path -> new FileSystemStorageUnit(cache, path))
+                    .filter(f -> f.size() > 0)
                     .collect(Collectors.toList());
             final long totalSize = fileStorageUnits.stream().mapToLong(StorageUnit::size).sum();
 
