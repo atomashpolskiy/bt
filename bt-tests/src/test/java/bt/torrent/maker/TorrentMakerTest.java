@@ -354,4 +354,21 @@ public class TorrentMakerTest {
         testBoundaryTorrent(2, 1);
         testBoundaryTorrent(3, 1);
     }
+
+    /**
+     * A test for an unusual corner case where creating a torrent fails because it contains empty files
+     */
+    @Test
+    public void testEmptyFileAtEndOfTorrent() throws Exception {
+        // create a torrent with two files, the last of which is empty
+        TorrentBuilder torrentBuilder = makeTorrentBuilder(null, Arrays.asList(testfileName, testfile2Name), 1, 0);
+
+        Torrent decodedTorrent = buildAndDecodeTorrent(torrentBuilder);
+        TorrentFile file1 = decodedTorrent.getFiles().get(0);
+        Assert.assertEquals(testfileName, file1.getPathElements().get(0));
+        Assert.assertEquals(1, file1.getSize());
+        TorrentFile file2 = decodedTorrent.getFiles().get(1);
+        Assert.assertEquals(testfile2Name, file2.getPathElements().get(0));
+        Assert.assertEquals(0, file2.getSize());
+    }
 }
