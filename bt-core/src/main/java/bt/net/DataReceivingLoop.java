@@ -17,6 +17,7 @@
 package bt.net;
 
 import bt.module.PeerConnectionSelector;
+import bt.module.PeerRegistrationQueue;
 import bt.net.pipeline.ChannelHandlerContext;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
@@ -29,9 +30,13 @@ import java.io.IOException;
 import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,16 +46,19 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
 
     private static final int NO_OPS = 0;
 
-    private final SharedSelector selector;
+    private final Selector selector;
+    private final Queue<PeerRegistrationEvent> registrationQueue;
     private final ConcurrentMap<SelectableChannel, Integer> interestOpsUpdates;
 
     private volatile boolean shutdown;
 
     @Inject
-    public DataReceivingLoop(@PeerConnectionSelector SharedSelector selector,
+    public DataReceivingLoop(@PeerConnectionSelector Selector selector,
+                             @PeerRegistrationQueue ConcurrentLinkedQueue<PeerRegistrationEvent> registrationQueue,
                              IRuntimeLifecycleBinder lifecycleBinder,
                              Config config) {
         this.selector = selector;
+        this.registrationQueue = registrationQueue;
         this.interestOpsUpdates = new ConcurrentHashMap<>();
 
         schedule(lifecycleBinder, config);
@@ -71,16 +79,34 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
 
     @Override
     public void registerChannel(SelectableChannel channel, ChannelHandlerContext context) {
-        // use atomic wakeup-and-register to prevent blocking of registration,
-        // if selection is resumed before call to register is performed
-        // (there is a race between the message receiving loop and current thread)
-        // TODO: move this to the main loop instead?
-        selector.wakeupAndRegister(channel, SelectionKey.OP_READ, context);
+        PeerRegistrationEvent peerRegistrationEvent = new PeerRegistrationEvent(channel, SelectionKey.OP_READ, context);
+        if (!registrationQueue.add(peerRegistrationEvent)) {
+            throw new IllegalStateException("Queue didn't accept event. Should not happen.");
+        }
+        boolean done;
+
+        do {
+            // registration is done in the main receiving thread, which may be waiting in a select call.
+            // fire a wakeup event in case this is the case.
+            selector.wakeup();
+            try {
+                // wait up with a timeout for the event to register.
+                // There's a slight race condition with the wakeup - it's possible that the receiving loop
+                // calls select just after the wakeup call above completes. In this unlikely case, we'll call wakeup
+                // again after this timeout which will trigger the event to be processed.
+                done = peerRegistrationEvent.waitForCompletion(10);
+            } catch (IOException ex) {
+                throw new RuntimeException("Failed to register channel", ex);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(ex);
+            }
+        } while (!done);
     }
 
     @Override
     public void unregisterChannel(SelectableChannel channel) {
-        selector.keyFor(channel).ifPresent(SelectionKey::cancel);
+        Optional.ofNullable(channel.keyFor(selector)).ifPresent(SelectionKey::cancel);
     }
 
     @Override
@@ -107,9 +133,7 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
 
             try {
                 do {
-                    if (!interestOpsUpdates.isEmpty()) {
-                        processInterestOpsUpdates();
-                    }
+                    processInterestOpsUpdates();
                 } while (selector.select(1000) == 0);
 
                 while (!shutdown) {
@@ -135,10 +159,11 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
                     if (selector.selectedKeys().isEmpty()) {
                         break;
                     }
-                    Thread.sleep(1);
-                    if (!interestOpsUpdates.isEmpty()) {
-                        processInterestOpsUpdates();
-                    }
+
+                    if (Thread.interrupted())
+                        throw new InterruptedException();
+
+                    processInterestOpsUpdates();
                     selector.selectNow();
                 }
             } catch (ClosedSelectorException e) {
@@ -148,6 +173,7 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
                 throw new RuntimeException("Unexpected I/O exception when selecting peer connections", e);
             } catch (InterruptedException e) {
                 LOGGER.info("Terminating due to interrupt");
+                Thread.currentThread().interrupt();
                 return;
             }
         }
@@ -160,13 +186,18 @@ public class DataReceivingLoop implements Runnable, DataReceiver {
             SelectableChannel channel = entry.getKey();
             int interestOps = entry.getValue();
             try {
-                selector.keyFor(entry.getKey())
+                Optional.ofNullable(entry.getKey().keyFor(selector))
                         .ifPresent(key -> key.interestOps(interestOps));
             } catch (Exception e) {
                 LOGGER.error("Failed to set interest ops for channel " + channel + " to " + interestOps, e);
             } finally {
                 iter.remove();
             }
+        }
+
+        PeerRegistrationEvent peerRegistrationEvent;
+        while ((peerRegistrationEvent = this.registrationQueue.poll()) != null) {
+            peerRegistrationEvent.register(selector);
         }
     }
 

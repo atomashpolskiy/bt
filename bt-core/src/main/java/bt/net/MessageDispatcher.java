@@ -246,7 +246,7 @@ public class MessageDispatcher implements IMessageDispatcher {
      */
     private static class LoopControl {
 
-        private long maxTimeToSleep;
+        private final long maxTimeToSleep;
         private int messagesProcessed;
         private long timeToSleep;
 
