@@ -39,7 +39,7 @@ import bt.net.IPeerConnectionPool;
 import bt.net.MessageDispatcher;
 import bt.net.PeerConnectionFactory;
 import bt.net.PeerConnectionPool;
-import bt.net.SharedSelector;
+import bt.net.PeerRegistrationEvent;
 import bt.net.SocketChannelConnectionAcceptor;
 import bt.net.buffer.BufferManager;
 import bt.net.buffer.IBufferManager;
@@ -85,6 +85,7 @@ import com.google.inject.multibindings.Multibinder;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -230,10 +231,10 @@ public class ServiceModule implements Module {
     @Provides
     @Singleton
     @PeerConnectionSelector
-    public SharedSelector provideSelector(IRuntimeLifecycleBinder lifecycleBinder) {
-        SharedSelector selector;
+    public Selector provideSelector(IRuntimeLifecycleBinder lifecycleBinder) {
+        Selector selector;
         try {
-            selector = new SharedSelector(Selector.open());
+            selector = Selector.open();
         } catch (IOException e) {
             throw new RuntimeException("Failed to get I/O selector", e);
         }
@@ -253,8 +254,15 @@ public class ServiceModule implements Module {
 
     @Provides
     @Singleton
+    @PeerRegistrationQueue
+    public ConcurrentLinkedQueue<PeerRegistrationEvent> provideRegistrationQueue(IRuntimeLifecycleBinder lifecycleBinder) {
+        return new ConcurrentLinkedQueue<>();
+    }
+
+    @Provides
+    @Singleton
     public IPeerConnectionFactory providePeerConnectionFactory(
-            @PeerConnectionSelector SharedSelector selector,
+            @PeerConnectionSelector Selector selector,
             IConnectionHandlerFactory connectionHandlerFactory,
             @BitTorrentProtocol MessageHandler<Message> bittorrentProtocol,
             TorrentRegistry torrentRegistry,
@@ -270,7 +278,7 @@ public class ServiceModule implements Module {
     @Provides
     @Singleton
     public SocketChannelConnectionAcceptor provideSocketChannelConnectionAcceptor(
-            @PeerConnectionSelector SharedSelector selector,
+            @PeerConnectionSelector Selector selector,
             IPeerConnectionFactory connectionFactory,
             Config config) {
         InetSocketAddress localAddress = new InetSocketAddress(config.getAcceptorAddress(), config.getAcceptorPort());

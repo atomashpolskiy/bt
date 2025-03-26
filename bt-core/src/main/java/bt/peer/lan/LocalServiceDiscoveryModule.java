@@ -19,7 +19,6 @@ package bt.peer.lan;
 import bt.module.PeerConnectionSelector;
 import bt.module.ServiceModule;
 import bt.net.PeerConnectionAcceptor;
-import bt.net.SharedSelector;
 import bt.net.SocketChannelConnectionAcceptor;
 import bt.service.IRuntimeLifecycleBinder;
 import bt.service.LifecycleBinding;
@@ -28,6 +27,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 
+import java.nio.channels.Selector;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
@@ -88,7 +88,7 @@ public class LocalServiceDiscoveryModule implements Module {
     @Singleton
     public Collection<AnnounceGroupChannel> provideGroupChannels(
             ILocalServiceDiscoveryInfo info,
-            @PeerConnectionSelector SharedSelector selector,
+            @PeerConnectionSelector Selector selector,
             IRuntimeLifecycleBinder lifecycleBinder) {
 
         Collection<AnnounceGroupChannel> groupChannels = info.getCompatibleGroups().stream()
