@@ -36,6 +36,9 @@ public abstract class LocalBitfield extends Bitfield {
     private final AtomicReference<BitSet> skipped = new AtomicReference<>();
 
     private final CountDownLatch latch;
+
+    // first list is the number of pieces in the torrent. Second list is a list of the files that are referenced
+    // by that piece
     private final Optional<List<List<CompletableTorrentFile>>> countdownFiles;
 
     public LocalBitfield(int piecesTotal,
@@ -47,7 +50,6 @@ public abstract class LocalBitfield extends Bitfield {
 
     public void markLocalPieceVerified(int pieceIndex) {
         if (checkAndMarkVerified(pieceIndex)) {
-            latch.countDown();
             countdownFiles.ifPresent(cdfList ->
                     cdfList.get(pieceIndex).forEach(
                             cdf -> {
@@ -56,6 +58,7 @@ public abstract class LocalBitfield extends Bitfield {
                                 }
                             })
             );
+            latch.countDown();
         }
     }
 
