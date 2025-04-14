@@ -17,6 +17,7 @@
 package bt.torrent.messaging;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -48,41 +49,44 @@ public class Mapper {
     }
 
     static class Key {
+        private final int pieceIndex;
+        private final int offset;
+        private final int length;
 
-        private final int[] key;
 
         Key(int pieceIndex, int offset, int length) {
-            this.key = new int[] {pieceIndex, offset, length};
-        }
-
-        int[] getKey() {
-            return key;
+            this.pieceIndex = pieceIndex;
+            this.offset = offset;
+            this.length = length;
         }
 
         int getPieceIndex() {
-            return key[0];
+            return pieceIndex;
         }
 
         int getOffset() {
-            return key[1];
+            return offset;
         }
 
         int getLength() {
-            return key[2];
+            return length;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Key key = (Key) o;
+            return pieceIndex == key.pieceIndex && offset == key.offset && length == key.length;
         }
 
         @Override
         public int hashCode() {
-            return Arrays.hashCode(key);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-
-            if (obj == null || !Key.class.equals(obj.getClass())) {
-                return false;
-            }
-            return (obj == this) || Arrays.equals(key, ((Key) obj).getKey());
+            int result = pieceIndex;
+            result = 31 * result + offset;
+            result = 31 * result + length;
+            return result;
         }
     }
 }

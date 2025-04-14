@@ -46,6 +46,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             List<BufferMutator> encoders,
             IBufferedPieceRegistry bufferedPieceRegistry) {
 
+        // this code leaks the buffer out of the lock. Should be fixed.
         ByteBuffer buffer;
         try {
             buffer = inboundBuffer.lockAndGet();
@@ -74,6 +75,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void fireDataReceived() {
         try {
+            // this is messy - works OK because of reentrant lock, but it would be cleaner to take the
+            // buffer as a parameter..
             inboundBuffer.lockAndGet();
             inboundMessageProcessor.processInboundData();
         } finally {
