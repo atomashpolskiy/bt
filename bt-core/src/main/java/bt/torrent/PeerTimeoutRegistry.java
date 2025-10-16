@@ -1,17 +1,20 @@
 package bt.torrent;
 
-import java.util.Map;
+import java.io.*;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * PeerTimeoutRegistry - keeps peerId (ConnectionKey.toString()) -> expiry timestamp (ms).
+ * PeerTimeoutRegistry – keeps peerId (ConnectionKey.toString()) -> expiry timestamp (ms).
  * Use markTimedOut(peerId) to ban for configured duration.
  * Use isAllowed(peerId) to check whether peer can be accepted.
  *
- * This is intentionally minimal and thread-safe.
+ * Supports optional persistence via saveToFile/loadFromFile so that bans can survive
+ * short runtime restarts (important for Android environments where runtime restarts frequently).
  */
 public class PeerTimeoutRegistry {
+
     private final Map<String, Long> expiryMap = new ConcurrentHashMap<>();
     private final long banDurationMillis;
 
@@ -49,4 +52,41 @@ public class PeerTimeoutRegistry {
         }
     }
 
+    /**
+     * Save current bans to a file so they can be restored later (e.g. after restart).
+     * File format: one peerId=expiryTimestamp per line.
+     */
+    public void saveToFile(File file) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            for (Map.Entry<String, Long> e : expiryMap.entrySet()) {
+                writer.write(e.getKey() + "=" + e.getValue());
+                writer.newLine();
+            }
+        } catch (IOException ex) {
+            System.err.println("PeerTimeoutRegistry: failed to save state: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Load bans from a file previously created by saveToFile.
+     * Automatically drops expired entries.
+     */
+    public void loadFromFile(File file) {
+        if (!file.exists()) return;
+        long now = System.currentTimeMillis();
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("=");
+                if (parts.length != 2) continue;
+                String peerId = parts[0];
+                long expiry = Long.parseLong(parts[1]);
+                if (expiry > now) {
+                    expiryMap.put(peerId, expiry);
+                }
+            }
+        } catch (IOException ex) {
+            System.err.println("PeerTimeoutRegistry: failed to load state: " + ex.getMessage());
+        }
+    }
 }
