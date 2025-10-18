@@ -20,7 +20,7 @@ import bt.CountingThreadFactory;
 import bt.metainfo.TorrentId;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
-import bt.torrent.PeerTimeoutRegistry;     // ✅ Added import
+import bt.torrent.PeerTimeoutRegistry;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +45,7 @@ public class ConnectionSource implements IConnectionSource {
     private final ConcurrentMap<ConnectionKey, CompletableFuture<ConnectionResult>> pendingConnections;
     private final ConcurrentMap<Peer, Long> unreachablePeers;
 
-    private final PeerTimeoutRegistry peerTimeoutRegistry;   // ✅ Added field
+    private final PeerTimeoutRegistry peerTimeoutRegistry;
 
     @Inject
     public ConnectionSource(Set<PeerConnectionAcceptor> connectionAcceptors,
@@ -66,8 +66,6 @@ public class ConnectionSource implements IConnectionSource {
 
         this.pendingConnections = new ConcurrentHashMap<>();
         this.unreachablePeers = new ConcurrentHashMap<>();
-
-        // ✅ Initialize PeerTimeoutRegistry (1-minute bans)
         this.peerTimeoutRegistry = new PeerTimeoutRegistry(1, java.util.concurrent.TimeUnit.MINUTES);
 
         String incomingThreadName = String.format("%d.bt.net.pool.incoming-connection-worker", config.getAcceptorPort());
@@ -96,8 +94,6 @@ public class ConnectionSource implements IConnectionSource {
     @Override
     public CompletableFuture<ConnectionResult> getConnectionAsync(Peer peer, TorrentId torrentId) {
         ConnectionKey key = new ConnectionKey(peer, peer.getPort(), torrentId);
-
-        // ✅ Check for temporarily banned peers
         String peerId = peer.toString();
         if (!peerTimeoutRegistry.isAllowed(peerId)) {
             if (LOGGER.isDebugEnabled()) {
@@ -169,7 +165,6 @@ public class ConnectionSource implements IConnectionSource {
             }
         }, outgoingConnectionExecutor).whenComplete((acquiredConnection, throwable) -> {
             if (acquiredConnection == null || throwable != null) {
-                // ✅ Mark peer as timed out in registry
                 peerTimeoutRegistry.markTimedOut(peer.toString());
 
                 if (LOGGER.isDebugEnabled()) {

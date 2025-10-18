@@ -20,6 +20,8 @@ import bt.event.EventSink;
 import bt.metainfo.TorrentId;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
+import bt.torrent.PeerTimeoutRegistry;
+
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,19 +41,20 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
- *<p><b>Note that this class implements a service.
+ * <p><b>Note that this class implements a service.
  * Hence, is not a part of the public API and is a subject to change.</b></p>
  */
 public class PeerConnectionPool implements IPeerConnectionPool {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PeerConnectionPool.class);
 
-    private Config config;
-    private EventSink eventSink;
-    private ScheduledExecutorService cleaner;
-    private Connections connections;
-    private ReentrantLock connectionLock;
-    private Duration peerConnectionInactivityThreshold;
+    private final Config config;
+    private final EventSink eventSink;
+    private final ScheduledExecutorService cleaner;
+    private final Connections connections;
+    private final ReentrantLock connectionLock;
+    private final Duration peerConnectionInactivityThreshold;
+    private final PeerTimeoutRegistry peerTimeoutRegistry;
 
     @Inject
     public PeerConnectionPool(
@@ -64,6 +67,7 @@ public class PeerConnectionPool implements IPeerConnectionPool {
         this.peerConnectionInactivityThreshold = config.getPeerConnectionInactivityThreshold();
         this.connections = new Connections();
         this.connectionLock = new ReentrantLock();
+        this.peerTimeoutRegistry = new PeerTimeoutRegistry(5, TimeUnit.MINUTES);
 
         String cleanerThreadName = String.format("%d.bt.net.pool.cleaner", config.getAcceptorPort());
         this.cleaner = Executors.newScheduledThreadPool(1, r -> new Thread(r, cleanerThreadName));
@@ -113,8 +117,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                         getConnectionsForAddress(newConnection.getTorrentId(), newConnection.getRemotePeer());
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Checking duplicate connections for newly established" +
-                            " connection with peer: {} (established remote port: {})." +
-                            " All connections:\n{}", newConnection.getRemotePeer(), newConnection.getRemotePort(),
+                                    " connection with peer: {} (established remote port: {})." +
+                                    " All connections:\n{}", newConnection.getRemotePeer(), newConnection.getRemotePort(),
                             connectionsWithSameAddress.stream()
                                     .map(Object::toString)
                                     .collect(Collectors.joining("\n")));
@@ -171,7 +175,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                 }
             }
             if (outgoingConnection != null && incomingConnection != null) {
-                // always prefer to keep outgoing connections
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Closing duplicate incoming connection with {}:{}" +
                                     " (established remote port {})",
@@ -220,7 +223,6 @@ public class PeerConnectionPool implements IPeerConnectionPool {
                         }
                         purgeConnection(connection);
                     }
-                    // can send keep-alives here based on lastActiveTime
                 });
 
             } finally {
@@ -232,6 +234,9 @@ public class PeerConnectionPool implements IPeerConnectionPool {
     private void purgeConnection(PeerConnection connection) {
         ConnectionKey connectionKey = new ConnectionKey(connection.getRemotePeer(),
                 connection.getRemotePort(), connection.getTorrentId());
+
+        peerTimeoutRegistry.markTimedOut(connectionKey.toString());
+
         connections.remove(connectionKey, connection);
         connection.closeQuietly();
         eventSink.firePeerDisconnected(connectionKey);
@@ -256,8 +261,8 @@ public class PeerConnectionPool implements IPeerConnectionPool {
 }
 
 class Connections {
-    private ConcurrentMap<ConnectionKey, PeerConnection> connections;
-    private ConcurrentMap<TorrentId, Collection<PeerConnection>> connectionsByTorrent;
+    private final ConcurrentMap<ConnectionKey, PeerConnection> connections;
+    private final ConcurrentMap<TorrentId, Collection<PeerConnection>> connectionsByTorrent;
 
     Connections() {
         this.connections = new ConcurrentHashMap<>();
