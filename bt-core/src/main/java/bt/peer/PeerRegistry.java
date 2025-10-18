@@ -2,8 +2,6 @@
  * Copyright (c) 2016—2021 Andrei Tomashpolskiy and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -27,20 +25,14 @@ import bt.service.IRuntimeLifecycleBinder;
 import bt.service.IdentityService;
 import bt.torrent.TorrentDescriptor;
 import bt.torrent.TorrentRegistry;
+import bt.torrent.PeerTimeoutRegistry;
 import bt.tracker.AnnounceKey;
 import bt.tracker.ITrackerService;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -67,6 +59,7 @@ public class PeerRegistry implements IPeerRegistry {
 
     private final ConcurrentMap<TorrentId, Set<AnnounceKey>> extraAnnounceKeys;
     private final ReentrantLock extraAnnounceKeysLock;
+    private final PeerTimeoutRegistry peerTimeoutRegistry;
 
     @Inject
     public PeerRegistry(IRuntimeLifecycleBinder lifecycleBinder,
@@ -91,9 +84,13 @@ public class PeerRegistry implements IPeerRegistry {
 
         this.extraAnnounceKeys = new ConcurrentHashMap<>();
         this.extraAnnounceKeysLock = new ReentrantLock();
-
+        this.peerTimeoutRegistry = new PeerTimeoutRegistry(5, TimeUnit.MINUTES);
         this.scheduledExecutorService = createExecutor(lifecycleBinder, config);
         eventSource.onTorrentStopped(null, e -> this.extraAnnounceKeys.remove(e.getTorrentId()));
+
+        lifecycleBinder.onStartup("Schedule peer timeout cleanup", () ->
+                scheduledExecutorService.scheduleAtFixedRate(
+                        peerTimeoutRegistry::cleanup, 1, 1, TimeUnit.MINUTES));
     }
 
     private ScheduledExecutorService createExecutor(IRuntimeLifecycleBinder lifecycleBinder, Config config) {
@@ -131,9 +128,6 @@ public class PeerRegistry implements IPeerRegistry {
                     LOGGER.warn("Will not query extra trackers for a private torrent, id: {}", torrentId);
                 }
             } else {
-                // more announce keys might be added at the same time;
-                // querying all trackers can be time-consuming, so we make a copy of the collection
-                // to prevent blocking callers of addPeerSource(TorrentId, AnnounceKey) for too long
                 Collection<AnnounceKey> extraTorrentAnnounceKeysCopy;
                 extraAnnounceKeysLock.lock();
                 try {
@@ -141,10 +135,9 @@ public class PeerRegistry implements IPeerRegistry {
                 } finally {
                     extraAnnounceKeysLock.unlock();
                 }
-                queryTrackers(torrentId, torrentAnnounceKey, extraTorrentAnnounceKeysCopy);
+                queryTrackers(torrentId, torrentAnnounceKeysCopy, extraTorrentAnnounceKeysCopy);
             }
 
-            // disallow querying peer sources other than the tracker for private torrents
             if ((!torrentOptional.isPresent() || !torrentOptional.get().isPrivate()) && !extraPeerSourceFactories.isEmpty()) {
                 extraPeerSourceFactories.forEach(factory ->
                         queryPeerSource(torrentId, factory.getPeerSource(torrentId)));
@@ -180,7 +173,6 @@ public class PeerRegistry implements IPeerRegistry {
 
     private boolean mightCreateTracker(AnnounceKey announceKey) {
         if (announceKey.isMultiKey()) {
-            // TODO: need some more sophisticated solution because some of the trackers might be supported
             for (List<String> tier : announceKey.getTrackerUrls()) {
                 for (String trackerUrl : tier) {
                     if (!trackerService.isSupportedProtocol(trackerUrl)) {
@@ -215,6 +207,15 @@ public class PeerRegistry implements IPeerRegistry {
 
     @Override
     public void addPeer(TorrentId torrentId, Peer peer) {
+        // --------------------- Skip banned peers ---------------------
+        String peerId = peer.toString();
+        if (!peerTimeoutRegistry.isAllowed(peerId)) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Skipping banned peer: {}", peerId);
+            }
+            return;
+        }
+
         if (peer.isPortUnknown()) {
             throw new IllegalArgumentException("Peer's port is unknown: " + peer);
         } else if (peer.getPort() < 0 || peer.getPort() > 65535) {
@@ -256,5 +257,4 @@ public class PeerRegistry implements IPeerRegistry {
     public Peer getLocalPeer() {
         return localPeer;
     }
-
 }
