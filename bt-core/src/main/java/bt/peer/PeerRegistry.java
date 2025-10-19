@@ -135,7 +135,7 @@ public class PeerRegistry implements IPeerRegistry {
                 } finally {
                     extraAnnounceKeysLock.unlock();
                 }
-                queryTrackers(torrentId, torrentAnnounceKeysCopy, extraTorrentAnnounceKeysCopy);
+                queryTrackers(torrentId, torrentAnnounceKey, extraTorrentAnnounceKeysCopy);
             }
 
             if ((!torrentOptional.isPresent() || !torrentOptional.get().isPrivate()) && !extraPeerSourceFactories.isEmpty()) {
