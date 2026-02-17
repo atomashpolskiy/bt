@@ -231,9 +231,7 @@ public class MessageDispatcher implements IMessageDispatcher {
                             }
                         }
                     } else {
-                        synchronized (modificationLock) {
-                            removeInactiveConnection(connectionKey, iter);
-                        }
+                        removeInactiveConnection(connectionKey, iter);
                     }
                 }
             }
