@@ -154,7 +154,7 @@ public class MessageDispatcher implements IMessageDispatcher {
                     }
                 } else {
                     PeerConnection connection = pool.getConnection(connectionKey);
-                    if (connection != null && !connection.isClosed()) {
+                    if (isActive(connection)) {
                         Message message;
                         for (;;) {
                             try {
@@ -178,10 +178,18 @@ public class MessageDispatcher implements IMessageDispatcher {
                             }
                         }
                     } else {
-                        synchronized (modificationLock) {
-                            iter.remove();
-                        }
+                        removeInactiveConnection(connectionKey, iter);
                     }
+                }
+            }
+        }
+
+        private void removeInactiveConnection(ConnectionKey connectionKey, Iterator<?> iter) {
+            // Synchronized check to ensure that the connection is not reestablished and added before it is removed.
+            synchronized (modificationLock) {
+                PeerConnection connection = pool.getConnection(connectionKey);
+                if (!isActive(connection)) {
+                    iter.remove();
                 }
             }
         }
@@ -201,7 +209,7 @@ public class MessageDispatcher implements IMessageDispatcher {
                     }
                 } else {
                     PeerConnection connection = pool.getConnection(connectionKey);
-                    if (connection != null && !connection.isClosed()) {
+                    if (isActive(connection)) {
                         for (Supplier<Message> messageSupplier : peerSuppliers) {
                             Message message;
                             try {
@@ -224,11 +232,15 @@ public class MessageDispatcher implements IMessageDispatcher {
                         }
                     } else {
                         synchronized (modificationLock) {
-                            iter.remove();
+                            removeInactiveConnection(connectionKey, iter);
                         }
                     }
                 }
             }
+        }
+
+        private boolean isActive(PeerConnection connection) {
+            return connection != null && !connection.isClosed();
         }
 
         public void shutdown() {
