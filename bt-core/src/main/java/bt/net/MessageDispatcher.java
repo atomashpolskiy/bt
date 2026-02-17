@@ -94,41 +94,39 @@ public class MessageDispatcher implements IMessageDispatcher {
         @Override
         public void run() {
             while (!shutdown) {
-                if (!consumers.isEmpty()) {
-                    Iterator<Map.Entry<TorrentId, Map<ConnectionKey, Collection<Consumer<Message>>>>> iter = consumers.entrySet().iterator();
-                    while (iter.hasNext()) {
-                        Map.Entry<TorrentId, Map<ConnectionKey, Collection<Consumer<Message>>>> consumerMapByTorrent = iter.next();
-                        Map<ConnectionKey, Collection<Consumer<Message>>> consumerMapByPeer = consumerMapByTorrent.getValue();
-                        if (consumerMapByPeer.isEmpty()) {
-                            synchronized (modificationLock) {
-                                if (consumerMapByPeer.isEmpty()) {
-                                    iter.remove();
-                                }
+                Iterator<Map.Entry<TorrentId, Map<ConnectionKey, Collection<Consumer<Message>>>>> consumerIter = consumers.entrySet()
+                        .iterator();
+                while (consumerIter.hasNext()) {
+                    Map.Entry<TorrentId, Map<ConnectionKey, Collection<Consumer<Message>>>> consumerMapByTorrent = consumerIter.next();
+                    Map<ConnectionKey, Collection<Consumer<Message>>> consumerMapByPeer = consumerMapByTorrent.getValue();
+                    if (consumerMapByPeer.isEmpty()) {
+                        synchronized (modificationLock) {
+                            if (consumerMapByPeer.isEmpty()) {
+                                consumerIter.remove();
                             }
                         }
-                        TorrentId torrentId = consumerMapByTorrent.getKey();
-                        if (torrentRegistry.isSupportedAndActive(torrentId)) {
-                            processConsumerMap(torrentId);
-                        }
+                    }
+                    TorrentId torrentId = consumerMapByTorrent.getKey();
+                    if (torrentRegistry.isSupportedAndActive(torrentId)) {
+                        processConsumerMap(torrentId);
                     }
                 }
 
-                if (!suppliers.isEmpty()) {
-                    Iterator<Map.Entry<TorrentId, Map<ConnectionKey, Collection<Supplier<Message>>>>> iter = suppliers.entrySet().iterator();
-                    while (iter.hasNext()) {
-                        Map.Entry<TorrentId, Map<ConnectionKey, Collection<Supplier<Message>>>> supplierMapByTorrent = iter.next();
-                        Map<ConnectionKey, Collection<Supplier<Message>>> supplierMapByPeer = supplierMapByTorrent.getValue();
-                        if (supplierMapByPeer.isEmpty()) {
-                            synchronized (modificationLock) {
-                                if (supplierMapByPeer.isEmpty()) {
-                                    iter.remove();
-                                }
+                Iterator<Map.Entry<TorrentId, Map<ConnectionKey, Collection<Supplier<Message>>>>> supplierIter = suppliers.entrySet()
+                        .iterator();
+                while (supplierIter.hasNext()) {
+                    Map.Entry<TorrentId, Map<ConnectionKey, Collection<Supplier<Message>>>> supplierMapByTorrent = supplierIter.next();
+                    Map<ConnectionKey, Collection<Supplier<Message>>> supplierMapByPeer = supplierMapByTorrent.getValue();
+                    if (supplierMapByPeer.isEmpty()) {
+                        synchronized (modificationLock) {
+                            if (supplierMapByPeer.isEmpty()) {
+                                supplierIter.remove();
                             }
                         }
-                        TorrentId torrentId = supplierMapByTorrent.getKey();
-                        if (torrentRegistry.isSupportedAndActive(torrentId)) {
-                            processSupplierMap(torrentId);
-                        }
+                    }
+                    TorrentId torrentId = supplierMapByTorrent.getKey();
+                    if (torrentRegistry.isSupportedAndActive(torrentId)) {
+                        processSupplierMap(torrentId);
                     }
                 }
 
@@ -143,10 +141,6 @@ public class MessageDispatcher implements IMessageDispatcher {
 
         private void processConsumerMap(TorrentId torrentId) {
             Map<ConnectionKey, Collection<Consumer<Message>>> consumerMap = consumers.get(torrentId);
-            if (consumerMap.isEmpty()) {
-                return;
-            }
-
             Iterator<Map.Entry<ConnectionKey, Collection<Consumer<Message>>>> iter = consumerMap.entrySet().iterator();
             while (iter.hasNext()) {
                 Map.Entry<ConnectionKey, Collection<Consumer<Message>>> e = iter.next();
@@ -183,6 +177,10 @@ public class MessageDispatcher implements IMessageDispatcher {
                                 }
                             }
                         }
+                    } else {
+                        synchronized (modificationLock) {
+                            iter.remove();
+                        }
                     }
                 }
             }
@@ -190,10 +188,6 @@ public class MessageDispatcher implements IMessageDispatcher {
 
         private void processSupplierMap(TorrentId torrentId) {
             Map<ConnectionKey, Collection<Supplier<Message>>> supplierMap = suppliers.get(torrentId);
-            if (supplierMap.isEmpty()) {
-                return;
-            }
-
             Iterator<Map.Entry<ConnectionKey, Collection<Supplier<Message>>>> iter = supplierMap.entrySet().iterator();
             while (iter.hasNext()) {
                 Map.Entry<ConnectionKey, Collection<Supplier<Message>>> e = iter.next();
@@ -227,6 +221,10 @@ public class MessageDispatcher implements IMessageDispatcher {
                             } catch (Exception ex) {
                                 LOGGER.error("Error when writing message", ex);
                             }
+                        }
+                    } else {
+                        synchronized (modificationLock) {
+                            iter.remove();
                         }
                     }
                 }

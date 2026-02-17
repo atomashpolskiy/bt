@@ -50,6 +50,7 @@ public class TorrentId {
     }
 
     private final byte[] torrentId;
+    private final int hashCode;
 
     private TorrentId(byte[] torrentId) {
         Objects.requireNonNull(torrentId);
@@ -57,6 +58,7 @@ public class TorrentId {
             throw new BtException("Illegal torrent ID length: " + torrentId.length);
         }
         this.torrentId = torrentId;
+        this.hashCode = Arrays.hashCode(torrentId);
     }
 
     /**
@@ -69,7 +71,7 @@ public class TorrentId {
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(torrentId);
+        return hashCode;
     }
 
     @Override

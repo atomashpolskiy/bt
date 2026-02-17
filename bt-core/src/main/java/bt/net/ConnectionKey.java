@@ -25,6 +25,7 @@ public class ConnectionKey {
     private final Peer peer;
     private final int remotePort;
     private final TorrentId torrentId;
+    private final int hashCode;
 
     public ConnectionKey(Peer peer, int remotePort, TorrentId torrentId) {
         Objects.requireNonNull(peer);
@@ -32,6 +33,7 @@ public class ConnectionKey {
         this.peer = peer;
         this.remotePort = remotePort;
         this.torrentId = torrentId;
+        this.hashCode = computeHashCode();
     }
 
     public Peer getPeer() {
@@ -64,6 +66,10 @@ public class ConnectionKey {
 
     @Override
     public int hashCode() {
+        return hashCode;
+    }
+
+    private int computeHashCode() {
         int result = peer.getInetAddress().hashCode();
         result = 31 * result + remotePort;
         result = 31 * result + torrentId.hashCode();
