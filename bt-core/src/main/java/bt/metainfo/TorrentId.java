@@ -57,7 +57,7 @@ public class TorrentId {
         if (torrentId.length != TORRENT_ID_LENGTH) {
             throw new BtException("Illegal torrent ID length: " + torrentId.length);
         }
-        this.torrentId = torrentId;
+        this.torrentId = torrentId.clone();
         this.hashCode = Arrays.hashCode(torrentId);
     }
 
