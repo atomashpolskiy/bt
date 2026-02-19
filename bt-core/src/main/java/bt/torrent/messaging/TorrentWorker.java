@@ -141,8 +141,8 @@ public class TorrentWorker {
             PieceAnnouncingPeerWorker worker = Objects.requireNonNull(createPeerWorker(connectionKey));
             PieceAnnouncingPeerWorker existing = peerMap.putIfAbsent(connectionKey, worker);
             if (existing == null) {
-                dispatcher.addMessageConsumer(connectionKey, message -> consume(connectionKey, message));
-                dispatcher.addMessageSupplier(connectionKey, () -> produce(connectionKey));
+                dispatcher.setConnectionMessageConsumerAndSupplier(connectionKey,
+                        message -> consume(connectionKey, message), () -> produce(connectionKey));
             } else {
                 // The peer was already present, so don't increment the count.
                 peerCount.decrementAndGet();

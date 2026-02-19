@@ -27,18 +27,11 @@ import java.util.function.Supplier;
  * @since 1.0
  */
 public interface IMessageDispatcher {
-
     /**
-     * Add a message consumer to receive messages from a remote peer for a given torrent.
+     * Set the message supplier for a newly connected peer
      *
-     * @since 1.7
+     * @since 1.11
      */
-    void addMessageConsumer(ConnectionKey connectionKey, Consumer<Message> messageConsumer);
-
-    /**
-     * Add a message supplier to send messages to a remote peer for a given torrent.
-     *
-     * @since 1.7
-     */
-    void addMessageSupplier(ConnectionKey connectionKey, Supplier<Message> messageSupplier);
+    void setConnectionMessageConsumerAndSupplier(ConnectionKey connectionKey, Consumer<Message> messageConsumer,
+            Supplier<Message> messageSupplier);
 }
