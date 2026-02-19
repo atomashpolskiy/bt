@@ -27,7 +27,6 @@ import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.net.InetAddress;
@@ -50,7 +49,7 @@ public class RoutingPeerWorker_WithCompilerTest {
     private PeerWorker peerWorker;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         this.c1 = new C1();
         this.p1 = new P1();
 
@@ -62,7 +61,7 @@ public class RoutingPeerWorker_WithCompilerTest {
         DefaultMessageRouter router = new DefaultMessageRouter(agents);
         IPeerWorkerFactory peerWorkerFactory = new PeerWorkerFactory(router);
         Peer mock = mock(Peer.class);
-        Mockito.doReturn(InetAddress.getLocalHost()).when(mock).getInetAddress();
+        Mockito.doReturn(InetAddress.getLoopbackAddress()).when(mock).getInetAddress();
         ConnectionKey connectionKey = new ConnectionKey(mock,
                 1, TorrentId.fromBytes(new byte[20]));
         this.peerWorker = peerWorkerFactory.createPeerWorker(connectionKey);

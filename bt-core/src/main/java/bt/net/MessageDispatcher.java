@@ -25,7 +25,6 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,8 +32,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
-import static java.util.Collections.emptyMap;
 
 /**
  * Default single-threaded message dispatcher implementation.
@@ -196,8 +193,7 @@ public class MessageDispatcher implements IMessageDispatcher {
                 ConnectionKey connectionKey = e.getKey();
                 Supplier<Message> peerSupplier = e.getValue();
                 PeerConnection connection = pool.getConnection(connectionKey);
-                if (isActive(connection))
-                {
+                if (isActive(connection)) {
                     Message message;
                     try {
                         message = peerSupplier.get();

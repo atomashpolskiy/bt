@@ -28,7 +28,7 @@ import java.util.function.Supplier;
  */
 public interface IMessageDispatcher {
     /**
-     * Set the message supplier for a newly connected peer
+     * Set the message supplier and consumer for a newly connected peer
      *
      * @since 1.11
      */
