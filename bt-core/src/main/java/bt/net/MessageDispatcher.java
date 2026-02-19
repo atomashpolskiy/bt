@@ -34,6 +34,8 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static java.util.Collections.emptyMap;
+
 /**
  * Default single-threaded message dispatcher implementation.
  *
@@ -140,9 +142,7 @@ public class MessageDispatcher implements IMessageDispatcher {
         }
 
         private void processConsumerMap(TorrentId torrentId) {
-            Map<ConnectionKey, Collection<Consumer<Message>>> consumerMap = consumers.get(torrentId);
-            if (null == consumerMap)
-                return;
+            Map<ConnectionKey, Collection<Consumer<Message>>> consumerMap = consumers.getOrDefault(torrentId, emptyMap());
             Iterator<Map.Entry<ConnectionKey, Collection<Consumer<Message>>>> iter = consumerMap.entrySet().iterator();
             while (iter.hasNext()) {
                 Map.Entry<ConnectionKey, Collection<Consumer<Message>>> e = iter.next();
@@ -197,9 +197,7 @@ public class MessageDispatcher implements IMessageDispatcher {
         }
 
         private void processSupplierMap(TorrentId torrentId) {
-            Map<ConnectionKey, Collection<Supplier<Message>>> supplierMap = suppliers.get(torrentId);
-            if (null == supplierMap)
-                return;
+            Map<ConnectionKey, Collection<Supplier<Message>>> supplierMap = suppliers.getOrDefault(torrentId, emptyMap());
             Iterator<Map.Entry<ConnectionKey, Collection<Supplier<Message>>>> iter = supplierMap.entrySet().iterator();
             while (iter.hasNext()) {
                 Map.Entry<ConnectionKey, Collection<Supplier<Message>>> e = iter.next();
