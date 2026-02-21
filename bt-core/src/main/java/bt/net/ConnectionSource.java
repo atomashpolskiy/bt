@@ -20,6 +20,7 @@ import bt.CountingThreadFactory;
 import bt.metainfo.TorrentId;
 import bt.runtime.Config;
 import bt.service.IRuntimeLifecycleBinder;
+import bt.torrent.PeerTimeoutRegistry;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,8 +43,9 @@ public class ConnectionSource implements IConnectionSource {
     private final Object lock = new Object();
 
     private final ConcurrentMap<ConnectionKey, CompletableFuture<ConnectionResult>> pendingConnections;
-    // TODO: weak map
     private final ConcurrentMap<Peer, Long> unreachablePeers;
+
+    private final PeerTimeoutRegistry peerTimeoutRegistry;
 
     @Inject
     public ConnectionSource(Set<PeerConnectionAcceptor> connectionAcceptors,
@@ -64,6 +66,7 @@ public class ConnectionSource implements IConnectionSource {
 
         this.pendingConnections = new ConcurrentHashMap<>();
         this.unreachablePeers = new ConcurrentHashMap<>();
+        this.peerTimeoutRegistry = new PeerTimeoutRegistry(1, java.util.concurrent.TimeUnit.MINUTES);
 
         String incomingThreadName = String.format("%d.bt.net.pool.incoming-connection-worker", config.getAcceptorPort());
         ExecutorService incomingConnectionExecutor = Executors.newFixedThreadPool(
@@ -91,6 +94,13 @@ public class ConnectionSource implements IConnectionSource {
     @Override
     public CompletableFuture<ConnectionResult> getConnectionAsync(Peer peer, TorrentId torrentId) {
         ConnectionKey key = new ConnectionKey(peer, peer.getPort(), torrentId);
+        String peerId = peer.toString();
+        if (!peerTimeoutRegistry.isAllowed(peerId)) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Skipping banned peer: {}", peerId);
+            }
+            return CompletableFuture.completedFuture(ConnectionResult.failure("Peer is temporarily banned"));
+        }
 
         CompletableFuture<ConnectionResult> result = validateNewConnPossible(peer, torrentId, key);
         if (result != null) {
@@ -114,7 +124,6 @@ public class ConnectionSource implements IConnectionSource {
         }
 
         synchronized (lock) {
-            // synchronized double checking.
             result = validateNewConnPossible(peer, torrentId, key);
             if (result != null) {
                 return result;
@@ -125,7 +134,6 @@ public class ConnectionSource implements IConnectionSource {
                     pendingConnections.put(key, result);
                     return result;
                 } finally {
-                    // If an exception happens, make sure that a thread isn't deadlocked waiting for this to complete
                     addedToPendingConnections.complete(null);
                 }
             }
@@ -150,23 +158,17 @@ public class ConnectionSource implements IConnectionSource {
                     return connectionResult;
                 }
             } finally {
-                // ensure that we don't remove this key from the map before it is added.
                 addedToPendingConnections.join();
-
-                // The synchronize ensures a memory barrier that ensures the effects of connectionPool.addConnectionIfAbsent(established)
-                // are visible to any other thread that sees the removal.
-                // Unfortunately ConcurrentMap.remove() does not guarantee a happens before relationship. See:
-                // https://stackoverflow.com/questions/39341742/does-concurrentmap-remove-provide-a-happens-before-edge-before-get-returns-n
-                // When Java 11 features are enabled,  this synchronize can be replaced with VarHandle.storeStoreFence().
                 synchronized (pendingConnections) {
                     pendingConnections.remove(key);
                 }
             }
         }, outgoingConnectionExecutor).whenComplete((acquiredConnection, throwable) -> {
             if (acquiredConnection == null || throwable != null) {
+                peerTimeoutRegistry.markTimedOut(peer.toString());
+
                 if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Peer is unreachable: {}. Will prevent further attempts to establish connection.",
-                            peer);
+                    LOGGER.debug("Peer is unreachable: {}. Will prevent further attempts to establish connection.", peer);
                 }
                 unreachablePeers.putIfAbsent(peer, System.currentTimeMillis());
             }
@@ -178,16 +180,6 @@ public class ConnectionSource implements IConnectionSource {
         });
     }
 
-    /**
-     * Checks whether a connection to this peer on the specified torrent id is possible. Returns a result if a new
-     * connection is not possible. This can happen if there is an existing pending connection, or we have reached
-     * {@link Config#getMaxPeerConnections()}
-     *
-     * @param peer      the peer to connect to
-     * @param torrentId the torrent for the connection
-     * @param key       the connection key
-     * @return a result if a new connection is not possible, null otherwise
-     */
     private CompletableFuture<ConnectionResult> validateNewConnPossible(Peer peer, TorrentId torrentId,
                                                                         ConnectionKey key) {
         CompletableFuture<ConnectionResult> connection = getExistingOrPendingConnection(key);
@@ -216,9 +208,6 @@ public class ConnectionSource implements IConnectionSource {
     }
 
     private CompletableFuture<ConnectionResult> getExistingOrPendingConnection(ConnectionKey key) {
-        // When Java 11 features are enabled, this synchronize can be replaced with VarHandle.loadLoadFence() below the
-        // end of the synchronized block.
-        // See comment in createPendingConnFuture()
         synchronized (pendingConnections) {
             CompletableFuture<ConnectionResult> pendingConnection = pendingConnections.get(key);
             if (pendingConnection != null) {
