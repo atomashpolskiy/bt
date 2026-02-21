@@ -25,7 +25,6 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,8 +42,8 @@ import java.util.function.Supplier;
 public class MessageDispatcher implements IMessageDispatcher {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageDispatcher.class);
 
-    private final Map<TorrentId, Map<ConnectionKey, Collection<Consumer<Message>>>> consumers;
-    private final Map<TorrentId, Map<ConnectionKey, Collection<Supplier<Message>>>> suppliers;
+    private final Map<TorrentId, Map<ConnectionKey, Consumer<Message>>> consumers;
+    private final Map<TorrentId, Map<ConnectionKey, Supplier<Message>>> suppliers;
 
     private final TorrentRegistry torrentRegistry;
     private final Object modificationLock;
@@ -94,41 +93,41 @@ public class MessageDispatcher implements IMessageDispatcher {
         @Override
         public void run() {
             while (!shutdown) {
-                if (!consumers.isEmpty()) {
-                    Iterator<Map.Entry<TorrentId, Map<ConnectionKey, Collection<Consumer<Message>>>>> iter = consumers.entrySet().iterator();
-                    while (iter.hasNext()) {
-                        Map.Entry<TorrentId, Map<ConnectionKey, Collection<Consumer<Message>>>> consumerMapByTorrent = iter.next();
-                        Map<ConnectionKey, Collection<Consumer<Message>>> consumerMapByPeer = consumerMapByTorrent.getValue();
-                        if (consumerMapByPeer.isEmpty()) {
-                            synchronized (modificationLock) {
-                                if (consumerMapByPeer.isEmpty()) {
-                                    iter.remove();
-                                }
+                Iterator<Map.Entry<TorrentId, Map<ConnectionKey, Consumer<Message>>>> consumerIter = consumers.entrySet().iterator();
+                while (consumerIter.hasNext()) {
+                    Map.Entry<TorrentId, Map<ConnectionKey, Consumer<Message>>> consumerMapByTorrent = consumerIter.next();
+                    Map<ConnectionKey, Consumer<Message>> consumerMapByPeer = consumerMapByTorrent.getValue();
+                    // remove inactive torrents with no peers
+                    if (consumerMapByPeer.isEmpty()) {
+                        synchronized (modificationLock) {
+                            if (consumerMapByPeer.isEmpty()) {
+                                consumerIter.remove();
+                                continue;
                             }
                         }
-                        TorrentId torrentId = consumerMapByTorrent.getKey();
-                        if (torrentRegistry.isSupportedAndActive(torrentId)) {
-                            processConsumerMap(torrentId);
-                        }
+                    }
+                    TorrentId torrentId = consumerMapByTorrent.getKey();
+                    if (torrentRegistry.isSupportedAndActive(torrentId)) {
+                        processConsumerMap(consumerMapByPeer);
                     }
                 }
 
-                if (!suppliers.isEmpty()) {
-                    Iterator<Map.Entry<TorrentId, Map<ConnectionKey, Collection<Supplier<Message>>>>> iter = suppliers.entrySet().iterator();
-                    while (iter.hasNext()) {
-                        Map.Entry<TorrentId, Map<ConnectionKey, Collection<Supplier<Message>>>> supplierMapByTorrent = iter.next();
-                        Map<ConnectionKey, Collection<Supplier<Message>>> supplierMapByPeer = supplierMapByTorrent.getValue();
-                        if (supplierMapByPeer.isEmpty()) {
-                            synchronized (modificationLock) {
-                                if (supplierMapByPeer.isEmpty()) {
-                                    iter.remove();
-                                }
+                Iterator<Map.Entry<TorrentId, Map<ConnectionKey, Supplier<Message>>>> supplierIter = suppliers.entrySet().iterator();
+                while (supplierIter.hasNext()) {
+                    Map.Entry<TorrentId, Map<ConnectionKey, Supplier<Message>>> supplierMapByTorrent = supplierIter.next();
+                    Map<ConnectionKey, Supplier<Message>> supplierMapByPeer = supplierMapByTorrent.getValue();
+                    if (supplierMapByPeer.isEmpty()) {
+                        synchronized (modificationLock) {
+                            // remove inactive torrents with no peers
+                            if (supplierMapByPeer.isEmpty()) {
+                                supplierIter.remove();
+                                continue;
                             }
                         }
-                        TorrentId torrentId = supplierMapByTorrent.getKey();
-                        if (torrentRegistry.isSupportedAndActive(torrentId)) {
-                            processSupplierMap(torrentId);
-                        }
+                    }
+                    TorrentId torrentId = supplierMapByTorrent.getKey();
+                    if (torrentRegistry.isSupportedAndActive(torrentId)) {
+                        processSupplierMap(supplierMapByPeer);
                     }
                 }
 
@@ -141,96 +140,86 @@ public class MessageDispatcher implements IMessageDispatcher {
             }
         }
 
-        private void processConsumerMap(TorrentId torrentId) {
-            Map<ConnectionKey, Collection<Consumer<Message>>> consumerMap = consumers.get(torrentId);
-            if (consumerMap.isEmpty()) {
-                return;
-            }
-
-            Iterator<Map.Entry<ConnectionKey, Collection<Consumer<Message>>>> iter = consumerMap.entrySet().iterator();
+        private void processConsumerMap(Map<ConnectionKey, Consumer<Message>> consumerMap) {
+            Iterator<Map.Entry<ConnectionKey, Consumer<Message>>> iter = consumerMap.entrySet().iterator();
             while (iter.hasNext()) {
-                Map.Entry<ConnectionKey, Collection<Consumer<Message>>> e = iter.next();
+                Map.Entry<ConnectionKey, Consumer<Message>> e = iter.next();
                 ConnectionKey connectionKey = e.getKey();
-                Collection<Consumer<Message>> peerConsumers = e.getValue();
-                if (peerConsumers.isEmpty()) {
-                    synchronized (modificationLock) {
-                        if (peerConsumers.isEmpty()) {
-                            iter.remove();
+                Consumer<Message> peerConsumer = e.getValue();
+                PeerConnection connection = pool.getConnection(connectionKey);
+                if (isActive(connection)) {
+                    Message message;
+                    for (;;) {
+                        try {
+                            message = connection.readMessageNow();
+                        } catch (Exception ex) {
+                            LOGGER.error("Error when reading message from peer connection: " + connectionKey.getPeer(),
+                                    ex);
+                            break;
+                        }
+
+                        if (message == null) {
+                            break;
+                        }
+
+                        loopControl.incrementProcessed();
+                        try {
+                            peerConsumer.accept(message);
+                        } catch (Exception ex) {
+                            LOGGER.warn("Error in message consumer", ex);
                         }
                     }
                 } else {
-                    PeerConnection connection = pool.getConnection(connectionKey);
-                    if (connection != null && !connection.isClosed()) {
-                        Message message;
-                        for (;;) {
-                            try {
-                                message = connection.readMessageNow();
-                            } catch (Exception ex) {
-                                LOGGER.error("Error when reading message from peer connection: " + connectionKey.getPeer(), ex);
-                                break;
-                            }
-
-                            if (message == null) {
-                                break;
-                            }
-
-                            loopControl.incrementProcessed();
-                            for (Consumer<Message> consumer : peerConsumers) {
-                                try {
-                                    consumer.accept(message);
-                                } catch (Exception ex) {
-                                    LOGGER.warn("Error in message consumer", ex);
-                                }
-                            }
-                        }
-                    }
+                    removeInactiveConnection(connectionKey, iter);
                 }
             }
         }
 
-        private void processSupplierMap(TorrentId torrentId) {
-            Map<ConnectionKey, Collection<Supplier<Message>>> supplierMap = suppliers.get(torrentId);
-            if (supplierMap.isEmpty()) {
-                return;
-            }
-
-            Iterator<Map.Entry<ConnectionKey, Collection<Supplier<Message>>>> iter = supplierMap.entrySet().iterator();
-            while (iter.hasNext()) {
-                Map.Entry<ConnectionKey, Collection<Supplier<Message>>> e = iter.next();
-                ConnectionKey connectionKey = e.getKey();
-                Collection<Supplier<Message>> peerSuppliers = e.getValue();
-                if (peerSuppliers.isEmpty()) {
-                    synchronized (modificationLock) {
-                        if (peerSuppliers.isEmpty()) {
-                            iter.remove();
-                        }
-                    }
-                } else {
-                    PeerConnection connection = pool.getConnection(connectionKey);
-                    if (connection != null && !connection.isClosed()) {
-                        for (Supplier<Message> messageSupplier : peerSuppliers) {
-                            Message message;
-                            try {
-                                message = messageSupplier.get();
-                            } catch (Exception ex) {
-                                LOGGER.warn("Error in message supplier", ex);
-                                continue;
-                            }
-
-                            if (message == null) {
-                                continue;
-                            }
-
-                            loopControl.incrementProcessed();
-                            try {
-                                connection.postMessage(message);
-                            } catch (Exception ex) {
-                                LOGGER.error("Error when writing message", ex);
-                            }
-                        }
-                    }
+        private void removeInactiveConnection(ConnectionKey connectionKey, Iterator<?> iter) {
+            // Synchronized check to ensure that the connection is not reestablished and added before it is removed.
+            synchronized (modificationLock) {
+                PeerConnection connection = pool.getConnection(connectionKey);
+                if (!isActive(connection)) {
+                    iter.remove();
                 }
             }
+        }
+
+        private void processSupplierMap(Map<ConnectionKey, Supplier<Message>> supplierMap) {
+            Iterator<Map.Entry<ConnectionKey, Supplier<Message>>> iter = supplierMap.entrySet().iterator();
+            while (iter.hasNext())
+            {
+                Map.Entry<ConnectionKey, Supplier<Message>> e = iter.next();
+                ConnectionKey connectionKey = e.getKey();
+                Supplier<Message> peerSupplier = e.getValue();
+                PeerConnection connection = pool.getConnection(connectionKey);
+                if (isActive(connection)) {
+                    Message message;
+                    try {
+                        message = peerSupplier.get();
+                    } catch (Exception ex) {
+                        LOGGER.warn("Error in message supplier", ex);
+                        continue;
+                    }
+
+                    if (message == null) {
+                        continue;
+                    }
+
+                    loopControl.incrementProcessed();
+                    try {
+                        connection.postMessage(message);
+                    } catch (Exception ex) {
+                        LOGGER.error("Error when writing message", ex);
+                    }
+                } else {
+                    removeInactiveConnection(connectionKey, iter);
+                }
+            }
+        }
+
+        private boolean isActive(PeerConnection connection) {
+            return connection != null && !connection.isClosed();
         }
 
         public void shutdown() {
@@ -280,28 +269,18 @@ public class MessageDispatcher implements IMessageDispatcher {
     }
 
     @Override
-    public void addMessageConsumer(ConnectionKey connectionKey, Consumer<Message> messageConsumer) {
-        synchronized (modificationLock) {
-            Map<ConnectionKey, Collection<Consumer<Message>>> consumerMapByPeer =
-                    consumers.computeIfAbsent(connectionKey.getTorrentId(), it -> new ConcurrentHashMap<>());
+    public void setConnectionMessageConsumerAndSupplier(ConnectionKey connectionKey, Consumer<Message> messageConsumer,
+            Supplier<Message> messageSupplier)
+    {
+        synchronized (modificationLock)
+        {
+            Map<ConnectionKey, Consumer<Message>> consumerMapByPeer = consumers.computeIfAbsent(
+                    connectionKey.getTorrentId(), t -> new ConcurrentHashMap<>());
+            consumerMapByPeer.put(connectionKey, messageConsumer);
 
-            Collection<Consumer<Message>> peerConsumers =
-                    consumerMapByPeer.computeIfAbsent(connectionKey, it -> ConcurrentHashMap.newKeySet());
-
-            peerConsumers.add(messageConsumer);
-        }
-    }
-
-    @Override
-    public void addMessageSupplier(ConnectionKey connectionKey, Supplier<Message> messageSupplier) {
-        synchronized (modificationLock) {
-            Map<ConnectionKey, Collection<Supplier<Message>>> supplierMapByPeer =
-                    suppliers.computeIfAbsent(connectionKey.getTorrentId(), it -> new ConcurrentHashMap<>());
-
-            Collection<Supplier<Message>> peerSuppliers =
-                    supplierMapByPeer.computeIfAbsent(connectionKey, it -> ConcurrentHashMap.newKeySet());
-
-            peerSuppliers.add(messageSupplier);
+            Map<ConnectionKey, Supplier<Message>> supplierMapByPeer = suppliers.computeIfAbsent(
+                    connectionKey.getTorrentId(), t -> new ConcurrentHashMap<>());
+            supplierMapByPeer.put(connectionKey, messageSupplier);
         }
     }
 }

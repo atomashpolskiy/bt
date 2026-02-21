@@ -27,7 +27,9 @@ import bt.torrent.annotation.Consumes;
 import bt.torrent.annotation.Produces;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -58,7 +60,9 @@ public class RoutingPeerWorker_WithCompilerTest {
 
         DefaultMessageRouter router = new DefaultMessageRouter(agents);
         IPeerWorkerFactory peerWorkerFactory = new PeerWorkerFactory(router);
-        ConnectionKey connectionKey = new ConnectionKey(mock(Peer.class),
+        Peer mock = mock(Peer.class);
+        Mockito.doReturn(InetAddress.getLoopbackAddress()).when(mock).getInetAddress();
+        ConnectionKey connectionKey = new ConnectionKey(mock,
                 1, TorrentId.fromBytes(new byte[20]));
         this.peerWorker = peerWorkerFactory.createPeerWorker(connectionKey);
     }
